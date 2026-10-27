@@ -1,0 +1,13 @@
+{
+  "name": "@kinoshelf/cli",
+  "version": "0.0.0",
+  "description": "Kinoshelf command-line interface.",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "kinoshelf": "./dist/main.js"
+  },
+  "files": [
+    "dist"
+  ]
+}

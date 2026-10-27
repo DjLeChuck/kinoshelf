@@ -1,0 +1,30 @@
+{
+  "name": "kinoshelf",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Identify, rename and enrich a video library already on disk.",
+  "license": "MIT",
+  "type": "module",
+  "packageManager": "pnpm@11.27.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "typecheck": "tsc -b && tsc -p tsconfig.check.json",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "pnpm build && vitest run",
+    "test:corpus": "pnpm build && vitest run --project core packages/core/test/corpus"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^26.6.5",
+    "eslint": "^10.13.0",
+    "prettier": "^3.9.10",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.72.0",
+    "vitest": "^5.0.5"
+  }
+}

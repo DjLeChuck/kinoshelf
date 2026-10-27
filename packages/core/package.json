@@ -1,0 +1,16 @@
+{
+  "name": "@kinoshelf/core",
+  "version": "0.0.0",
+  "description": "Kinoshelf headless core: parsing, matching, planning, execution, journal.",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "name": "@kinoshelf/provider-tmdb",
+  "version": "0.0.0",
+  "description": "TMDB metadata provider for Kinoshelf.",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ]
+}
