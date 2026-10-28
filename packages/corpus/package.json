@@ -1,0 +1,17 @@
+{
+  "name": "@kinoshelf/corpus",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Matching corpus: real release names with their expected match, replayed offline.",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "report": "node dist/report.js",
+    "record": "node --env-file=../../.env scripts/record.mjs"
+  },
+  "dependencies": {
+    "@kinoshelf/core": "workspace:*",
+    "@kinoshelf/provider-tmdb": "workspace:*",
+    "zod": "^4.6.7"
+  }
+}

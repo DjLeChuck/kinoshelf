@@ -1,8 +1,17 @@
 {
   "files": [],
   "references": [
-    { "path": "packages/core" },
-    { "path": "packages/providers/tmdb" },
-    { "path": "packages/cli" }
+    {
+      "path": "packages/core"
+    },
+    {
+      "path": "packages/providers/tmdb"
+    },
+    {
+      "path": "packages/cli"
+    },
+    {
+      "path": "packages/corpus"
+    }
   ]
 }

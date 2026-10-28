@@ -77,6 +77,23 @@ packages/core/profiles/*.yaml declarative output profiles, shipped with the core
 - guessit-js may return arrays where its types promise scalars (conflicting readings of a folder
   and a file name). `GuessitParser` treats any unexpected type as absent; keep it that way.
 
+## Matching corpus
+
+`packages/corpus` (private) holds real release names with their expected outcome
+(`data/corpus.json`: matched to this tmdb id, season and episodes, or `review` when a human must
+decide) and replays them offline against recorded TMDB responses (`data/recordings.json`), so CI
+needs no key. It runs with `pnpm test` (or `pnpm test:corpus`). Two gates:
+
+- **Zero wrong automatic matches**: a file renamed to the wrong work, or renamed when it needed
+  review, always fails. Missing a match (sent to review) is safe and only lowers the rate.
+- **The pass rate may not fall below `data/baseline.json`** (a ratchet): raise it when it
+  improves; lowering it needs a justification in the PR.
+
+Add an entry whenever a real file is mis-handled, then `pnpm corpus:record` (needs `TMDB_API_KEY`
+in `.env`; it rewrites `recordings.json`) and `pnpm corpus:report` to see every verdict with its
+score and runner-ups, which is how the weights in `matching/config.ts` get calibrated. Check that a
+new entry can fail: break the matcher on purpose and see it go red.
+
 ## Stack
 
 Node.js 22, TypeScript (strict, ESM, NodeNext), pnpm workspaces, Vitest, ESLint

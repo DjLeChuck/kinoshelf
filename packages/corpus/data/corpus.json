@@ -1,0 +1,293 @@
+[
+  {
+    "path": "Dune.2021.2160p.UHD.BluRay.x265-GRP.mkv",
+    "expect": {
+      "status": "matched",
+      "tmdb": 438631,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Blade.Runner.2049.2017.1080p.BluRay.x264-GRP.mkv",
+    "note": "number in the title",
+    "expect": {
+      "status": "matched",
+      "tmdb": 335984,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Le.Fabuleux.Destin.d.Amelie.Poulain.2001.FRENCH.1080p.BluRay.x264-GRP.mkv",
+    "note": "French name, English metadata: needs the original or an alternative title",
+    "expect": {
+      "status": "matched",
+      "tmdb": 194,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "The.Matrix.1999.REMASTERED.1080p.BluRay.x264.mkv",
+    "expect": {
+      "status": "matched",
+      "tmdb": 603,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Interstellar (2014)/Interstellar (2014).mkv",
+    "note": "Plex-style folder",
+    "expect": {
+      "status": "matched",
+      "tmdb": 157336,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Parasite.2019.KOREAN.1080p.BluRay.x264.mkv",
+    "note": "foreign original title",
+    "expect": {
+      "status": "matched",
+      "tmdb": 496243,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Spirited.Away.2001.1080p.BluRay.mkv",
+    "note": "English title, Japanese original",
+    "expect": {
+      "status": "matched",
+      "tmdb": 129,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Inception.2010.720p.BRRip.XviD-GRP.avi",
+    "expect": {
+      "status": "matched",
+      "tmdb": 27205,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Movies/Oppenheimer (2023) [tmdbid-872585]/Oppenheimer (2023).mkv",
+    "note": "Jellyfin-style id tag",
+    "expect": {
+      "status": "matched",
+      "tmdb": 872585,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Dune.Part.Two.2024.1080p.WEB-DL.DDP5.1.Atmos.H.264-GRP.mkv",
+    "note": "subtitle after the title",
+    "expect": {
+      "status": "matched",
+      "tmdb": 693134,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "dune.part.two.2024.2160p.mkv",
+    "note": "all lowercase",
+    "expect": {
+      "status": "matched",
+      "tmdb": 693134,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Alien.1979.Directors.Cut.1080p.BluRay.mkv",
+    "note": "edition tag",
+    "expect": {
+      "status": "matched",
+      "tmdb": 348,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Mission.Impossible.Dead.Reckoning.Part.One.2023.1080p.WEB-DL.mkv",
+    "note": "TMDB writes a colon",
+    "expect": {
+      "status": "matched",
+      "tmdb": 575264,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Pulp.Fiction.1994.1080p.BluRay.x264.mkv",
+    "expect": {
+      "status": "matched",
+      "tmdb": 680,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Casablanca.1943.1080p.mkv",
+    "note": "year off by one",
+    "expect": {
+      "status": "matched",
+      "tmdb": 289,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Breaking.Bad.S02E05.720p.BluRay.x264-GRP.mkv",
+    "expect": {
+      "status": "matched",
+      "tmdb": 1396,
+      "kind": "series",
+      "season": 2,
+      "episodes": [5]
+    }
+  },
+  {
+    "path": "The Bear (2022) {tmdb-136315}/Season 03/The Bear (2022) - s03e04.mkv",
+    "note": "already named by Plex",
+    "expect": {
+      "status": "matched",
+      "tmdb": 136315,
+      "kind": "series",
+      "season": 3,
+      "episodes": [4]
+    }
+  },
+  {
+    "path": "Game.of.Thrones.S08E06.The.Iron.Throne.1080p.mkv",
+    "note": "episode title in the name",
+    "expect": {
+      "status": "matched",
+      "tmdb": 1399,
+      "kind": "series",
+      "season": 8,
+      "episodes": [6]
+    }
+  },
+  {
+    "path": "Stranger.Things.S04E01E02.1080p.WEBRip.x264.mkv",
+    "note": "double episode",
+    "expect": {
+      "status": "matched",
+      "tmdb": 66732,
+      "kind": "series",
+      "season": 4,
+      "episodes": [1, 2]
+    }
+  },
+  {
+    "path": "Doctor.Who.2005.S10E03.720p.HDTV.mkv",
+    "note": "the year tells the 2005 series from the 1963 one",
+    "expect": {
+      "status": "matched",
+      "tmdb": 57243,
+      "kind": "series",
+      "season": 10,
+      "episodes": [3]
+    }
+  },
+  {
+    "path": "Grey's Anatomy (2005)/Season 02/Grey's Anatomy (2005) - s02e01-e03.avi",
+    "note": "Plex multi-episode naming",
+    "expect": {
+      "status": "matched",
+      "tmdb": 1416,
+      "kind": "series",
+      "season": 2,
+      "episodes": [1, 2, 3]
+    }
+  },
+  {
+    "path": "Friends/Season 10/Friends - 10x17 - The One Where Joey Speaks French.avi",
+    "note": "NxM naming with folders",
+    "expect": {
+      "status": "matched",
+      "tmdb": 1668,
+      "kind": "series",
+      "season": 10,
+      "episodes": [17]
+    }
+  },
+  {
+    "path": "The.Office.US.S03E04.720p.mkv",
+    "note": "the country tells the US series from the UK one",
+    "expect": {
+      "status": "matched",
+      "tmdb": 2316,
+      "kind": "series",
+      "season": 3,
+      "episodes": [4]
+    }
+  },
+  {
+    "path": "Dune.mkv",
+    "note": "no year and several movies called Dune: a human must choose",
+    "expect": {
+      "status": "review"
+    }
+  },
+  {
+    "path": "zzqxv.2020.mkv",
+    "note": "nothing on TMDB",
+    "expect": {
+      "status": "review"
+    }
+  },
+  {
+    "path": "Breaking.Bad.S09E01.720p.mkv",
+    "note": "that season does not exist: must not be renamed automatically",
+    "expect": {
+      "status": "review"
+    }
+  },
+  {
+    "path": "Chernobyl.2019.S02E01.1080p.mkv",
+    "note": "right title and year but the miniseries has one season: title and year alone would reach the threshold",
+    "expect": {
+      "status": "review"
+    }
+  },
+  {
+    "path": "The.Office.UK.S01E01.720p.mkv",
+    "note": "the country tells the UK series from the US one (and the 2024 one)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 2996,
+      "kind": "series",
+      "season": 1,
+      "episodes": [1]
+    }
+  },
+  {
+    "path": "Shameless.US.S05E02.720p.HDTV.mkv",
+    "note": "another US/UK pair (US is 34307, first aired 2011; the UK one is 1906)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 34307,
+      "kind": "series",
+      "season": 5,
+      "episodes": [2]
+    }
+  },
+  {
+    "path": "Us.2019.1080p.BluRay.x264.mkv",
+    "note": "a title that is also a country code",
+    "expect": {
+      "status": "matched",
+      "tmdb": 458723,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Dune (2021) {tmdb-841}/Dune (2021) {tmdb-841}.mkv",
+    "note": "the tag designates the 1984 film but the year says 2021: the two disagree, a human must choose",
+    "expect": {
+      "status": "review"
+    }
+  },
+  {
+    "path": "Show.Name/Season 1/e05.mkv",
+    "note": "generic title",
+    "expect": {
+      "status": "review"
+    }
+  }
+]
