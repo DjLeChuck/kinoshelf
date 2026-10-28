@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import { lstat, readdir, readFile, rm, stat, utimes } from 'node:fs/promises';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -93,6 +94,37 @@ describe('executePlan: copy', () => {
     const { plan, journal } = await setup('copy', lib);
     const batch = await run(plan, journal);
     expect(journal.entriesOf(batch.batchId)[0]?.createdDirectories).toEqual([]);
+  });
+});
+
+describe('executePlan: onItem', () => {
+  it('reports each item once it is done and journaled, before the next one starts', async () => {
+    const { plan, journal, root } = await setup();
+    const seen: { itemId: string; journaled: number; onDisk: boolean }[] = [];
+
+    await executePlan(plan, {
+      journal,
+      newId: counter('x'),
+      onItem: (result) =>
+        seen.push({
+          itemId: result.itemId,
+          journaled: journal.entriesOf(journal.lastBatchId() ?? '').length,
+          onDisk: existsSync(join(root, FOLDER, `${STEM}.mkv`)),
+        }),
+    });
+
+    expect(seen).toEqual([{ itemId: plan.items[0]?.id, journaled: 1, onDisk: true }]);
+  });
+
+  it('also reports the items it did not run, with no result', async () => {
+    const { plan, journal } = await setup();
+    const held = {
+      ...plan,
+      items: plan.items.map((item) => ({ ...item, status: 'in-place' as const })),
+    };
+    const seen: number[] = [];
+    await executePlan(held, { journal, onItem: (result) => seen.push(result.results.length) });
+    expect(seen).toEqual([0]);
   });
 });
 

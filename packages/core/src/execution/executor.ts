@@ -20,6 +20,12 @@ export interface ExecuteOptions {
   readonly journal: Journal;
   /** Checks every precondition and reports what would happen, without writing anything. */
   readonly dryRun?: boolean;
+  /**
+   * Called as soon as an item is done, its transfers already journaled. A caller keeping its own
+   * records (the server) updates them here, so after a crash they are in step with the journal
+   * except for the item in flight.
+   */
+  readonly onItem?: (result: ItemResult) => void;
   readonly newId?: () => string;
   readonly now?: () => Date;
 }
@@ -151,11 +157,12 @@ export async function executePlan(plan: Plan, options: ExecuteOptions): Promise<
 
   const items: ItemResult[] = [];
   for (const item of plan.items) {
-    items.push(
+    const result =
       item.status === 'ready'
         ? await runItem(item, batchId, options, newId, now)
-        : { itemId: item.id, results: [] },
-    );
+        : { itemId: item.id, results: [] };
+    items.push(result);
+    options.onItem?.(result);
   }
   return { batchId, planId: plan.id, dryRun: options.dryRun ?? false, items };
 }
