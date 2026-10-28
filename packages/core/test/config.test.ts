@@ -38,6 +38,16 @@ describe('loadConfig', () => {
     });
   });
 
+  it('reads the retention and rejects a negative or fractional one', async () => {
+    const dir = await makeDir();
+    await put(join(dir, 'config.yaml'), 'retentionDays: 30\n');
+    expect(await loadConfig(dir)).toEqual({ retentionDays: 30 });
+    for (const bad of ['-1', '1.5', 'soon']) {
+      await put(join(dir, 'config.yaml'), `retentionDays: ${bad}\n`);
+      await expect(loadConfig(dir)).rejects.toMatchObject({ info: { code: 'config.invalid' } });
+    }
+  });
+
   it('treats an empty file as no configuration', async () => {
     const dir = await makeDir();
     await put(join(dir, 'config.yaml'), '');

@@ -15,6 +15,8 @@ const configSchema = z.strictObject({
   profile: z.string().min(1).optional(),
   mode: z.enum(['copy', 'hardlink', 'move']).optional(),
   threshold: z.number().min(0).max(100).optional(),
+  /** Server: days after which a finished job, all its files settled, is forgotten. 0 keeps all. */
+  retentionDays: z.number().int().min(0).optional(),
   /** One root for everything, or one per kind (Plex asks for separate libraries). */
   destination: z
     .union([

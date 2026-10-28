@@ -8,6 +8,7 @@ import { EntryStore } from './entries.js';
 import { ExecutionStore } from './executions.js';
 import { JobStore } from './jobs.js';
 import { createProcessor, type ProcessorDeps } from './processor.js';
+import { purgeHistory } from './purge.js';
 import { registerRoutes } from './routes.js';
 import { JobRunner, type JobProcessor } from './runner.js';
 import { healthSchema } from './schemas.js';
@@ -27,6 +28,11 @@ export interface AppOptions extends Omit<ProcessorDeps, 'database'> {
   readonly logger?: boolean;
   /** Replaces the real pipeline, for tests. */
   readonly processor?: JobProcessor;
+  /**
+   * Days after which a finished job, all its files settled, is forgotten. Checked at start and
+   * every day. Unset or 0 keeps everything.
+   */
+  readonly retentionDays?: number;
   /** Wraps or replaces the journal, for tests. */
   readonly journal?: (database: Database) => Journal;
 }
@@ -68,10 +74,24 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     },
   );
   app.decorate('jobs', runner);
+
+  let purgeTimer: NodeJS.Timeout | undefined;
+  const purge = (): void => {
+    const purged = purgeHistory(options.database, { olderThanDays: options.retentionDays ?? 0 });
+    if (purged.jobs > 0) {
+      app.log.info(purged, 'Forgot the history of finished jobs');
+    }
+  };
   app.addHook('onReady', () => {
     runner.start();
+    if (options.retentionDays) {
+      purge();
+      // Not kept alive by the timer: the process leaves when the server closes.
+      purgeTimer = setInterval(purge, 86_400_000).unref();
+    }
   });
   app.addHook('onClose', async () => {
+    clearInterval(purgeTimer);
     await runner.stop();
   });
 

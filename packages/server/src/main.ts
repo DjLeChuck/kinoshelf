@@ -5,6 +5,8 @@ import { buildApp } from './app.js';
 import { generateApiKey, hasApiKey, MIN_API_KEY_LENGTH, setApiKey } from './auth.js';
 import { openDatabase } from './database.js';
 
+const DEFAULT_RETENTION_DAYS = 90;
+
 const configDir = configDirectory(undefined, process.env);
 
 // `kinoshelf-server api-key create`: the key goes to stdout only, never through the logger, so
@@ -49,6 +51,8 @@ const app = await buildApp({
   database,
   env: process.env,
   logger: true,
+  // Finished jobs older than this are forgotten; 0 in config.yaml keeps everything.
+  retentionDays: config.retentionDays ?? DEFAULT_RETENTION_DAYS,
 });
 
 if (!hasApiKey(database)) {
