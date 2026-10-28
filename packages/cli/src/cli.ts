@@ -4,16 +4,19 @@ import Database from 'better-sqlite3';
 import { Command, CommanderError } from 'commander';
 import {
   analyze,
+  configDirectory,
+  DATABASE_FILE,
   discoverVideos,
   executePlan,
   GuessitParser,
   KinoshelfError,
+  loadConfig,
   SqliteJournal,
   undoLastBatch,
+  type Config,
   type MetadataProvider,
 } from '@kinoshelf/core';
 import { SqliteHttpCache, TmdbProvider, type HttpCache } from '@kinoshelf/provider-tmdb';
-import { configDirectory, DATABASE_FILE, loadConfig, type Config } from './config.js';
 import { CliError } from './errors.js';
 import {
   createTranslator,
@@ -251,8 +254,8 @@ export async function run(argv: readonly string[], deps: CliDeps): Promise<numbe
   try {
     config = await loadConfig(configDir);
   } catch (error) {
-    if (error instanceof CliError) {
-      deps.io.err(describeError(t, error));
+    if (error instanceof KinoshelfError) {
+      deps.io.err(describeError(t, error.info));
       return 1;
     }
     throw error;

@@ -3,6 +3,7 @@
  * the compiler rejects a code that is not listed here, so none can be forgotten or mistyped.
  */
 export const ERROR_CODES = [
+  'config.invalid',
   'destination.exists',
   'discover.not-found',
   'fs.error',

@@ -1,7 +1,6 @@
 /** Codes raised by the CLI itself, next to the core's own; both are translated here. */
 export const CLI_ERROR_CODES = [
   'config.destination-required',
-  'config.invalid',
   'config.invalid-value',
   'config.tmdb-key-missing',
 ] as const;

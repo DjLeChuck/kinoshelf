@@ -3,7 +3,7 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { parse } from 'yaml';
 import { z } from 'zod';
-import { CliError } from './errors.js';
+import { KinoshelfError } from '../errors.js';
 
 const configSchema = z.strictObject({
   tmdbApiKey: z.string().min(1).optional(),
@@ -52,7 +52,7 @@ export async function loadConfig(directory: string): Promise<Config> {
   try {
     raw = parse(text);
   } catch (error) {
-    throw new CliError('config.invalid', {
+    throw new KinoshelfError('config.invalid', {
       path,
       detail: error instanceof Error ? error.message : String(error),
     });
@@ -61,7 +61,7 @@ export async function loadConfig(directory: string): Promise<Config> {
   const result = configSchema.safeParse(raw ?? {});
   if (!result.success) {
     const issue = result.error.issues[0];
-    throw new CliError('config.invalid', {
+    throw new KinoshelfError('config.invalid', {
       path,
       detail: `${issue?.path.join('.') ?? ''} ${issue?.message ?? ''}`.trim(),
     });

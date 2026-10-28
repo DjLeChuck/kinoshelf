@@ -51,3 +51,4 @@ export {
   type AnalyzeOptions,
   type Classification,
 } from './pipeline/analyze.js';
+export { configDirectory, DATABASE_FILE, loadConfig, type Config } from './config/config.js';

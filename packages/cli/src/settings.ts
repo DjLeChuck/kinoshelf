@@ -6,7 +6,7 @@ import {
   type Profile,
   type TransferMode,
 } from '@kinoshelf/core';
-import type { Config } from './config.js';
+import type { Config } from '@kinoshelf/core';
 import { CliError } from './errors.js';
 import type { Locale } from './i18n/index.js';
 
