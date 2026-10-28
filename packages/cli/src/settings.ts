@@ -1,12 +1,12 @@
 import { dirname, resolve } from 'node:path';
 import {
-  loadBundledProfile,
-  loadProfileFile,
+  KinoshelfError,
+  loadProfile,
+  type Config,
   type DestinationRoots,
   type Profile,
   type TransferMode,
 } from '@kinoshelf/core';
-import type { Config } from '@kinoshelf/core';
 import { CliError } from './errors.js';
 import type { Locale } from './i18n/index.js';
 
@@ -46,13 +46,6 @@ function parseThreshold(value: string): number {
   return threshold;
 }
 
-/** A path (contains a separator or ends in .yaml) or the id of a bundled profile. */
-export function loadProfile(reference: string): Promise<Profile> {
-  return /[\\/]|\.ya?ml$/i.test(reference)
-    ? loadProfileFile(resolve(reference))
-    : loadBundledProfile(reference);
-}
-
 /**
  * Merges flags over the config file over defaults. `source` is the scanned path: a library
  * organized in place (destination = source) defaults to `move`, otherwise to `copy`.
@@ -70,7 +63,7 @@ export async function resolveSettings(
   const movie = options.destMovies ?? config.destinationMovies ?? shared;
   const series = options.destSeries ?? config.destinationSeries ?? shared;
   if (movie === undefined || series === undefined) {
-    throw new CliError('config.destination-required');
+    throw new KinoshelfError('config.destination-required');
   }
   const roots = { movie: resolve(movie), series: resolve(series) };
   const destinations: DestinationRoots = roots.movie === roots.series ? roots.movie : roots;

@@ -1,4 +1,5 @@
 import { readdir, readFile } from 'node:fs/promises';
+import { resolve } from 'node:path';
 import { parseDocument } from 'yaml';
 import { KinoshelfError } from '../errors.js';
 import type { Profile } from '../types/profile.js';
@@ -147,4 +148,11 @@ export async function loadBundledProfile(id: string): Promise<Profile> {
     }
     throw error;
   }
+}
+
+/** A path (contains a separator or ends in .yaml) or the id of a bundled profile. */
+export function loadProfile(reference: string): Promise<Profile> {
+  return /[\\/]|\.ya?ml$/i.test(reference)
+    ? loadProfileFile(resolve(reference))
+    : loadBundledProfile(reference);
 }

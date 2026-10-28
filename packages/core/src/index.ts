@@ -11,6 +11,7 @@ export { ERROR_CODES, type ErrorCode } from './error-codes.js';
 export { KinoshelfError } from './errors.js';
 export {
   listBundledProfiles,
+  loadProfile,
   loadBundledProfile,
   loadProfileFile,
   parseProfile,

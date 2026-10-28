@@ -80,7 +80,7 @@ function makeProvider(context: Context, language: string, cache: HttpCache): Met
   }
   const apiKey = (context.deps.env.TMDB_API_KEY ?? context.config.tmdbApiKey ?? '').trim();
   if (!apiKey) {
-    throw new CliError('config.tmdb-key-missing', {
+    throw new KinoshelfError('config.tmdb-key-missing', {
       path: join(context.configDir, 'config.yaml'),
     });
   }
@@ -288,7 +288,7 @@ export async function run(argv: readonly string[], deps: CliDeps): Promise<numbe
     }
     if (error instanceof CliError) {
       deps.io.err(describeError(t, error));
-      return error.code === 'config.invalid-value' ? 2 : 1;
+      return 2;
     }
     throw error;
   }

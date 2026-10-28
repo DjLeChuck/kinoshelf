@@ -3,7 +3,9 @@
  * the compiler rejects a code that is not listed here, so none can be forgotten or mistyped.
  */
 export const ERROR_CODES = [
+  'config.destination-required',
   'config.invalid',
+  'config.tmdb-key-missing',
   'destination.exists',
   'discover.not-found',
   'fs.error',
