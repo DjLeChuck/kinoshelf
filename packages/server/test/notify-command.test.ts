@@ -45,6 +45,7 @@ async function run(args: string[], config: Config) {
     env: {},
     out: (line) => out.push(line),
     err: (line) => err.push(line),
+    usage: 'USAGE TEXT',
   });
   return { code, out: out.join('\n'), err, json: () => JSON.parse(out.join('\n')) as unknown };
 }
@@ -205,7 +206,7 @@ describe('the command line', () => {
     const { config } = await servers();
     const result = await run(args, config);
     expect(result.code).toBe(2);
-    expect(result.err.join('\n')).toContain('Usage: kinoshelf-server notify test');
+    expect(result.err.join('\n')).toBe('USAGE TEXT');
     expect(result.out).toBe('');
   });
 

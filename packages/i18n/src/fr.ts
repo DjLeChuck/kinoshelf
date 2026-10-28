@@ -120,6 +120,12 @@ export const fr: Record<keyof typeof en, string> = {
   'notify.test.title': 'Test Kinoshelf',
   'notify.test.message': 'Ceci est une notification de test.',
 
+  'error.server.port-in-use':
+    'Le port {port} est déjà utilisé sur {host} : un autre serveur y écoute. Arrêtez-le, ou choisissez un autre port avec KINOSHELF_PORT.',
+  'error.server.port-denied':
+    'Écoute sur le port {port} de {host} refusée. Les ports inférieurs à 1024 demandent des privilèges : choisissez-en un plus élevé avec KINOSHELF_PORT.',
+  'server.help':
+    'Usage : kinoshelf-server [commande]\n\nSans commande, démarre le serveur (KINOSHELF_HOST, KINOSHELF_PORT, KINOSHELF_CONFIG_DIR).\n\nCommandes :\n  api-key create                 crée la clé API et l’affiche (elle remplace la précédente)\n  notify test                    vérifie les webhooks, Plex et Jellyfin de config.yaml\n  notify refresh <chemin> [--kind movie|series] [--dry-run]\n                                 demande à Plex et Jellyfin de regarder un dossier, tel que Kinoshelf le voit\n  --help                         affiche cette aide',
   'help.description': 'Identifie, renomme et enrichit des fichiers vidéo déjà sur disque.',
   'help.scan': 'Analyse une bibliothèque et indique ce qui changerait (n’écrit jamais).',
   'help.process': 'Identifie un fichier ou un dossier et le range (simulation sans --apply).',

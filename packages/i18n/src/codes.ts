@@ -10,3 +10,8 @@ export const CLI_ERROR_CODES = [
 ] as const;
 
 export type CliErrorCode = (typeof CLI_ERROR_CODES)[number];
+
+/** Codes the server binary raises on its own when it cannot start. */
+export const SERVER_ERROR_CODES = ['server.port-denied', 'server.port-in-use'] as const;
+
+export type ServerErrorCode = (typeof SERVER_ERROR_CODES)[number];

@@ -1,5 +1,5 @@
 import type { ErrorCode } from '@kinoshelf/core';
-import type { CliErrorCode } from './codes.js';
+import type { CliErrorCode, ServerErrorCode } from './codes.js';
 
 /**
  * English catalog and source of truth for the keys: `fr.ts` must have exactly the same ones.
@@ -120,6 +120,12 @@ export const en = {
   'notify.test.title': 'Kinoshelf test',
   'notify.test.message': 'This is a test notification.',
 
+  'error.server.port-in-use':
+    'Port {port} is already in use on {host}: another server is listening there. Stop it, or choose another port with KINOSHELF_PORT.',
+  'error.server.port-denied':
+    'Not allowed to listen on port {port} on {host}. Ports below 1024 need extra privileges: choose a higher one with KINOSHELF_PORT.',
+  'server.help':
+    'Usage: kinoshelf-server [command]\n\nWithout a command, starts the server (KINOSHELF_HOST, KINOSHELF_PORT, KINOSHELF_CONFIG_DIR).\n\nCommands:\n  api-key create                 create the API key and print it (it replaces the previous one)\n  notify test                    check the webhooks, Plex and Jellyfin set in config.yaml\n  notify refresh <path> [--kind movie|series] [--dry-run]\n                                 ask Plex and Jellyfin to look at a folder, as Kinoshelf sees it\n  --help                         show this help',
   'help.description': 'Identify, rename and enrich video files already on disk.',
   'help.scan': 'Analyze a library and report what would change (never writes).',
   'help.process': 'Identify a file or folder and organize it (dry run unless --apply).',
@@ -156,4 +162,7 @@ export const en = {
 } as const;
 
 /** Fails to compile when an error code has no `error.<code>` message. */
-export const errorMessagesAreComplete: Record<`error.${ErrorCode | CliErrorCode}`, string> = en;
+export const errorMessagesAreComplete: Record<
+  `error.${ErrorCode | CliErrorCode | ServerErrorCode}`,
+  string
+> = en;

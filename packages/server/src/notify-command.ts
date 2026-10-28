@@ -9,17 +9,11 @@ export interface NotifyCommandContext {
   readonly env: Readonly<Record<string, string | undefined>>;
   readonly out: (line: string) => void;
   readonly err: (line: string) => void;
+  /** Printed to `err` on a bad command line (translated by the caller). */
+  readonly usage: string;
   /** Replaced in tests. */
   readonly fetch?: typeof fetch;
 }
-
-const USAGE = [
-  'Usage: kinoshelf-server notify test',
-  '       kinoshelf-server notify refresh <path> [--kind movie|series] [--dry-run]',
-  '  test     reach every webhook, Plex and Jellyfin, and check their keys (changes nothing)',
-  '  refresh  ask Plex and Jellyfin to look at one folder, given as Kinoshelf sees it',
-  '  --dry-run  read as usual, but only print the refreshes that would be sent',
-].join('\n');
 
 /**
  * `kinoshelf-server notify …`: checks, from inside the container and with the real config.yaml
@@ -33,12 +27,12 @@ export async function runNotifyCommand(
 ): Promise<number> {
   const [command, ...rest] = args;
   if (command !== 'test' && command !== 'refresh') {
-    context.err(USAGE);
+    context.err(context.usage);
     return 2;
   }
   const parsed = command === 'refresh' ? parseRefresh(rest) : undefined;
   if (command === 'refresh' && !parsed) {
-    context.err(USAGE);
+    context.err(context.usage);
     return 2;
   }
 

@@ -43,6 +43,11 @@ export function describeError(
   return key in en ? t(key as MessageKey, info.params) : t('error.unknown', { code: info.code });
 }
 
-export { CLI_ERROR_CODES, type CliErrorCode } from './codes.js';
+export {
+  CLI_ERROR_CODES,
+  SERVER_ERROR_CODES,
+  type CliErrorCode,
+  type ServerErrorCode,
+} from './codes.js';
 export { en } from './en.js';
 export { fr } from './fr.js';
