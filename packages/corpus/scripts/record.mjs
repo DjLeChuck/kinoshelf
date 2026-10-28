@@ -1,4 +1,5 @@
-// Records the TMDB responses the corpus needs into data/recordings.json. Run with
+// Records the TMDB responses the corpus needs into data/recordings.json, trimmed to the fields
+// Kinoshelf reads (search results, alternative titles, seasons). Run with
 // `pnpm corpus:record` (needs TMDB_API_KEY in .env, and a build). It prints counts only,
 // never a URL: with a v3 key the URL carries the key.
 import { readFile, writeFile } from 'node:fs/promises';
@@ -28,26 +29,64 @@ const recording = async (input, init) => {
   const body = await response.text();
   if (response.status === 200 || response.status === 404) {
     let stored = body;
-    // Cast and crew lists make season responses huge and Kinoshelf never reads them.
+    // A season is trimmed to what Kinoshelf reads: episode numbers, names and air dates.
     if (/^\/3\/tv\/\d+\/season\/\d+$/.test(url.pathname) && response.status === 200) {
       const season = JSON.parse(body);
-      for (const episode of season.episodes ?? []) {
-        delete episode.crew;
-        delete episode.guest_stars;
-      }
-      stored = JSON.stringify(season);
+      stored = JSON.stringify({
+        season_number: season.season_number,
+        episodes: (season.episodes ?? []).map((e) => ({
+          season_number: e.season_number,
+          episode_number: e.episode_number,
+          name: e.name,
+          air_date: e.air_date,
+        })),
+      });
+    }
+    // Search results are 20 long records; keep only the fields Kinoshelf reads.
+    if (/^\/3\/search\/(movie|tv)$/.test(url.pathname) && response.status === 200) {
+      const keep = url.pathname.endsWith('movie')
+        ? ['id', 'title', 'original_title', 'release_date', 'poster_path', 'popularity']
+        : [
+            'id',
+            'name',
+            'original_name',
+            'first_air_date',
+            'origin_country',
+            'poster_path',
+            'popularity',
+          ];
+      const search = JSON.parse(body);
+      stored = JSON.stringify({
+        results: search.results.map((r) =>
+          Object.fromEntries(keep.filter((k) => k in r).map((k) => [k, r[k]])),
+        ),
+      });
+    }
+    // Alternative titles: only `title` is read (not the country or type of each).
+    if (
+      /^\/3\/(movie|tv)\/\d+\/alternative_titles$/.test(url.pathname) &&
+      response.status === 200
+    ) {
+      const alt = JSON.parse(body);
+      const field = 'titles' in alt ? 'titles' : 'results';
+      stored = JSON.stringify({ id: alt.id, [field]: alt[field].map((t) => ({ title: t.title })) });
     }
     recordings[keyOf(url)] = { status: response.status, body: stored };
   }
   return new Response(body, { status: response.status, headers: response.headers });
 };
 
-const provider = new TmdbProvider({ apiKey: key, fetch: recording, language: 'en-US' });
 const parser = new GuessitParser();
-const matcher = new Matcher(provider);
-
+const matchers = new Map();
 for (const entry of entries) {
-  await matcher.match(parser.parse(entry.path));
+  const language = entry.language ?? 'en-US';
+  if (!matchers.has(language)) {
+    matchers.set(
+      language,
+      new Matcher(new TmdbProvider({ apiKey: key, fetch: recording, language })),
+    );
+  }
+  await matchers.get(language).match(parser.parse(entry.path));
 }
 
 const sorted = Object.fromEntries(

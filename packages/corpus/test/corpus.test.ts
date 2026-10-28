@@ -12,13 +12,16 @@ beforeAll(async () => {
   entries = await loadEntries();
   const replay = replayFetch(await loadRecordings());
   missing = replay.missing;
-  const provider = new TmdbProvider({
-    apiKey: 'replay',
-    fetch: replay.fetch,
-    language: 'en-US',
-    sleep: () => Promise.resolve(),
-  });
-  results = await runCorpus(provider, entries);
+  results = await runCorpus(
+    (language) =>
+      new TmdbProvider({
+        apiKey: 'replay',
+        fetch: replay.fetch,
+        language,
+        sleep: () => Promise.resolve(),
+      }),
+    entries,
+  );
 });
 
 const describeResult = ({ entry, actual, candidates }: EntryResult): string =>

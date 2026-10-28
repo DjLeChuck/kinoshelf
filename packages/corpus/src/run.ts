@@ -1,5 +1,5 @@
 import { GuessitParser, Matcher, type MatchOutcome, type MetadataProvider } from '@kinoshelf/core';
-import type { CorpusEntry } from './entries.js';
+import { DEFAULT_LANGUAGE, type CorpusEntry } from './entries.js';
 
 /**
  * - `pass`: handled as expected.
@@ -48,15 +48,22 @@ function judge(entry: CorpusEntry, actual: Actual): Verdict {
   return right ? 'pass' : 'wrong-match';
 }
 
+/** `providerFor` gives the provider for a metadata language; each is built once. */
 export async function runCorpus(
-  provider: MetadataProvider,
+  providerFor: (language: string) => MetadataProvider,
   entries: readonly CorpusEntry[],
 ): Promise<EntryResult[]> {
   const parser = new GuessitParser();
-  const matcher = new Matcher(provider);
+  const matchers = new Map<string, Matcher>();
   const results: EntryResult[] = [];
 
   for (const entry of entries) {
+    const language = entry.language ?? DEFAULT_LANGUAGE;
+    let matcher = matchers.get(language);
+    if (!matcher) {
+      matcher = new Matcher(providerFor(language));
+      matchers.set(language, matcher);
+    }
     const parsed = parser.parse(entry.path);
     const outcome = await matcher.match(parsed);
     const scored =

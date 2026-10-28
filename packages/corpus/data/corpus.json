@@ -284,6 +284,2700 @@
     }
   },
   {
+    "path": "Pirates.Des.Caraibes.COLLECTION.(2003-2017).MULTI.VFF.2160p.4KLight.DV.BluRay.TrueHD.Atmos.7.1.H265-QTZ/Pirates of the Caribbean - At Worlds End (2007) Hybrid MULTi VFF 2160p 10bit 4KLight DOLBY VISION BluRay TrueHD Atmos 7.1 x265-QTZ.mkv",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 285,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Pirates.Des.Caraibes.COLLECTION.(2003-2017).MULTI.VFF.2160p.4KLight.DV.BluRay.TrueHD.Atmos.7.1.H265-QTZ/Pirates of the Caribbean - Dead Man's Chest (2006) Hybrid MULTi VFF 2160p 10bit 4KLight DOLBY VISION BluRay TrueHD Atmos 7.1 x265-QTZ.mkv",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 58,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Pirates.Des.Caraibes.COLLECTION.(2003-2017).MULTI.VFF.2160p.4KLight.DV.BluRay.TrueHD.Atmos.7.1.H265-QTZ/Pirates of the Caribbean - On Stranger Tides (2011) Hybrid MULTi VFF 2160p 10bit 4KLight DOLBY VISION BluRay TrueHD Atmos 7.1 x265-QTZ.mkv",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 1865,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Pirates.Des.Caraibes.COLLECTION.(2003-2017).MULTI.VFF.2160p.4KLight.DV.BluRay.TrueHD.Atmos.7.1.H265-QTZ/Pirates of the Caribbean The Curse of the Black Pearl (2003) Hybrid MULTi VFF 2160p 10bit 4KLight DOLBY VISION BluRay TrueHD Atmos 7.1 x265-QTZ.mkv",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 22,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Pirates.Des.Caraibes.COLLECTION.(2003-2017).MULTI.VFF.2160p.4KLight.DV.BluRay.TrueHD.Atmos.7.1.H265-QTZ/Pirates of the Caribbean - Dead Men Tell No Tales (2017) Hybrid MULTi VFF 2160p 10bit 4KLight DOLBY VISION BluRay TrueHD Atmos 7.1 x265-QTZ.mkv",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 166426,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Saison 2/Supernatural (2005) - S02E01 - In My Time of Dying - 2006-09-28 - Audio [FR+EN] - SubTitle [FR+EN] - Quality [WEBDL-1080p].mkv",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 1622,
+      "kind": "series",
+      "season": 2,
+      "episodes": [1]
+    }
+  },
+  {
+    "path": "Django (1966) MULTi VFI 2160p 10bit 4KLight DOLBY VISION BluRay AC3 1.0 x265-QTZ.mkv",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 10772,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "How.to.With.John.Wilson.S02.DOC.VOSTFR.1080p.WEB.H265-FW/How.to.With.John.Wilson.S02E03.DOC.VOSTFR.1080p.WEB.H265-FW.mkv",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 110971,
+      "kind": "series",
+      "season": 2,
+      "episodes": [3]
+    }
+  },
+  {
+    "path": "How.to.With.John.Wilson.S03.DOC.VOSTFR.1080p.WEB.H265-FW/How.to.With.John.Wilson.S03E01.DOC.VOSTFR.1080p.WEB.H265-FW.mkv",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 110971,
+      "kind": "series",
+      "season": 3,
+      "episodes": [1]
+    }
+  },
+  {
+    "path": "How.to.With.John.Wilson.S02.DOC.VOSTFR.1080p.WEB.H265-FW/How.to.With.John.Wilson.S02E06.FiNAL.DOC.VOSTFR.1080p.WEB.H265-FW.mkv",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 110971,
+      "kind": "series",
+      "season": 2,
+      "episodes": [6]
+    }
+  },
+  {
+    "path": "House.Of.The.Dragon.S03E06.MULTi.1080p.HMAX.WEB.SDR.H265-BYOR.mkv",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 94997,
+      "kind": "series",
+      "season": 3,
+      "episodes": [6]
+    }
+  },
+  {
+    "path": "Saison 09/Supernatural - S09E14 - 1080p.mkv",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 1622,
+      "kind": "series",
+      "season": 9,
+      "episodes": [14]
+    }
+  },
+  {
+    "path": "Saison 15/Supernatural - S15E01 - 1080p.mkv",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 1622,
+      "kind": "series",
+      "season": 15,
+      "episodes": [1]
+    }
+  },
+  {
+    "path": "Saison 09/Supernatural - S09E23 - Final - 1080p.mkv",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 1622,
+      "kind": "series",
+      "season": 9,
+      "episodes": [23]
+    }
+  },
+  {
+    "path": "Saison 15/Supernatural - S15E20 - Final - 1080p.mkv",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 1622,
+      "kind": "series",
+      "season": 15,
+      "episodes": [20]
+    }
+  },
+  {
+    "path": "Common.Side.Effects.S01.MULTi.1080p.WEBRiP.x265-KAF/Common.Side.Effects.S01E05.MULTi.1080p.WEBRiP.x265-KAF.mkv",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 228878,
+      "kind": "series",
+      "season": 1,
+      "episodes": [5]
+    }
+  },
+  {
+    "path": "Common.Side.Effects.S01.MULTi.1080p.WEBRiP.x265-KAF/Common.Side.Effects.S01E10.FiNAL.MULTi.1080p.WEBRiP.x265-KAF.mkv",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 228878,
+      "kind": "series",
+      "season": 1,
+      "episodes": [10]
+    }
+  },
+  {
+    "path": "Pluribus.S01.MULTi.VFF.1080p.WEBrip.EAC3.5.1.x265-TyHD/Pluribus.S01E05.MULTi.VFF.1080p.WEBrip.EAC3.5.1.x265-TyHD.mkv",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 225171,
+      "kind": "series",
+      "season": 1,
+      "episodes": [5]
+    }
+  },
+  {
+    "path": "Pluribus.S01.MULTi.VFF.1080p.WEBrip.EAC3.5.1.x265-TyHD/Pluribus.S01E09.FiNAL.MULTi.VFF.1080p.WEBrip.EAC3.5.1.x265-TyHD.mkv",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 225171,
+      "kind": "series",
+      "season": 1,
+      "episodes": [9]
+    }
+  },
+  {
+    "path": "A Knight of the Seven Kingdoms (2026)/A.Knight.of.the.Seven.Kingdoms.S01E04.MULTi.1080p.WEBRip.DS4K.DDP5.1.x265-Y4Y4.mkv",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 224372,
+      "kind": "series",
+      "season": 1,
+      "episodes": [4]
+    }
+  },
+  {
+    "path": "The.Equalizer.3.2023.REPACK.MULTi.VF2.1080p.HDLight.AC3.5.1.H264-LiHDL.mkv",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 926393,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Chicago.P.D.S11.MULTi.1080p.WEB.H265-FW/Chicago.P.D.S11E07.MULTi.1080p.WEB.H265-FW/Chicago.P.D.S11E07.MULTi.1080p.WEB.H265-FW.mkv",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 58841,
+      "kind": "series",
+      "season": 11,
+      "episodes": [7]
+    }
+  },
+  {
+    "path": "Chicago.P.D.S11.MULTi.1080p.WEB.H265-FW/Chicago.P.D.S11E13.FiNAL.MULTi.1080p.WEB.H265-FW/Chicago.P.D.S11E13.FiNAL.MULTi.1080p.WEB.H265-FW.mkv",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 58841,
+      "kind": "series",
+      "season": 11,
+      "episodes": [13]
+    }
+  },
+  {
+    "path": "Homefront.2013.MULTI.1080p.WEB.DDP2.0.H265-TyHD.mkv",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 204082,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Project.Hail.Mary.2026.MULTi.VF2.2160p.WEBRip.10.bits.DV.HDR10Plus.EAC3.5.1.x265.HEVC-Ash.mkv",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 687163,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Gordon.Ramsay.Hells.Kitchen.S15.FRENCH.1080p.HDTV.x264-COLL3CTiF/Gordon.Ramsay.Hells.Kitchen.S15E12.FRENCH.1080p.HDTV.x264-COLL3CTiF.mkv",
+    "note": "from a real library. Known gap: the file says \"Gordon Ramsay Hells Kitchen\" while TMDB calls the show \"Hell's Kitchen\"; a title alias or batch validation is planned",
+    "expect": {
+      "status": "matched",
+      "tmdb": 2370,
+      "kind": "series",
+      "season": 15,
+      "episodes": [12]
+    }
+  },
+  {
+    "path": "House.of.the.Dragon.S03E02.MULTi.1080p.WEB.H265-TyHD.mkv",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 94997,
+      "kind": "series",
+      "season": 3,
+      "episodes": [2]
+    }
+  },
+  {
+    "path": "Dune.Prophecy.S01.MULTi.1080p.WEB.H265-CHiLL/Dune.Prophecy.S01E03.MULTi.1080p.WEB.H265-CHiLL/Dune.Prophecy.S01E03.MULTi.1080p.WEB.H265-CHiLL.mkv",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 90228,
+      "kind": "series",
+      "season": 1,
+      "episodes": [3]
+    }
+  },
+  {
+    "path": "Dune.Prophecy.S01.MULTi.1080p.WEB.H265-CHiLL/Dune.Prophecy.S01E06.FiNAL.MULTi.1080p.WEB.H265-CHiLL/Dune.Prophecy.S01E06.FiNAL.MULTi.1080p.WEB.H265-CHiLL.mkv",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 90228,
+      "kind": "series",
+      "season": 1,
+      "episodes": [6]
+    }
+  },
+  {
+    "path": "Iron.Lung.2026.VOSTFR.1080p.WEBRip.AAC5.1.x264-YTS.mp4",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 1116201,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Babylon.Berlin.S02.MULTi.1080p.BluRay.x264-SODAPOP/Babylon.Berlin.S02E06.MULTi.1080p.BluRay.x264-SODAPOP/Babylon.Berlin.S02E06.MULTi.1080p.BluRay.x264-SODAPOP.mkv",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 66980,
+      "kind": "series",
+      "season": 2,
+      "episodes": [6]
+    }
+  },
+  {
+    "path": "Babylon.Berlin.S03.MULTi.1080p.BluRay.x264-SODAPOP/Babylon.Berlin.S03E01.MULTi.1080p.BluRay.x264-SODAPOP/Babylon.Berlin.S03E01.MULTi.1080p.BluRay.x264-SODAPOP.mkv",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 66980,
+      "kind": "series",
+      "season": 3,
+      "episodes": [1]
+    }
+  },
+  {
+    "path": "Babylon.Berlin.S02.MULTi.1080p.BluRay.x264-SODAPOP/Babylon.Berlin.S02E08.FiNAL.MULTi.1080p.BluRay.x264-SODAPOP/Babylon.Berlin.S02E08.FiNAL.MULTi.1080p.BluRay.x264-SODAPOP.mkv",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 66980,
+      "kind": "series",
+      "season": 2,
+      "episodes": [8]
+    }
+  },
+  {
+    "path": "Nightbitch.2024.MULTi.HDR.DV.2160p.WEB.H265-FW/Nightbitch.2024.MULTi.HDR.DV.2160p.WEB.H265-FW.mkv",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 728949,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Megan.is.Missing.2011.VOSTFR.1080p.BluRay.HDLight.AAC.x265-Ash.mkv",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 63197,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "The.Equalizer.2014.MULTi.VF2.1080p.HDLight.AC3.5.1.H264-LiHDL.mkv",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 156022,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Evil.2019.S04.MULTi.HDR.DV.2160p.WEB.H265-FW/Evil.2019.S04E10.MULTi.HDR.DV.2160p.WEB.H265-FW/Evil.2019.S04E10.MULTi.HDR.DV.2160p.WEB.H265-FW.mkv",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 86848,
+      "kind": "series",
+      "season": 4,
+      "episodes": [10]
+    }
+  },
+  {
+    "path": "Evil.2019.S04.MULTi.HDR.DV.2160p.WEB.H265-FW/Evil.2019.S04E14.FiNAL.MULTi.HDR.DV.2160p.WEB.H265-FW/Evil.2019.S04E14.FiNAL.MULTi.HDR.DV.2160p.WEB.H265-FW.mkv",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 86848,
+      "kind": "series",
+      "season": 4,
+      "episodes": [14]
+    }
+  },
+  {
+    "path": "Evil.2019.S04.MULTi.HDR.DV.2160p.WEB.H265-FW/Evil.2019.S04E04.PROPER.MULTi.HDR.DV.2160p.WEB.H265-FW/Evil.2019.S04E04.PROPER.MULTi.HDR.DV.2160p.WEB.H265-FW.mkv",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 86848,
+      "kind": "series",
+      "season": 4,
+      "episodes": [4]
+    }
+  },
+  {
+    "path": "Babylon.Berlin.S04.MULTi.1080p.BluRay.x264-SODAPOP/Babylon.Berlin.S04E12.FiNAL.MULTi.1080p.BluRay.x264-SODAPOP/babylon.berlin.s04e12.multi.1080p.bluray.x264-sodapop.mkv",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 66980,
+      "kind": "series",
+      "season": 4,
+      "episodes": [12]
+    }
+  },
+  {
+    "path": "Chicago.PD.S12.MULTi.1080p.WEB.H265-TyHD/Chicago.PD.S12E11.MULTi.1080p.WEB.H265-TyHD.mkv",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 58841,
+      "kind": "series",
+      "season": 12,
+      "episodes": [11]
+    }
+  },
+  {
+    "path": "Chicago.PD.S12.MULTi.1080p.WEB.H265-TyHD/Chicago.PD.S12E22.FiNAL.MULTi.1080p.WEB.H265-TyHD.mkv",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 58841,
+      "kind": "series",
+      "season": 12,
+      "episodes": [22]
+    }
+  },
+  {
+    "path": "House.of.the.Dragon.S03E03.MULTi.1080p.WEB.H265-SUPPLY/House.of.the.Dragon.S03E03.MULTi.1080p.WEB.H265-SUPPLY.mkv",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 94997,
+      "kind": "series",
+      "season": 3,
+      "episodes": [3]
+    }
+  },
+  {
+    "path": "Dune.Part.Two.2024.MULTI.VFF.1080p.10bit.WEBRip.6CH.x265.HEVC-SERQPH.mkv",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 693134,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "The.Equalizer.2.2018.MULTi.VF2.1080p.HDLight.AC3.5.1.H264-LiHDL.mkv",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 345887,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Babylon.Berlin.S04.MULTi.1080p.BluRay.x264-SODAPOP/Babylon.Berlin.S04E06.MULTi.1080p.BluRay.x264-SODAPOP/babylon.berlin.s04e06.multi.1080p.bluray.x264-sodapop.mkv",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 66980,
+      "kind": "series",
+      "season": 4,
+      "episodes": [6]
+    }
+  },
+  {
+    "path": "Chicago.PD.S13.FASTSUB.VOSTFR.1080p.WEBRip.HEVC-ShC23/Chicago.PD.S13E11.FASTSUB.VOSTFR.1080p.WEBRip.HEVC-ShC23.mkv",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 58841,
+      "kind": "series",
+      "season": 13,
+      "episodes": [11]
+    }
+  },
+  {
+    "path": "3.Body.Problem.S01.MULTi.VFF.1080p.WEBrip.EAC3.5.1.x265-TyHD/3.Body.Problem.S01E05.MULTi.VFF.1080p.WEBrip.EAC3.5.1.x265-TyHD.mkv",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 108545,
+      "kind": "series",
+      "season": 1,
+      "episodes": [5]
+    }
+  },
+  {
+    "path": "Dune [FR-EN] (2021).mkv",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 438631,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Nightbitch.2024.MULTI.1080p.WEB.H265-TyHD.mkv",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 728949,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Hells.Kitchen.S21.FRENCH.1080p.WEB.H264-TFA/Hells.Kitchen.S21E08.FRENCH.1080p.WEB.H264-TFA/Hells.Kitchen.S21E08.FRENCH.1080p.WEB.H264-TFA.mkv",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 2370,
+      "kind": "series",
+      "season": 21,
+      "episodes": [8]
+    }
+  },
+  {
+    "path": "Hells.Kitchen.S21.FRENCH.1080p.WEB.H264-TFA/Hells.Kitchen.S21E16.FiNAL.FRENCH.1080p.WEB.H264-TFA/Hells.Kitchen.S21E16.FiNAL.FRENCH.1080p.WEB.H264-TFA.mkv",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 2370,
+      "kind": "series",
+      "season": 21,
+      "episodes": [16]
+    }
+  },
+  {
+    "path": "S.W.A.T.2017.S06.MULTi.1080p.WEB.x264-FW/S.W.A.T.2017.S06E11.MULTi.1080p.WEB.x264-FW.mkv",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 71790,
+      "kind": "series",
+      "season": 6,
+      "episodes": [11]
+    }
+  },
+  {
+    "path": "S.W.A.T.2017.S06.MULTi.1080p.WEB.x264-FW/S.W.A.T.2017.S06E22.FiNAL.MULTi.1080p.WEB.x264-FW.mkv",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 71790,
+      "kind": "series",
+      "season": 6,
+      "episodes": [22]
+    }
+  },
+  {
+    "path": "House.Of.The.Dragon.S03E08.FiNAL.MULTi.1080p.HMAX.WEB.SDR.H265-BYOR.mkv",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 94997,
+      "kind": "series",
+      "season": 3,
+      "episodes": [8]
+    }
+  },
+  {
+    "path": "Scavengers.Reign.S01.VOSTFR.FANSUB.1080p.WEB.h264-VaCa7/Scavengers.Reign.S01E06.VOSTFR.FANSUB.1080p.WEB.h264-VaCa7.mkv",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 204154,
+      "kind": "series",
+      "season": 1,
+      "episodes": [6]
+    }
+  },
+  {
+    "path": "Scavengers.Reign.S01.VOSTFR.FANSUB.1080p.WEB.h264-VaCa7/Scavengers.Reign.S01E12.FiNAL.VOSTFR.FANSUB.1080p.WEB.h264-VaCa7.mkv",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 204154,
+      "kind": "series",
+      "season": 1,
+      "episodes": [12]
+    }
+  },
+  {
+    "path": "Operation.Condor.1991.MULTI.VFF.1080p.WEBRIP.AC3.2.0.X264-MINI.mkv",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 10975,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Sambre (2023)/Saison 01/Sambre.S01E04.FRENCH.1080p.WEB-DL.AAC2.0.H264-FRATERNiTY.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 212609,
+      "kind": "series",
+      "season": 1,
+      "episodes": [4]
+    }
+  },
+  {
+    "path": "The Bridge (2011)/Saison 02/The.Bridge.2011.S02E10.FiNAL.MULTi.1080p.HDTV.x264-HYBRiS.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 45016,
+      "kind": "series",
+      "season": 2,
+      "episodes": [10]
+    }
+  },
+  {
+    "path": "New Girl (2011)/Saison 04/New Girl - S04E01 - Le dernier mariage.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 1420,
+      "kind": "series",
+      "season": 4,
+      "episodes": [1]
+    }
+  },
+  {
+    "path": "The Night Of (2016)/Saison 01/The.Night.Of.S01e05.mp4",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 66276,
+      "kind": "series",
+      "season": 1,
+      "episodes": [5]
+    }
+  },
+  {
+    "path": "How I Met Your Mother (2005)/Saison 05/How I Met Your Mother - S05E15 - Lapin ou canard.avi",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 1100,
+      "kind": "series",
+      "season": 5,
+      "episodes": [15]
+    }
+  },
+  {
+    "path": "Barry (2018)/Saison 03/Barry.S03E01.MULTI.1080p.WEB.H265-TyHD.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 73107,
+      "kind": "series",
+      "season": 3,
+      "episodes": [1]
+    }
+  },
+  {
+    "path": "Bref. (2011)/Saison 02/Bref.2-S02E03.PROPER.FRENCH.1080p.WEB.H264-FW.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 60715,
+      "kind": "series",
+      "season": 2,
+      "episodes": [3]
+    }
+  },
+  {
+    "path": "Vigil (2021)/Saison 02/Vigil.S02E01.MULTi.AD.1080p.WEB.x264-BTT.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 126167,
+      "kind": "series",
+      "season": 2,
+      "episodes": [1]
+    }
+  },
+  {
+    "path": "The Deuce (2017)/Saison 02/The Deuce - S02E05 - All You'll Be Eating is Cannibals.mp4",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 65817,
+      "kind": "series",
+      "season": 2,
+      "episodes": [5]
+    }
+  },
+  {
+    "path": "Only Murders in the Building/Saison 03/Only.Murders.in.the.Building.S03E06.MULTI.1080p.WEBRip.x265-Elcrackito.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 107113,
+      "kind": "series",
+      "season": 3,
+      "episodes": [6]
+    }
+  },
+  {
+    "path": "The Pitt (2025)/Saison 02/The.Pitt.S02E01.MULTi.1080p.WEB.H265-FW.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 250307,
+      "kind": "series",
+      "season": 2,
+      "episodes": [1]
+    }
+  },
+  {
+    "path": "Band of Brothers - l'enfer du Pacifique (2010)/The.Pacific.S01E06.MULTi.1080p.WEB.DDP.x264-THESYNDiCATE.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 16997,
+      "kind": "series",
+      "season": 1,
+      "episodes": [6]
+    }
+  },
+  {
+    "path": "Il était deux fois (2026)/Saison 01/Il.Etait.Deux.Fois.S01E04.FRENCH.1080p.HMAX.WEB.SDR.x265-BYOR.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 279307,
+      "kind": "series",
+      "season": 1,
+      "episodes": [4]
+    }
+  },
+  {
+    "path": "1883 (2021)/Saison 01/1883 - S01E06 - Boring the Devil.mp4",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 118357,
+      "kind": "series",
+      "season": 1,
+      "episodes": [6]
+    }
+  },
+  {
+    "path": "Ted Lasso (2020)/Saison 02/Ted Lasso - S02E08 - Man City.mp4",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 97546,
+      "kind": "series",
+      "season": 2,
+      "episodes": [8]
+    }
+  },
+  {
+    "path": "House of the Dragon (2022)/Saison 02/House.Of.The.Dragon.S02E04.MULTi.1080p.WEBRiP.x265-KAF.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 94997,
+      "kind": "series",
+      "season": 2,
+      "episodes": [4]
+    }
+  },
+  {
+    "path": "Modern Family (2009)/Saison 06/Modern Family - S06E07 - Queer Eyes, Full Hearts.mp4",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 1421,
+      "kind": "series",
+      "season": 6,
+      "episodes": [7]
+    }
+  },
+  {
+    "path": "Cold Case (2003)/Saison 04/Cold Case - S04E10 - Partenaires.avi",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 2171,
+      "kind": "series",
+      "season": 4,
+      "episodes": [10]
+    }
+  },
+  {
+    "path": "Monarch Legacy of Monsters (2023)/Saison 02/Monarch.Legacy.of.Monsters.S02E01.MULTi.1080p.WEBrip.10.bits.EAC3.5.1.x265-TyHD.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 202411,
+      "kind": "series",
+      "season": 2,
+      "episodes": [1]
+    }
+  },
+  {
+    "path": "Saison 04/Slow.Horses.S04E01.MULTi.1080p.WEB.H265-FW/Slow.Horses.S04E01.MULTi.1080p.WEB.H265-FW.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 95480,
+      "kind": "series",
+      "season": 4,
+      "episodes": [1]
+    }
+  },
+  {
+    "path": "For All Mankind (2019)/Saison 03/For All Mankind - S03E04 - La Vallée du bonheur.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 87917,
+      "kind": "series",
+      "season": 3,
+      "episodes": [4]
+    }
+  },
+  {
+    "path": "1923 (2022)/Saison 02/1923 S02E01 720p x264-FENiX[EZTVx.to].mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 157744,
+      "kind": "series",
+      "season": 2,
+      "episodes": [1]
+    }
+  },
+  {
+    "path": "Dexter New Blood (2021)/Saison 01/Dexter New Blood - S01E06 - Too Many Tuna Sandwiches.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 131927,
+      "kind": "series",
+      "season": 1,
+      "episodes": [6]
+    }
+  },
+  {
+    "path": "Friends (1994)/Saison 05/Friends - S05E18 - Celui où Rachel fume.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 1668,
+      "kind": "series",
+      "season": 5,
+      "episodes": [18]
+    }
+  },
+  {
+    "path": "Yellowstone (2018)/Saison 02/Yellowstone.2018.S02E01.A.Thundering.720p.AMZN.WEB-DL.DDP2.0.H.264-NTb[eztv].mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 73586,
+      "kind": "series",
+      "season": 2,
+      "episodes": [1]
+    }
+  },
+  {
+    "path": "The Shield (2002)/Saison 01/The Shield - S01E07 - Le gang de la vengeance.mp4",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 1414,
+      "kind": "series",
+      "season": 1,
+      "episodes": [7]
+    }
+  },
+  {
+    "path": "Breaking Bad (2008)/Saison 03/Breaking Bad - S03E12 - Demi-Mesures.avi",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 1396,
+      "kind": "series",
+      "season": 3,
+      "episodes": [12]
+    }
+  },
+  {
+    "path": "A Knight of the Seven Kingdoms (2026)/Saison 01/A.Knight.of.the.Seven.Kingdoms.S01E04.MULTi.1080p.WEB.H265-TFA.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 224372,
+      "kind": "series",
+      "season": 1,
+      "episodes": [4]
+    }
+  },
+  {
+    "path": "Widow's Bay (2026)/Saison 01/Widows.Bay.S01E06.MULTi.1080p.WEB.H265-GL0P.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 270476,
+      "kind": "series",
+      "season": 1,
+      "episodes": [6]
+    }
+  },
+  {
+    "path": "Camp Kikiwaka (2015)/Saison 03/Camp Kikiwaka S03E03 Inspection.H264.WEB-DL.1080P.RsTeam.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 62875,
+      "kind": "series",
+      "season": 3,
+      "episodes": [3]
+    }
+  },
+  {
+    "path": "Task (2025)/Saison 01/Task.S01E04.MULTi.VFF.1080p.WEBrip.EAC3.5.1.x265-TyHD.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 228305,
+      "kind": "series",
+      "season": 1,
+      "episodes": [4]
+    }
+  },
+  {
+    "path": "Fondation (2021)/Saison 02/Foundation.S02E06.MULTi.VFF.1080p.WEBrip.EAC3.5.1.x265-TyHD.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 93740,
+      "kind": "series",
+      "season": 2,
+      "episodes": [6]
+    }
+  },
+  {
+    "path": "Scrubs (2001)/Saison 04/Scrubs - S04E23 - My Faith in Humanity.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 4556,
+      "kind": "series",
+      "season": 4,
+      "episodes": [23]
+    }
+  },
+  {
+    "path": "Paradise (2025)/Saison 01/Paradise.2025.S01E05.MULTi.1080p.HULU.WEBRiP.AAC5.1.x265-R3MiX.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 245927,
+      "kind": "series",
+      "season": 1,
+      "episodes": [5]
+    }
+  },
+  {
+    "path": "His Dark Materials (2019)/Saison 02/His.Dark.Materials.2019.S02E04.MULTi.1080p.WEBRip.10bits.x265.DDP5.1-Jarod.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 68507,
+      "kind": "series",
+      "season": 2,
+      "episodes": [4]
+    }
+  },
+  {
+    "path": "Platonic (2023)/Saison 02/Platonic.2023.S02E01.MULTi.1080p.WEB.H265-FW.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 112211,
+      "kind": "series",
+      "season": 2,
+      "episodes": [1]
+    }
+  },
+  {
+    "path": "Ça - Bienvenue à Derry (2025)/Saison 01/IT.Welcome.to.Derry.S01E05.MULTi.1080p.MAX.WEB-DL.x265-TyHD.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 200875,
+      "kind": "series",
+      "season": 1,
+      "episodes": [5]
+    }
+  },
+  {
+    "path": "The Leftovers (2014)/Saison 02/The Leftovers - S02E05 - Pas de place pour eux dans l’hôtellerie.mp4",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 54344,
+      "kind": "series",
+      "season": 2,
+      "episodes": [5]
+    }
+  },
+  {
+    "path": "The Last of Us/Season 01/The.Last.Of.Us.S01E09.1080p.BluRay.10Bit.AC-3.TrueHD7.1.Atmos.H265-d3g[eztv.re].mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 100088,
+      "kind": "series",
+      "season": 1,
+      "episodes": [9]
+    }
+  },
+  {
+    "path": "The Last Frontier (2025)/The Last Frontier - S01E06 - The Devil Wears a Suit and Tie 2160p.DV.HDR.x265-Amen.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 221079,
+      "kind": "series",
+      "season": 1,
+      "episodes": [6]
+    }
+  },
+  {
+    "path": "Death's Game (2023)/Saison 01/Deaths.Game.S01E05.1080p.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 218230,
+      "kind": "series",
+      "season": 1,
+      "episodes": [5]
+    }
+  },
+  {
+    "path": "Entourage (2004)/Saison 04/Entourage.S04E03.1080p.MULTi.WEB-DL.AvALoN.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 1940,
+      "kind": "series",
+      "season": 4,
+      "episodes": [3]
+    }
+  },
+  {
+    "path": "Mare of Easttown (2021)/Saison 01/Mare of Easttown - S01E04 - Mare Of Easttown ION265 eztv re.mp4",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 115004,
+      "kind": "series",
+      "season": 1,
+      "episodes": [4]
+    }
+  },
+  {
+    "path": "Dutton Ranch (2026)/Saison 01/Dutton.Ranch.S01E05.FRENCH.1080p.WEB.AAC.2.0.H264-MTLQC.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 299167,
+      "kind": "series",
+      "season": 1,
+      "episodes": [5]
+    }
+  },
+  {
+    "path": "Scrubs (2026)/Saison 01/Scrubs.2026.S01E05.MULTI.VFF.1080p.WEBRip.10bits.EAC3.5.1.x265-KTH.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 295778,
+      "kind": "series",
+      "season": 1,
+      "episodes": [5]
+    }
+  },
+  {
+    "path": "Succession (2018)/Saison 02/Succession.S02E10.MULTi.1080p.HMAX.WEB.H265-TyHD.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 76331,
+      "kind": "series",
+      "season": 2,
+      "episodes": [10]
+    }
+  },
+  {
+    "path": "Firefly (2002)/Saison 01/Firefly - S01E06 - Le Duel.avi",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 1437,
+      "kind": "series",
+      "season": 1,
+      "episodes": [6]
+    }
+  },
+  {
+    "path": "Sons of Anarchy (2008)/Saison 04/Sons.of.Anarchy.S04E08.MULTi.1080p.WEB.H265-CHiLL.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 1409,
+      "kind": "series",
+      "season": 4,
+      "episodes": [8]
+    }
+  },
+  {
+    "path": "Dexter (2006)/Saison 04/Dexter - S04E01 - Morphée contre Trinité.avi",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 1405,
+      "kind": "series",
+      "season": 4,
+      "episodes": [1]
+    }
+  },
+  {
+    "path": "The Wire (2002)/Saison 03/The Wire - S03E06 - Retour à la maison.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 1438,
+      "kind": "series",
+      "season": 3,
+      "episodes": [6]
+    }
+  },
+  {
+    "path": "Shogun (2024)/Saison 01/Shogun.2024.S01E06.MULTi.1080p.WEB.H265-FW.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 126308,
+      "kind": "series",
+      "season": 1,
+      "episodes": [6]
+    }
+  },
+  {
+    "path": "House of Cards (2013)/Saison 02/House of Cards S02E11 - Chapitre 24  Relations tendues.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 1425,
+      "kind": "series",
+      "season": 2,
+      "episodes": [11]
+    }
+  },
+  {
+    "path": "Mr. Robot (2015)/Saison 03/Mr. Robot - S03E01 - eps3.0_power-saver-mode.h.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 62560,
+      "kind": "series",
+      "season": 3,
+      "episodes": [1]
+    }
+  },
+  {
+    "path": "The Sopranos (1999)/Saison 04/The Sopranos - S04E05 - Pie O My.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 1398,
+      "kind": "series",
+      "season": 4,
+      "episodes": [5]
+    }
+  },
+  {
+    "path": "Silo (2023)/Saison 02/Silo.S02E06.MULTI.VFF.WiTH.AD.1080p.WEBRip.EAC3.5.1.x264-MULTiViSiON.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 125988,
+      "kind": "series",
+      "season": 2,
+      "episodes": [6]
+    }
+  },
+  {
+    "path": "À l'aube de l'Amérique (2025)/Saison 01/American.Primeval.S01E04.MULTi.1080p.WEB.AV1-TyHD.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 215866,
+      "kind": "series",
+      "season": 1,
+      "episodes": [4]
+    }
+  },
+  {
+    "path": "Pluribus (2025)/Saison 01/Pluribus.S01E05.MULTi.1080p.WEB.H265-TFA.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 225171,
+      "kind": "series",
+      "season": 1,
+      "episodes": [5]
+    }
+  },
+  {
+    "path": "Chernobyl (2019)/Saison 01/Chernobyl.S01E03.REPACK.MULTi.1080p.10bit.WEBRip.x265-NSP.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 87108,
+      "kind": "series",
+      "season": 1,
+      "episodes": [3]
+    }
+  },
+  {
+    "path": "It's a Sin (2021)/Saison 01/It.s.a.Sin.S01E03.MULTi.AD.1080p.WEB.H264-THESYNDiCATE.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 116174,
+      "kind": "series",
+      "season": 1,
+      "episodes": [3]
+    }
+  },
+  {
+    "path": "Black Mirror (2011)/Saison 04/Black Mirror - S04E05 - Metalhead.mp4",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 42009,
+      "kind": "series",
+      "season": 4,
+      "episodes": [5]
+    }
+  },
+  {
+    "path": "Jessie (2011)/Saison 02/Jessie.S02E23.Joyeux.anniversaire.Bertrand.mp4",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 38974,
+      "kind": "series",
+      "season": 2,
+      "episodes": [23]
+    }
+  },
+  {
+    "path": "Constellation (2024)/Saison 01/Constellation S01E03 Somewhere in Space Hangs My Heart 1080p WEBRip 10Bit DDP5 1 Atmos HEVC-d3g[EZTVx.to].mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 197125,
+      "kind": "series",
+      "season": 1,
+      "episodes": [3]
+    }
+  },
+  {
+    "path": "True Detective (2014)/Saison 02/True Detective - S02E08 - Omega Station.mp4",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 46648,
+      "kind": "series",
+      "season": 2,
+      "episodes": [8]
+    }
+  },
+  {
+    "path": "Le Trône de fer (2011)/Saison 04/Game Of Thrones S04E07 MULTi [1080p] Bluray x264-PopHD.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 1399,
+      "kind": "series",
+      "season": 4,
+      "episodes": [7]
+    }
+  },
+  {
+    "path": "Vicious (2013)/Saison 02/Vicious (2013) - S02E01 - Sister (1080p AMZN WEB-DL x265 Ghost).mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 47039,
+      "kind": "series",
+      "season": 2,
+      "episodes": [1]
+    }
+  },
+  {
+    "path": "Lego Nexo Knights/Saison 02/Lego.Nexo.Knights.S02E10.Un royaume de héros.FRENCH.720p.WEB-DL.x264-TDPG.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 65858,
+      "kind": "series",
+      "season": 2,
+      "episodes": [10]
+    }
+  },
+  {
+    "path": "Lego Ninjago/Saison 09/Lego.Ninjago.Masters.Of.Spinjitzu.S09E10.FiNAL.FRENCH.720p.HDTV.x264-D4KiD.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 38693,
+      "kind": "series",
+      "season": 9,
+      "episodes": [10]
+    }
+  },
+  {
+    "path": "Il était une fois... l'Homme/Il était une fois... l'Homme - S01E14 - L'homme de Quattrocento.avi",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 6080,
+      "kind": "series",
+      "season": 1,
+      "episodes": [14]
+    }
+  },
+  {
+    "path": "Il était une fois... La vie/Il etait une fois... la vie - S01E14 - La.Bouche.et.les dents.avi",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 2632,
+      "kind": "series",
+      "season": 1,
+      "episodes": [14]
+    }
+  },
+  {
+    "path": "Grizzy et les lemmings/Saison 01/Grizzy et les lemmings - S01E41 - Kung Fu Lemmings.mp4",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 74415,
+      "kind": "series",
+      "season": 1,
+      "episodes": [41]
+    }
+  },
+  {
+    "path": "Franklin/Franklin - S06E14 - Franklin se montre prudent.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 1458,
+      "kind": "series",
+      "season": 6,
+      "episodes": [14]
+    }
+  },
+  {
+    "path": "Les Mysterieuses Cités d'or/Les Mystérieuses Cités d'Or - S01E20.avi",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 11285,
+      "kind": "series",
+      "season": 1,
+      "episodes": [20]
+    }
+  },
+  {
+    "path": "Ulysse.31.S01.FRENCH.1080p.WEBRiP.DDP2.0.x265-R3MiX/Ulysse.31.S01E14.FRENCH.1080p.WEBRiP.DDP2.0.x265-R3MiX.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 4025,
+      "kind": "series",
+      "season": 1,
+      "episodes": [14]
+    }
+  },
+  {
+    "path": "Tom Sawyer/Tom Sawyer S01E38.avi",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 43513,
+      "kind": "series",
+      "season": 1,
+      "episodes": [38]
+    }
+  },
+  {
+    "path": "Casino Royale - Uncut (2006)/Casino Royale - Uncut (2006) 1080p AC3.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 36557,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Cars  - Quatre roues (2006)/Cars  - Quatre roues (2006) 1080p AC3.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 920,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "L'Âge de glace 3 - Le Temps des dinosaures (2009)/L'Âge de glace 3 - Le Temps des dinosaures (2009) 1080p AAC.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 8355,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Tous à l’ouest - Une aventure de Lucky Luke (2007)/Tous à l’ouest - Une aventure de Lucky Luke (2007) 360p MP3.avi",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 34655,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Epic  - La bataille du royaume secret (2013)/Epic  - La bataille du royaume secret (2013) 540p AAC.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 116711,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Avengers - Endgame (2019)/Avengers - Endgame (2019) 1080p AC3.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 299534,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Blade Runner 2049 - Special Edition (2017)/Blade Runner 2049 - Special Edition (2017) 1080p AC3.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 335984,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "L'Âge de glace 4 - La Dérive des continents (2012)/L'Âge de glace 4 - La Dérive des continents (2012) 1080p AAC.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 57800,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Le Parfum - Histoire d'un meurtrier (2006)/Le Parfum - Histoire d'un meurtrier (2006) 360p MP3.avi",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 1427,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "La Princesse et la grenouille (2009)/La Princesse Et La Grenouille - Multi - 1080p mHDgz.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 10198,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "La Belle et la Bête 2 - Le Noël enchanté (1997)/La Belle et la Bête 2 - Le Noël enchanté (1997) 1080p AC3.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 13313,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Harry Potter et les Reliques de la mort  - 1ère partie (2010)/Harry Potter et les Reliques de la mort  - 1ère partie (2010) 1080p AC3.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 12444,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Millénium 2 - La Fille qui rêvait d'un bidon d'essence et d'une allumette (2009)/Millénium 2 - La Fille qui rêvait d'un bidon d'essence et d'une allumette (2009) 360p MP3.avi",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 24253,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Following - le suiveur (1999)/Following - le suiveur (1999) 720p AC3.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 11660,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Sinbad - La légende des sept mers (2003)/Sinbad - La légende des sept mers (2003) 360p MP3.avi",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 14411,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Pocahontas II - Un monde nouveau (1998)/Pocahontas II - Un monde nouveau (1998) 1080p AC3.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 13761,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Grinch (2018)/Le Grinch (2018) MULTi VFF 1080p 10bit HDLight BluRay x265 HE-AAC 5.1 - QTZ (The Grinch).mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 360920,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Le Seigneur des anneaux - La Communauté de l'anneau (2001)/Le Seigneur des anneaux - la communauté de l'anneau.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 120,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Tenet (2020)/Tenet (2020) - TF Multi 1080 HDL.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 577922,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Le Seigneur des anneaux - Les Deux Tours (2002)/Le Seigneur des anneaux - Les Deux Tours (2002) 480p AC3.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 121,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "X-Men Origins - Wolverine (2009)/X-Men Origins - Wolverine (2009) 1080p AC3.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 2080,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Pollux - Le Manège enchanté (2005)/Pollux - Le Manège enchanté (2005) 360p MP3.avi",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 16455,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Shrek 4 (2010)/Shrek 4 (2010).1080p.Eng.Fra.Multisub.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 10192,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Moi, moche et méchant 3 (2017)/Moi, moche et méchant 3 (2017) 1080p AAC.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 324852,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Alvin et les Chipmunks 3 (2011)/Alvin et les Chipmunks 3 (2011) 1080p AC3.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 55301,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Jurassic Park III (2001)/Jurassic Park III (2001) 1080p AC3.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 331,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Le Roi lion 2 - L'Honneur de la tribu (1998)/Le Roi lion 2 - L'Honneur de la tribu (1998) 1080p AC3.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 9732,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Spider-Man 2 (2004)/Spider-Man 2 (2004) 720p AC3.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 558,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Babysitting 2 (2015)/Babysitting 2 (2015) 480p MP3.avi",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 331836,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Lilo & Stitch 2  - Hawaï, nous avons un problème ! (2005)/Lilo & Stitch 2  - Hawaï, nous avons un problème ! (2005) 1080p AC3.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 20760,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Insaisissable 2 (2016)/Insaisissables 2 (2016) EXTENDED MULTi VF2-EN AC3 1080p HDLight x264.U-A (Now You See Me 2).mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 291805,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Hôtel Transylvanie 3 - Des vacances monstrueuses (2018)/Hôtel Transylvanie 3 - Des vacances monstrueuses (2018) 1080p AC3.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 400155,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Iron Man 2 (2010)/Iron Man 2 (2010) 1080p AC3.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 10138,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Hôtel Transylvanie 2 (2015)/Hôtel Transylvanie 2 (2015) 1080p AC3.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 159824,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Le vent se lève (2013)/Le vent se lève (2013) 1080p AC3.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 149870,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Astérix et Cléopâtre (1968)/Astérix et Cléopâtre (1968) 1080p DTS.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 9929,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Frère des ours (2003)/Frère des ours (2003) 1080p AC3.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 10009,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Volt, star malgré lui (2008)/Volt, star malgré lui (2008) 1080p AC3.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 13053,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Ocean's Thirteen (2007)/Ocean's Thirteen (2007) 720p AC3.avi",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 298,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Merlin l'enchanteur (1963)/Merlin l'enchanteur (1963) 1080p AC3.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 9078,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Frère des ours 2 (2006)/Frère des ours 2 (2006) 1080p AC3.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 10010,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Astérix - Le Domaine des dieux (2014)/Astérix - Le Domaine des dieux (2014) 1080p AC3.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 170522,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Le Seigneur des anneaux : Le Retour du roi (2003)/The.Lord.of.the.Rings.The.Return.of.the.King.2003.EXTENDED.MULTI.VFF.1080p.BluRay.AAC.5.1.x265-FERVEX (Le Seigneur des Anneaux : Le Retour du Roi).mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 122,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Un monstre à Paris (2011)/Un monstre à Paris (2011) 1080p AC3.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 77459,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Harry Potter et l'Ordre du Phénix (2007)/Harry Potter et l'Ordre du Phénix (2007) 1080p AC3.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 675,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "La route d'Eldorado (2000)/La route d'Eldorado (2000) 480p MP3.avi",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 10501,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Ça (2017)/iT.2017.MULTi.VF2.1080p.AMZN.WEB.DDP5.1.H265-TFA.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 346364,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Life Of Chuck (2025)/The.Life.of.Chuck.2024.MULTi.1080p.WEB.H264-SUPPLY.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 842924,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Split (2016)/Split (2016) 1080p AC3.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 425636,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Harry Potter et les Reliques de la mort  - 2ème partie (2011)/Harry Potter et les Reliques de la mort  - 2ème partie (2011) 1080p AC3.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 12445,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Gravity (2013)/Gravity (2013) 1080p AC3.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 49047,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Migration (2023)/Migration.2023.VFQ.720p.WEBRip.H264.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 940551,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Les Zévadés de l'espace (2012)/Les Zévadés de l'espace (2012) 360p MP3.avi",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 68179,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Turbo (2013)/Turbo (2013) 1080p AC3.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 77950,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Rebelle (2012)/Rebelle (2012) 1080p AC3.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 62177,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Babysitting (2014)/Babysitting (2013) (1080p VFF AAC-2.0 AAC-5.1).mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 262551,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "La Belle et la Bête (1991)/La Belle et la Bête (1991) 1080p AC3.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 10020,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Kill Bill Vol 1 (2003)/Kill.Bill.Vol.1.2003.1080p.BrRIp.x264.YIFY.mp4",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 24,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Forrest Gump (1994)/Forrest Gump (1994) 1080p AC3.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 13,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Vice Versa (2015)/Vice Versa (2015) 1080p AC3.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 150540,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Hercule (1997)/Hercule (1997) 1080p AC3.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 11970,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Happy Feet (2006)/Happy Feet (2006) 480p MP3.avi",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 9836,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Mulan (2020)/Mulan (2020) 1080p EAC3.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 337401,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Rox et Rouky (1981)/Rox et Rouky (1981) 1080p AC3.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 10948,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Blanche-Neige et les Sept Nains (1937)/Blanche-Neige et les Sept Nains (1937) 1080p AC3.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 408,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Les Vacances du Petit Nicolas (2014)/Les Vacances du Petit Nicolas (2014) 480p AC3.mkv",
+    "language": "fr",
+    "note": "from a real library (French)",
+    "expect": {
+      "status": "matched",
+      "tmdb": 277368,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Kaamelott (2003)/Saison 01/Kaamelott - S01E49 - Le Sort de rage.avi",
+    "language": "fr",
+    "note": "from a real library (French). The folder year (2003) is two years off TMDB (2005): a series year is only a weak hint",
+    "expect": {
+      "status": "matched",
+      "tmdb": 11466,
+      "kind": "series",
+      "season": 1,
+      "episodes": [49]
+    }
+  },
+  {
+    "path": "Le Bureau des Légendes (2020)/Saison 04/Le Bureau Des Legendes - S04E03 - 1080p.mkv",
+    "language": "fr",
+    "note": "from a real library (French). The folder year (2020) is five years off TMDB (2015): a series year is only a weak hint",
+    "expect": {
+      "status": "matched",
+      "tmdb": 62476,
+      "kind": "series",
+      "season": 4,
+      "episodes": [3]
+    }
+  },
+  {
+    "path": "Dragon Ball/Dragon Ball French 116 Kame-sennin est en vie !.mkv",
+    "language": "fr",
+    "note": "from a real library (French). absolute episode numbering (out of v1): 116 cannot be told from S01E16",
+    "expect": {
+      "status": "review"
+    }
+  },
+  {
+    "path": "Tom Sawyer/Tom Sawyer S01E20.avi",
+    "language": "fr",
+    "note": "from a real library (French). two series called Tom Sawyer, no year",
+    "expect": {
+      "status": "review"
+    }
+  },
+  {
+    "path": "The Patient/Saison 01/The.Patient.S01E04.MULTi.1080p.WEB.H264-FW.mkv",
+    "language": "fr",
+    "note": "from a real library (French). two 2022 series called The Patient, no year",
+    "expect": {
+      "status": "review"
+    }
+  },
+  {
+    "path": "Tom et Jerry/Tom et Jerry - S01E28 - La sirène de mon coeur.mkv",
+    "language": "fr",
+    "note": "from a real library (French). several Tom and Jerry series, no year",
+    "expect": {
+      "status": "review"
+    }
+  },
+  {
+    "path": "Friends (1994)/Saison 07/Friends - S07E24 - Celui qui a épousé Monica (2).mkv",
+    "language": "fr",
+    "note": "from a real library (French). TMDB has 23 episodes in season 7, the files split the two-parters: numbering differs",
+    "expect": {
+      "status": "review"
+    }
+  },
+  {
+    "path": "Firefly (2002)/Saison 01/Firefly - S01E12 - Mission Secours.avi",
+    "language": "fr",
+    "note": "from a real library (French). TMDB has 11 episodes in season 1, the files follow another order",
+    "expect": {
+      "status": "review"
+    }
+  },
+  {
+    "path": "Jessie (2011)/Saison 03/Jessie.S03E27.Vacances.de.Noël.à.Hawaï.Deuxième.partie.mp4",
+    "language": "fr",
+    "note": "from a real library (French). TMDB has 26 episodes in season 3: numbering differs",
+    "expect": {
+      "status": "review"
+    }
+  },
+  {
+    "path": "Flo et les Robinsons Suisses/Flo et les Robinsons Suisses - S01E47 - L arche de M. Morton.avi",
+    "language": "fr",
+    "note": "from a real library (French). TMDB finds nothing under that name",
+    "expect": {
+      "status": "review"
+    }
+  },
+  {
+    "path": "Star Wars, épisode II - L'Attaque des clones (2002)/Starwars 2 - L'attaque Des Clones - 1080p FR EN x264 ac3 mHDgz.mkv",
+    "language": "fr",
+    "note": "from a real library (French). glued title: nothing found",
+    "expect": {
+      "status": "review"
+    }
+  },
+  {
+    "path": "Pat Patrouille/Saison 05/Paw Patrol S05-07 Pups save the Butterflies-Pups save an Underground Chicken.mkv",
+    "language": "fr",
+    "note": "from a real library (French). S05-07 style and two PAW Patrol candidates",
+    "expect": {
+      "status": "review"
+    }
+  },
+  {
+    "path": "Kill Bill Vol 2 (2004)/Kill.Bill.Vol.2.2004.1080p.BrRIp.x264.YIFY.mp4",
+    "language": "fr",
+    "note": "from a real library (French). known gap: the parser drops \"Vol.2\"",
+    "expect": {
+      "status": "matched",
+      "tmdb": 393,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Better.Call.Saul.S01/Better Call Saul S01 WEB-DL x264-FUM[ettv]/Better.Call.Saul.S01E06.Five-O.WEB-DL.x264-FUM.mp4",
+    "language": "fr",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 60059,
+      "kind": "series",
+      "season": 1,
+      "episodes": [6]
+    }
+  },
+  {
+    "path": "SERIES/The Handmaid's Tale (2017) Season 1 S01 (1080p BluRay x265 HEVC 10bit AAC 5.1 Silence)/The Handmaid's Tale (2017) - S01E06 - A Woman's Place (1080p BluRay x265 Silence).mkv",
+    "language": "fr",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 69478,
+      "kind": "series",
+      "season": 1,
+      "episodes": [6]
+    }
+  },
+  {
+    "path": "SERIES/Arcane (2021) Season 1 S01 (1080p NF WEB-DL x265 HEVC 10bit EAC3 5.1 t3nzin)/Arcane (2021) - S01E05 - Everybody Wants to Be My Enemy (1080p NF WEB-DL x265 t3nzin).mkv",
+    "language": "fr",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 94605,
+      "kind": "series",
+      "season": 1,
+      "episodes": [5]
+    }
+  },
+  {
+    "path": "Dark Matter/Dark Matter Season 2.HDTV.x264-p2p/Dark.Matter.S02E12.HDTV.x264-FLEET.mkv",
+    "language": "fr",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 62425,
+      "kind": "series",
+      "season": 2,
+      "episodes": [12]
+    }
+  },
+  {
+    "path": "The Witcher/The.Witcher.S01.MULTi.AD.1080p.NF.WEB.DDP.5.1.Atmos.AV1-BTT/The.Witcher.S01E05.Bottled.Appetites.MULTi.AD.1080p.NF.WEB.DDP.5.1.Atmos.AV1-BTT.mkv",
+    "language": "fr",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 71912,
+      "kind": "series",
+      "season": 1,
+      "episodes": [5]
+    }
+  },
+  {
+    "path": "Mr. Robot/Mr. Robot S01 Season 1 Complete 720p HDTV x265 AAC E-Subs [GWC]/Mr. Robot S01E06 HDTV 720p x265 AAC E-Subs [GWC].mkv",
+    "language": "fr",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 62560,
+      "kind": "series",
+      "season": 1,
+      "episodes": [6]
+    }
+  },
+  {
+    "path": "Dept Q/Dept.Q.S01.1080p.NF.WEB-DL.AAC5.1.AV1-PrimeFix/Dept.Q.S01E05.1080p.NF.WEB-DL.AAC5.1.AV1-PrimeFix.mkv",
+    "language": "fr",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 245703,
+      "kind": "series",
+      "season": 1,
+      "episodes": [5]
+    }
+  },
+  {
+    "path": "Fargo/Fargo.Season.2.720p.BluRay.x264.ShAaNiG/Fargo.S02E06.720p.BluRay.x264.ShAaNiG.mkv",
+    "language": "fr",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 60622,
+      "kind": "series",
+      "season": 2,
+      "episodes": [6]
+    }
+  },
+  {
+    "path": "Bad Thoughts/Bad.Thoughts.Season.1.COMPLETE.1080p.NF.WEB-DL.x264.ESubs.S01.Full-MIKE/Bad.Thoughts.S01E04.1080p.NF.WEB-DL.x264-MIKE.mkv",
+    "language": "fr",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 251608,
+      "kind": "series",
+      "season": 1,
+      "episodes": [4]
+    }
+  },
+  {
+    "path": "Homeland/Homeland S02 Complete Season 2 BluRay 720p x265 HEVC [nate_666]/Homeland.S02E07.720p.BluRay.x265.mkv",
+    "language": "fr",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 1407,
+      "kind": "series",
+      "season": 2,
+      "episodes": [7]
+    }
+  },
+  {
+    "path": "Band of Brothers/Band.Of.Brothers.S01.1080p.BluRay.x265-RARBG/Band.of.Brothers.S01E06.1080p.BluRay.x265-RARBG.mp4",
+    "language": "fr",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 4613,
+      "kind": "series",
+      "season": 1,
+      "episodes": [6]
+    }
+  },
+  {
+    "path": "Tout va bien/Tout.va.bien.2023.S01.FRENCH.WEBRip.x264/Tout.va.bien.2023.S01E05.FRENCH.WEBRip.x264.mp4",
+    "language": "fr",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 208920,
+      "kind": "series",
+      "season": 1,
+      "episodes": [5]
+    }
+  },
+  {
+    "path": "Occupied/S01/Occupied.S01E10_Arte_2015_12_17_21_40.mp4",
+    "language": "fr",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 63867,
+      "kind": "series",
+      "season": 1,
+      "episodes": [10]
+    }
+  },
+  {
+    "path": "downloads/MOVIES/Le Dernier Combat - Luc Besson (1983).avi",
+    "language": "fr",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 19184,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "downloads/MOVIES/La verite ( de Clouzot - 1960) Brigitte Bardot.avi",
+    "language": "fr",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 61711,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "MOVIES/Highlander II The Quickening (1991) [1080p] [BluRay] [5.1] [YTS.MX]/Highlander.II.The.Quickening.1991.1080p.BluRay.x264.AAC5.1-[YTS.MX].mp4",
+    "language": "fr",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 8010,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "MOVIES/Les Misérables (2019) [1080p] [BluRay] [5.1] [YTS.MX]/Les.Misérables.2019.1080p.BluRay.x264.AAC5.1-[YTS.MX].mp4",
+    "language": "fr",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 586863,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "downloads/MOVIES/[ OxTorrent.cc ] Les Misérables 1982 French HDlight 1080p AC3 2.0 x264-Arezia.mkv",
+    "language": "fr",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 4416,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "downloads/MOVIES/Le fabuleux destin d'Amelie Poulain (2001) FR [1080p] BluRay x244-PopHD.mkv",
+    "language": "fr",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 194,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "MOVIES/Run Lola Run (1998)/Run.Lola.Run.1998.720p.x264.YIFY.mkv",
+    "language": "fr",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 104,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "downloads/MOVIES/Aladdin.1992.MULTi.1080p.BluRay.HDLight.x265-H4S5S.mkv",
+    "language": "fr",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 812,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "downloads/MOVIES/Princesse Mononoke 1080p FR JPN X264 AC3-mHDgz.mkv",
+    "language": "fr",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 128,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "media/movies/Ong.Bak.avi",
+    "language": "fr",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 9316,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "MOVIES/Goodbye Lenin/[XVID-ITA] Goodbye Lenin DvDRiP.avi",
+    "language": "fr",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 338,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "MOVIES/The Godfather Part 3 (1990) [1080p]/The.Godfather.Part.3.1990.1080p.BrRip.x264.BOKUTOX.YIFY.mp4",
+    "language": "fr",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 242,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "MOVIES/The Godfather Part 2 (1974) [1080p]/The.Godfather.Part.2.1974.1080p.BrRip.x264.BOKUTOX.YIFY.mp4",
+    "language": "fr",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 240,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "MOVIES/It (2017) [1080p] [YTS.AG]/It.2017.1080p.BluRay.x264-[YTS.AG].mp4",
+    "language": "fr",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 346364,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "MOVIES/North By Northwest (1959) [BluRay] [1080p] [YTS.AM]/North.By.Northwest.1959.1080p.BluRay.x264-[YTS.AM].mp4",
+    "language": "fr",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 213,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "downloads/MOVIES/Last Action Hero (1993) Remastered MULTi VFF 1080p 10bit HDLight BluRay H.265 AAC 5.1 -MM91.mkv",
+    "language": "fr",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 9593,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "MOVIES/Psycho (1960) [1080p]/Psycho.1960.1080p.BrRip.x264.YIFY.mp4",
+    "language": "fr",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 539,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "MOVIES/Planet.of.the.Apes.1968.1080p.10bit.BluRay.6CH.x265.HEVC-PSA/Planet.of.the.Apes.1968.1080p.10bit.BluRay.6CH.x265.HEVC-PSA.mkv",
+    "language": "fr",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 871,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "MOVIES/The Shape Of Water (2017) [BluRay] [1080p] [YTS.AM]/The.Shape.Of.Water.2017.1080p.BluRay.x264-[YTS.AM].mp4",
+    "language": "fr",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 399055,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "MOVIES/Miss.Peregrines.Home.For.Peculiar.Children.2016.V2.HC.HDRip.XviD.AC3-EVO/Miss.Peregrines.Home.For.Peculiar.Children.2016.HC.HDRip.XviD.AC3-EVO.avi",
+    "language": "fr",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 283366,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "MOVIES/American Beauty (1999) [1080p]/American.Beauty.1999.1080p.BrRip.x264.BOKUTOX.YIFY.mp4",
+    "language": "fr",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 14,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "media/movies/Le Grand soir (2012).mkv",
+    "language": "fr",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 70793,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "downloads/MOVIES/The Adventures Of Baron Munchausen 1988 Remastered 1080p BluRay HEVC x265 5.1 BONE.mkv",
+    "language": "fr",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 14506,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "MOVIES/Blue Velvet (1986) [BluRay] [1080p] [YTS.AM]/Blue.Velvet.1986.1080p.BluRay.x264-[YTS.AM].mp4",
+    "language": "fr",
+    "note": "from a real library",
+    "expect": {
+      "status": "matched",
+      "tmdb": 793,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Dark Matter/Dark Matter Season 2.HDTV.x264-p2p/Dark.Matter.S02E10.HDTV.x264-FLEET.mkv",
+    "language": "fr",
+    "note": "from a real library. two series called Dark Matter, no year",
+    "expect": {
+      "status": "review"
+    }
+  },
+  {
+    "path": "Cowboy Bebop/cowboy_bebop_S01_remastered_01-26[h264.ac3][niizk]/cowboy_bebop_remastered_02[h264.ac3][niizk].mkv",
+    "language": "fr",
+    "note": "from a real library. the 1998 anime and the 2021 series share the title, no year, no SxxExx marker",
+    "expect": {
+      "status": "review"
+    }
+  },
+  {
+    "path": "media/movies/La.guerre.des.boutons.avi",
+    "language": "fr",
+    "note": "from a real library. the 1962 and 2011 films share the title, no year",
+    "expect": {
+      "status": "review"
+    }
+  },
+  {
+    "path": "downloads/MOVIES/Anatomy.Of.A.Fall-Anatomie.d.une.chute--2023-720p-w.subs-x265-HEVC.mkv",
+    "language": "fr",
+    "note": "from a real library. known gap: a bilingual title (English-French) matches neither language alone",
+    "expect": {
+      "status": "matched",
+      "tmdb": 915935,
+      "kind": "movie"
+    }
+  },
+  {
     "path": "Show.Name/Season 1/e05.mkv",
     "note": "generic title",
     "expect": {

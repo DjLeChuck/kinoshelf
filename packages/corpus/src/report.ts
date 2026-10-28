@@ -7,14 +7,10 @@ import { runCorpus, summarize } from './run.js';
 /** Prints every entry with its verdict and score, to calibrate the matching weights. */
 const recordings = await loadRecordings();
 const { fetch, missing } = replayFetch(recordings);
-const provider = new TmdbProvider({
-  apiKey: 'replay',
-  fetch,
-  language: 'en-US',
-  sleep: () => Promise.resolve(),
-});
+const providerFor = (language: string): TmdbProvider =>
+  new TmdbProvider({ apiKey: 'replay', fetch, language, sleep: () => Promise.resolve() });
 
-const results = await runCorpus(provider, await loadEntries());
+const results = await runCorpus(providerFor, await loadEntries());
 for (const { entry, verdict, actual, candidates } of results) {
   const mark = verdict === 'pass' ? 'ok ' : verdict === 'wrong-match' ? 'BAD' : 'miss';
   const got =

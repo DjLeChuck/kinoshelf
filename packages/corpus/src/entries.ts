@@ -21,10 +21,14 @@ const entrySchema = z.strictObject({
   /** The path as the parser receives it (relative to the scanned folder's parent). */
   path: z.string().min(1),
   note: z.string().optional(),
+  /** Language of the TMDB metadata, as the CLI would ask for it. Defaults to `en-US`. */
+  language: z.string().optional(),
   expect: expectation,
 });
 
 export type CorpusEntry = z.infer<typeof entrySchema>;
+
+export const DEFAULT_LANGUAGE = 'en-US';
 
 export const DATA_DIR = new URL('../data/', import.meta.url);
 
