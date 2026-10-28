@@ -1,6 +1,14 @@
 #!/usr/bin/env node
 import { readFileSync } from 'node:fs';
-import { configDirectory, loadConfig } from '@kinoshelf/core';
+import type Database from 'better-sqlite3';
+import {
+  configDirectory,
+  ensureConfigDirectory,
+  KinoshelfError,
+  loadConfig,
+  type Config,
+} from '@kinoshelf/core';
+import { createTranslator, describeError, detectLocale } from '@kinoshelf/i18n';
 import { buildApp } from './app.js';
 import { generateApiKey, hasApiKey, MIN_API_KEY_LENGTH, setApiKey } from './auth.js';
 import { openDatabase } from './database.js';
@@ -10,6 +18,17 @@ const DEFAULT_RETENTION_DAYS = 90;
 
 const configDir = configDirectory(undefined, process.env);
 
+// Typed errors (an unwritable volume, an unreadable config.yaml) are printed translated: a stack
+// trace tells whoever starts the container nothing about what to fix.
+function failStartup(error: unknown): never {
+  if (error instanceof KinoshelfError) {
+    const t = createTranslator(detectLocale(undefined, undefined, process.env));
+    process.stderr.write(`${describeError(t, error.info)}\n`);
+    process.exit(1);
+  }
+  throw error;
+}
+
 // `kinoshelf-server api-key create`: the key goes to stdout only, never through the logger, so
 // it cannot end up in shipped logs. It replaces the previous key.
 if (process.argv[2] === 'api-key') {
@@ -17,7 +36,7 @@ if (process.argv[2] === 'api-key') {
     process.stderr.write('Usage: kinoshelf-server api-key create\n');
     process.exit(2);
   }
-  const database = openDatabase(configDir);
+  const database = await openDatabase(configDir).catch(failStartup);
   const key = generateApiKey();
   setApiKey(database, key);
   database.close();
@@ -30,8 +49,15 @@ const { version } = JSON.parse(
   readFileSync(new URL('../package.json', import.meta.url), 'utf8'),
 ) as { version: string };
 
-const config = await loadConfig(configDir);
-const database = openDatabase(configDir);
+let config: Config;
+let database: Database.Database;
+try {
+  await ensureConfigDirectory(configDir);
+  config = await loadConfig(configDir);
+  database = await openDatabase(configDir);
+} catch (error) {
+  failStartup(error);
+}
 
 const fromEnv = process.env.KINOSHELF_API_KEY;
 if (fromEnv !== undefined && fromEnv !== '') {

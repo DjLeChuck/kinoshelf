@@ -22,6 +22,20 @@ hardlink is reported instead of silently copying. Settings can live in
 `~/.config/kinoshelf/config.yaml`. The tool speaks French or English (`--lang fr|en`, or your
 locale).
 
+## Docker: volume permissions
+
+The image runs as `node` (uid/gid 1000) and keeps its database and `config.yaml` in `/config`.
+That volume must be writable by this user, and the media folders readable (and writable, to move
+or rename) by it. On a NAS the folder you mount usually belongs to another user, and the server
+stops at startup with `Cannot write to the config directory /config (running as uid 1000)` or
+`Permission denied for /config/config.yaml`. Either:
+
+- give the folder to uid 1000: `chown -R 1000:1000 /path/to/config`; or
+- run the container as the owner of your folders (`user: "1026:100"` in Compose, `--user` with
+  `docker run`), which also gives it their access to the media.
+
+A named volume is created as root and needs the same `chown`. Do not mount it read-only (`:ro`).
+
 ## Development
 
 With Nix: `nix develop` (or direnv). Otherwise: Node.js 22 and pnpm.

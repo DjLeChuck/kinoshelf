@@ -1,7 +1,6 @@
-import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import Database from 'better-sqlite3';
-import { applyMigrations, DATABASE_FILE } from '@kinoshelf/core';
+import { applyMigrations, DATABASE_FILE, ensureConfigDirectory } from '@kinoshelf/core';
 
 /** Same rules as the core's migrations: append, never edit a shipped entry. */
 export const SERVER_MIGRATIONS: readonly { readonly name: string; readonly sql: string }[] = [
@@ -86,8 +85,8 @@ export const SERVER_MIGRATIONS: readonly { readonly name: string; readonly sql: 
 ];
 
 /** Opens the single SQLite file of the config directory, shared with the CLI and the cache. */
-export function openDatabase(configDir: string): Database.Database {
-  mkdirSync(configDir, { recursive: true });
+export async function openDatabase(configDir: string): Promise<Database.Database> {
+  await ensureConfigDirectory(configDir);
   return migrated(new Database(join(configDir, DATABASE_FILE)));
 }
 

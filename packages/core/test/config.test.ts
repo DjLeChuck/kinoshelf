@@ -1,10 +1,43 @@
+import { chmod } from 'node:fs/promises';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { configDirectory, loadConfig } from '../src/config/config.js';
+import { configDirectory, ensureConfigDirectory, loadConfig } from '../src/config/config.js';
 import { KinoshelfError } from '../src/errors.js';
 import { cleanup, makeDir, put } from './workspace.js';
 
 afterEach(cleanup);
+
+// root ignores file modes, so these cases cannot fail there.
+const asUser = process.getuid?.() === 0 ? it.skip : it;
+
+describe('config directory permissions', () => {
+  asUser('reports a directory that cannot be written, with the uid', async () => {
+    const dir = await makeDir();
+    await chmod(dir, 0o555);
+    try {
+      await expect(ensureConfigDirectory(dir)).rejects.toMatchObject({
+        info: { code: 'config.dir-not-writable', params: { path: dir } },
+      });
+    } finally {
+      await chmod(dir, 0o755);
+    }
+  });
+
+  it('creates a missing directory', async () => {
+    const dir = join(await makeDir(), 'a', 'b');
+    await ensureConfigDirectory(dir);
+    await ensureConfigDirectory(dir);
+  });
+
+  asUser('reports an unreadable config.yaml as a permission error', async () => {
+    const dir = await makeDir();
+    await put(join(dir, 'config.yaml'), 'locale: fr\n');
+    await chmod(join(dir, 'config.yaml'), 0o000);
+    await expect(loadConfig(dir)).rejects.toMatchObject({
+      info: { code: 'fs.permission-denied', params: { path: join(dir, 'config.yaml') } },
+    });
+  });
+});
 
 describe('loadConfig', () => {
   it('treats a missing file as no configuration', async () => {

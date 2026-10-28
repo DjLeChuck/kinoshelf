@@ -1,4 +1,5 @@
-import { readFile } from 'node:fs/promises';
+import { constants } from 'node:fs';
+import { access, mkdir, readFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { parse } from 'yaml';
@@ -30,6 +31,23 @@ export type Config = z.infer<typeof configSchema>;
 
 export const DATABASE_FILE = 'kinoshelf.sqlite';
 
+/**
+ * Creates the config directory if needed and checks that it can be written to. Without this,
+ * SQLite reports a bare "unable to open database file", which is all a container shows when
+ * its volume belongs to another user than the one the image runs as.
+ */
+export async function ensureConfigDirectory(dir: string): Promise<void> {
+  try {
+    await mkdir(dir, { recursive: true });
+    await access(dir, constants.W_OK | constants.X_OK);
+  } catch {
+    throw new KinoshelfError('config.dir-not-writable', {
+      path: dir,
+      uid: process.getuid?.() ?? 'unknown',
+    });
+  }
+}
+
 /** `--config-dir`, then `KINOSHELF_CONFIG_DIR`, then `$XDG_CONFIG_HOME/kinoshelf`. */
 export function configDirectory(
   flag: string | undefined,
@@ -51,6 +69,9 @@ export async function loadConfig(directory: string): Promise<Config> {
   } catch (error) {
     if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
       return {};
+    }
+    if (error instanceof Error && 'code' in error && error.code === 'EACCES') {
+      throw new KinoshelfError('fs.permission-denied', { path });
     }
     throw error;
   }

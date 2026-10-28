@@ -1,4 +1,4 @@
-import { mkdir, stat } from 'node:fs/promises';
+import { stat } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import Database from 'better-sqlite3';
 import { Command, CommanderError } from 'commander';
@@ -6,6 +6,7 @@ import {
   analyze,
   cleanupStaleTemporaryFiles,
   configDirectory,
+  ensureConfigDirectory,
   DATABASE_FILE,
   discoverVideos,
   executePlan,
@@ -81,7 +82,7 @@ interface Context {
 }
 
 async function openDatabase(context: Context): Promise<Database.Database> {
-  await mkdir(context.configDir, { recursive: true });
+  await ensureConfigDirectory(context.configDir);
   return new Database(join(context.configDir, DATABASE_FILE));
 }
 

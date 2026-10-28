@@ -5,6 +5,7 @@
 export const ERROR_CODES = [
   'cleanup.age-too-short',
   'config.destination-required',
+  'config.dir-not-writable',
   'config.invalid',
   'config.tmdb-key-missing',
   'destination.exists',
