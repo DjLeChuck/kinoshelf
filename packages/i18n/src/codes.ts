@@ -15,3 +15,26 @@ export type CliErrorCode = (typeof CLI_ERROR_CODES)[number];
 export const SERVER_ERROR_CODES = ['server.port-denied', 'server.port-in-use'] as const;
 
 export type ServerErrorCode = (typeof SERVER_ERROR_CODES)[number];
+
+/** Codes the REST API answers with, which the web UI turns into text. */
+export const API_ERROR_CODES = [
+  'auth.not-configured',
+  'auth.unauthorized',
+  'batch.already-undone',
+  'batch.not-found',
+  'execution.not-found',
+  'internal.unexpected',
+  'job.busy',
+  'job.not-done',
+  'job.not-found',
+  'queue.entry-not-found',
+  'queue.entry-resolved',
+  'request.invalid',
+  'request.not-found',
+  'request.rejected',
+  'settings.api-key-from-env',
+  'settings.webhook-not-found',
+  'settings.webhook-url-required',
+] as const;
+
+export type ApiErrorCode = (typeof API_ERROR_CODES)[number];

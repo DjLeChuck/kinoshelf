@@ -17,6 +17,7 @@
     "dist"
   ],
   "dependencies": {
+    "@fastify/static": "^10.1.8",
     "@fastify/swagger": "^9.9.2",
     "@kinoshelf/core": "workspace:*",
     "@kinoshelf/i18n": "workspace:*",

@@ -1,6 +1,6 @@
 import { ERROR_CODES } from '@kinoshelf/core';
 import { describe, expect, it } from 'vitest';
-import { CLI_ERROR_CODES, SERVER_ERROR_CODES } from '../src/codes.js';
+import { API_ERROR_CODES, CLI_ERROR_CODES, SERVER_ERROR_CODES } from '../src/codes.js';
 import { en } from '../src/en.js';
 import { fr } from '../src/fr.js';
 import { createTranslator, describeError, detectLocale } from '../src/index.js';
@@ -32,8 +32,13 @@ describe('catalogs', () => {
     expect(identical).toEqual([]);
   });
 
-  it('translate every error code the core, the CLI and the server can raise', () => {
-    for (const code of [...ERROR_CODES, ...CLI_ERROR_CODES, ...SERVER_ERROR_CODES]) {
+  it('translate every error code the core, the CLI, the server and its API can raise', () => {
+    for (const code of [
+      ...ERROR_CODES,
+      ...CLI_ERROR_CODES,
+      ...SERVER_ERROR_CODES,
+      ...API_ERROR_CODES,
+    ]) {
       expect(en).toHaveProperty([`error.${code}`]);
       expect(fr).toHaveProperty([`error.${code}`]);
     }

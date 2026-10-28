@@ -44,8 +44,10 @@ export function describeError(
 }
 
 export {
+  API_ERROR_CODES,
   CLI_ERROR_CODES,
   SERVER_ERROR_CODES,
+  type ApiErrorCode,
   type CliErrorCode,
   type ServerErrorCode,
 } from './codes.js';

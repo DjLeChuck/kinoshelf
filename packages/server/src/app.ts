@@ -21,6 +21,7 @@ import { Service } from './service.js';
 import { isValidSession } from './sessions.js';
 import { registerSettingsRoutes } from './settings-routes.js';
 import { ConfigStore } from './settings.js';
+import { registerWeb } from './web.js';
 import { registerSessionRoutes, sameOrigin, sessionToken } from './session-routes.js';
 
 declare module 'fastify' {
@@ -46,6 +47,8 @@ export interface AppOptions extends Omit<ProcessorDeps, 'database'> {
   readonly retentionDays?: number;
   /** How notifications are delivered (retries, timeout); tests make them instant. */
   readonly delivery?: DeliveryOptions;
+  /** The built web UI to serve, if any (see `findWebRoot`). */
+  readonly webRoot?: string;
   /** Wraps or replaces the journal, for tests. */
   readonly journal?: (database: Database) => Journal;
 }
@@ -260,6 +263,10 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     registerRoutes(api, { jobs, entries, executions, service, runner, notifier, events, history });
     done();
   });
+
+  if (options.webRoot) {
+    await registerWeb(app, options.webRoot);
+  }
 
   await app.ready();
   return app;

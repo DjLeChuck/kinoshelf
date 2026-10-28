@@ -14,6 +14,7 @@ import { generateApiKey, hasApiKey, MIN_API_KEY_LENGTH, setApiKey } from './auth
 import { openDatabase } from './database.js';
 import { runNotifyCommand } from './notify-command.js';
 import { createShutdown } from './shutdown.js';
+import { findWebRoot } from './web.js';
 import { describeListenError, parseServerCommand } from './startup.js';
 
 const DEFAULT_RETENTION_DAYS = 90;
@@ -95,8 +96,11 @@ if (fromEnv !== undefined && fromEnv !== '') {
 const host = process.env.KINOSHELF_HOST ?? '0.0.0.0';
 const port = Number(process.env.KINOSHELF_PORT ?? 8484);
 
+const webRoot = findWebRoot(process.env);
+
 const app = await buildApp({
   version,
+  ...(webRoot && { webRoot }),
   config,
   configDir,
   database,
@@ -105,6 +109,10 @@ const app = await buildApp({
   // Finished jobs older than this are forgotten; 0 in config.yaml keeps everything.
   retentionDays: config.retentionDays ?? DEFAULT_RETENTION_DAYS,
 });
+
+if (!webRoot) {
+  app.log.info('No web UI found (KINOSHELF_WEB_DIR): serving the API only.');
+}
 
 if (!hasApiKey(database)) {
   app.log.warn(
