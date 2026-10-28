@@ -26,12 +26,32 @@ function languageCode(language: string | GuessitLanguage): string | undefined {
     : (language.alpha2 ?? language.alpha3 ?? language.name);
 }
 
+// guessit-js types most fields as scalars but returns arrays when it finds conflicting
+// candidates (a folder name it half-reads as a title next to the file's own title). Anything
+// that is not the expected type is treated as absent rather than trusted.
+const text = (value: unknown): string | undefined =>
+  typeof value === 'string' && value.trim() !== '' ? value : undefined;
+const count = (value: unknown): number | undefined =>
+  typeof value === 'number' && Number.isFinite(value) ? value : undefined;
+
 /** {@link Parser} backed by guessit-js, which already understands parent-folder context. */
 export class GuessitParser implements Parser {
   private readonly contextDepth: number;
 
   constructor(options: GuessitParserOptions = {}) {
     this.contextDepth = options.contextDepth ?? 3;
+  }
+
+  /** `undefined` when guessit gives up on the input. */
+  private guess(segments: readonly string[]): GuessItResult | undefined {
+    try {
+      return guessit(segments.map((segment) => segment.replace(TAG, '')).join('/'));
+    } catch (error) {
+      if (error instanceof GuessItException) {
+        return undefined;
+      }
+      throw error;
+    }
   }
 
   parse(path: string): ParsedMedia {
@@ -46,13 +66,13 @@ export class GuessitParser implements Parser {
       }
     }
 
-    let guess: GuessItResult;
-    try {
-      guess = guessit(context.map((segment) => segment.replace(TAG, '')).join('/'));
-    } catch (error) {
-      if (!(error instanceof GuessItException)) {
-        throw error;
-      }
+    let guess = this.guess(context);
+    // Conflicting titles usually come from a folder name: the file name alone is then the
+    // better witness (`Dune.mkv` in a folder called `Xy-G0wEL`).
+    if (guess && text(guess.title) === undefined && context.length > 1) {
+      guess = this.guess(context.slice(-1)) ?? guess;
+    }
+    if (!guess) {
       return { path, kind: 'unknown', episodes: [] };
     }
 
@@ -64,8 +84,12 @@ export class GuessitParser implements Parser {
 
     // Date-based and absolute-numbered episodes are out of scope for v1: they carry no
     // season/episode pair, so they stay `unknown` rather than being guessed at.
+    const title = text(guess.title);
+    const year = count(guess.year);
+    const episodeTitle = text(guess.episode_title);
+    const releaseGroup = text(guess.release_group);
     let kind: ParsedKind = 'unknown';
-    if (guess.title !== undefined) {
+    if (title !== undefined) {
       if (guess.type === 'movie') {
         kind = 'movie';
       } else if (guess.type === 'episode' && episodes.length > 0 && season !== undefined) {
@@ -77,16 +101,13 @@ export class GuessitParser implements Parser {
       path,
       kind,
       episodes: kind === 'episode' ? episodes : [],
-      ...(guess.title !== undefined && { title: guess.title }),
-      ...(guess.year !== undefined && { year: guess.year }),
+      ...(title !== undefined && { title }),
+      ...(year !== undefined && { year }),
       ...(kind === 'episode' && season !== undefined && { season }),
-      ...(kind === 'episode' &&
-        guess.episode_title !== undefined && {
-          episodeTitle: guess.episode_title,
-        }),
+      ...(kind === 'episode' && episodeTitle !== undefined && { episodeTitle }),
       ...(extension && { extension }),
       ...(knownIds.length > 0 && { knownIds }),
-      ...(guess.release_group !== undefined && { releaseGroup: guess.release_group }),
+      ...(releaseGroup !== undefined && { releaseGroup }),
       ...(languages.length > 0 && { languages }),
     };
   }

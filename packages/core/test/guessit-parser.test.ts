@@ -117,6 +117,39 @@ describe('GuessitParser', () => {
     });
   });
 
+  describe('conflicting readings from guessit', () => {
+    // guessit-js answers `title: ["kinoshelf-cli-G", "wEL"]` here: a folder it half-reads as a
+    // title. Found by chance through a random temp directory name, hence the exact input.
+    const tricky = 'kinoshelf-cli-GV0wEL/Dune.mkv';
+
+    it('falls back to the file name alone instead of trusting a non-string title', () => {
+      expect(parser.parse(tricky)).toMatchObject({ kind: 'movie', title: 'Dune' });
+    });
+
+    it('never returns a title, year, episode title or group that is not the expected type', () => {
+      // A fixed pseudo-random sequence, so a failure can be replayed.
+      let seed = 42;
+      const next = (): number => (seed = (seed * 1103515245 + 12345) % 2147483648);
+      const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+      const word = (): string =>
+        Array.from({ length: 6 }, () => chars.charAt(next() % chars.length)).join('');
+      const files = ['Dune.mkv', 'The.Bear.S03E04.mkv', 'zzqx.2020.mkv', '02x05.mkv'];
+
+      for (let i = 0; i < 150; i += 1) {
+        for (const file of files) {
+          const parsed = parser.parse(`kinoshelf-cli-${word()}/${file}`);
+          expect(
+            [parsed.title, parsed.episodeTitle, parsed.releaseGroup].every(
+              (v) => v === undefined || typeof v === 'string',
+            ),
+          ).toBe(true);
+          expect(parsed.year === undefined || typeof parsed.year === 'number').toBe(true);
+          expect(parsed.kind === 'unknown' || parsed.title !== undefined).toBe(true);
+        }
+      }
+    });
+  });
+
   it('accepts Windows separators and lowercases the extension', () => {
     expect(parser.parse('Breaking Bad\\Season 2\\02x05.MKV')).toMatchObject({
       kind: 'episode',
