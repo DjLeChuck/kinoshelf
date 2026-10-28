@@ -13,9 +13,11 @@ import {
   executionSchema,
   jobSchema,
   matchBodySchema,
+  notificationTestSchema,
   paging,
   undoSchema,
 } from './schemas.js';
+import type { Notifier } from './notify/notifier.js';
 import type { Service } from './service.js';
 
 export interface RouteContext {
@@ -24,6 +26,7 @@ export interface RouteContext {
   readonly executions: ExecutionStore;
   readonly service: Service;
   readonly runner: JobRunner;
+  readonly notifier: Notifier;
 }
 
 interface Paging {
@@ -96,7 +99,7 @@ const emptyBodyByDefault = (
 
 /** Thin HTTP layer: validate, call the store or the service, shape the answer. */
 export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
-  const { jobs, entries, executions, service, runner } = ctx;
+  const { jobs, entries, executions, service, runner, notifier } = ctx;
   const presentJob = (job: Job): unknown => {
     const latest = executions.latestOf(job.id);
     return {
@@ -352,5 +355,19 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
       },
     },
     (request) => service.undo(request.params.id, { dryRun: request.body?.dryRun ?? false }),
+  );
+
+  api.post(
+    '/api/notifications/test',
+    {
+      schema: {
+        summary: 'Send a test notification to every target',
+        description:
+          'Reaches each webhook, and checks that Plex and Jellyfin answer and accept their key, ' +
+          'whatever the events a webhook listens to. Nothing is refreshed.',
+        response: { 200: notificationTestSchema, 401: errorSchema },
+      },
+    },
+    () => notifier.test(),
   );
 }

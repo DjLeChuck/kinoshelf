@@ -105,6 +105,21 @@ export const fr: Record<keyof typeof en, string> = {
   'undo.summary': '{undone} annulés, {skipped} ignorés, {failed} en échec.',
   'undo.dry-run': 'Simulation : rien n’a été modifié. Ajoutez --apply pour annuler.',
 
+  'notify.transferred.title': '{count} fichier(s) transféré(s)',
+  'notify.transferred.message': '{count} fichier(s) transféré(s) depuis {path}.',
+  'notify.failed.job.title': 'Analyse échouée',
+  'notify.failed.job.message': 'L’analyse de {path} a échoué : {reason}',
+  'notify.failed.execution.title': 'Transfert échoué',
+  'notify.failed.execution.message': 'Le transfert de {path} a échoué : {reason}',
+  'notify.failed.files.title': '{failed} fichier(s) non transféré(s)',
+  'notify.failed.files.message': '{done} transféré(s), {failed} non transféré(s) ({path}).',
+  'notify.failed.file': '{name} : {reason}',
+  'notify.review.title': '{count} fichier(s) à examiner',
+  'notify.review.message':
+    '{count} fichier(s) de {path} attendent une décision : {ambiguous} ambigu(s), {unrecognized} non reconnu(s), {conflict} en conflit.',
+  'notify.test.title': 'Test Kinoshelf',
+  'notify.test.message': 'Ceci est une notification de test.',
+
   'help.description': 'Identifie, renomme et enrichit des fichiers vidéo déjà sur disque.',
   'help.scan': 'Analyse une bibliothèque et indique ce qui changerait (n’écrit jamais).',
   'help.process': 'Identifie un fichier ou un dossier et le range (simulation sans --apply).',

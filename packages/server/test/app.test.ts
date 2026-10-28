@@ -30,6 +30,7 @@ describe('GET /api/openapi.json', () => {
       '/api/jobs',
       '/api/jobs/{id}',
       '/api/jobs/{id}/entries',
+      '/api/notifications/test',
       '/api/plans/{id}/execute',
       '/api/queue',
       '/api/queue/{id}/ignore',

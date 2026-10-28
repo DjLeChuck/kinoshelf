@@ -17,8 +17,9 @@ import {
 } from '@kinoshelf/core';
 import { ApiError } from './api-error.js';
 import type { EntryStore, Entry, StoredError } from './entries.js';
-import type { Execution, ExecutionStore, ExecutionSummary } from './executions.js';
+import type { Execution, ExecutionStore } from './executions.js';
 import type { Job, JobStore, PlanSettings } from './jobs.js';
+import type { ExecutionOutcome, OutcomeFile } from './notify/message.js';
 import { makeProvider, type ProcessorDeps } from './processor.js';
 
 export interface OperationReport {
@@ -155,7 +156,7 @@ export class Service {
    * before writing. Each file is settled as soon as it is transferred, in step with the journal:
    * after a crash the execution only has what is left to do.
    */
-  async run(execution: Execution): Promise<ExecutionSummary> {
+  async run(execution: Execution): Promise<ExecutionOutcome> {
     const { plan, entryOfItem } = await this.prepare(
       execution.jobId,
       execution.entryIds ?? undefined,
@@ -169,21 +170,34 @@ export class Service {
 
     let done = 0;
     let failed = 0;
+    const files: OutcomeFile[] = [];
     await executePlan(plan, {
       journal: this.deps.journal,
       batchId,
       onItem: (result) => {
         const entry = entryOfItem.get(result.itemId);
-        if (entry) {
-          if (this.settle(entry, result.results, batchId) === 'done') {
-            done++;
-          } else {
-            failed++;
-          }
+        if (!entry) {
+          return;
         }
+        const status = this.settle(entry, result.results, batchId);
+        if (status === 'done') {
+          done++;
+        } else {
+          failed++;
+        }
+        const main = result.results.find(
+          (r) => r.operation.type === 'transfer' && r.operation.role === 'main',
+        );
+        files.push({
+          path: entry.path,
+          destination: main?.operation.destination ?? null,
+          kind: entry.parsed.kind === 'episode' ? 'series' : 'movie',
+          status,
+          ...(status === 'failed' && { error: main?.error ?? { code: 'main-not-done' } }),
+        });
       },
     });
-    return { done, failed };
+    return { summary: { done, failed }, files };
   }
 
   /** The plan of a job: its matched files not transferred yet, optionally only some of them. */

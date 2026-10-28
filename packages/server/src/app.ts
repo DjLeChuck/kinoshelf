@@ -7,6 +7,9 @@ import { hasApiKey, isValidApiKey } from './auth.js';
 import { EntryStore } from './entries.js';
 import { ExecutionStore } from './executions.js';
 import { JobStore } from './jobs.js';
+import { createTranslator, detectLocale } from '@kinoshelf/i18n';
+import type { DeliveryOptions } from './notify/delivery.js';
+import { Notifier } from './notify/notifier.js';
 import { createProcessor, type ProcessorDeps } from './processor.js';
 import { purgeHistory } from './purge.js';
 import { registerRoutes } from './routes.js';
@@ -18,6 +21,8 @@ declare module 'fastify' {
   interface FastifyInstance {
     /** The queue worker; tests await `jobs.idle()` instead of sleeping. */
     jobs: JobRunner;
+    /** Tells the targets of `notify`; tests await `notifier.idle()` for what is in flight. */
+    notifier: Notifier;
   }
 }
 
@@ -33,6 +38,8 @@ export interface AppOptions extends Omit<ProcessorDeps, 'database'> {
    * every day. Unset or 0 keeps everything.
    */
   readonly retentionDays?: number;
+  /** How notifications are delivered (retries, timeout); tests make them instant. */
+  readonly delivery?: DeliveryOptions;
   /** Wraps or replaces the journal, for tests. */
   readonly journal?: (database: Database) => Journal;
 }
@@ -64,16 +71,47 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     executions,
     journal: options.journal?.(options.database) ?? new SqliteJournal(options.database),
   });
+  const notifier = new Notifier({
+    config: options.config,
+    translate: createTranslator(detectLocale(undefined, options.config.locale, options.env)),
+    log: {
+      info: (message) => {
+        app.log.info(message);
+      },
+      warn: (message) => {
+        app.log.warn(message);
+      },
+      error: (error) => {
+        app.log.error(error);
+      },
+    },
+    ...(options.delivery && { delivery: options.delivery }),
+  });
   const runner = new JobRunner(
     jobs,
     executions,
     options.processor ?? createProcessor(options),
     (execution) => service.run(execution),
+    {
+      jobDone: (job) => {
+        notifier.jobDone(job, entries.summary(job.id));
+      },
+      jobFailed: (job, error) => {
+        notifier.jobFailed(job, error);
+      },
+      executionDone: (job, execution, outcome) => {
+        notifier.executionFinished(job, execution, outcome);
+      },
+      executionFailed: (job, execution, error) => {
+        notifier.executionFailed(job, execution, error);
+      },
+    },
     (error) => {
       app.log.error(error);
     },
   );
   app.decorate('jobs', runner);
+  app.decorate('notifier', notifier);
 
   let purgeTimer: NodeJS.Timeout | undefined;
   const purge = (): void => {
@@ -93,6 +131,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
   app.addHook('onClose', async () => {
     clearInterval(purgeTimer);
     await runner.stop();
+    await notifier.idle();
   });
 
   app.setErrorHandler(
@@ -167,7 +206,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
       done();
     });
 
-    registerRoutes(api, { jobs, entries, executions, service, runner });
+    registerRoutes(api, { jobs, entries, executions, service, runner, notifier });
     done();
   });
 

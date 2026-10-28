@@ -134,7 +134,7 @@ function newQueue(): { jobs: JobStore; executions: ExecutionStore } {
   return { jobs: new JobStore(database, new EntryStore(database), executions), executions };
 }
 
-const done = { done: 0, failed: 0 };
+const done = { summary: { done: 0, failed: 0 }, files: [] };
 
 describe('GET /api/jobs', () => {
   it('lists newest first and answers 404 for an unknown job', async () => {
@@ -234,6 +234,30 @@ describe('JobRunner', () => {
       error: { code: 'internal.unexpected', params: { message: 'disk on fire' } },
     });
     expect(jobs.list(1)[0]?.status).toBe('done');
+  });
+
+  it('does not let a failing notification fail the task it reports on', async () => {
+    const { jobs, executions } = newQueue();
+    const job = jobs.create('/a');
+    const execution = executions.createIfIdle(job.id);
+    const errors: unknown[] = [];
+    const boom = (): never => {
+      throw new Error('notifier is down');
+    };
+    const runner = new JobRunner(
+      jobs,
+      executions,
+      () => Promise.resolve(empty),
+      idle,
+      { jobDone: boom, executionDone: boom },
+      (error) => errors.push(error),
+    );
+    runner.kick();
+    await runner.idle();
+
+    expect(jobs.get(job.id)?.status).toBe('done');
+    expect(executions.get(execution?.id ?? '')?.status).toBe('done');
+    expect(errors).toHaveLength(2); // both reported, none thrown
   });
 
   it('refuses a second pending execution for a job, but not for another', () => {

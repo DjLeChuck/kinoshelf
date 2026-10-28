@@ -261,3 +261,19 @@ export const paging = {
 } as const;
 
 export const classificationValues = CLASSIFICATIONS;
+
+/** One entry per target; a URL is shown without its secret part. */
+export const notificationTestSchema = {
+  type: 'array',
+  items: {
+    type: 'object',
+    required: ['target', 'kind', 'ok'],
+    properties: {
+      target: { type: 'string' },
+      kind: { type: 'string', enum: ['webhook', 'plex', 'jellyfin'] },
+      ok: { type: 'boolean' },
+      status: { type: 'integer' },
+      error: { type: 'string' },
+    },
+  },
+} as const;

@@ -36,7 +36,7 @@ packages/core              parsing (Parser), matching/score, planning, execution
 packages/i18n              fr/en messages (CLI, server, web), error code → text
 packages/providers/tmdb    MetadataProvider for TMDB, SQLite cache
 packages/cli               kinoshelf scan | process <path> | undo
-packages/server            (v0.2) Fastify REST API, job queue, folder watcher, SSE
+packages/server            (v0.2) Fastify REST API, job queue, notifications (webhooks, Plex, Jellyfin)
 packages/web               (v0.3) Svelte 5 UI
 packages/corpus            (private) matching corpus and the scripts that grow it
 ```

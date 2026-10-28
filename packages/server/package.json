@@ -22,9 +22,13 @@
     "@kinoshelf/i18n": "workspace:*",
     "@kinoshelf/provider-tmdb": "workspace:*",
     "better-sqlite3": "^13.0.3",
+    "fast-xml-parser": "^5.11.2",
     "fastify": "^5.12.7"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^9.6.0"
+  },
+  "scripts": {
+    "live:media": "node --env-file=../../.env scripts/live-media-servers.mjs"
   }
 }

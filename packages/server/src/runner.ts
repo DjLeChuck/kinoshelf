@@ -1,12 +1,21 @@
 import { KinoshelfError } from '@kinoshelf/core';
 import type { StoredError } from './entries.js';
 import { ApiError } from './api-error.js';
-import type { Execution, ExecutionStore, ExecutionSummary } from './executions.js';
+import type { Execution, ExecutionStore } from './executions.js';
 import type { Job, JobStore, ProcessedJob } from './jobs.js';
+import type { ExecutionOutcome } from './notify/message.js';
 
 export type JobProcessor = (job: Job) => Promise<ProcessedJob>;
 /** Transfers the files of an execution. */
-export type ExecutionRunner = (execution: Execution) => Promise<ExecutionSummary>;
+export type ExecutionRunner = (execution: Execution) => Promise<ExecutionOutcome>;
+
+/** What the runner tells, once something ended: who to notify is the caller's business. */
+export interface RunnerHooks {
+  jobDone?(job: Job): void;
+  jobFailed?(job: Job, error: StoredError): void;
+  executionDone?(job: Job, execution: Execution, outcome: ExecutionOutcome): void;
+  executionFailed?(job: Job, execution: Execution, error: StoredError): void;
+}
 
 /** Code for a failure that is not one of the core's typed errors: a bug, not a user mistake. */
 export const UNEXPECTED_ERROR = 'internal.unexpected';
@@ -25,6 +34,7 @@ export class JobRunner {
     private readonly executions: ExecutionStore,
     private readonly process: JobProcessor,
     private readonly execute: ExecutionRunner,
+    private readonly hooks: RunnerHooks = {},
     private readonly onError: (error: unknown) => void = () => undefined,
   ) {}
 
@@ -80,18 +90,44 @@ export class JobRunner {
   }
 
   private async runExecution(execution: Execution): Promise<void> {
+    const job = this.jobs.get(execution.jobId);
     try {
-      this.executions.complete(execution.id, await this.execute(execution));
+      const outcome = await this.execute(execution);
+      this.executions.complete(execution.id, outcome.summary);
+      this.tell(() => {
+        const finished = this.executions.get(execution.id);
+        if (job && finished) {
+          this.hooks.executionDone?.(job, finished, outcome);
+        }
+      });
     } catch (error) {
-      this.executions.fail(execution.id, this.describe(error));
+      const info = this.describe(error);
+      this.executions.fail(execution.id, info);
+      this.tell(() => {
+        if (job) {
+          this.hooks.executionFailed?.(job, this.executions.get(execution.id) ?? execution, info);
+        }
+      });
     }
   }
 
   private async runJob(job: Job): Promise<void> {
     try {
       this.jobs.complete(job, await this.process(job));
+      this.tell(() => this.hooks.jobDone?.(job));
     } catch (error) {
-      this.jobs.fail(job.id, this.describe(error));
+      const info = this.describe(error);
+      this.jobs.fail(job.id, info);
+      this.tell(() => this.hooks.jobFailed?.(job, info));
+    }
+  }
+
+  /** A hook that fails must not fail the task it reports on. */
+  private tell(hook: () => void): void {
+    try {
+      hook();
+    } catch (error) {
+      this.onError(error);
     }
   }
 

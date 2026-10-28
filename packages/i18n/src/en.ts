@@ -105,6 +105,21 @@ export const en = {
   'undo.summary': '{undone} reverted, {skipped} skipped, {failed} failed.',
   'undo.dry-run': 'Dry run: nothing was changed. Add --apply to revert.',
 
+  'notify.transferred.title': '{count} file(s) transferred',
+  'notify.transferred.message': '{count} file(s) transferred from {path}.',
+  'notify.failed.job.title': 'Analysis failed',
+  'notify.failed.job.message': 'The analysis of {path} failed: {reason}',
+  'notify.failed.execution.title': 'Transfer failed',
+  'notify.failed.execution.message': 'The transfer of {path} failed: {reason}',
+  'notify.failed.files.title': '{failed} file(s) not transferred',
+  'notify.failed.files.message': '{done} transferred, {failed} not transferred ({path}).',
+  'notify.failed.file': '{name}: {reason}',
+  'notify.review.title': '{count} file(s) to review',
+  'notify.review.message':
+    '{count} file(s) of {path} need a decision: {ambiguous} ambiguous, {unrecognized} unrecognized, {conflict} in conflict.',
+  'notify.test.title': 'Kinoshelf test',
+  'notify.test.message': 'This is a test notification.',
+
   'help.description': 'Identify, rename and enrich video files already on disk.',
   'help.scan': 'Analyze a library and report what would change (never writes).',
   'help.process': 'Identify a file or folder and organize it (dry run unless --apply).',
