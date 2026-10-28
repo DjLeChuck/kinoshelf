@@ -8,7 +8,8 @@
     "paths": {
       "@kinoshelf/core": ["./packages/core/src/index.ts"],
       "@kinoshelf/provider-tmdb": ["./packages/providers/tmdb/src/index.ts"],
-      "@kinoshelf/cli": ["./packages/cli/src/cli.ts"]
+      "@kinoshelf/cli": ["./packages/cli/src/cli.ts"],
+      "@kinoshelf/i18n": ["./packages/i18n/src/index.ts"]
     }
   },
   "include": [

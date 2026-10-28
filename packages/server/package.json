@@ -19,6 +19,7 @@
   "dependencies": {
     "@fastify/swagger": "^9.9.2",
     "@kinoshelf/core": "workspace:*",
+    "@kinoshelf/i18n": "workspace:*",
     "@kinoshelf/provider-tmdb": "workspace:*",
     "better-sqlite3": "^13.0.3",
     "fastify": "^5.12.7"

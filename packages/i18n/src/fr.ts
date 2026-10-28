@@ -57,6 +57,8 @@ export const fr: Record<keyof typeof en, string> = {
 
   'error.config.destination-required':
     'Indiquez une destination avec --dest (ou --dest-movies et --dest-series).',
+  'error.config.dir-not-writable':
+    'Impossible d’écrire dans le dossier de configuration {path} (exécuté avec l’uid {uid}). Rendez-le accessible en écriture à cet utilisateur.',
   'error.config.invalid': 'Fichier de configuration invalide {path} : {detail}',
   'error.undo.batch-already-undone': 'Le lot {batch} a déjà été annulé.',
   'error.undo.batch-not-found': 'Aucun lot {batch} dans le journal.',

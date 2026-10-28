@@ -5,7 +5,7 @@ import {
   type TransferMode,
 } from '@kinoshelf/core';
 import { CliError } from './errors.js';
-import type { Locale } from './i18n/index.js';
+import type { Locale } from '@kinoshelf/i18n';
 
 export interface CommonOptions {
   readonly dest?: string;

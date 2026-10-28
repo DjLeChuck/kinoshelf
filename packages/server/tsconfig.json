@@ -10,6 +10,9 @@
       "path": "../core"
     },
     {
+      "path": "../i18n"
+    },
+    {
       "path": "../providers/tmdb"
     }
   ]

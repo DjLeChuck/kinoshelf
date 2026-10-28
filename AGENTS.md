@@ -33,6 +33,7 @@ Everything depending on a service or a player is a plugin behind an interface.
 
 ```
 packages/core              parsing (Parser), matching/score, planning, execution, journal/undo, profiles
+packages/i18n              fr/en messages (CLI, server, web), error code → text
 packages/providers/tmdb    MetadataProvider for TMDB, SQLite cache
 packages/cli               kinoshelf scan | process <path> | undo
 packages/server            (v0.2) Fastify REST API, job queue, folder watcher, SSE
@@ -77,8 +78,8 @@ contains no player-specific rule.
   (journal and TMDB cache). Default mode is `move` when the destination is the source folder,
   `copy` otherwise. Movies and series may go to separate libraries (`--dest-movies`,
   `--dest-series`), as Plex recommends.
-- New user-facing text goes in **both** `packages/cli/src/i18n/en.ts` and `fr.ts` (same keys, same
-  `{parameters}`; tests enforce it). A new core error code goes in `ERROR_CODES`
+- New user-facing text goes in **both** `packages/i18n/src/en.ts` and `fr.ts` (same keys, same
+  `{parameters}`; tests enforce it). The catalogs are shared by the CLI, the server and the web UI. A new core error code goes in `ERROR_CODES`
   (`packages/core/src/error-codes.ts`) and needs an `error.<code>` message: it does not compile
   otherwise.
 - guessit-js may return arrays where its types promise scalars (conflicting readings of a folder

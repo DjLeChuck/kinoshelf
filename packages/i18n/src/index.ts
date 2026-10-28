@@ -42,3 +42,7 @@ export function describeError(
   const key = `error.${info.code}`;
   return key in en ? t(key as MessageKey, info.params) : t('error.unknown', { code: info.code });
 }
+
+export { CLI_ERROR_CODES, type CliErrorCode } from './codes.js';
+export { en } from './en.js';
+export { fr } from './fr.js';

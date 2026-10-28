@@ -1,9 +1,9 @@
 import { ERROR_CODES } from '@kinoshelf/core';
 import { describe, expect, it } from 'vitest';
-import { CLI_ERROR_CODES } from '../src/errors.js';
-import { en } from '../src/i18n/en.js';
-import { fr } from '../src/i18n/fr.js';
-import { createTranslator, describeError, detectLocale } from '../src/i18n/index.js';
+import { CLI_ERROR_CODES } from '../src/codes.js';
+import { en } from '../src/en.js';
+import { fr } from '../src/fr.js';
+import { createTranslator, describeError, detectLocale } from '../src/index.js';
 
 const placeholders = (text: string): string[] =>
   [...text.matchAll(/\{(\w+)\}/g)].map((m) => m[1] ?? '').sort();

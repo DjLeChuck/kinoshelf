@@ -10,7 +10,7 @@ import type {
   TransferMode,
   UndoResult,
 } from '@kinoshelf/core';
-import { describeError, type Translate } from './i18n/index.js';
+import { describeError, type Translate } from '@kinoshelf/i18n';
 
 const SECTIONS: readonly Classification[] = [
   'to-rename',

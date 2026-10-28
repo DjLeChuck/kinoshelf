@@ -28,7 +28,7 @@ import {
   isLocale,
   type Locale,
   type Translate,
-} from './i18n/index.js';
+} from '@kinoshelf/i18n';
 import {
   analysisToJson,
   cleanupToJson,

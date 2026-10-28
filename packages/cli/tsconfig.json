@@ -11,6 +11,9 @@
     },
     {
       "path": "../providers/tmdb"
+    },
+    {
+      "path": "../i18n"
     }
   ]
 }

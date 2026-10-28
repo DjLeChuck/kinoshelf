@@ -1,0 +1,19 @@
+{
+  "name": "@kinoshelf/i18n",
+  "version": "0.0.0",
+  "description": "Kinoshelf messages in French and English, shared by the CLI, the server and the web UI.",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "dependencies": {
+    "@kinoshelf/core": "workspace:*"
+  }
+}

@@ -1,5 +1,5 @@
 import type { ErrorCode } from '@kinoshelf/core';
-import type { CliErrorCode } from '../errors.js';
+import type { CliErrorCode } from './codes.js';
 
 /**
  * English catalog and source of truth for the keys: `fr.ts` must have exactly the same ones.
@@ -57,6 +57,8 @@ export const en = {
 
   'error.config.destination-required':
     'Give a destination with --dest (or --dest-movies and --dest-series).',
+  'error.config.dir-not-writable':
+    'Cannot write to the config directory {path} (running as uid {uid}). Make it writable for that user.',
   'error.config.invalid': 'Invalid configuration file {path}: {detail}',
   'error.undo.batch-already-undone': 'Batch {batch} was already reverted.',
   'error.undo.batch-not-found': 'No batch {batch} in the journal.',

@@ -5,6 +5,7 @@ export default defineConfig({
     passWithNoTests: true,
     projects: [
       'packages/core',
+      'packages/i18n',
       'packages/providers/tmdb',
       'packages/cli',
       'packages/server',
