@@ -17,6 +17,8 @@ export function generateApiKey(): string {
 export function setApiKey(database: Database, key: string): void {
   database.transaction(() => {
     database.prepare('DELETE FROM api_keys').run();
+    // A session was opened with the old key: replacing the key is how one locks everyone out.
+    database.prepare('DELETE FROM sessions').run();
     database
       .prepare('INSERT INTO api_keys (hash, created_at) VALUES (?, ?)')
       .run(hash(key), new Date().toISOString());

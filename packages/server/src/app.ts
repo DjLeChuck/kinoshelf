@@ -16,6 +16,8 @@ import { registerRoutes } from './routes.js';
 import { JobRunner, type JobProcessor } from './runner.js';
 import { healthSchema } from './schemas.js';
 import { Service } from './service.js';
+import { isValidSession } from './sessions.js';
+import { registerSessionRoutes, sameOrigin, sessionToken } from './session-routes.js';
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -174,9 +176,15 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
             description:
               'Set with KINOSHELF_API_KEY, or create one with `kinoshelf-server api-key create`.',
           },
+          session: {
+            type: 'apiKey',
+            in: 'cookie',
+            name: 'kinoshelf_session',
+            description: 'Opened by the web UI with `POST /api/session`.',
+          },
         },
       },
-      security: [{ apiKey: [] }],
+      security: [{ apiKey: [] }, { session: [] }],
     },
   });
 
@@ -188,6 +196,8 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
 
   app.get('/api/openapi.json', { schema: { hide: true } }, () => app.swagger());
 
+  registerSessionRoutes(app, options.database);
+
   await app.register((api, _options, done) => {
     api.addHook('onRequest', (request, reply, done) => {
       // Checked per request so `api-key create` takes effect without a restart.
@@ -196,14 +206,26 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
         return;
       }
       const match = /^Bearer (.+)$/.exec(request.headers.authorization ?? '');
-      if (!match?.[1] || !isValidApiKey(options.database, match[1])) {
-        void reply
-          .code(401)
-          .header('www-authenticate', 'Bearer')
-          .send({ error: { code: 'auth.unauthorized' } });
+      if (match?.[1] && isValidApiKey(options.database, match[1])) {
+        done();
         return;
       }
-      done();
+      // A browser session is only honored with the cookie's own safeguards: a write must come
+      // from the UI's origin.
+      const token = sessionToken(request);
+      const safe = request.method === 'GET' || request.method === 'HEAD';
+      if (
+        token !== undefined &&
+        isValidSession(options.database, token) &&
+        (safe || sameOrigin(request))
+      ) {
+        done();
+        return;
+      }
+      void reply
+        .code(401)
+        .header('www-authenticate', 'Bearer')
+        .send({ error: { code: 'auth.unauthorized' } });
     });
 
     registerRoutes(api, { jobs, entries, executions, service, runner, notifier });

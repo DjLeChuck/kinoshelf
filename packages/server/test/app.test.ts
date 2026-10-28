@@ -36,6 +36,7 @@ describe('GET /api/openapi.json', () => {
       '/api/queue/{id}/ignore',
       '/api/queue/{id}/match',
       '/api/search',
+      '/api/session',
       '/health',
     ]);
     expect(spec.paths['/health']?.get?.security).toEqual([]);

@@ -82,6 +82,18 @@ export const SERVER_MIGRATIONS: readonly { readonly name: string; readonly sql: 
       ALTER TABLE jobs DROP COLUMN batch_id;
     `,
   },
+  {
+    // Sessions of the web UI. Like API keys, only a hash is stored: a copy of the database does
+    // not let anyone in.
+    name: 'server:005-sessions',
+    sql: `
+      CREATE TABLE sessions (
+        hash TEXT PRIMARY KEY,
+        created_at TEXT NOT NULL,
+        expires_at TEXT NOT NULL
+      );
+    `,
+  },
 ];
 
 /** Opens the single SQLite file of the config directory, shared with the CLI and the cache. */
