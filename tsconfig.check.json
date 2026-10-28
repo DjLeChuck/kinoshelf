@@ -4,7 +4,11 @@
     "composite": false,
     "declaration": false,
     "declarationMap": false,
-    "noEmit": true
+    "noEmit": true,
+    "paths": {
+      "@kinoshelf/core": ["./packages/core/src/index.ts"],
+      "@kinoshelf/provider-tmdb": ["./packages/providers/tmdb/src/index.ts"]
+    }
   },
   "include": [
     "*.ts",

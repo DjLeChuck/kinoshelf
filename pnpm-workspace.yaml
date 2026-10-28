@@ -1,6 +1,7 @@
 packages:
   - packages/*
   - packages/providers/*
-onlyBuiltDependencies:
-  - better-sqlite3
-  - esbuild
+# better-sqlite3 compiles or downloads a native binary; esbuild ships its own.
+allowBuilds:
+  better-sqlite3: true
+  esbuild: true

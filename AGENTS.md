@@ -42,7 +42,12 @@ profiles/*.yaml            declarative output profiles; the core contains no pla
   agent (PMS 1.43.1+) reads Kodi-format NFO, `tvshow.nfo`, per-episode `<file>.nfo`,
   `poster.jpg` and `background.jpg` (profile `plex-nfo`, planned for v1.0 with Jellyfin; needs
   `<uniqueid type="tmdb">` in the NFO).
-- Each user provides their own TMDB key; none is ever embedded.
+- `ParsedMedia.knownIds` (ids found in names) is a hint, not a truth: the matcher boosts a candidate
+  whose id matches but keeps the type, title and season/episode guards. Looking a work up by id
+  (`getMovie`/`getSeries`) is planned later, to verify ids the text search does not return.
+- Each user provides their own TMDB key; none is ever embedded. Put it in `.env` (git-ignored) as
+  `TMDB_API_KEY`; never read or print it. `pnpm test:live` runs the contract tests against the
+  real API.
 
 ## Stack
 

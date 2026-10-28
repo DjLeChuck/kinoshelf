@@ -1,0 +1,85 @@
+{
+  "id": 841,
+  "titles": [
+    {
+      "iso_3166_1": "JP",
+      "title": "砂の惑星",
+      "type": ""
+    },
+    {
+      "iso_3166_1": "IL",
+      "title": "Xolit",
+      "type": "transliteration"
+    },
+    {
+      "iso_3166_1": "RS",
+      "title": "Дина",
+      "type": ""
+    },
+    {
+      "iso_3166_1": "KR",
+      "title": "듄",
+      "type": ""
+    },
+    {
+      "iso_3166_1": "AR",
+      "title": "Duna",
+      "type": ""
+    },
+    {
+      "iso_3166_1": "DE",
+      "title": "Dune - Der Wüstenplanet",
+      "type": "reissue title"
+    },
+    {
+      "iso_3166_1": "DE",
+      "title": "Dune Der Wüstenplanet",
+      "type": ""
+    },
+    {
+      "iso_3166_1": "DE",
+      "title": "Dune - Der Wuestenplanet",
+      "type": ""
+    },
+    {
+      "iso_3166_1": "GE",
+      "title": "დიუნი",
+      "type": ""
+    },
+    {
+      "iso_3166_1": "TH",
+      "title": "ดูน สงครามล้างเผ่าพันธุ์จักรวาล",
+      "type": ""
+    },
+    {
+      "iso_3166_1": "KR",
+      "title": "사구",
+      "type": ""
+    },
+    {
+      "iso_3166_1": "GE",
+      "title": "სილახვავი",
+      "type": ""
+    },
+    {
+      "iso_3166_1": "US",
+      "title": "Dune: The Alternative Edition Redux",
+      "type": "fanedit title"
+    },
+    {
+      "iso_3166_1": "US",
+      "title": "Dune: The Spicediver Cut",
+      "type": "fanedit title"
+    },
+    {
+      "iso_3166_1": "US",
+      "title": "Dune: Extended TV Version",
+      "type": "extended cut title"
+    },
+    {
+      "iso_3166_1": "AZ",
+      "title": "Dyun",
+      "type": ""
+    }
+  ]
+}

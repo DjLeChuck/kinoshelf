@@ -16,7 +16,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "pnpm build && vitest run",
-    "test:corpus": "pnpm build && vitest run --project core packages/core/test/corpus"
+    "test:corpus": "pnpm build && vitest run --project core packages/core/test/corpus",
+    "test:live": "pnpm --filter @kinoshelf/provider-tmdb test:live"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
