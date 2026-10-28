@@ -53,3 +53,9 @@ export {
   type Classification,
 } from './pipeline/analyze.js';
 export { configDirectory, DATABASE_FILE, loadConfig, type Config } from './config/config.js';
+export {
+  resolveSettings,
+  type Settings,
+  type SettingsContext,
+  type SettingsOverrides,
+} from './config/settings.js';
