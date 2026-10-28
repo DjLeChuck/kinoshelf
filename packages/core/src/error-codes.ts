@@ -1,0 +1,45 @@
+/**
+ * Every code the core can emit. Edges translate them (`error.<code>` in their catalogs), and
+ * the compiler rejects a code that is not listed here, so none can be forgotten or mistyped.
+ */
+export const ERROR_CODES = [
+  'destination.exists',
+  'discover.not-found',
+  'fs.error',
+  'fs.no-space',
+  'fs.permission-denied',
+  'fs.read-only',
+  'hardlink.cross-device',
+  'hardlink.unsupported',
+  'main-not-done',
+  'move.verification-failed',
+  'operation.unsupported',
+  'plan.episode-numbers-missing',
+  'plan.outside-root',
+  'plan.profile-feature-unsupported',
+  'plan.unsafe-segment',
+  'profile.double-quoted-escape',
+  'profile.invalid',
+  'profile.invalid-path',
+  'profile.unknown',
+  'profile.unknown-variable',
+  'profile.yaml-syntax',
+  'provider.foreign-id',
+  'source.missing',
+  'template.empty-segment',
+  'template.invalid-escape',
+  'template.invalid-variable',
+  'template.missing-variable',
+  'template.pad-on-text',
+  'template.unexpected-brace',
+  'tmdb.http-error',
+  'tmdb.invalid-key',
+  'tmdb.invalid-response',
+  'tmdb.network',
+  'tmdb.not-found',
+  'tmdb.rate-limited',
+  'undo.destination-missing',
+  'undo.source-exists',
+] as const;
+
+export type ErrorCode = (typeof ERROR_CODES)[number];

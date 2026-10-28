@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import {
   createPlan,
   KinoshelfError,
-  loadProfileFile,
+  loadBundledProfile,
   parseProfile,
   type PlanInput,
   type PlanItem,
@@ -22,7 +22,7 @@ import {
   SHM,
 } from './workspace.js';
 
-const plex = await loadProfileFile(new URL('../../../profiles/plex.yaml', import.meta.url));
+const plex = await loadBundledProfile('plex');
 const dune = movie(438631, 'Dune', 2021);
 const bear = series(136315, 'The Bear', 2022);
 
@@ -148,6 +148,33 @@ describe('createPlan: names', () => {
       lib,
     );
     expect(destinationOf(result.items[0])).toContain('Mission Impossible (1996) {tmdb-1}');
+  });
+});
+
+describe('createPlan: separate libraries', () => {
+  it('sends movies and series to their own roots', async () => {
+    const src = await makeDir();
+    const [movies, shows] = [await makeDir(), await makeDir()];
+    const film = await put(join(src, 'Dune.2021.mkv'));
+    const episode = await put(join(src, 'The.Bear.S03E04.mkv'));
+
+    const result = await createPlan(
+      [
+        { parsed: parsedMovie(film), candidate: dune },
+        { parsed: parsedEpisode(episode, 3, [4]), candidate: bear },
+      ],
+      {
+        profile: plex,
+        destinationRoot: { movie: movies, series: shows },
+        mode: 'copy',
+      },
+    );
+
+    expect(
+      destinationOf(result.items[0]?.status === 'ready' ? result.items[0] : undefined),
+    ).toMatch(new RegExp(`^${movies}/Dune \\(2021\\)`));
+    expect(destinationOf(result.items[1])).toMatch(new RegExp(`^${shows}/The Bear \\(2022\\)`));
+    expect(result.destinationRoot).toEqual({ movie: movies, series: shows });
   });
 });
 

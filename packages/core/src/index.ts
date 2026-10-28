@@ -7,8 +7,14 @@ export type * from './types/operation.js';
 export type * from './types/plan.js';
 export type * from './types/journal.js';
 export type * from './types/errors.js';
+export { ERROR_CODES, type ErrorCode } from './error-codes.js';
 export { KinoshelfError } from './errors.js';
-export { loadProfileFile, parseProfile } from './profiles/loader.js';
+export {
+  listBundledProfiles,
+  loadBundledProfile,
+  loadProfileFile,
+  parseProfile,
+} from './profiles/loader.js';
 export {
   parseTemplate,
   renderTemplate,
@@ -32,3 +38,11 @@ export { executePlan, type ExecuteOptions } from './execution/executor.js';
 export { MemoryJournal } from './journal/memory-journal.js';
 export { SqliteJournal } from './journal/sqlite-journal.js';
 export { undoLastBatch, type UndoEntryResult, type UndoResult } from './journal/undo.js';
+export { discoverVideos, VIDEO_EXTENSIONS, type DiscoveredFile } from './pipeline/discover.js';
+export {
+  analyze,
+  type Analysis,
+  type AnalysisEntry,
+  type AnalyzeOptions,
+  type Classification,
+} from './pipeline/analyze.js';

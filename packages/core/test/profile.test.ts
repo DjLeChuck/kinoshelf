@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   KinoshelfError,
+  listBundledProfiles,
+  loadBundledProfile,
   loadProfileFile,
   parseProfile,
   parseTemplate,
@@ -8,7 +10,7 @@ import {
 } from '../src/index.js';
 import type { Profile, TemplateVariables } from '../src/index.js';
 
-const plexUrl = new URL('../../../profiles/plex.yaml', import.meta.url);
+const plexUrl = new URL('../profiles/plex.yaml', import.meta.url);
 
 function codeOf(fn: () => unknown): string | undefined {
   try {
@@ -146,4 +148,24 @@ artwork:
       'profile.unknown-variable',
     );
   });
+});
+
+describe('bundled profiles', () => {
+  it('lists the shipped profiles', async () => {
+    expect(await listBundledProfiles()).toContain('plex');
+  });
+
+  it('loads one by id', async () => {
+    expect((await loadBundledProfile('plex')).id).toBe('plex');
+  });
+
+  it.each(['nope', '../etc/passwd', 'Plex', '', 'a/b'])(
+    'refuses unknown or unsafe id %j',
+    async (id) => {
+      await expect(loadBundledProfile(id)).rejects.toSatisfy(
+        (error: unknown) =>
+          error instanceof KinoshelfError && error.info.code === 'profile.unknown',
+      );
+    },
+  );
 });

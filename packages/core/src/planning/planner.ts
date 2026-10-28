@@ -7,7 +7,7 @@ import { parseTemplate, renderTemplate, type TemplateVariables } from '../profil
 import type { ErrorInfo } from '../types/errors.js';
 import type { ParsedMedia } from '../types/media.js';
 import type { Operation, TransferMode } from '../types/operation.js';
-import type { Conflict, Plan, PlanItem } from '../types/plan.js';
+import type { Conflict, DestinationRoots, Plan, PlanItem } from '../types/plan.js';
 import type { Profile } from '../types/profile.js';
 import type { Candidate } from '../types/provider.js';
 import { DEFAULT_SIDECAR_EXTENSIONS, findSidecars } from './sidecars.js';
@@ -21,7 +21,7 @@ export interface PlanInput {
 
 export interface PlannerOptions {
   readonly profile: Profile;
-  readonly destinationRoot: string;
+  readonly destinationRoot: DestinationRoots;
   readonly mode: TransferMode;
   readonly sidecarExtensions?: readonly string[];
   readonly newId?: () => string;
@@ -128,7 +128,12 @@ async function planItem(input: PlanInput, options: PlannerOptions, id: string): 
   if (segments.some((segment) => segment === '.' || segment === '..')) {
     return unresolvable({ code: 'plan.unsafe-segment' });
   }
-  const root = resolve(options.destinationRoot);
+  const roots = options.destinationRoot;
+  const root = resolve(
+    typeof roots === 'string'
+      ? roots
+      : roots[input.candidate.kind === 'movie' ? 'movie' : 'series'],
+  );
   const destination = join(root, ...target.folders, `${target.stem}${extension}`);
   if (!destination.startsWith(`${root}${sep}`)) {
     return unresolvable({ code: 'plan.outside-root' });
@@ -195,7 +200,13 @@ export async function createPlan(
     id: newId(),
     createdAt: (options.now?.() ?? new Date()).toISOString(),
     profileId: profile.id,
-    destinationRoot: resolve(options.destinationRoot),
+    destinationRoot:
+      typeof options.destinationRoot === 'string'
+        ? resolve(options.destinationRoot)
+        : {
+            movie: resolve(options.destinationRoot.movie),
+            series: resolve(options.destinationRoot.series),
+          },
     mode: options.mode,
     items: items.map((item): PlanItem => {
       const main = item.operations[0];

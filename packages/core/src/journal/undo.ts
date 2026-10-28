@@ -1,6 +1,7 @@
 import { rmdir, unlink } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { describeFsError, ensureDirectory, exists, moveFile } from '../execution/fs-ops.js';
+import type { ErrorCode } from '../error-codes.js';
 import type { ErrorInfo } from '../types/errors.js';
 import type { Journal, JournalEntry } from '../types/journal.js';
 
@@ -18,7 +19,7 @@ export interface UndoResult {
 }
 
 async function revert(entry: JournalEntry, dryRun: boolean): Promise<UndoEntryResult> {
-  const skipped = (code: string, path: string): UndoEntryResult => ({
+  const skipped = (code: ErrorCode, path: string): UndoEntryResult => ({
     entry,
     status: 'skipped',
     error: { code, params: { path } },

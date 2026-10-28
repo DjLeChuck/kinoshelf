@@ -46,13 +46,19 @@ export interface PlanItem {
   readonly conflicts: readonly Conflict[];
 }
 
+/**
+ * Where files go. Plex asks for movies and TV shows in separate libraries, so a destination
+ * can be one root for everything or one per kind.
+ */
+export type DestinationRoots = string | { readonly movie: string; readonly series: string };
+
 export interface Plan {
   readonly id: string;
   /** ISO 8601 timestamp. */
   readonly createdAt: string;
   readonly profileId: string;
-  /** Absolute root every destination lives under. */
-  readonly destinationRoot: string;
+  /** Absolute root(s) every destination lives under. */
+  readonly destinationRoot: DestinationRoots;
   readonly mode: TransferMode;
   readonly items: readonly PlanItem[];
 }

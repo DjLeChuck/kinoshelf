@@ -1,4 +1,4 @@
-import { readFile } from 'node:fs/promises';
+import { readdir, readFile } from 'node:fs/promises';
 import { parseDocument } from 'yaml';
 import { KinoshelfError } from '../errors.js';
 import type { Profile } from '../types/profile.js';
@@ -119,4 +119,32 @@ export function parseProfile(yamlText: string): Profile {
 
 export async function loadProfileFile(path: string | URL): Promise<Profile> {
   return parseProfile(await readFile(path, 'utf8'));
+}
+
+// Same depth from `src/profiles` and `dist/profiles`: the YAML files ship next to the code.
+const BUNDLED_DIR = new URL('../../profiles/', import.meta.url);
+
+const PROFILE_ID = /^[a-z0-9-]+$/;
+
+/** Ids of the profiles shipped with Kinoshelf, e.g. `plex`. */
+export async function listBundledProfiles(): Promise<string[]> {
+  return (await readdir(BUNDLED_DIR))
+    .filter((name) => name.endsWith('.yaml'))
+    .map((name) => name.slice(0, -'.yaml'.length))
+    .sort();
+}
+
+/** Loads a shipped profile by id. The id is checked so it can never address another file. */
+export async function loadBundledProfile(id: string): Promise<Profile> {
+  if (!PROFILE_ID.test(id)) {
+    throw new KinoshelfError('profile.unknown', { id });
+  }
+  try {
+    return await loadProfileFile(new URL(`${id}.yaml`, BUNDLED_DIR));
+  } catch (error) {
+    if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
+      throw new KinoshelfError('profile.unknown', { id });
+    }
+    throw error;
+  }
 }
