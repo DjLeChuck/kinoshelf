@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import {
   createPlan,
   loadProfile,
@@ -16,6 +17,7 @@ import {
 } from '@kinoshelf/core';
 import { ApiError } from './api-error.js';
 import type { EntryStore, Entry, StoredError } from './entries.js';
+import type { Execution, ExecutionStore, ExecutionSummary } from './executions.js';
 import type { Job, JobStore, PlanSettings } from './jobs.js';
 import { makeProvider, type ProcessorDeps } from './processor.js';
 
@@ -60,6 +62,7 @@ export interface SearchQuery {
 export interface ServiceDeps extends ProcessorDeps {
   readonly jobs: JobStore;
   readonly entries: EntryStore;
+  readonly executions: ExecutionStore;
   readonly journal: Journal;
 }
 
@@ -119,53 +122,13 @@ export class Service {
     return this.require(entryId);
   }
 
-  /**
-   * Transfers the matched files of a job. `dryRun` checks every precondition and writes nothing.
-   * The plan is rebuilt from the stored items and the settings of the job, then the executor
-   * re-checks each destination right before writing.
-   */
-  async execute(
-    jobId: string,
-    options: { dryRun: boolean; entryIds?: readonly string[] },
-  ): Promise<ExecutionReport> {
-    const job = this.deps.jobs.get(jobId);
-    if (!job) {
-      throw new ApiError(404, 'job.not-found');
-    }
-    if (job.status !== 'done') {
-      throw new ApiError(409, 'job.not-done', { status: job.status });
-    }
-    const selected = options.entryIds && new Set(options.entryIds);
-    const entries = this.deps.entries
-      .executable(jobId)
-      .filter((entry) => !selected || selected.has(entry.id));
-
-    const settings = this.settingsOf(jobId);
-    const profile = await loadProfile(settings.profile);
-    const items = entries.flatMap((entry) => (entry.item ? [entry.item] : []));
-    const plan: Plan = {
-      id: job.id,
-      createdAt: new Date().toISOString(),
-      profileId: profile.id,
-      destinationRoot: settings.destinationRoot,
-      mode: settings.mode,
-      items,
-    };
-
-    const batch = await executePlan(plan, { journal: this.deps.journal, dryRun: options.dryRun });
-
-    const entryOfItem = new Map(entries.flatMap((e) => (e.item ? [[e.item.id, e] as const] : [])));
-    if (!options.dryRun) {
-      for (const result of batch.items) {
-        const entry = entryOfItem.get(result.itemId);
-        if (entry) {
-          this.settle(entry, result.results, batch.batchId);
-        }
-      }
-    }
+  /** What a transfer of the job would do, checked against the disk, with nothing written. */
+  async dryRun(jobId: string, entryIds?: readonly string[]): Promise<ExecutionReport> {
+    const { plan, entryOfItem } = await this.prepare(jobId, entryIds);
+    const batch = await executePlan(plan, { journal: this.deps.journal, dryRun: true });
     return {
       batchId: batch.batchId,
-      dryRun: batch.dryRun,
+      dryRun: true,
       items: batch.items.map((result) => ({
         entryId: entryOfItem.get(result.itemId)?.id ?? result.itemId,
         results: result.results.map(report),
@@ -173,9 +136,90 @@ export class Service {
     };
   }
 
-  /** Executes what an `apply` job matched; returns the batch id. */
-  async apply(job: Job): Promise<string> {
-    return (await this.execute(job.id, { dryRun: false })).batchId;
+  /**
+   * Queues the transfer: a copy can last minutes, longer than a request should. One at a time per
+   * job: a second would copy the same files again, for nothing.
+   */
+  enqueue(jobId: string, entryIds?: readonly string[]): Execution {
+    this.requireDoneJob(jobId);
+    const execution = this.deps.executions.createIfIdle(jobId, entryIds);
+    if (!execution) {
+      throw new ApiError(409, 'job.busy');
+    }
+    return execution;
+  }
+
+  /**
+   * Transfers the files of an execution, run by the queue worker. The plan is rebuilt from the
+   * stored items and the settings of the job, and the executor re-checks each destination right
+   * before writing. Each file is settled as soon as it is transferred, in step with the journal:
+   * after a crash the execution only has what is left to do.
+   */
+  async run(execution: Execution): Promise<ExecutionSummary> {
+    const { plan, entryOfItem } = await this.prepare(
+      execution.jobId,
+      execution.entryIds ?? undefined,
+    );
+    // A resumed execution keeps its batch: what it did before the crash and what it does now are
+    // one batch in the journal, so one undo reverts them all.
+    const batchId = execution.batchId ?? randomUUID();
+    if (!execution.batchId) {
+      this.deps.executions.setBatch(execution.id, batchId);
+    }
+
+    let done = 0;
+    let failed = 0;
+    await executePlan(plan, {
+      journal: this.deps.journal,
+      batchId,
+      onItem: (result) => {
+        const entry = entryOfItem.get(result.itemId);
+        if (entry) {
+          if (this.settle(entry, result.results, batchId) === 'done') {
+            done++;
+          } else {
+            failed++;
+          }
+        }
+      },
+    });
+    return { done, failed };
+  }
+
+  /** The plan of a job: its matched files not transferred yet, optionally only some of them. */
+  private async prepare(
+    jobId: string,
+    entryIds?: readonly string[],
+  ): Promise<{ plan: Plan; entryOfItem: Map<string, Entry> }> {
+    const job = this.requireDoneJob(jobId);
+    const selected = entryIds && new Set(entryIds);
+    const entries = this.deps.entries
+      .executable(jobId)
+      .filter((entry) => !selected || selected.has(entry.id));
+
+    const settings = this.settingsOf(jobId);
+    const profile = await loadProfile(settings.profile);
+    const plan: Plan = {
+      id: job.id,
+      createdAt: new Date().toISOString(),
+      profileId: profile.id,
+      destinationRoot: settings.destinationRoot,
+      mode: settings.mode,
+      items: entries.flatMap((entry) => (entry.item ? [entry.item] : [])),
+    };
+    const entryOfItem = new Map(entries.flatMap((e) => (e.item ? [[e.item.id, e] as const] : [])));
+    return { plan, entryOfItem };
+  }
+
+  private requireDoneJob(jobId: string): Job {
+    const job = this.deps.jobs.get(jobId);
+    if (!job) {
+      throw new ApiError(404, 'job.not-found');
+    }
+    if (job.status !== 'done') {
+      throw new ApiError(409, 'job.not-done', { status: job.status });
+    }
+    return job;
   }
 
   /**
@@ -212,16 +256,21 @@ export class Service {
   }
 
   /** `done` when the video itself went through; anything else needs a human again. */
-  private settle(entry: Entry, results: readonly OperationResult[], batchId: string): void {
+  private settle(
+    entry: Entry,
+    results: readonly OperationResult[],
+    batchId: string,
+  ): 'done' | 'failed' {
     const main = results.find(
       (r) => r.operation.type === 'transfer' && r.operation.role === 'main',
     );
     if (main?.status === 'done') {
       this.deps.entries.resolve(entry.id, 'done', { batchId });
-      return;
+      return 'done';
     }
     const error: StoredError = main?.error ?? { code: 'main-not-done' };
     this.deps.entries.resolve(entry.id, 'failed', { error });
+    return 'failed';
   }
 
   private pendingEntry(id: string): Entry {

@@ -26,6 +26,12 @@ export async function put(path: string, content = 'x'): Promise<string> {
   return path;
 }
 
+/** Registers an app built by a test, so `cleanup` closes it. */
+export function track(app: FastifyInstance): FastifyInstance {
+  apps.push(app);
+  return app;
+}
+
 export async function cleanup(): Promise<void> {
   await Promise.all(apps.splice(0).map((app) => app.close()));
   await Promise.all(created.splice(0).map((d) => rm(d, { recursive: true, force: true })));

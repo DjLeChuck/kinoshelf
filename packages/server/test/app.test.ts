@@ -26,6 +26,7 @@ describe('GET /api/openapi.json', () => {
     expect(spec.info.version).toBe('1.2.3');
     expect(Object.keys(spec.paths).sort()).toEqual([
       '/api/batches/{id}/undo',
+      '/api/executions/{id}',
       '/api/jobs',
       '/api/jobs/{id}',
       '/api/jobs/{id}/entries',

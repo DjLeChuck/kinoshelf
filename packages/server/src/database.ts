@@ -60,6 +60,29 @@ export const SERVER_MIGRATIONS: readonly { readonly name: string; readonly sql: 
       ALTER TABLE jobs DROP COLUMN analysis;
     `,
   },
+  {
+    // A transfer can last minutes, so it is a queued record, not a request: it survives a restart
+    // and a second one for the same job can be refused while one is pending.
+    name: 'server:004-executions',
+    sql: `
+      CREATE TABLE executions (
+        seq INTEGER PRIMARY KEY AUTOINCREMENT,
+        id TEXT NOT NULL UNIQUE,
+        job_id TEXT NOT NULL,
+        status TEXT NOT NULL,
+        entry_ids TEXT,
+        created_at TEXT NOT NULL,
+        started_at TEXT,
+        finished_at TEXT,
+        batch_id TEXT,
+        summary TEXT,
+        error TEXT
+      );
+      CREATE INDEX executions_status ON executions (status, seq);
+      CREATE INDEX executions_job ON executions (job_id, seq);
+      ALTER TABLE jobs DROP COLUMN batch_id;
+    `,
+  },
 ];
 
 /** Opens the single SQLite file of the config directory, shared with the CLI and the cache. */

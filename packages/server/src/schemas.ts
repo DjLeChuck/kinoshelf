@@ -38,6 +38,39 @@ export const summarySchema = {
   properties: Object.fromEntries(CLASSIFICATIONS.map((name) => [name, { type: 'integer' }])),
 } as const;
 
+/** A queued transfer: poll it until `done` or `failed`; the files show what became of each. */
+export const executionSchema = {
+  type: 'object',
+  required: [
+    'id',
+    'jobId',
+    'status',
+    'createdAt',
+    'startedAt',
+    'finishedAt',
+    'batchId',
+    'summary',
+    'error',
+  ],
+  properties: {
+    id: { type: 'string', format: 'uuid' },
+    jobId: { type: 'string', format: 'uuid' },
+    status: { type: 'string', enum: ['queued', 'running', 'done', 'failed'] },
+    createdAt: { type: 'string', format: 'date-time' },
+    startedAt: { type: 'string', format: 'date-time', nullable: true },
+    finishedAt: { type: 'string', format: 'date-time', nullable: true },
+    /** The batch to undo. A resumed execution keeps it: it spans what ran before the crash too. */
+    batchId: { type: 'string', nullable: true },
+    summary: {
+      type: 'object',
+      nullable: true,
+      required: ['done', 'failed'],
+      properties: { done: { type: 'integer' }, failed: { type: 'integer' } },
+    },
+    error: { ...errorInfo, nullable: true },
+  },
+} as const;
+
 export const jobSchema = {
   type: 'object',
   required: [
@@ -49,7 +82,7 @@ export const jobSchema = {
     'startedAt',
     'finishedAt',
     'error',
-    'batchId',
+    'execution',
     'summary',
   ],
   properties: {
@@ -61,7 +94,8 @@ export const jobSchema = {
     startedAt: { type: 'string', format: 'date-time', nullable: true },
     finishedAt: { type: 'string', format: 'date-time', nullable: true },
     error: { ...errorInfo, nullable: true },
-    batchId: { type: 'string', nullable: true },
+    /** The latest transfer of this job (an `apply` job queues its own). */
+    execution: { ...executionSchema, nullable: true },
     summary: { ...summarySchema, nullable: true },
   },
 } as const;
@@ -162,7 +196,8 @@ export const entrySchema = {
   },
 } as const;
 
-export const executionSchema = {
+/** What a dry run reports: every operation of the plan, checked and not run. */
+export const executionReportSchema = {
   type: 'object',
   required: ['batchId', 'dryRun', 'items'],
   properties: {

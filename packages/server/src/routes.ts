@@ -1,6 +1,7 @@
 import type { Candidate, MovieCandidate, SeriesCandidate } from '@kinoshelf/core';
 import type { FastifyInstance } from 'fastify';
 import type { Entry, EntryStore } from './entries.js';
+import type { ExecutionStore } from './executions.js';
 import type { Job, JobStore } from './jobs.js';
 import type { JobRunner } from './runner.js';
 import {
@@ -8,6 +9,7 @@ import {
   classificationValues,
   entrySchema,
   errorSchema,
+  executionReportSchema,
   executionSchema,
   jobSchema,
   matchBodySchema,
@@ -19,6 +21,7 @@ import type { Service } from './service.js';
 export interface RouteContext {
   readonly jobs: JobStore;
   readonly entries: EntryStore;
+  readonly executions: ExecutionStore;
   readonly service: Service;
   readonly runner: JobRunner;
 }
@@ -93,11 +96,15 @@ const emptyBodyByDefault = (
 
 /** Thin HTTP layer: validate, call the store or the service, shape the answer. */
 export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
-  const { jobs, entries, service, runner } = ctx;
-  const presentJob = (job: Job): unknown => ({
-    ...job,
-    summary: job.status === 'done' ? entries.summary(job.id) : null,
-  });
+  const { jobs, entries, executions, service, runner } = ctx;
+  const presentJob = (job: Job): unknown => {
+    const latest = executions.latestOf(job.id);
+    return {
+      ...job,
+      summary: job.status === 'done' ? entries.summary(job.id) : null,
+      execution: latest ?? null,
+    };
+  };
   const idParams = { type: 'object', properties: { id: { type: 'string' } } } as const;
   const dryRunBody = {
     type: 'object',
@@ -280,8 +287,11 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
         summary: 'Execute the plan of a job',
         description:
           'The plan of a job is the set of its matched files not transferred yet; its id is the ' +
-          "job's. With `dryRun`, every precondition is checked and nothing is written. A " +
-          'destination that exists is never overwritten, and hardlink never falls back to copy.',
+          "job's. With `dryRun`, every precondition is checked, nothing is written and the report " +
+          'comes back at once (200). Otherwise the transfer is queued (202): poll the execution ' +
+          'until it is `done` or `failed`. One at a time per job: another request while one is ' +
+          'queued or running is refused (409 `job.busy`). A destination that exists is never ' +
+          'overwritten, and hardlink never falls back to copy.',
         params: idParams,
         body: {
           ...dryRunBody,
@@ -290,14 +300,40 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
             entries: { type: 'array', items: { type: 'string' }, description: 'Only these files' },
           },
         },
-        response: { 200: executionSchema, 401: errorSchema, 404: errorSchema, 409: errorSchema },
+        response: {
+          200: executionReportSchema,
+          202: executionSchema,
+          401: errorSchema,
+          404: errorSchema,
+          409: errorSchema,
+        },
       },
     },
-    (request) =>
-      service.execute(request.params.id, {
-        dryRun: request.body?.dryRun ?? false,
-        ...(request.body?.entries && { entryIds: request.body.entries }),
-      }),
+    async (request, reply) => {
+      const entryIds = request.body?.entries;
+      if (request.body?.dryRun) {
+        return service.dryRun(request.params.id, entryIds);
+      }
+      const execution = service.enqueue(request.params.id, entryIds);
+      runner.kick();
+      return reply.code(202).send(execution);
+    },
+  );
+
+  api.get<{ Params: { id: string } }>(
+    '/api/executions/:id',
+    {
+      schema: {
+        summary: 'A queued transfer and how it went',
+        description: 'What became of each file is on the file: see `GET /api/jobs/{id}/entries`.',
+        params: idParams,
+        response: { 200: executionSchema, 401: errorSchema, 404: errorSchema },
+      },
+    },
+    (request, reply) => {
+      const execution = executions.get(request.params.id);
+      return execution ?? reply.code(404).send({ error: { code: 'execution.not-found' } });
+    },
   );
 
   api.post<{ Params: { id: string }; Body?: { dryRun?: boolean } }>(

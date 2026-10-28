@@ -1,10 +1,11 @@
 import swagger from '@fastify/swagger';
-import { KinoshelfError, SqliteJournal } from '@kinoshelf/core';
+import { KinoshelfError, SqliteJournal, type Journal } from '@kinoshelf/core';
 import type { Database } from 'better-sqlite3';
 import Fastify, { type FastifyInstance } from 'fastify';
 import { ApiError } from './api-error.js';
 import { hasApiKey, isValidApiKey } from './auth.js';
 import { EntryStore } from './entries.js';
+import { ExecutionStore } from './executions.js';
 import { JobStore } from './jobs.js';
 import { createProcessor, type ProcessorDeps } from './processor.js';
 import { registerRoutes } from './routes.js';
@@ -26,6 +27,8 @@ export interface AppOptions extends Omit<ProcessorDeps, 'database'> {
   readonly logger?: boolean;
   /** Replaces the real pipeline, for tests. */
   readonly processor?: JobProcessor;
+  /** Wraps or replaces the journal, for tests. */
+  readonly journal?: (database: Database) => Journal;
 }
 
 /** The core's typed errors are the client's to fix or an upstream's fault, not a server bug. */
@@ -46,17 +49,20 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     ajv: { customOptions: { removeAdditional: false } },
   });
   const entries = new EntryStore(options.database);
-  const jobs = new JobStore(options.database, entries);
+  const executions = new ExecutionStore(options.database);
+  const jobs = new JobStore(options.database, entries, executions);
   const service = new Service({
     ...options,
     jobs,
     entries,
-    journal: new SqliteJournal(options.database),
+    executions,
+    journal: options.journal?.(options.database) ?? new SqliteJournal(options.database),
   });
   const runner = new JobRunner(
     jobs,
+    executions,
     options.processor ?? createProcessor(options),
-    (job) => service.apply(job),
+    (execution) => service.run(execution),
     (error) => {
       app.log.error(error);
     },
@@ -141,7 +147,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
       done();
     });
 
-    registerRoutes(api, { jobs, entries, service, runner });
+    registerRoutes(api, { jobs, entries, executions, service, runner });
     done();
   });
 

@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { Analysis, DestinationRoots, TransferMode } from '@kinoshelf/core';
 import type { Database } from 'better-sqlite3';
 import type { StoredError, EntryStore } from './entries.js';
+import type { ExecutionStore } from './executions.js';
 
 export type JobStatus = 'queued' | 'running' | 'done' | 'failed';
 
@@ -31,8 +32,6 @@ export interface Job {
   readonly startedAt: string | null;
   readonly finishedAt: string | null;
   readonly error: StoredError | null;
-  /** The batch an `apply` job transferred its files in. */
-  readonly batchId: string | null;
 }
 
 interface JobRow {
@@ -44,10 +43,9 @@ interface JobRow {
   started_at: string | null;
   finished_at: string | null;
   error: string | null;
-  batch_id: string | null;
 }
 
-const COLUMNS = 'id, path, status, apply, created_at, started_at, finished_at, error, batch_id';
+const COLUMNS = 'id, path, status, apply, created_at, started_at, finished_at, error';
 
 function toJob(row: JobRow): Job {
   return {
@@ -59,7 +57,6 @@ function toJob(row: JobRow): Job {
     startedAt: row.started_at,
     finishedAt: row.finished_at,
     error: row.error === null ? null : (JSON.parse(row.error) as StoredError),
-    batchId: row.batch_id,
   };
 }
 
@@ -68,6 +65,7 @@ export class JobStore {
   constructor(
     private readonly database: Database,
     private readonly entries: EntryStore,
+    private readonly executions: ExecutionStore,
   ) {}
 
   create(path: string, apply = false): Job {
@@ -120,18 +118,20 @@ export class JobStore {
     })();
   }
 
-  /** Files and status land together: a crash cannot leave a `done` job without its files. */
-  complete(id: string, processed: ProcessedJob): void {
+  /**
+   * Files and status land together: a crash cannot leave a `done` job without its files. An
+   * `apply` job gets its execution in the same transaction, so it cannot be lost either.
+   */
+  complete(job: Job, processed: ProcessedJob): void {
     this.database.transaction(() => {
-      this.entries.insertAll(id, processed.analysis.entries);
+      this.entries.insertAll(job.id, processed.analysis.entries);
       this.database
         .prepare("UPDATE jobs SET status = 'done', finished_at = ?, settings = ? WHERE id = ?")
-        .run(new Date().toISOString(), JSON.stringify(processed.settings), id);
+        .run(new Date().toISOString(), JSON.stringify(processed.settings), job.id);
+      if (job.apply) {
+        this.executions.createIfIdle(job.id);
+      }
     })();
-  }
-
-  setBatch(id: string, batchId: string): void {
-    this.database.prepare('UPDATE jobs SET batch_id = ? WHERE id = ?').run(batchId, id);
   }
 
   fail(id: string, error: StoredError): void {
