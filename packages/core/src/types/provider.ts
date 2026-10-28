@@ -19,6 +19,11 @@ interface CandidateBase {
   readonly overview?: string;
   readonly posterPath?: string;
   readonly popularity?: number;
+  /**
+   * Countries of origin, ISO 3166-1 alpha-2, when the provider says so (TMDB does for series,
+   * not in its movie search results). Absent means unknown, not "none".
+   */
+  readonly countries?: readonly string[];
 }
 
 export interface MovieCandidate extends CandidateBase {

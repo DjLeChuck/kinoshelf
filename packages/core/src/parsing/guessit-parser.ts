@@ -33,6 +33,9 @@ const text = (value: unknown): string | undefined =>
   typeof value === 'string' && value.trim() !== '' ? value : undefined;
 const count = (value: unknown): number | undefined =>
   typeof value === 'number' && Number.isFinite(value) ? value : undefined;
+// guessit already folds `UK` into `GB`; only a plain two-letter code is trusted.
+const countryOf = (value: unknown): string | undefined =>
+  typeof value === 'string' && /^[A-Za-z]{2}$/.test(value) ? value.toUpperCase() : undefined;
 
 /** {@link Parser} backed by guessit-js, which already understands parent-folder context. */
 export class GuessitParser implements Parser {
@@ -88,6 +91,7 @@ export class GuessitParser implements Parser {
     const year = count(guess.year);
     const episodeTitle = text(guess.episode_title);
     const releaseGroup = text(guess.release_group);
+    const country = countryOf(guess.country);
     let kind: ParsedKind = 'unknown';
     if (title !== undefined) {
       if (guess.type === 'movie') {
@@ -107,6 +111,7 @@ export class GuessitParser implements Parser {
       ...(kind === 'episode' && episodeTitle !== undefined && { episodeTitle }),
       ...(extension && { extension }),
       ...(knownIds.length > 0 && { knownIds }),
+      ...(country !== undefined && { country }),
       ...(releaseGroup !== undefined && { releaseGroup }),
       ...(languages.length > 0 && { languages }),
     };

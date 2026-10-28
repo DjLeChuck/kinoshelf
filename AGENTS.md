@@ -47,9 +47,15 @@ packages/core/profiles/*.yaml declarative output profiles, shipped with the core
   agent (PMS 1.43.1+) reads Kodi-format NFO, `tvshow.nfo`, per-episode `<file>.nfo`,
   `poster.jpg` and `background.jpg` (profile `plex-nfo`, planned for v1.0 with Jellyfin; needs
   `<uniqueid type="tmdb">` in the NFO).
-- `ParsedMedia.knownIds` (ids found in names) is a hint, not a truth: the matcher boosts a candidate
-  whose id matches but keeps the type, title and season/episode guards. Looking a work up by id
-  (`getMovie`/`getSeries`) is planned later, to verify ids the text search does not return.
+- `ParsedMedia.knownIds` (ids found in names) is a hint, not a truth: a candidate whose id matches
+  is boosted only if its type, title, season/episode and year agree. If the id designates a
+  candidate yet another one scores higher (`Dune (2021) {tmdb-841}`: 841 is the 1984 film), the
+  name contradicts itself and nothing is decided automatically. An id absent from the results
+  cannot be verified and is ignored; looking a work up by id (`getMovie`/`getSeries`) is planned
+  later.
+- `ParsedMedia.country` (`The.Office.US`) is matched against `Candidate.countries` (TMDB gives
+  `origin_country` for series only): a bonus on agreement, a penalty when both are known and
+  differ, neutral otherwise.
 - Each user provides their own TMDB key; none is ever embedded. Put it in `.env` (git-ignored) as
   `TMDB_API_KEY`; never read or print it. `pnpm test:live` runs the contract tests against the
   real API.

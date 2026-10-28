@@ -301,6 +301,30 @@ describe('known ids', () => {
     expect(outcome.candidates[0]?.breakdown.knownId).toBe(0);
   });
 
+  it('refuses to decide when the id and the year point to different works', async () => {
+    // `Dune (2021) {tmdb-841}`: 841 is the 1984 film, the year says 2021.
+    const provider = new FakeProvider([movie(438631, 'Dune', 2021), movie(841, 'Dune', 1984)]);
+    const parsed = parsedMovie('Dune', 2021, { knownIds: [{ provider: 'tmdb', id: 841 }] });
+    const outcome = expectAmbiguous(await new Matcher(provider).match(parsed));
+
+    expect(outcome.candidates.every((c) => c.score < 85)).toBe(true);
+    const hinted = outcome.candidates.find((c) => c.candidate.id.id === 841);
+    expect(hinted?.breakdown.knownId).toBe(0); // the year contradicts it: no bonus
+    expect(outcome.candidates.map((c) => c.candidate.id.id)).toContain(438631);
+  });
+
+  it('still matches when the id and the year agree', async () => {
+    const provider = new FakeProvider([movie(438631, 'Dune', 2021), movie(841, 'Dune', 1984)]);
+    const parsed = parsedMovie('Dune', 2021, { knownIds: [{ provider: 'tmdb', id: 438631 }] });
+    expect(expectMatched(await new Matcher(provider).match(parsed)).best.score).toBe(100);
+  });
+
+  it('ignores an id that is not among the results, which it cannot verify', async () => {
+    const provider = new FakeProvider([movie(438631, 'Dune', 2021)]);
+    const parsed = parsedMovie('Dune', 2021, { knownIds: [{ provider: 'tmdb', id: 999999 }] });
+    expectMatched(await new Matcher(provider).match(parsed));
+  });
+
   it('ignores ids from another provider', async () => {
     const provider = new FakeProvider([movie(1, 'Dune', 2021)]);
     const parsed = parsedMovie('Dune', 2021, { knownIds: [{ provider: 'tvdb', id: 1 }] });
@@ -309,14 +333,69 @@ describe('known ids', () => {
   });
 });
 
+describe('country', () => {
+  const office = (id: number, year: number, countries: string[]) =>
+    ({ ...series(id, 'The Office', year), countries }) as const;
+  const us = office(2316, 2005, ['US']);
+  const uk = office(2996, 2001, ['GB']);
+  const both = { '2316:3': season(3, [1, 2, 3, 4]), '2996:3': season(3, [1, 2, 3, 4]) };
+
+  it('tells same-titled series apart by the country in the file name', async () => {
+    const matcher = new Matcher(new FakeProvider([uk, us], both));
+
+    const american = expectMatched(
+      await matcher.match(parsedEpisode('The Office', 3, [4], undefined, { country: 'US' })),
+    );
+    expect(american.best.candidate.id.id).toBe(2316);
+    expect(american.best.breakdown.country).toBe(10);
+
+    const british = expectMatched(
+      await matcher.match(parsedEpisode('The Office', 3, [4], undefined, { country: 'GB' })),
+    );
+    expect(british.best.candidate.id.id).toBe(2996);
+  });
+
+  it('stays ambiguous without a country, as it would not be able to choose', async () => {
+    const matcher = new Matcher(new FakeProvider([uk, us], both));
+    expectAmbiguous(await matcher.match(parsedEpisode('The Office', 3, [4])));
+  });
+
+  it('penalizes a candidate from another country', async () => {
+    const matcher = new Matcher(new FakeProvider([uk, us], both));
+    const outcome = expectMatched(
+      await matcher.match(parsedEpisode('The Office', 3, [4], undefined, { country: 'US' })),
+    );
+    expect(outcome.others[0]?.breakdown.country).toBe(-15);
+  });
+
+  it('is neutral when the candidate has no known country (TMDB movies)', async () => {
+    const provider = new FakeProvider([movie(1, 'Dune', 2021)]);
+    const matcher = new Matcher(provider);
+    const plain = expectMatched(await matcher.match(parsedMovie('Dune', 2021)));
+    const withCountry = expectMatched(
+      await matcher.match(parsedMovie('Dune', 2021, { country: 'US' })),
+    );
+    expect(withCountry.best.breakdown.country).toBe(0);
+    expect(withCountry.best.score).toBe(plain.best.score);
+  });
+
+  it('does not let a country rescue an unrelated title', async () => {
+    const provider = new FakeProvider([{ ...movie(1, 'Casablanca', 1942), countries: ['US'] }]);
+    const outcome = expectAmbiguous(
+      await new Matcher(provider).match(parsedMovie('Dune', 1942, { country: 'US' })),
+    );
+    expect(outcome.candidates[0]?.breakdown.country).toBe(0);
+  });
+});
+
 describe('scores', () => {
   it('never exceeds 100 and breakdown components add up to the score', async () => {
     const provider = new FakeProvider([movie(1, 'Dune', 2021)]);
     const parsed = parsedMovie('Dune', 2021, { knownIds: [{ provider: 'tmdb', id: 1 }] });
     const { best } = expectMatched(await new Matcher(provider).match(parsed));
-    const { title, year, kind, episodeExists, margin } = best.breakdown;
+    const { title, year, kind, episodeExists, margin, country } = best.breakdown;
     expect(best.score).toBe(100);
-    expect(Math.round(title + year + kind + episodeExists + margin)).toBe(100);
+    expect(Math.round(title + year + kind + episodeExists + margin + country)).toBe(100);
   });
 
   it('returns ambiguous candidates best first and capped', async () => {

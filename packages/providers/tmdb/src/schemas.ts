@@ -24,6 +24,7 @@ export const tvSearchSchema = z.object({
       name: z.string(),
       original_name: z.string(),
       first_air_date: date,
+      origin_country: z.array(z.string()).nullish(),
       overview: z.string().nullish(),
       poster_path: z.string().nullish(),
       popularity: z.number().nullish(),

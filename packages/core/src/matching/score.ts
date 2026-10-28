@@ -53,6 +53,19 @@ function episodeCloseness(
   return parsed.episodes.every((episode) => available.has(episode)) ? 1 : 0;
 }
 
+/** `1` the countries agree, `-1` both are known and differ, `0` nothing to compare. */
+function countryAgreement(parsed: ParsedMedia, candidate: Candidate): -1 | 0 | 1 {
+  if (parsed.country === undefined || !candidate.countries || candidate.countries.length === 0) {
+    return 0;
+  }
+  return candidate.countries.includes(parsed.country) ? 1 : -1;
+}
+
+const knownIdMatches = (parsed: ParsedMedia, candidate: Candidate): boolean =>
+  parsed.knownIds?.some(
+    (known) => known.provider === candidate.id.provider && known.id === candidate.id.id,
+  ) ?? false;
+
 interface Raw {
   readonly candidate: Candidate;
   readonly similarity: number;
@@ -60,6 +73,7 @@ interface Raw {
   readonly year: number;
   readonly kind: number;
   readonly episodeExists: number;
+  readonly country: number;
   readonly sum: number;
 }
 
@@ -67,7 +81,8 @@ interface Raw {
  * Scores every candidate (0–100) and returns them best first.
  * Criteria: title similarity, year gap, movie/series consistency, season/episode existence,
  * margin over the runner-up, plus a guarded bonus for an id already present in the names.
- * An episode that does not exist caps the score just under the threshold.
+ * An episode that does not exist, or an id in the names that the best candidate contradicts,
+ * caps the scores just under the threshold.
  */
 export function scoreCandidates(
   parsed: ParsedMedia,
@@ -80,17 +95,25 @@ export function scoreCandidates(
 
   const raws: Raw[] = candidates.map((candidate) => {
     const similarity = candidateTitleSimilarity(title, candidate);
+    const agreement = countryAgreement(parsed, candidate);
     const parts = {
       title: weights.title * similarity,
       year: weights.year * yearCloseness(parsed, candidate),
       kind: weights.kind * kindCloseness(parsed, candidate),
       episodeExists: weights.episodeExists * episodeCloseness(parsed, candidate, seasons),
+      // Part of the raw sum, so it also widens or narrows the gap with the runner-up.
+      country:
+        agreement === -1
+          ? -config.country.penalty
+          : agreement === 1 && similarity >= config.country.minTitleSimilarity
+            ? config.country.bonus
+            : 0,
     };
     return {
       candidate,
       similarity,
       ...parts,
-      sum: parts.title + parts.year + parts.kind + parts.episodeExists,
+      sum: parts.title + parts.year + parts.kind + parts.episodeExists + parts.country,
     };
   });
 
@@ -99,15 +122,14 @@ export function scoreCandidates(
     const gap = raws.length === 1 ? Infinity : raw.sum - rivalBest;
     const margin = weights.margin * Math.min(1, Math.max(0, gap / config.marginFullGap));
 
-    // The id only counts when type and season/episode agree and the title is not alien.
-    const knownIdMatches = parsed.knownIds?.some(
-      (known) => known.provider === raw.candidate.id.provider && known.id === raw.candidate.id.id,
-    );
+    // The id only counts when type and season/episode agree, the title is not alien and the
+    // year (when both are known) does not contradict it.
     const knownId =
-      knownIdMatches &&
+      knownIdMatches(parsed, raw.candidate) &&
       raw.kind > 0 &&
       raw.episodeExists > 0 &&
-      raw.similarity >= config.knownId.minTitleSimilarity
+      raw.similarity >= config.knownId.minTitleSimilarity &&
+      raw.year > 0
         ? config.knownId.bonus
         : 0;
 
@@ -117,6 +139,7 @@ export function scoreCandidates(
       kind: raw.kind,
       episodeExists: raw.episodeExists,
       margin,
+      country: raw.country,
       knownId,
     };
     const total = Math.min(100, Math.round(raw.sum + margin + knownId));
@@ -130,5 +153,16 @@ export function scoreCandidates(
     return { candidate: raw.candidate, score, breakdown };
   });
 
-  return scored.sort((a, b) => b.score - a.score);
+  const ranked = scored.sort((a, b) => b.score - a.score);
+
+  // The names carry an id and the candidate it designates is in the results, yet something
+  // else scores higher: the tag and the rest of the name disagree (e.g. `Dune (2021)
+  // {tmdb-841}`, where 841 is the 1984 film). Neither can be trusted over the other, so
+  // nothing may be decided automatically.
+  const top = ranked[0];
+  const hinted = ranked.some((s) => knownIdMatches(parsed, s.candidate));
+  if (hinted && top && !knownIdMatches(parsed, top.candidate)) {
+    return ranked.map((s) => ({ ...s, score: Math.min(s.score, config.threshold - 1) }));
+  }
+  return ranked;
 }

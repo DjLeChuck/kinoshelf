@@ -32,6 +32,11 @@ export interface ParsedMedia {
    * because the file was named by a previous run. A strong hint for the matcher.
    */
   readonly knownIds?: readonly ExternalId[];
+  /**
+   * Country named in the file name (`The.Office.US`), ISO 3166-1 alpha-2 (`UK` becomes `GB`).
+   * Tells apart same-titled works made in different countries.
+   */
+  readonly country?: string;
   readonly releaseGroup?: string;
   readonly languages?: readonly string[];
 }

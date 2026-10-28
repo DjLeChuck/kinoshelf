@@ -10,6 +10,11 @@ export interface ScoreBreakdown {
   readonly kind: number;
   readonly episodeExists: number;
   readonly margin: number;
+  /**
+   * Signed: a bonus when the country named in the file agrees with the candidate's, a penalty
+   * when both are known and differ, 0 otherwise.
+   */
+  readonly country: number;
   /** Bonus when the candidate's id was already present in the file names (0 otherwise). */
   readonly knownId: number;
 }

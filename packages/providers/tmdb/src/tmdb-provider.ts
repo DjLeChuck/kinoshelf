@@ -135,6 +135,8 @@ export class TmdbProvider implements MetadataProvider {
           ...(result.overview && { overview: result.overview }),
           ...(result.poster_path && { posterPath: result.poster_path }),
           ...(result.popularity != null && { popularity: result.popularity }),
+          ...(result.origin_country &&
+            result.origin_country.length > 0 && { countries: result.origin_country }),
         };
       }),
     );

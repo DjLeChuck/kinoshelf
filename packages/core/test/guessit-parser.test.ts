@@ -117,6 +117,29 @@ describe('GuessitParser', () => {
     });
   });
 
+  describe('country', () => {
+    it.each([
+      ['The.Office.US.S03E04.720p.mkv', 'US'],
+      ['The.Office.UK.S01E01.720p.mkv', 'GB'],
+      ['The.Office.AU.S01E01.mkv', 'AU'],
+    ])('reads the country in %s', (path, country) => {
+      expect(parser.parse(path)).toMatchObject({ kind: 'episode', title: 'The Office', country });
+    });
+
+    it('leaves it out when the name carries none', () => {
+      expect(parser.parse('The.Bear.S03E04.mkv').country).toBeUndefined();
+    });
+
+    it('does not mistake a title for a country when the year follows', () => {
+      expect(parser.parse('Us.2019.1080p.BluRay.mkv')).toMatchObject({
+        kind: 'movie',
+        title: 'Us',
+        year: 2019,
+      });
+      expect(parser.parse('Us.2019.1080p.BluRay.mkv').country).toBeUndefined();
+    });
+  });
+
   describe('conflicting readings from guessit', () => {
     // guessit-js answers `title: ["kinoshelf-cli-G", "wEL"]` here: a folder it half-reads as a
     // title. Found by chance through a random temp directory name, hence the exact input.

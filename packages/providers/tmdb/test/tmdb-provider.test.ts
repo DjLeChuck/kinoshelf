@@ -162,6 +162,35 @@ describe('searchSeries', () => {
     expect(bear?.alternativeTitles).not.toContain('The Bear');
   });
 
+  it('reports the countries of origin of a series', async () => {
+    const { provider } = make();
+    const results = await provider.searchSeries({ title: 'The Bear', year: 2022 });
+    expect(results.find((r) => r.id.id === 136315)?.countries).toEqual(['US']);
+  });
+
+  it('omits the countries when TMDB gives none, as for movies (synthetic)', async () => {
+    const { provider } = make([
+      at('/3/search/tv', () =>
+        json(
+          JSON.stringify({
+            results: [
+              { id: 1, name: 'A', original_name: 'A', origin_country: [] },
+              { id: 2, name: 'B', original_name: 'B' },
+            ],
+          }),
+        ),
+      ),
+      at('/3/tv/1/alternative_titles', () => json('{"id":1,"results":[]}')),
+      at('/3/tv/2/alternative_titles', () => json('{"id":2,"results":[]}')),
+    ]);
+    const results = await provider.searchSeries({ title: 'x' });
+    for (const result of results) {
+      expect(result).not.toHaveProperty('countries');
+    }
+    const movies = await make().provider.searchMovies({ title: 'Dune', year: 2021 });
+    expect(movies[0]).not.toHaveProperty('countries');
+  });
+
   it('keeps the localized and original names apart', async () => {
     const { provider } = make();
     const results = await provider.searchSeries({ title: 'The Bear', year: 2022 });
