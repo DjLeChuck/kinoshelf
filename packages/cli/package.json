@@ -9,5 +9,16 @@
   },
   "files": [
     "dist"
-  ]
+  ],
+  "dependencies": {
+    "@kinoshelf/core": "workspace:*",
+    "@kinoshelf/provider-tmdb": "workspace:*",
+    "better-sqlite3": "^13.0.3",
+    "commander": "^15.0.0",
+    "yaml": "^2.9.1",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^9.6.0"
+  }
 }

@@ -33,7 +33,7 @@ packages/providers/tmdb    MetadataProvider for TMDB, SQLite cache
 packages/cli               kinoshelf scan | process <path> | undo
 packages/server            (v0.2) Fastify REST API, job queue, folder watcher, SSE
 packages/web               (v0.3) Svelte 5 UI
-profiles/*.yaml            declarative output profiles; the core contains no player-specific rule
+packages/core/profiles/*.yaml declarative output profiles, shipped with the core; the core contains no player-specific rule
 ```
 
 - The parser is [guessit-js](https://github.com/opensubtitles/guessit-js) (LGPL-3.0) behind the
@@ -53,6 +53,23 @@ profiles/*.yaml            declarative output profiles; the core contains no pla
 - Each user provides their own TMDB key; none is ever embedded. Put it in `.env` (git-ignored) as
   `TMDB_API_KEY`; never read or print it. `pnpm test:live` runs the contract tests against the
   real API.
+
+## CLI and i18n
+
+- `kinoshelf scan <source>` (read-only report), `process <path>` (dry run unless `--apply`),
+  `undo` (dry run unless `--apply`). `--json` prints codes and parameters, never translated text.
+  Exit codes: 0 ok, 1 a run or an operation failed, 2 bad usage.
+- Settings: flags over `config.yaml` over defaults. Config dir: `--config-dir`, then
+  `KINOSHELF_CONFIG_DIR`, then `$XDG_CONFIG_HOME/kinoshelf`; it also holds `kinoshelf.sqlite`
+  (journal and TMDB cache). Default mode is `move` when the destination is the source folder,
+  `copy` otherwise. Movies and series may go to separate libraries (`--dest-movies`,
+  `--dest-series`), as Plex recommends.
+- New user-facing text goes in **both** `packages/cli/src/i18n/en.ts` and `fr.ts` (same keys, same
+  `{parameters}`; tests enforce it). A new core error code goes in `ERROR_CODES`
+  (`packages/core/src/error-codes.ts`) and needs an `error.<code>` message: it does not compile
+  otherwise.
+- guessit-js may return arrays where its types promise scalars (conflicting readings of a folder
+  and a file name). `GuessitParser` treats any unexpected type as absent; keep it that way.
 
 ## Stack
 
