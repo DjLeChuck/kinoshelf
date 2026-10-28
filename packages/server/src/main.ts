@@ -4,6 +4,7 @@ import { configDirectory, loadConfig } from '@kinoshelf/core';
 import { buildApp } from './app.js';
 import { generateApiKey, hasApiKey, MIN_API_KEY_LENGTH, setApiKey } from './auth.js';
 import { openDatabase } from './database.js';
+import { createShutdown } from './shutdown.js';
 
 const DEFAULT_RETENTION_DAYS = 90;
 
@@ -63,8 +64,14 @@ if (!hasApiKey(database)) {
 
 await app.listen({ host, port });
 
+const shutdown = createShutdown({
+  close: () => app.close().finally(() => database.close()),
+  busy: () => app.jobs.busy,
+  log: (message) => {
+    app.log.warn(message);
+  },
+  forceExit: () => process.exit(1),
+});
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {
-  process.once(signal, () => {
-    void app.close().finally(() => database.close());
-  });
+  process.on(signal, shutdown);
 }

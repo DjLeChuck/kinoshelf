@@ -45,6 +45,11 @@ export class JobRunner {
     });
   }
 
+  /** A task is running or about to be. */
+  get busy(): boolean {
+    return this.loop !== undefined;
+  }
+
   /** Resolves once the queue is empty and nothing is running. */
   async idle(): Promise<void> {
     while (this.loop) {
