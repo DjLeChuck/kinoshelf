@@ -6,7 +6,8 @@ import { z } from 'zod';
 import { KinoshelfError } from '../errors.js';
 
 const configSchema = z.strictObject({
-  tmdbApiKey: z.string().min(1).optional(),
+  /** One key per metadata service, so a second provider adds a key here, not a new setting. */
+  apiKey: z.strictObject({ tmdb: z.string().min(1).optional() }).optional(),
   /** Language of the tool itself. */
   locale: z.enum(['en', 'fr']).optional(),
   /** Language of the titles fetched from TMDB, e.g. `fr` or `en-US`. */
@@ -14,9 +15,13 @@ const configSchema = z.strictObject({
   profile: z.string().min(1).optional(),
   mode: z.enum(['copy', 'hardlink', 'move']).optional(),
   threshold: z.number().min(0).max(100).optional(),
-  destination: z.string().min(1).optional(),
-  destinationMovies: z.string().min(1).optional(),
-  destinationSeries: z.string().min(1).optional(),
+  /** One root for everything, or one per kind (Plex asks for separate libraries). */
+  destination: z
+    .union([
+      z.string().min(1),
+      z.strictObject({ movies: z.string().min(1), series: z.string().min(1) }),
+    ])
+    .optional(),
 });
 
 export type Config = z.infer<typeof configSchema>;

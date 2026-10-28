@@ -78,7 +78,7 @@ function makeProvider(context: Context, language: string, cache: HttpCache): Met
   if (context.deps.createProvider) {
     return context.deps.createProvider({ language, cache });
   }
-  const apiKey = (context.deps.env.TMDB_API_KEY ?? context.config.tmdbApiKey ?? '').trim();
+  const apiKey = (context.deps.env.TMDB_API_KEY ?? context.config.apiKey?.tmdb ?? '').trim();
   if (!apiKey) {
     throw new KinoshelfError('config.tmdb-key-missing', {
       path: join(context.configDir, 'config.yaml'),

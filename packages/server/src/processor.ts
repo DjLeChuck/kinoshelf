@@ -65,7 +65,7 @@ export function makeProvider(deps: ProcessorDeps, language: string): MetadataPro
   if (deps.createProvider) {
     return deps.createProvider({ language });
   }
-  const apiKey = (deps.env.TMDB_API_KEY ?? deps.config.tmdbApiKey ?? '').trim();
+  const apiKey = (deps.env.TMDB_API_KEY ?? deps.config.apiKey?.tmdb ?? '').trim();
   if (!apiKey) {
     throw new KinoshelfError('config.tmdb-key-missing', {
       path: join(deps.configDir, 'config.yaml'),

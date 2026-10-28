@@ -46,10 +46,14 @@ export async function resolveSettings(
 ): Promise<Settings> {
   const sourceDir = resolve(context.sourceIsFile ? dirname(context.source) : context.source);
 
+  const configured = config.destination;
+  const configuredRoot = typeof configured === 'string' ? configured : undefined;
+  const configuredByKind = typeof configured === 'object' ? configured : undefined;
+
   const shared =
-    overrides.dest ?? config.destination ?? (context.defaultToSource ? sourceDir : undefined);
-  const movie = overrides.destMovies ?? config.destinationMovies ?? shared;
-  const series = overrides.destSeries ?? config.destinationSeries ?? shared;
+    overrides.dest ?? configuredRoot ?? (context.defaultToSource ? sourceDir : undefined);
+  const movie = overrides.destMovies ?? configuredByKind?.movies ?? shared;
+  const series = overrides.destSeries ?? configuredByKind?.series ?? shared;
   if (movie === undefined || series === undefined) {
     throw new KinoshelfError('config.destination-required');
   }

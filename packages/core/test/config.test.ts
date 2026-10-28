@@ -26,6 +26,18 @@ describe('loadConfig', () => {
     });
   });
 
+  it('reads the key of each service and a destination per kind', async () => {
+    const dir = await makeDir();
+    await put(
+      join(dir, 'config.yaml'),
+      'apiKey:\n  tmdb: abc\ndestination:\n  movies: /films\n  series: /shows\n',
+    );
+    expect(await loadConfig(dir)).toEqual({
+      apiKey: { tmdb: 'abc' },
+      destination: { movies: '/films', series: '/shows' },
+    });
+  });
+
   it('treats an empty file as no configuration', async () => {
     const dir = await makeDir();
     await put(join(dir, 'config.yaml'), '');
@@ -38,6 +50,10 @@ describe('loadConfig', () => {
     ['threshold out of range', 'threshold: 150\n'],
     ['bad yaml', 'locale: [unclosed\n'],
     ['wrong type', 'threshold: high\n'],
+    ['the former tmdbApiKey', 'tmdbApiKey: abc\n'],
+    ['the former destinationMovies', 'destinationMovies: /films\n'],
+    ['a destination with one kind only', 'destination:\n  movies: /films\n'],
+    ['an unknown service key', 'apiKey:\n  tvdb: abc\n'],
   ])('rejects %s with the file path', async (_name, content) => {
     const dir = await makeDir();
     await put(join(dir, 'config.yaml'), content);

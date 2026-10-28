@@ -60,7 +60,7 @@ export const en = {
   'error.config.invalid': 'Invalid configuration file {path}: {detail}',
   'error.config.invalid-value': 'Invalid value "{value}" for {option}.',
   'error.config.tmdb-key-missing':
-    'No TMDB API key. Set the TMDB_API_KEY environment variable or "tmdbApiKey" in {path}.',
+    'No TMDB API key. Set the TMDB_API_KEY environment variable or "apiKey.tmdb" in {path}.',
   'error.unknown': 'Unexpected error ({code}).',
 
   'conflict.destination-exists': 'the destination already exists',

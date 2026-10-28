@@ -60,7 +60,7 @@ export const fr: Record<keyof typeof en, string> = {
   'error.config.invalid': 'Fichier de configuration invalide {path} : {detail}',
   'error.config.invalid-value': 'Valeur invalide « {value} » pour {option}.',
   'error.config.tmdb-key-missing':
-    'Aucune clé d’API TMDB. Définissez la variable d’environnement TMDB_API_KEY ou « tmdbApiKey » dans {path}.',
+    'Aucune clé d’API TMDB. Définissez la variable d’environnement TMDB_API_KEY ou « apiKey.tmdb » dans {path}.',
   'error.unknown': 'Erreur inattendue ({code}).',
 
   'conflict.destination-exists': 'la destination existe déjà',

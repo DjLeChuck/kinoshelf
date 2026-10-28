@@ -32,7 +32,7 @@ describe('resolveSettings', () => {
   it('keeps movies and series apart when their roots differ', async () => {
     const settings = await resolveSettings(
       {},
-      { destinationMovies: '/movies', destinationSeries: '/shows' },
+      { destination: { movies: '/movies', series: '/shows' } },
       context,
     );
     expect(settings.destinations).toEqual({ movie: '/movies', series: '/shows' });
