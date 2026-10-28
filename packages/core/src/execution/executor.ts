@@ -21,6 +21,11 @@ export interface ExecuteOptions {
   /** Checks every precondition and reports what would happen, without writing anything. */
   readonly dryRun?: boolean;
   /**
+   * The id of the batch, when the caller wants to record it before the first transfer (a crash
+   * then leaves a trace of which batch was running). Defaults to a fresh one.
+   */
+  readonly batchId?: string;
+  /**
    * Called as soon as an item is done, its transfers already journaled. A caller keeping its own
    * records (the server) updates them here, so after a crash they are in step with the journal
    * except for the item in flight.
@@ -153,7 +158,7 @@ async function runItem(
 export async function executePlan(plan: Plan, options: ExecuteOptions): Promise<BatchResult> {
   const newId = options.newId ?? randomUUID;
   const now = options.now ?? ((): Date => new Date());
-  const batchId = newId();
+  const batchId = options.batchId ?? newId();
 
   const items: ItemResult[] = [];
   for (const item of plan.items) {

@@ -97,6 +97,19 @@ describe('executePlan: copy', () => {
   });
 });
 
+describe('executePlan: batchId', () => {
+  it('uses the batch id the caller chose, in the result and in the journal', async () => {
+    const { plan, journal } = await setup();
+    const batch = await executePlan(plan, {
+      journal,
+      batchId: 'chosen-batch',
+      newId: counter('x'),
+    });
+    expect(batch.batchId).toBe('chosen-batch');
+    expect(journal.lastBatchId()).toBe('chosen-batch');
+  });
+});
+
 describe('executePlan: onItem', () => {
   it('reports each item once it is done and journaled, before the next one starts', async () => {
     const { plan, journal, root } = await setup();
