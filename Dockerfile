@@ -18,9 +18,11 @@ RUN set -eu; \
     # better-sqlite3 ships a binary per platform and the SQLite sources: only ours is loaded.
     find "$sqlite/prebuilds" -type f ! -name "linuxmusl-$arch.node" -delete; \
     rm -rf "$sqlite/deps" "$sqlite/src" "$sqlite/build"; \
-    # Type declarations, source maps and docs are for development.
+    # Type declarations, source maps and docs are for development. Docs are matched by their exact
+    # names: a looser glob such as `HISTORY*` also deletes our own `history.js`.
     find /out/node_modules \( -name '*.d.ts' -o -name '*.d.cts' -o -name '*.d.mts' -o -name '*.map' \
-         -o -iname 'README*' -o -iname 'CHANGELOG*' -o -iname 'HISTORY*' \) -type f -delete; \
+         -o -iname 'README' -o -iname 'README.md' -o -iname 'CHANGELOG' -o -iname 'CHANGELOG.md' \
+         -o -iname 'HISTORY' -o -iname 'HISTORY.md' \) -type f -delete; \
     # The node binary carries debug symbols it never uses.
     strip --strip-unneeded -o /out-node /usr/local/bin/node
 
