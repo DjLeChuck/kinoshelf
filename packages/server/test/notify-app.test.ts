@@ -17,6 +17,10 @@ const SECTIONS_XML = readFileSync(
   join(import.meta.dirname, 'fixtures', 'plex-sections.xml'),
   'utf8',
 );
+const LIBRARIES_JSON = readFileSync(
+  join(import.meta.dirname, 'fixtures', 'jellyfin-virtual-folders.json'),
+  'utf8',
+);
 const instant = { sleep: () => Promise.resolve(), delays: [] as number[] };
 
 interface Payload {
@@ -43,7 +47,9 @@ async function reporting(
   const plex = await fakeServer((r) =>
     r.url === '/library/sections' ? { body: SECTIONS_XML } : {},
   );
-  const jellyfin = await fakeServer(() => ({ status: 204 }));
+  const jellyfin = await fakeServer((r) =>
+    r.url === '/Library/VirtualFolders' ? { body: LIBRARIES_JSON } : { status: 204 },
+  );
   const destination = await makeDir();
   const h = await harness({
     config: {
@@ -106,10 +112,11 @@ describe('after a transfer', () => {
     );
     expect(refreshes[0]?.headers['x-plex-token']).toBe('PTOKEN');
 
-    expect(jellyfin.received).toHaveLength(1);
-    expect(jellyfin.received[0]).toMatchObject({ method: 'POST', url: '/Library/Media/Updated' });
-    expect(jellyfin.received[0]?.headers.authorization).toBe('MediaBrowser Token="JKEY"');
-    expect(json(jellyfin.received[0] as Received).Updates).toEqual([
+    const updates = jellyfin.received.filter((r) => r.method === 'POST');
+    expect(updates).toHaveLength(1);
+    expect(updates[0]).toMatchObject({ url: '/Library/Media/Updated' });
+    expect(updates[0]?.headers.authorization).toBe('MediaBrowser Token="JKEY"');
+    expect(json(updates[0] as Received).Updates).toEqual([
       { Path: '/data/movies/Dune (2021) {tmdb-438631}', UpdateType: 'Created' },
     ]);
   });
@@ -166,7 +173,7 @@ describe('after a transfer', () => {
     await apply(h, { 'Dune.2021.1080p.mkv': 'dune' });
 
     expect(plexRefreshes(plex)).toEqual([]);
-    expect(jellyfin.received).toEqual([]);
+    expect(jellyfin.received.filter((r) => r.method === 'POST')).toEqual([]);
   });
 });
 

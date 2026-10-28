@@ -1,0 +1,12 @@
+[
+  {
+    "Name": "Séries",
+    "CollectionType": "tvshows",
+    "Locations": ["/data/tv-shows"]
+  },
+  {
+    "Name": "Films",
+    "CollectionType": "movies",
+    "Locations": ["/data/movies"]
+  }
+]

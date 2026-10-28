@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import { deliver } from '../src/notify/delivery.js';
 import { buildRequest, type WebhookConfig } from '../src/notify/formats.js';
-import { JellyfinClient } from '../src/notify/jellyfin.js';
+import { JellyfinClient, parseLibraries } from '../src/notify/jellyfin.js';
 import type { Notification } from '../src/notify/message.js';
 import { isInside, mapPath, redactUrl } from '../src/notify/paths.js';
 import { MAX_PARTIAL_SCANS, parseSections, PlexClient, type Send } from '../src/notify/plex.js';
@@ -387,14 +387,47 @@ describe('PlexClient', () => {
   });
 });
 
+const LIBRARIES_JSON = readFileSync(
+  join(import.meta.dirname, 'fixtures', 'jellyfin-virtual-folders.json'),
+  'utf8',
+);
+
+describe('parseLibraries', () => {
+  it('reads the libraries and their folders from Jellyfin’s JSON', () => {
+    expect(parseLibraries(LIBRARIES_JSON)).toEqual([
+      { name: 'Séries', type: 'tvshows', locations: ['/data/tv-shows'] },
+      { name: 'Films', type: 'movies', locations: ['/data/movies'] },
+    ]);
+  });
+
+  it('copes with a library of mixed content, and with an answer that is not a list', () => {
+    expect(parseLibraries('[{"Name":"Tout","Locations":["/data/all"]}]')).toEqual([
+      { name: 'Tout', type: null, locations: ['/data/all'] },
+    ]);
+    expect(parseLibraries('{}')).toEqual([]);
+  });
+});
+
 describe('JellyfinClient', () => {
-  function jellyfin(status = 204, paths = [{ from: '/media/movies', to: '/data/movies' }]) {
-    const calls: {
-      method: string;
-      url: string;
-      headers: Readonly<Record<string, string>>;
-      body?: string;
-    }[] = [];
+  interface Call {
+    method: string;
+    url: string;
+    headers: Readonly<Record<string, string>>;
+    body?: string;
+  }
+
+  /** A Jellyfin that lists its libraries (the real ones) and answers the refresh with `status`. */
+  function jellyfin(
+    options: {
+      status?: number;
+      paths?: { from: string; to: string }[];
+      libraries?: string;
+      listingStatus?: number;
+    } = {},
+  ) {
+    const { status = 204, paths = [{ from: '/media/movies', to: '/data/movies' }] } = options;
+    const calls: Call[] = [];
+    const warnings: string[] = [];
     const client = new JellyfinClient(
       { url: 'http://jf:8096/', apiKey: 'KEY', paths },
       (request) => {
@@ -404,6 +437,16 @@ describe('JellyfinClient', () => {
           headers: request.headers,
           ...(request.body && { body: request.body }),
         });
+        if (request.method === 'GET') {
+          const listing = options.listingStatus ?? 200;
+          return Promise.resolve({
+            ok: listing < 300,
+            status: listing,
+            attempts: 1,
+            text: options.libraries ?? LIBRARIES_JSON,
+            ...(listing >= 300 && { error: `HTTP ${listing}` }),
+          });
+        }
         return Promise.resolve({
           ok: status < 300,
           status,
@@ -411,10 +454,11 @@ describe('JellyfinClient', () => {
           ...(status >= 300 && { error: `HTTP ${status}` }),
         });
       },
-      quiet,
+      { info: () => undefined, warn: (m) => warnings.push(m) },
     );
-    return { client, calls };
+    return { client, calls, warnings };
   }
+  const posts = (calls: Call[]) => calls.filter((c) => c.method === 'POST');
 
   it('tells Jellyfin which paths were created, with the key in the Authorization header', async () => {
     const { client, calls } = jellyfin();
@@ -423,14 +467,14 @@ describe('JellyfinClient', () => {
       { path: '/media/movies/Alien (1979)', kind: 'movie' },
     ]);
 
-    expect(report).toMatchObject({ refreshed: 2, failed: [] });
-    expect(calls).toHaveLength(1);
-    expect(calls[0]).toMatchObject({
+    expect(report).toMatchObject({ refreshed: 2, failed: [], skipped: [] });
+    expect(posts(calls)).toHaveLength(1);
+    expect(posts(calls)[0]).toMatchObject({
       method: 'POST',
       url: 'http://jf:8096/Library/Media/Updated',
       headers: { Authorization: 'MediaBrowser Token="KEY"', 'content-type': 'application/json' },
     });
-    expect(JSON.parse(calls[0]?.body ?? '')).toEqual({
+    expect(JSON.parse(posts(calls)[0]?.body ?? '')).toEqual({
       Updates: [
         { Path: '/data/movies/Dune (2021)', UpdateType: 'Created' },
         { Path: '/data/movies/Alien (1979)', UpdateType: 'Created' },
@@ -438,28 +482,83 @@ describe('JellyfinClient', () => {
     });
   });
 
+  it('does not take its own success for proof: a path in no library is reported, not sent', async () => {
+    // Jellyfin answers success whatever the path, so a wrong mapping would pass unnoticed.
+    const { client, calls, warnings } = jellyfin({ paths: [] });
+    const report = await client.refresh([{ path: '/mnt/Downloads', kind: 'movie' }]);
+
+    expect(report).toMatchObject({ refreshed: 0, skipped: ['/mnt/Downloads'] });
+    expect(posts(calls)).toEqual([]);
+    expect(warnings).toEqual(['Jellyfin: no movies library holds /mnt/Downloads']);
+  });
+
+  it('puts a series in the series library: a movie library does not hold it', async () => {
+    const { client, calls } = jellyfin({ paths: [] });
+    const report = await client.refresh([
+      { path: '/data/movies/Dune (2021)', kind: 'movie' },
+      { path: '/data/movies/Show/Season 01', kind: 'series' }, // in the movie library
+      { path: '/data/tv-shows/Show/Season 01', kind: 'series' },
+    ]);
+    expect(report.skipped).toEqual(['/data/movies/Show/Season 01']);
+    expect(
+      (JSON.parse(posts(calls)[0]?.body ?? '') as { Updates: { Path: string }[] }).Updates.map(
+        (u) => u.Path,
+      ),
+    ).toEqual(['/data/movies/Dune (2021)', '/data/tv-shows/Show/Season 01']);
+  });
+
+  it('accepts any kind in a library of mixed content', async () => {
+    const { client, calls } = jellyfin({
+      paths: [],
+      libraries: '[{"Name":"Tout","Locations":["/data/all"]}]',
+    });
+    const report = await client.refresh([
+      { path: '/data/all/a', kind: 'movie' },
+      { path: '/data/all/b', kind: 'series' },
+    ]);
+    expect(report.refreshed).toBe(2);
+    expect(posts(calls)).toHaveLength(1);
+  });
+
+  it('sends the paths unchecked, and says so, when it cannot list its libraries', async () => {
+    const { client, calls, warnings } = jellyfin({ paths: [], listingStatus: 401 });
+    const report = await client.refresh([{ path: '/anywhere/x', kind: 'movie' }]);
+    expect(report.refreshed).toBe(1);
+    expect(posts(calls)).toHaveLength(1);
+    expect(warnings[0]).toContain('paths are sent unchecked');
+  });
+
+  it('asks for the list of libraries once, not for every refresh', async () => {
+    const { client, calls } = jellyfin({ paths: [] });
+    await client.refresh([{ path: '/data/movies/a', kind: 'movie' }]);
+    await client.refresh([{ path: '/data/movies/b', kind: 'movie' }]);
+    expect(calls.filter((c) => c.method === 'GET')).toHaveLength(1);
+  });
+
   it('skips what no mapping covers, and sends nothing when nothing is left', async () => {
     const { client, calls } = jellyfin();
     const report = await client.refresh([{ path: '/elsewhere/x', kind: 'movie' }]);
     expect(report.skipped).toEqual(['/elsewhere/x']);
-    expect(calls).toEqual([]);
+    expect(posts(calls)).toEqual([]);
   });
 
   it('refreshes the whole library rather than a long list of paths', async () => {
-    const { client, calls } = jellyfin(204, []);
+    const { client, calls } = jellyfin({ paths: [] });
     const many = Array.from({ length: MAX_PARTIAL_SCANS + 1 }, (_, i) => ({
-      path: `/m/${i}`,
+      path: `/data/movies/Film ${i}`,
       kind: 'movie' as const,
     }));
     await client.refresh(many);
-    expect(calls).toMatchObject([{ method: 'POST', url: 'http://jf:8096/Library/Refresh' }]);
+    expect(posts(calls)).toMatchObject([{ url: 'http://jf:8096/Library/Refresh' }]);
   });
 
-  it('reports a refusal', async () => {
-    const { client } = jellyfin(401);
+  it('reports a refusal, and asks for the libraries again afterwards', async () => {
+    const { client, calls } = jellyfin({ status: 401 });
     expect(await client.refresh([{ path: '/media/movies/x', kind: 'movie' }])).toMatchObject({
       refreshed: 0,
       failed: ['/data/movies/x'],
     });
+    await client.refresh([{ path: '/media/movies/y', kind: 'movie' }]);
+    expect(calls.filter((c) => c.method === 'GET')).toHaveLength(2);
   });
 });
