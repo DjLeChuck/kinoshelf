@@ -1,7 +1,11 @@
-import { KinoshelfError, type Analysis } from '@kinoshelf/core';
-import type { Job, JobError, JobStore } from './jobs.js';
+import { KinoshelfError } from '@kinoshelf/core';
+import type { StoredError } from './entries.js';
+import { ApiError } from './api-error.js';
+import type { Job, JobStore, ProcessedJob } from './jobs.js';
 
-export type JobProcessor = (job: Job) => Promise<Analysis>;
+export type JobProcessor = (job: Job) => Promise<ProcessedJob>;
+/** Transfers a finished job's matched files and returns the batch they went in. */
+export type JobApplier = (job: Job) => Promise<string>;
 
 /** Code for a failure that is not one of the core's typed errors: a bug, not a user mistake. */
 export const UNEXPECTED_ERROR = 'internal.unexpected';
@@ -17,6 +21,7 @@ export class JobRunner {
   constructor(
     private readonly store: JobStore,
     private readonly process: JobProcessor,
+    private readonly apply: JobApplier,
     private readonly onError: (error: unknown) => void = () => undefined,
   ) {}
 
@@ -58,15 +63,21 @@ export class JobRunner {
       }
       try {
         this.store.complete(job.id, await this.process(job));
+        if (job.apply) {
+          this.store.setBatch(job.id, await this.apply(job));
+        }
       } catch (error) {
         this.store.fail(job.id, this.describe(error));
       }
     }
   }
 
-  private describe(error: unknown): JobError {
+  private describe(error: unknown): StoredError {
     if (error instanceof KinoshelfError) {
       return error.info;
+    }
+    if (error instanceof ApiError) {
+      return { code: error.code, ...(error.params && { params: error.params }) };
     }
     this.onError(error);
     return {

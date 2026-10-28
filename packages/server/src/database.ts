@@ -33,6 +33,33 @@ export const SERVER_MIGRATIONS: readonly { readonly name: string; readonly sql: 
       );
     `,
   },
+  {
+    // Replaces the analysis blob of the jobs table (about 6 KB per file, reparsed on every read)
+    // with one compact row per file, so a 20 000-file library is read page by page.
+    name: 'server:003-job-entries',
+    sql: `
+      CREATE TABLE job_entries (
+        seq INTEGER PRIMARY KEY AUTOINCREMENT,
+        id TEXT NOT NULL UNIQUE,
+        job_id TEXT NOT NULL,
+        path TEXT NOT NULL,
+        classification TEXT NOT NULL,
+        resolution TEXT,
+        parsed TEXT NOT NULL,
+        outcome TEXT NOT NULL,
+        item TEXT,
+        error TEXT,
+        batch_id TEXT
+      );
+      CREATE INDEX job_entries_job ON job_entries (job_id, seq);
+      CREATE INDEX job_entries_batch ON job_entries (batch_id);
+      ALTER TABLE jobs ADD COLUMN apply INTEGER NOT NULL DEFAULT 0;
+      ALTER TABLE jobs ADD COLUMN batch_id TEXT;
+      ALTER TABLE jobs ADD COLUMN settings TEXT;
+      ALTER TABLE jobs DROP COLUMN summary;
+      ALTER TABLE jobs DROP COLUMN analysis;
+    `,
+  },
 ];
 
 /** Opens the single SQLite file of the config directory, shared with the CLI and the cache. */

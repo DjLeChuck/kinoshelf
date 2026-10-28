@@ -7,12 +7,11 @@ import {
   GuessitParser,
   KinoshelfError,
   resolveSettings,
-  type Analysis,
   type Config,
   type MetadataProvider,
 } from '@kinoshelf/core';
 import { SqliteHttpCache, TmdbProvider } from '@kinoshelf/provider-tmdb';
-import type { Job } from './jobs.js';
+import type { Job, ProcessedJob } from './jobs.js';
 
 export interface ProcessorDeps {
   readonly config: Config;
@@ -27,7 +26,7 @@ export interface ProcessorDeps {
  * parse → match → plan for the path of a job. Read-only: executing the plan is a separate,
  * explicit step, so nothing touches the disk without having been validated.
  */
-export function createProcessor(deps: ProcessorDeps): (job: Job) => Promise<Analysis> {
+export function createProcessor(deps: ProcessorDeps): (job: Job) => Promise<ProcessedJob> {
   return async (job) => {
     let isFile: boolean;
     try {
@@ -43,7 +42,7 @@ export function createProcessor(deps: ProcessorDeps): (job: Job) => Promise<Anal
       defaultMetadataLanguage: deps.config.locale === 'fr' ? 'fr' : 'en-US',
     });
 
-    return analyze(await discoverVideos(job.path), {
+    const analysis = await analyze(await discoverVideos(job.path), {
       parser: new GuessitParser(),
       provider: makeProvider(deps, settings.metadataLanguage),
       profile: settings.profile,
@@ -51,10 +50,18 @@ export function createProcessor(deps: ProcessorDeps): (job: Job) => Promise<Anal
       mode: settings.mode,
       ...(settings.threshold !== undefined && { matching: { threshold: settings.threshold } }),
     });
+    return {
+      analysis,
+      settings: {
+        profile: deps.config.profile ?? 'plex',
+        mode: settings.mode,
+        destinationRoot: settings.destinations,
+      },
+    };
   };
 }
 
-function makeProvider(deps: ProcessorDeps, language: string): MetadataProvider {
+export function makeProvider(deps: ProcessorDeps, language: string): MetadataProvider {
   if (deps.createProvider) {
     return deps.createProvider({ language });
   }

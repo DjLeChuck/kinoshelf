@@ -24,7 +24,18 @@ describe('GET /api/openapi.json', () => {
     expect(response.statusCode).toBe(200);
     expect(spec.openapi).toMatch(/^3\./);
     expect(spec.info.version).toBe('1.2.3');
-    expect(Object.keys(spec.paths).sort()).toEqual(['/api/jobs', '/api/jobs/{id}', '/health']);
+    expect(Object.keys(spec.paths).sort()).toEqual([
+      '/api/batches/{id}/undo',
+      '/api/jobs',
+      '/api/jobs/{id}',
+      '/api/jobs/{id}/entries',
+      '/api/plans/{id}/execute',
+      '/api/queue',
+      '/api/queue/{id}/ignore',
+      '/api/queue/{id}/match',
+      '/api/search',
+      '/health',
+    ]);
     expect(spec.paths['/health']?.get?.security).toEqual([]);
   });
 });

@@ -31,20 +31,22 @@ export async function cleanup(): Promise<void> {
   await Promise.all(created.splice(0).map((d) => rm(d, { recursive: true, force: true })));
 }
 
-const dune: MovieCandidate = {
+const film = (id: number, title: string, year: number): MovieCandidate => ({
   kind: 'movie',
-  id: { provider: 'tmdb', id: 438631 },
-  title: 'Dune',
-  originalTitle: 'Dune',
+  id: { provider: 'tmdb', id },
+  title,
+  originalTitle: title,
   alternativeTitles: [],
-  year: 2021,
-};
+  year,
+});
 
-/** Knows one film, so a `Dune.2021` file matches and anything else is unrecognized. */
+const catalog = [film(438631, 'Dune', 2021), film(348, 'Alien', 1979)];
+
+/** Knows two films, so a `Dune.2021` file matches and anything else is unrecognized. */
 export const fakeProvider: MetadataProvider = {
   name: 'fake',
   searchMovies: ({ title }) =>
-    Promise.resolve(title.toLowerCase().startsWith('dune') ? [dune] : []),
+    Promise.resolve(catalog.filter((c) => title.toLowerCase().startsWith(c.title.toLowerCase()))),
   searchSeries: () => Promise.resolve([]),
   getSeason: () => Promise.resolve(null),
 };

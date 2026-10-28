@@ -1,80 +1,82 @@
 import { randomUUID } from 'node:crypto';
-import type { Analysis, Classification } from '@kinoshelf/core';
+import type { Analysis, DestinationRoots, TransferMode } from '@kinoshelf/core';
 import type { Database } from 'better-sqlite3';
+import type { StoredError, EntryStore } from './entries.js';
 
 export type JobStatus = 'queued' | 'running' | 'done' | 'failed';
 
-/** Same shape as the core's `ErrorInfo`, but also carries the server's own codes. */
-export interface JobError {
-  readonly code: string;
-  readonly params?: Readonly<Record<string, string | number>>;
+/**
+ * What the plan was built with. Kept with the job so a file matched by hand later is planned the
+ * same way as the others, whatever `config.yaml` says by then.
+ */
+export interface PlanSettings {
+  /** A bundled profile id or a path, as `loadProfile` takes it. */
+  readonly profile: string;
+  readonly mode: TransferMode;
+  readonly destinationRoot: DestinationRoots;
 }
 
-export type JobSummary = Record<Classification, number>;
+export interface ProcessedJob {
+  readonly analysis: Analysis;
+  readonly settings: PlanSettings;
+}
 
 export interface Job {
   readonly id: string;
   readonly path: string;
   readonly status: JobStatus;
+  /** Execute the matched files as soon as the analysis is done. */
+  readonly apply: boolean;
   readonly createdAt: string;
   readonly startedAt: string | null;
   readonly finishedAt: string | null;
-  readonly error: JobError | null;
-  readonly summary: JobSummary | null;
+  readonly error: StoredError | null;
+  /** The batch an `apply` job transferred its files in. */
+  readonly batchId: string | null;
 }
 
 interface JobRow {
   id: string;
   path: string;
   status: JobStatus;
+  apply: number;
   created_at: string;
   started_at: string | null;
   finished_at: string | null;
   error: string | null;
-  summary: string | null;
+  batch_id: string | null;
 }
 
-const COLUMNS = 'id, path, status, created_at, started_at, finished_at, error, summary';
+const COLUMNS = 'id, path, status, apply, created_at, started_at, finished_at, error, batch_id';
 
 function toJob(row: JobRow): Job {
   return {
     id: row.id,
     path: row.path,
     status: row.status,
+    apply: row.apply === 1,
     createdAt: row.created_at,
     startedAt: row.started_at,
     finishedAt: row.finished_at,
-    error: row.error === null ? null : (JSON.parse(row.error) as JobError),
-    summary: row.summary === null ? null : (JSON.parse(row.summary) as JobSummary),
+    error: row.error === null ? null : (JSON.parse(row.error) as StoredError),
+    batchId: row.batch_id,
   };
 }
 
-export function summarize(analysis: Analysis): JobSummary {
-  const summary: JobSummary = {
-    compliant: 0,
-    'to-rename': 0,
-    conflict: 0,
-    ambiguous: 0,
-    unrecognized: 0,
-  };
-  for (const entry of analysis.entries) {
-    summary[entry.classification]++;
-  }
-  return summary;
-}
-
-/**
- * Durable job queue in the server's SQLite file. The analysis is kept whole: the validation queue
- * (candidates, plan items) is built from it, so a job survives a restart with nothing to redo.
- */
+/** Durable job queue in the server's SQLite file; the files of a job live in `EntryStore`. */
 export class JobStore {
-  constructor(private readonly database: Database) {}
+  constructor(
+    private readonly database: Database,
+    private readonly entries: EntryStore,
+  ) {}
 
-  create(path: string): Job {
+  create(path: string, apply = false): Job {
     const id = randomUUID();
     this.database
-      .prepare("INSERT INTO jobs (id, path, status, created_at) VALUES (?, ?, 'queued', ?)")
-      .run(id, path, new Date().toISOString());
+      .prepare(
+        "INSERT INTO jobs (id, path, status, apply, created_at) VALUES (?, ?, 'queued', ?, ?)",
+      )
+      .run(id, path, apply ? 1 : 0, new Date().toISOString());
     return this.require(id);
   }
 
@@ -93,12 +95,11 @@ export class JobStore {
       .map(toJob);
   }
 
-  /** The stored analysis of a finished job. */
-  analysis(id: string): Analysis | undefined {
+  settings(id: string): PlanSettings | undefined {
     const row = this.database
-      .prepare<[string], { analysis: string | null }>('SELECT analysis FROM jobs WHERE id = ?')
+      .prepare<[string], { settings: string | null }>('SELECT settings FROM jobs WHERE id = ?')
       .get(id);
-    return row?.analysis ? (JSON.parse(row.analysis) as Analysis) : undefined;
+    return row?.settings ? (JSON.parse(row.settings) as PlanSettings) : undefined;
   }
 
   /** Takes the oldest queued job and marks it running; the queue is served in order. */
@@ -119,20 +120,21 @@ export class JobStore {
     })();
   }
 
-  complete(id: string, analysis: Analysis): void {
-    this.database
-      .prepare(
-        "UPDATE jobs SET status = 'done', finished_at = ?, summary = ?, analysis = ? WHERE id = ?",
-      )
-      .run(
-        new Date().toISOString(),
-        JSON.stringify(summarize(analysis)),
-        JSON.stringify(analysis),
-        id,
-      );
+  /** Files and status land together: a crash cannot leave a `done` job without its files. */
+  complete(id: string, processed: ProcessedJob): void {
+    this.database.transaction(() => {
+      this.entries.insertAll(id, processed.analysis.entries);
+      this.database
+        .prepare("UPDATE jobs SET status = 'done', finished_at = ?, settings = ? WHERE id = ?")
+        .run(new Date().toISOString(), JSON.stringify(processed.settings), id);
+    })();
   }
 
-  fail(id: string, error: JobError): void {
+  setBatch(id: string, batchId: string): void {
+    this.database.prepare('UPDATE jobs SET batch_id = ? WHERE id = ?').run(batchId, id);
+  }
+
+  fail(id: string, error: StoredError): void {
     this.database
       .prepare("UPDATE jobs SET status = 'failed', finished_at = ?, error = ? WHERE id = ?")
       .run(new Date().toISOString(), JSON.stringify(error), id);
