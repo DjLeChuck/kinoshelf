@@ -19,3 +19,10 @@ export {
   type TemplateVariables,
 } from './profiles/template.js';
 export { GuessitParser, type GuessitParserOptions } from './parsing/guessit-parser.js';
+export {
+  DEFAULT_MATCHING_CONFIG,
+  type MatchingConfig,
+  type ScoreWeights,
+} from './matching/config.js';
+export { Matcher } from './matching/matcher.js';
+export { normalizeTitle, titleSimilarity } from './matching/title-similarity.js';

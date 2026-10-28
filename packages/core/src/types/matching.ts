@@ -10,6 +10,8 @@ export interface ScoreBreakdown {
   readonly kind: number;
   readonly episodeExists: number;
   readonly margin: number;
+  /** Bonus when the candidate's id was already present in the file names (0 otherwise). */
+  readonly knownId: number;
 }
 
 export interface ScoredCandidate {
@@ -18,6 +20,9 @@ export interface ScoredCandidate {
   readonly score: number;
   readonly breakdown: ScoreBreakdown;
 }
+
+/** Why nothing could be matched; translated at the edges. */
+export type UnrecognizedReason = 'no-title' | 'no-candidates';
 
 /** Outcome of matching one file. */
 export type MatchOutcome =
@@ -28,4 +33,4 @@ export type MatchOutcome =
     }
   /** Candidates found but score below the threshold: manual validation queue. */
   | { readonly status: 'ambiguous'; readonly candidates: readonly ScoredCandidate[] }
-  | { readonly status: 'unrecognized'; readonly reason: string };
+  | { readonly status: 'unrecognized'; readonly reason: UnrecognizedReason };
