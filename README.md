@@ -4,7 +4,8 @@ Identifies video files (movies, series) **already on disk**, renames them to mat
 conventions (Plex, Jellyfin) and writes their metadata (NFO, artwork). A web-native equivalent of
 tinyMediaManager and a companion to Radarr/Sonarr: it never downloads anything.
 
-> **Status: v0.1 in progress** — headless core and CLI. Nothing is usable yet.
+> **Status: v0.1 done**: the headless core and the CLI work from source (see below). The server and
+> Docker image (v0.2) and the web UI (v0.3) are next.
 
 ## Usage (v0.1, from source)
 
@@ -30,7 +31,7 @@ pnpm install
 pnpm typecheck && pnpm lint && pnpm test
 ```
 
-See [AGENTS.md](AGENTS.md) for project conventions.
+See [AGENTS.md](AGENTS.md) for the project conventions.
 
 ## License
 

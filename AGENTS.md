@@ -3,6 +3,10 @@
 Kinoshelf: self-hosted web app (MIT) that identifies video files already on disk (movies, series),
 renames them for a media player (Plex, Jellyfin) and writes their metadata (NFO, artwork).
 
+## Where we are
+
+v0.1 (core, CLI and matching corpus) is done; v0.2 (server and Docker) is next.
+
 ## Golden rules
 
 - **Everything is in English**: code, comments, identifiers, commit messages, PR titles, docs,
@@ -33,8 +37,11 @@ packages/providers/tmdb    MetadataProvider for TMDB, SQLite cache
 packages/cli               kinoshelf scan | process <path> | undo
 packages/server            (v0.2) Fastify REST API, job queue, folder watcher, SSE
 packages/web               (v0.3) Svelte 5 UI
-packages/core/profiles/*.yaml declarative output profiles, shipped with the core; the core contains no player-specific rule
+packages/corpus            (private) matching corpus and the scripts that grow it
 ```
+
+Output profiles are declarative YAML in `packages/core/profiles/`, shipped with the core: the core
+contains no player-specific rule.
 
 - The parser is [guessit-js](https://github.com/opensubtitles/guessit-js) (LGPL-3.0) behind the
   `Parser` interface. Never modify or vendor it (LGPL/MIT compatibility).
@@ -89,6 +96,21 @@ needs no key. It runs with `pnpm test` (or `pnpm test:corpus`). Two gates:
 - **The pass rate may not fall below `data/baseline.json`** (a ratchet): raise it when it
   improves; lowering it needs a justification in the PR.
 
+Most entries come from real libraries (marked `from a real library`, paths cut to their last three
+segments, which is all the parser reads); French ones carry `"language": "fr"`, as the CLI would
+ask TMDB. Real names exposed what invented ones hid, and fixed in the matcher and the parser:
+`marginFullGap` set to the weight of one criterion, apostrophe-tolerant title comparison, the part
+after a dash in `Title - Subtitle (Year)` read as the rest of the title, a folder name no longer
+taken for the show, and bare numbers (`2049`, `116`, a year as a season) no longer read as episodes.
+Entries that keep failing on purpose are noted as `known gap` with the reason.
+
+To add a library or investigate a mis-handled name, follow `packages/corpus/README.md`: the
+`analyze`, `inspect`, `probe`, `compare`, `select` and `merge` scripts there reproduce the whole
+workflow, including the checks that a change regresses nothing.
+
+`pnpm corpus:record` stores only what Kinoshelf reads (search results, alternative titles, season
+episodes), which keeps `recordings.json` under a megabyte.
+
 Add an entry whenever a real file is mis-handled, then `pnpm corpus:record` (needs `TMDB_API_KEY`
 in `.env`; it rewrites `recordings.json`) and `pnpm corpus:report` to see every verdict with its
 score and runner-ups, which is how the weights in `matching/config.ts` get calibrated. Check that a
@@ -122,4 +144,6 @@ Run `pnpm typecheck && pnpm lint && pnpm format:check && pnpm test` before consi
 
 - Define types/interfaces before implementations; write tests along with the code.
 - Comments explain _why_, not _what_; match the surrounding density and naming.
-- Matching corpus: real release names + expected match, run in CI.
+- Commits: one concern each, in distinct commits when a change touches several; ask before
+  committing. Before relying on a result, verify it independently; before trusting a new rule,
+  break it on purpose and watch a test go red.
