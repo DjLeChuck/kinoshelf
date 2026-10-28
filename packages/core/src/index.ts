@@ -38,7 +38,7 @@ export { DEFAULT_SIDECAR_EXTENSIONS, findSidecars, type Sidecar } from './planni
 export { executePlan, type ExecuteOptions } from './execution/executor.js';
 export { MemoryJournal } from './journal/memory-journal.js';
 export { SqliteJournal } from './journal/sqlite-journal.js';
-export { undoLastBatch, type UndoEntryResult, type UndoResult } from './journal/undo.js';
+export { undoBatch, undoLastBatch, type UndoEntryResult, type UndoResult } from './journal/undo.js';
 export {
   discoverVideos,
   isSample,

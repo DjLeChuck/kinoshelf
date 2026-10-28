@@ -23,6 +23,8 @@ export interface Journal {
   record(entry: JournalEntry): void;
   /** Id of the last batch not yet undone, `null` if none. */
   lastBatchId(): string | null;
+  /** True once a batch was undone; false for a batch still pending and for an unknown one. */
+  isUndone(batchId: string): boolean;
   entriesOf(batchId: string): readonly JournalEntry[];
   markUndone(batchId: string): void;
 }

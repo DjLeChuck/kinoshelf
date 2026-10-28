@@ -12,6 +12,11 @@ export class MemoryJournal implements Journal {
     return this.entries.findLast((e) => !e.undone)?.entry.batchId ?? null;
   }
 
+  isUndone(batchId: string): boolean {
+    const batch = this.entries.filter((e) => e.entry.batchId === batchId);
+    return batch.length > 0 && batch.every((e) => e.undone);
+  }
+
   entriesOf(batchId: string): readonly JournalEntry[] {
     return this.entries.filter((e) => e.entry.batchId === batchId).map((e) => e.entry);
   }

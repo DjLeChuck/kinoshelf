@@ -1,4 +1,4 @@
-import { mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
+import { mkdir, readdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
 import { lstat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -7,6 +7,7 @@ import {
   executePlan,
   loadBundledProfile,
   MemoryJournal,
+  undoBatch,
   undoLastBatch,
   type TransferMode,
 } from '../src/index.js';
@@ -139,6 +140,51 @@ describe('undoLastBatch', () => {
 
     expect((await undoLastBatch(journal))?.batchId).toBe(first.batch.batchId);
     expect(await undoLastBatch(journal)).toBeNull();
+  });
+
+  it('undoes an older batch and leaves the newer one in place and undoable', async () => {
+    const journal = new MemoryJournal();
+    const lib = await makeDir();
+    const first = await importMovie('copy', journal, { lib, id: 1, title: 'Alpha', name: 'a.mkv' });
+    const second = await importMovie('copy', journal, { lib, id: 2, title: 'Beta', name: 'b.mkv' });
+
+    const result = await undoBatch(journal, first.batch.batchId);
+    expect(result?.entries.map((e) => e.status)).toEqual(['undone']);
+    expect(await exists(join(lib, 'Alpha (2021) {tmdb-1}'))).toBe(false);
+    expect(await exists(join(lib, 'Beta (2021) {tmdb-2}'))).toBe(true);
+    expect(journal.lastBatchId()).toBe(second.batch.batchId);
+
+    expect((await undoLastBatch(journal))?.batchId).toBe(second.batch.batchId);
+    expect(journal.lastBatchId()).toBeNull();
+  });
+
+  it('has nothing to undo for an unknown or an already undone batch', async () => {
+    const { journal, batch } = await importMovie('copy');
+    expect(await undoBatch(journal, 'ghost')).toBeNull();
+    expect(await undoBatch(journal, batch.batchId)).not.toBeNull();
+    expect(await undoBatch(journal, batch.batchId)).toBeNull();
+  });
+
+  it('skips, never forces, what a later batch moved on or took the place of', async () => {
+    const journal = new MemoryJournal();
+    const lib = await makeDir();
+    const moved = await importMovie('move', journal, { lib, id: 1, title: 'Alpha', name: 'a.mkv' });
+    const folder = join(lib, 'Alpha (2021) {tmdb-1}');
+    const target = join(folder, 'Alpha (2021) {tmdb-1}.mkv');
+
+    // A later batch renamed the file, so its first destination is gone.
+    const renamed = join(lib, 'renamed-later.mkv');
+    await rename(target, renamed);
+    // And something else now sits where the move came from.
+    await put(moved.source, 'someone else');
+
+    const result = await undoBatch(journal, moved.batch.batchId);
+    expect(result?.entries[0]).toMatchObject({
+      status: 'skipped',
+      error: { code: 'undo.destination-missing' },
+    });
+    expect(await readFile(renamed, 'utf8')).toBe('video');
+    expect(await readFile(moved.source, 'utf8')).toBe('someone else');
   });
 
   it('changes nothing in a dry run and leaves the batch pending', async () => {

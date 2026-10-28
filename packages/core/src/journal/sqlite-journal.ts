@@ -45,6 +45,16 @@ export class SqliteJournal implements Journal {
     return row?.batchId ?? null;
   }
 
+  isUndone(batchId: string): boolean {
+    const row = this.db
+      .select({ undoneAt: journalEntries.undoneAt })
+      .from(journalEntries)
+      .where(eq(journalEntries.batchId, batchId))
+      .orderBy(asc(journalEntries.seq))
+      .all();
+    return row.length > 0 && row.every((entry) => entry.undoneAt !== null);
+  }
+
   entriesOf(batchId: string): readonly JournalEntry[] {
     return this.db
       .select()

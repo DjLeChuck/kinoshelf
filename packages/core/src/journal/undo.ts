@@ -59,21 +59,24 @@ async function pruneDirectories(entries: readonly JournalEntry[]): Promise<void>
 }
 
 /**
- * Reverts the last batch that was not undone yet. A move goes back to where it came from;
- * a copy or hardlink loses its new name. Anything that no longer matches (destination gone,
- * original place taken) is skipped and reported, never forced. The batch is marked undone
- * only when nothing failed, so a failed undo can be retried.
+ * Reverts a batch that was not undone yet, whether or not it is the last one. A move goes back
+ * to where it came from; a copy or hardlink loses its new name. Each entry is checked against
+ * the disk as it is now, so a later batch cannot be damaged: a destination that was moved on or
+ * removed since is skipped, an original place taken since is skipped, and directories a later
+ * batch also filled are left (only empty ones go). Nothing is forced. The batch is marked undone
+ * only when nothing failed, so a failed undo can be retried. Returns `null` for an unknown or
+ * already undone batch.
  */
-export async function undoLastBatch(
+export async function undoBatch(
   journal: Journal,
+  batchId: string,
   options: { readonly dryRun?: boolean } = {},
 ): Promise<UndoResult | null> {
-  const batchId = journal.lastBatchId();
-  if (batchId === null) {
+  const journaled = journal.entriesOf(batchId);
+  if (journaled.length === 0 || journal.isUndone(batchId)) {
     return null;
   }
   const dryRun = options.dryRun ?? false;
-  const journaled = journal.entriesOf(batchId);
 
   const entries: UndoEntryResult[] = [];
   for (const entry of [...journaled].reverse()) {
@@ -87,4 +90,13 @@ export async function undoLastBatch(
     }
   }
   return { batchId, dryRun, entries };
+}
+
+/** Reverts the most recent batch that was not undone yet (what the CLI offers). */
+export async function undoLastBatch(
+  journal: Journal,
+  options: { readonly dryRun?: boolean } = {},
+): Promise<UndoResult | null> {
+  const batchId = journal.lastBatchId();
+  return batchId === null ? null : undoBatch(journal, batchId, options);
 }
