@@ -7,11 +7,21 @@
   "type": "module",
   "scripts": {
     "report": "node dist/report.js",
-    "record": "node --env-file=../../.env scripts/record.mjs"
+    "record": "node --env-file=../../.env scripts/record.mjs",
+    "analyze": "node --env-file=../../.env scripts/analyze.mjs",
+    "inspect": "node scripts/inspect.mjs",
+    "compare": "node scripts/compare.mjs",
+    "probe": "node scripts/probe.mjs",
+    "select": "node scripts/select.mjs",
+    "merge": "node scripts/merge.mjs"
   },
   "dependencies": {
     "@kinoshelf/core": "workspace:*",
     "@kinoshelf/provider-tmdb": "workspace:*",
+    "better-sqlite3": "^13.0.3",
     "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "guessit-js": "^4.8.0"
   }
 }
