@@ -27,8 +27,5 @@
   },
   "devDependencies": {
     "@types/better-sqlite3": "^9.6.0"
-  },
-  "scripts": {
-    "live:media": "node --env-file=../../.env scripts/live-media-servers.mjs"
   }
 }

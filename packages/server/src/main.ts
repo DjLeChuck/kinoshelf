@@ -12,6 +12,7 @@ import { createTranslator, describeError, detectLocale } from '@kinoshelf/i18n';
 import { buildApp } from './app.js';
 import { generateApiKey, hasApiKey, MIN_API_KEY_LENGTH, setApiKey } from './auth.js';
 import { openDatabase } from './database.js';
+import { runNotifyCommand } from './notify-command.js';
 import { createShutdown } from './shutdown.js';
 
 const DEFAULT_RETENTION_DAYS = 90;
@@ -42,6 +43,20 @@ if (process.argv[2] === 'api-key') {
   database.close();
   process.stdout.write(`${key}\n`);
   process.exit(0);
+}
+
+// `kinoshelf-server notify test|refresh`: checks the media servers and webhooks of config.yaml
+// from inside the container, without starting the server (see notify-command.ts).
+if (process.argv[2] === 'notify') {
+  const config = await loadConfig(configDir).catch(failStartup);
+  process.exit(
+    await runNotifyCommand(process.argv.slice(3), {
+      config,
+      env: process.env,
+      out: (line) => process.stdout.write(`${line}\n`),
+      err: (line) => process.stderr.write(`${line}\n`),
+    }),
+  );
 }
 
 // `dist/` sits next to `package.json`, so this resolves the same in a checkout and once installed.

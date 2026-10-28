@@ -18,7 +18,7 @@ import {
   type NotificationEvent,
 } from './message.js';
 import { redactUrl } from './paths.js';
-import { PlexClient, type Logger, type RefreshTarget } from './plex.js';
+import { PlexClient, type Logger, type RefreshReport, type RefreshTarget } from './plex.js';
 
 /** What a target hears about when it does not say: the news, and what went wrong. */
 const DEFAULT_EVENTS: readonly NotificationEvent[] = ['transferred', 'failed'];
@@ -121,6 +121,22 @@ export class Notifier {
     this.dispatch(
       executionFailedNotification(this.deps.translate, job, execution, error, this.now()),
     );
+  }
+
+  /** Whether anything is configured to talk to. */
+  get targets(): { webhooks: number; plex: boolean; jellyfin: boolean } {
+    return { webhooks: this.webhooks.length, plex: !!this.plex, jellyfin: !!this.jellyfin };
+  }
+
+  /** Asks the media servers to look at these folders (Kinoshelf's paths), and waits for them. */
+  async refreshPaths(
+    targets: readonly RefreshTarget[],
+  ): Promise<{ plex?: RefreshReport; jellyfin?: RefreshReport }> {
+    const [plex, jellyfin] = await Promise.all([
+      this.plex?.refresh(targets),
+      this.jellyfin?.refresh(targets),
+    ]);
+    return { ...(plex && { plex }), ...(jellyfin && { jellyfin }) };
   }
 
   /** Waits for what is in flight, so a closing server does not drop the last messages. */
