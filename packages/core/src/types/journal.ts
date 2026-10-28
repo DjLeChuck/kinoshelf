@@ -6,6 +6,11 @@ export interface JournalEntry {
   readonly source: string;
   readonly destination: string;
   readonly mode: TransferMode;
+  /**
+   * Directories this operation had to create, outermost first. Undo removes them (if empty)
+   * and nothing else, so it can never prune a directory the user already had.
+   */
+  readonly createdDirectories: readonly string[];
   /** ISO 8601 timestamp. */
   readonly at: string;
 }

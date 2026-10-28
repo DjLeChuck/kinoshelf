@@ -1,3 +1,4 @@
+import type { ErrorInfo } from './errors.js';
 import type { ExternalId, ParsedMedia } from './media.js';
 import type { Operation, OperationResult, TransferMode } from './operation.js';
 
@@ -6,11 +7,21 @@ export type ConflictReason =
   /** A file already exists at the destination: never overwritten by default. */
   | 'destination-exists'
   /** Two source files target the same destination within the batch. */
-  | 'duplicate-destination';
+  | 'duplicate-destination'
+  /**
+   * Hardlink mode, but source and destination are on different filesystems. There is no
+   * automatic fallback: the user must change the configuration or pick copy/move.
+   */
+  | 'hardlink-cross-device'
+  /** The target name cannot be built (missing year, no episode number, unsafe segment…). */
+  | 'unresolvable-name';
 
 export interface Conflict {
   readonly reason: ConflictReason;
+  /** The path concerned (for `unresolvable-name`: the source file). */
   readonly path: string;
+  /** Why, when the reason alone is not enough (e.g. which template variable is missing). */
+  readonly detail?: ErrorInfo;
 }
 
 /**
@@ -40,6 +51,8 @@ export interface Plan {
   /** ISO 8601 timestamp. */
   readonly createdAt: string;
   readonly profileId: string;
+  /** Absolute root every destination lives under. */
+  readonly destinationRoot: string;
   readonly mode: TransferMode;
   readonly items: readonly PlanItem[];
 }

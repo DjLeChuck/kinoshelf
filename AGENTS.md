@@ -16,6 +16,11 @@ renames them for a media player (Plex, Jellyfin) and writes their metadata (NFO,
 - Nothing touches the disk without a validated plan (parse → match → plan → execute).
 - No automatic fallback when a hardlink is impossible: fail with an explicit error.
 - Never overwrite a destination file by default: the operation goes to the validation queue.
+  Enforced in layers: the planner flags it, the executor re-checks right before writing, and the
+  primitives in `execution/fs-ops.ts` publish with `link` (fails on EEXIST) instead of `rename`
+  (silently overwrites). Keep all three; tests cover each layer.
+- Durable SQLite data (the journal) changes only through `journal/migrations.ts`: append a new
+  entry, never edit a shipped one. Disposable data (the TMDB cache) is created on demand.
 
 ## Architecture
 

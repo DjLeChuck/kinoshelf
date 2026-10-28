@@ -26,3 +26,9 @@ export {
 } from './matching/config.js';
 export { Matcher } from './matching/matcher.js';
 export { normalizeTitle, titleSimilarity } from './matching/title-similarity.js';
+export { createPlan, type PlanInput, type PlannerOptions } from './planning/planner.js';
+export { DEFAULT_SIDECAR_EXTENSIONS, findSidecars, type Sidecar } from './planning/sidecars.js';
+export { executePlan, type ExecuteOptions } from './execution/executor.js';
+export { MemoryJournal } from './journal/memory-journal.js';
+export { SqliteJournal } from './journal/sqlite-journal.js';
+export { undoLastBatch, type UndoEntryResult, type UndoResult } from './journal/undo.js';
