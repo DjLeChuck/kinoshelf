@@ -109,6 +109,21 @@ export const fr: Record<keyof typeof en, string> = {
   'help.undo':
     'Annule un lot exécuté, le dernier sauf si vous le nommez (simulation sans --apply).',
   'help.arg.batch': 'identifiant du lot à annuler (affiché lors de son application)',
+  'help.cleanup':
+    'Supprime les fichiers temporaires qu’une copie interrompue a laissés dans les dossiers de destination (simulation sans --apply).',
+  'help.arg.folders': 'dossiers à parcourir (par défaut : les destinations de config.yaml)',
+  'help.opt.older-than':
+    'uniquement les fichiers inchangés depuis au moins ce nombre d’heures (24 par défaut, 1 au minimum)',
+  'cleanup.header':
+    'Fichiers temporaires abandonnés (inchangés depuis {hours} h ou plus) dans : {folders}',
+  'cleanup.none': 'Aucun fichier temporaire abandonné.',
+  'cleanup.file': '{size} · inchangé depuis {age} h',
+  'cleanup.summary': '{found} trouvé(s), {removed} supprimé(s), {failed} en échec.',
+  'cleanup.dry-run': 'Simulation : rien n’a été supprimé. Ajoutez --apply pour les supprimer.',
+  'error.cleanup.age-too-short':
+    'L’âge minimum est de {min} heure : un fichier plus récent est peut-être en cours de copie.',
+  'error.cleanup.no-folder':
+    'Indiquez le ou les dossiers à parcourir, ou définissez « destination » dans {path}.',
   'help.arg.source': 'dossier ou fichier vidéo à analyser',
   'help.arg.path': 'fichier vidéo ou dossier à traiter',
   'help.opt.dest': 'dossier de destination des films et des séries',

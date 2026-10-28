@@ -92,14 +92,28 @@ async function publish(from: string, to: string): Promise<'linked' | 'renamed'> 
 }
 
 /**
+ * The hidden sibling a copy is written to before being published. The name is the only thing
+ * telling these files from anyone else's, so the cleanup relies on `isTemporaryName` and the two
+ * are kept side by side.
+ */
+export function temporaryPathFor(destination: string): string {
+  return join(
+    dirname(destination),
+    `.${basename(destination)}.${randomUUID().slice(0, 8)}.kinoshelf-tmp`,
+  );
+}
+
+/** True for a file name made by `temporaryPathFor`: dot, any name, 8 hex digits, our suffix. */
+export function isTemporaryName(name: string): boolean {
+  return /^\..+\.[0-9a-f]{8}\.kinoshelf-tmp$/.test(name);
+}
+
+/**
  * Copies to a hidden temporary file in the destination directory, then publishes it under its
  * final name: a player never sees a partial file.
  */
 export async function copyAtomic(source: string, destination: string): Promise<void> {
-  const temporary = join(
-    dirname(destination),
-    `.${basename(destination)}.${randomUUID().slice(0, 8)}.kinoshelf-tmp`,
-  );
+  const temporary = temporaryPathFor(destination);
   try {
     await copyFile(source, temporary, constants.COPYFILE_EXCL);
     const { atime, mtime } = await stat(source);

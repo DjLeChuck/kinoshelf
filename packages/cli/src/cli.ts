@@ -4,6 +4,7 @@ import Database from 'better-sqlite3';
 import { Command, CommanderError } from 'commander';
 import {
   analyze,
+  cleanupStaleTemporaryFiles,
   configDirectory,
   DATABASE_FILE,
   discoverVideos,
@@ -27,7 +28,14 @@ import {
   type Locale,
   type Translate,
 } from './i18n/index.js';
-import { analysisToJson, renderAnalysis, renderBatch, renderUndo } from './render.js';
+import {
+  analysisToJson,
+  cleanupToJson,
+  renderAnalysis,
+  renderBatch,
+  renderCleanup,
+  renderUndo,
+} from './render.js';
 import { resolveSettings, type CommonOptions } from './settings.js';
 
 export interface Io {
@@ -42,6 +50,8 @@ export interface CliDeps {
   readonly io: Io;
   /** Replaces TMDB, for tests. */
   readonly createProvider?: (options: { language: string; cache: HttpCache }) => MetadataProvider;
+  /** Replaces the clock, so a test can age files without waiting. */
+  readonly now?: () => number;
 }
 
 interface RunOptions extends CommonOptions {
@@ -204,6 +214,59 @@ async function runUndo(
   }
 }
 
+const DEFAULT_CLEANUP_AGE_HOURS = 24;
+
+/** The folders to scan: those given, else the destinations of `config.yaml` (never the sources). */
+function cleanupRoots(folders: readonly string[], context: Context): string[] {
+  if (folders.length > 0) {
+    return folders.map((folder) => resolve(folder));
+  }
+  const { destination } = context.config;
+  const configured =
+    destination === undefined
+      ? []
+      : typeof destination === 'string'
+        ? [destination]
+        : [destination.movies, destination.series];
+  if (configured.length === 0) {
+    throw new CliError('cleanup.no-folder', { path: join(context.configDir, 'config.yaml') });
+  }
+  return [...new Set(configured.map((folder) => resolve(folder)))];
+}
+
+async function runCleanup(
+  folders: readonly string[],
+  options: { olderThan?: string; apply?: boolean; json?: boolean },
+  context: Context,
+): Promise<number> {
+  const { t, deps } = context;
+  const hours =
+    options.olderThan === undefined ? DEFAULT_CLEANUP_AGE_HOURS : Number(options.olderThan);
+  if (options.olderThan !== undefined && (options.olderThan.trim() === '' || Number.isNaN(hours))) {
+    throw new CliError('config.invalid-value', {
+      value: options.olderThan,
+      option: '--older-than',
+    });
+  }
+  const roots = cleanupRoots(folders, context);
+  const dryRun = options.apply !== true;
+
+  const files = await cleanupStaleTemporaryFiles(roots, {
+    olderThanHours: hours,
+    dryRun,
+    ...(deps.now && { now: deps.now }),
+  });
+
+  if (options.json) {
+    deps.io.out(JSON.stringify(cleanupToJson(roots, hours, dryRun, files), null, 2));
+  } else {
+    for (const line of renderCleanup(files, { roots, hours, dryRun }, t)) {
+      deps.io.out(line);
+    }
+  }
+  return files.some((file) => file.status === 'failed') ? 1 : 0;
+}
+
 function buildProgram(context: Context, exit: { code: number }): Command {
   const { t } = context;
   const program = new Command('kinoshelf')
@@ -262,6 +325,18 @@ function buildProgram(context: Context, exit: { code: number }): Command {
       act(() => runUndo(batch, options, context))(),
     );
 
+  program
+    .command('cleanup')
+    .description(t('help.cleanup'))
+    .argument('[folders...]', t('help.arg.folders'))
+    .option('--older-than <hours>', t('help.opt.older-than'))
+    .option('--apply', t('help.opt.apply'))
+    .option('--json', t('help.opt.json'))
+    .exitOverride()
+    .action((folders: string[], options: { olderThan?: string; apply?: boolean; json?: boolean }) =>
+      act(() => runCleanup(folders, options, context))(),
+    );
+
   return program;
 }
 
@@ -305,7 +380,8 @@ export async function run(argv: readonly string[], deps: CliDeps): Promise<numbe
     }
     if (error instanceof KinoshelfError) {
       deps.io.err(describeError(t, error.info));
-      return 1;
+      // An age below the minimum is a bad argument, like any other invalid value.
+      return error.info.code === 'cleanup.age-too-short' ? 2 : 1;
     }
     if (error instanceof CliError) {
       deps.io.err(describeError(t, error));

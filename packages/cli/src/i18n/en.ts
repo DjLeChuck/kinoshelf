@@ -109,6 +109,19 @@ export const en = {
   'help.undo':
     'Revert an executed batch, the last one unless you name it (dry run unless --apply).',
   'help.arg.batch': 'id of the batch to revert (printed when it was applied)',
+  'help.cleanup':
+    'Remove the temporary files an interrupted copy left in the destination folders (dry run unless --apply).',
+  'help.arg.folders': 'folders to scan (default: the destinations of config.yaml)',
+  'help.opt.older-than':
+    'only files untouched for at least this many hours (default 24, minimum 1)',
+  'cleanup.header': 'Stale temporary files (untouched for {hours} h or more) in: {folders}',
+  'cleanup.none': 'No stale temporary file found.',
+  'cleanup.file': '{size} · untouched for {age} h',
+  'cleanup.summary': '{found} found, {removed} removed, {failed} failed.',
+  'cleanup.dry-run': 'Dry run: nothing was removed. Add --apply to delete them.',
+  'error.cleanup.age-too-short':
+    'The minimum age is {min} hour: a younger file may still be being copied.',
+  'error.cleanup.no-folder': 'Give the folder(s) to scan, or set "destination" in {path}.',
   'help.arg.source': 'folder or video file to analyze',
   'help.arg.path': 'video file or folder to process',
   'help.opt.dest': 'destination folder for movies and series',

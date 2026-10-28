@@ -6,6 +6,7 @@ import type {
   Classification,
   DestinationRoots,
   ErrorInfo,
+  StaleFile,
   TransferMode,
   UndoResult,
 } from '@kinoshelf/core';
@@ -236,4 +237,59 @@ export function analysisToJson(analysis: Analysis, batch?: BatchResult) {
       })),
     },
   };
+}
+
+/** Binary units, which read the same in French and English (KiB, not KB or Ko). */
+function formatBytes(bytes: number): string {
+  const units = ['B', 'KiB', 'MiB', 'GiB', 'TiB'];
+  let value = bytes;
+  let unit = 0;
+  while (value >= 1024 && unit < units.length - 1) {
+    value /= 1024;
+    unit++;
+  }
+  return `${unit === 0 ? value : value.toFixed(1)} ${units[unit]}`;
+}
+
+export function renderCleanup(
+  files: readonly StaleFile[],
+  context: { roots: readonly string[]; hours: number; dryRun: boolean },
+  t: Translate,
+): string[] {
+  const lines = [t('cleanup.header', { hours: context.hours, folders: context.roots.join(', ') })];
+  if (files.length === 0) {
+    lines.push(t('cleanup.none'));
+    return lines;
+  }
+  const totals = { removed: 0, failed: 0 };
+  for (const file of files) {
+    const mark = file.status === 'removed' ? '✓' : file.status === 'failed' ? '✗' : '·';
+    lines.push(`  ${mark} ${file.path}`);
+    lines.push(
+      `      ${t('cleanup.file', { size: formatBytes(file.sizeBytes), age: Math.floor(file.ageHours) })}`,
+    );
+    if (file.status === 'removed') {
+      totals.removed++;
+    } else if (file.status === 'failed') {
+      totals.failed++;
+      lines.push(
+        `      ${t('result.failed', { reason: describeError(t, file.error ?? { code: 'unknown' }) })}`,
+      );
+    }
+  }
+  lines.push('', t('cleanup.summary', { found: files.length, ...totals }));
+  if (context.dryRun) {
+    lines.push(t('cleanup.dry-run'));
+  }
+  return lines;
+}
+
+/** Codes and parameters, never translated text. */
+export function cleanupToJson(
+  roots: readonly string[],
+  olderThanHours: number,
+  dryRun: boolean,
+  files: readonly StaleFile[],
+): unknown {
+  return { roots, olderThanHours, dryRun, files };
 }

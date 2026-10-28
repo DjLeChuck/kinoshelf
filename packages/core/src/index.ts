@@ -59,4 +59,10 @@ export {
   type SettingsContext,
   type SettingsOverrides,
 } from './config/settings.js';
+export {
+  cleanupStaleTemporaryFiles,
+  MIN_STALE_AGE_HOURS,
+  type CleanupOptions,
+  type StaleFile,
+} from './maintenance/stale-temporary.js';
 export { applyMigrations } from './journal/migrations.js';
