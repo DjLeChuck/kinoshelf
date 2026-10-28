@@ -58,6 +58,8 @@ export const fr: Record<keyof typeof en, string> = {
   'error.config.destination-required':
     'Indiquez une destination avec --dest (ou --dest-movies et --dest-series).',
   'error.config.invalid': 'Fichier de configuration invalide {path} : {detail}',
+  'error.undo.batch-already-undone': 'Le lot {batch} a déjà été annulé.',
+  'error.undo.batch-not-found': 'Aucun lot {batch} dans le journal.',
   'error.config.invalid-value': 'Valeur invalide « {value} » pour {option}.',
   'error.config.tmdb-key-missing':
     'Aucune clé d’API TMDB. Définissez la variable d’environnement TMDB_API_KEY ou « apiKey.tmdb » dans {path}.',
@@ -92,10 +94,10 @@ export const fr: Record<keyof typeof en, string> = {
   'result.skipped': 'ignoré : {reason}',
   'result.failed': 'échec : {reason}',
   'batch.summary': 'Lot {batch} : {done} faits, {skipped} ignorés, {failed} en échec.',
-  'batch.undo-hint': 'Pour l’annuler : kinoshelf undo --apply',
+  'batch.undo-hint': 'Pour l’annuler : kinoshelf undo {batch} --apply',
 
   'undo.nothing': 'Rien à annuler.',
-  'undo.header': 'Dernier lot : {batch}',
+  'undo.header': 'Lot : {batch}',
   'undo.skipped': 'ignoré : {reason}',
   'undo.failed': 'échec : {reason}',
   'undo.summary': '{undone} annulés, {skipped} ignorés, {failed} en échec.',
@@ -104,7 +106,9 @@ export const fr: Record<keyof typeof en, string> = {
   'help.description': 'Identifie, renomme et enrichit des fichiers vidéo déjà sur disque.',
   'help.scan': 'Analyse une bibliothèque et indique ce qui changerait (n’écrit jamais).',
   'help.process': 'Identifie un fichier ou un dossier et le range (simulation sans --apply).',
-  'help.undo': 'Annule le dernier lot exécuté (simulation sans --apply).',
+  'help.undo':
+    'Annule un lot exécuté, le dernier sauf si vous le nommez (simulation sans --apply).',
+  'help.arg.batch': 'identifiant du lot à annuler (affiché lors de son application)',
   'help.arg.source': 'dossier ou fichier vidéo à analyser',
   'help.arg.path': 'fichier vidéo ou dossier à traiter',
   'help.opt.dest': 'dossier de destination des films et des séries',

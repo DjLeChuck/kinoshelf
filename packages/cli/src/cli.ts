@@ -12,6 +12,7 @@ import {
   KinoshelfError,
   loadConfig,
   SqliteJournal,
+  undoBatch,
   undoLastBatch,
   type Config,
   type MetadataProvider,
@@ -163,12 +164,29 @@ async function runPipeline(
   }
 }
 
-async function runUndo(options: { apply?: boolean }, context: Context): Promise<number> {
+async function runUndo(
+  batch: string | undefined,
+  options: { apply?: boolean },
+  context: Context,
+): Promise<number> {
   const { t, deps } = context;
   const database = await openDatabase(context);
   try {
     const dryRun = options.apply !== true;
-    const result = await undoLastBatch(new SqliteJournal(database), { dryRun });
+    const journal = new SqliteJournal(database);
+    if (batch !== undefined) {
+      // A named batch is checked up front, so a typo is a usage error and not "nothing to undo".
+      if (journal.entriesOf(batch).length === 0) {
+        throw new CliError('undo.batch-not-found', { batch });
+      }
+      if (journal.isUndone(batch)) {
+        throw new CliError('undo.batch-already-undone', { batch });
+      }
+    }
+    const result =
+      batch === undefined
+        ? await undoLastBatch(journal, { dryRun })
+        : await undoBatch(journal, batch, { dryRun });
     if (!result) {
       deps.io.out(t('undo.nothing'));
       return 0;
@@ -237,9 +255,12 @@ function buildProgram(context: Context, exit: { code: number }): Command {
   program
     .command('undo')
     .description(t('help.undo'))
+    .argument('[batch]', t('help.arg.batch'))
     .option('--apply', t('help.opt.apply'))
     .exitOverride()
-    .action((options: { apply?: boolean }) => act(() => runUndo(options, context))());
+    .action((batch: string | undefined, options: { apply?: boolean }) =>
+      act(() => runUndo(batch, options, context))(),
+    );
 
   return program;
 }

@@ -58,6 +58,8 @@ export const en = {
   'error.config.destination-required':
     'Give a destination with --dest (or --dest-movies and --dest-series).',
   'error.config.invalid': 'Invalid configuration file {path}: {detail}',
+  'error.undo.batch-already-undone': 'Batch {batch} was already reverted.',
+  'error.undo.batch-not-found': 'No batch {batch} in the journal.',
   'error.config.invalid-value': 'Invalid value "{value}" for {option}.',
   'error.config.tmdb-key-missing':
     'No TMDB API key. Set the TMDB_API_KEY environment variable or "apiKey.tmdb" in {path}.',
@@ -92,10 +94,10 @@ export const en = {
   'result.skipped': 'skipped: {reason}',
   'result.failed': 'failed: {reason}',
   'batch.summary': 'Batch {batch}: {done} done, {skipped} skipped, {failed} failed.',
-  'batch.undo-hint': 'To revert it: kinoshelf undo --apply',
+  'batch.undo-hint': 'To revert it: kinoshelf undo {batch} --apply',
 
   'undo.nothing': 'Nothing to undo.',
-  'undo.header': 'Last batch: {batch}',
+  'undo.header': 'Batch: {batch}',
   'undo.skipped': 'skipped: {reason}',
   'undo.failed': 'failed: {reason}',
   'undo.summary': '{undone} reverted, {skipped} skipped, {failed} failed.',
@@ -104,7 +106,9 @@ export const en = {
   'help.description': 'Identify, rename and enrich video files already on disk.',
   'help.scan': 'Analyze a library and report what would change (never writes).',
   'help.process': 'Identify a file or folder and organize it (dry run unless --apply).',
-  'help.undo': 'Revert the last executed batch (dry run unless --apply).',
+  'help.undo':
+    'Revert an executed batch, the last one unless you name it (dry run unless --apply).',
+  'help.arg.batch': 'id of the batch to revert (printed when it was applied)',
   'help.arg.source': 'folder or video file to analyze',
   'help.arg.path': 'video file or folder to process',
   'help.opt.dest': 'destination folder for movies and series',

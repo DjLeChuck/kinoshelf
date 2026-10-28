@@ -125,7 +125,8 @@ describe('process', () => {
     expect(await exists(join(dest, 'zzqx.2020.mkv'))).toBe(false);
     const text = h.out.join('\n');
     expect(text).toMatch(/Batch .+: 3 done, 0 skipped, 0 failed\./);
-    expect(text).toContain('kinoshelf undo --apply');
+    const batch = /Batch (\S+): 3 done/.exec(text)?.[1];
+    expect(text).toContain(`kinoshelf undo ${batch} --apply`);
   });
 
   it('moves with --mode move', async () => {
@@ -216,6 +217,69 @@ describe('undo', () => {
     h.out.length = 0;
     await h.cli('undo', '--apply');
     expect(h.out).toEqual(['Nothing to undo.']);
+  });
+
+  describe('with a batch id', () => {
+    /** The id printed when a batch is applied. */
+    const batchOf = (out: string[]): string => {
+      const id = /Batch (\S+): \d+ done/.exec(out.join('\n'))?.[1];
+      if (!id) {
+        throw new Error('no batch id in the output');
+      }
+      return id;
+    };
+
+    async function twoBatches() {
+      const first = await library();
+      const second = await makeDir();
+      await put(join(second, 'Casablanca.1942.mkv'), 'casa');
+      const h = await harness();
+      await h.cli('process', first.src, '--dest', first.dest, '--apply');
+      const one = batchOf(h.out);
+      h.out.length = 0;
+      await h.cli('process', second, '--dest', first.dest, '--apply');
+      const two = batchOf(h.out);
+      h.out.length = 0;
+      return { h, dest: first.dest, one, two };
+    }
+
+    it('reverts that batch and leaves the more recent one', async () => {
+      const { h, dest, one, two } = await twoBatches();
+      expect(one).not.toBe(two);
+
+      expect(await h.cli('undo', one)).toBe(0); // dry run
+      expect(h.out.join('\n')).toContain(`Batch: ${one}`);
+      expect(await exists(join(dest, DUNE_DIR, 'Dune (2021) {tmdb-438631}.mkv'))).toBe(true);
+
+      h.out.length = 0;
+      expect(await h.cli('undo', one, '--apply')).toBe(0);
+      expect(h.out.join('\n')).toContain('3 reverted, 0 skipped, 0 failed.');
+      expect(await exists(join(dest, DUNE_DIR, 'Dune (2021) {tmdb-438631}.mkv'))).toBe(false);
+      expect(
+        await exists(
+          join(dest, 'Casablanca (1942) {tmdb-289}', 'Casablanca (1942) {tmdb-289}.mkv'),
+        ),
+      ).toBe(true);
+
+      // Without an id, the most recent one that is left.
+      h.out.length = 0;
+      await h.cli('undo', '--apply');
+      expect(h.out.join('\n')).toContain(`Batch: ${two}`);
+      expect(await readdir(dest)).toEqual([]);
+    });
+
+    it('rejects an unknown id and an already reverted one as bad usage', async () => {
+      const { h, one } = await twoBatches();
+      expect(await h.cli('undo', 'nope')).toBe(2);
+      expect(h.err).toEqual(['No batch nope in the journal.']);
+
+      await h.cli('undo', one, '--apply');
+      h.err.length = 0;
+      expect(await h.cli('undo', one, '--apply')).toBe(2);
+      expect(h.err).toEqual([`Batch ${one} was already reverted.`]);
+      expect(await h.cli('--lang', 'fr', 'undo', one)).toBe(2);
+      expect(h.err.at(-1)).toBe(`Le lot ${one} a déjà été annulé.`);
+    });
   });
 
   it('puts moved files back', async () => {

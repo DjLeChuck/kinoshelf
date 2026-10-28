@@ -159,7 +159,7 @@ export function renderBatch(batch: BatchResult, t: Translate): { lines: string[]
   }
   lines.push('', t('batch.summary', { batch: batch.batchId, ...totals }));
   if (totals.done > 0) {
-    lines.push(t('batch.undo-hint'));
+    lines.push(t('batch.undo-hint', { batch: batch.batchId }));
   }
   return { lines, failed: totals.failed };
 }
