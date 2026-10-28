@@ -59,3 +59,4 @@ export {
   type SettingsContext,
   type SettingsOverrides,
 } from './config/settings.js';
+export { applyMigrations } from './journal/migrations.js';
