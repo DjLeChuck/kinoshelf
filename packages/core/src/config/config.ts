@@ -1,8 +1,8 @@
 import { constants } from 'node:fs';
-import { access, mkdir, readFile } from 'node:fs/promises';
+import { access, mkdir, readFile, rename, stat, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import { parse } from 'yaml';
+import { isMap, parse, parseDocument, type Document } from 'yaml';
 import { z } from 'zod';
 import { KinoshelfError } from '../errors.js';
 
@@ -72,6 +72,7 @@ export type Config = z.infer<typeof configSchema>;
 export type NotifyConfig = NonNullable<Config['notify']>;
 
 export const DATABASE_FILE = 'kinoshelf.sqlite';
+export const CONFIG_FILE = 'config.yaml';
 
 /**
  * Creates the config directory if needed and checks that it can be written to. Without this,
@@ -102,32 +103,7 @@ export function configDirectory(
   );
 }
 
-/** Reads `config.yaml` from the config directory; a missing file means no configuration. */
-export async function loadConfig(directory: string): Promise<Config> {
-  const path = join(directory, 'config.yaml');
-  let text: string;
-  try {
-    text = await readFile(path, 'utf8');
-  } catch (error) {
-    if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
-      return {};
-    }
-    if (error instanceof Error && 'code' in error && error.code === 'EACCES') {
-      throw new KinoshelfError('fs.permission-denied', { path });
-    }
-    throw error;
-  }
-
-  let raw: unknown;
-  try {
-    raw = parse(text);
-  } catch (error) {
-    throw new KinoshelfError('config.invalid', {
-      path,
-      detail: error instanceof Error ? error.message : String(error),
-    });
-  }
-
+function validate(raw: unknown, path: string): Config {
   const result = configSchema.safeParse(raw ?? {});
   if (!result.success) {
     const issue = result.error.issues[0];
@@ -137,4 +113,93 @@ export async function loadConfig(directory: string): Promise<Config> {
     });
   }
   return result.data;
+}
+
+async function readText(path: string): Promise<string | undefined> {
+  try {
+    return await readFile(path, 'utf8');
+  } catch (error) {
+    if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
+      return undefined;
+    }
+    if (error instanceof Error && 'code' in error && error.code === 'EACCES') {
+      throw new KinoshelfError('fs.permission-denied', { path });
+    }
+    throw error;
+  }
+}
+
+function parseText(text: string, path: string): Document {
+  const document = parseDocument(text);
+  const [problem] = document.errors;
+  if (problem) {
+    throw new KinoshelfError('config.invalid', { path, detail: problem.message });
+  }
+  return document;
+}
+
+/** Reads `config.yaml` from the config directory; a missing file means no configuration. */
+export async function loadConfig(directory: string): Promise<Config> {
+  const path = join(directory, CONFIG_FILE);
+  const text = await readText(path);
+  if (text === undefined) {
+    return {};
+  }
+  let raw: unknown;
+  try {
+    raw = parse(text);
+  } catch (error) {
+    throw new KinoshelfError('config.invalid', {
+      path,
+      detail: error instanceof Error ? error.message : String(error),
+    });
+  }
+  return validate(raw, path);
+}
+
+/** One change to `config.yaml`: set the value at `path`, or remove it when `value` is undefined. */
+export interface ConfigEdit {
+  readonly path: readonly string[];
+  readonly value?: unknown;
+}
+
+/** A map left empty by a removal is dropped with it, so `apiKey: {}` never lingers. */
+function pruneEmptyParents(document: Document, path: readonly string[]): void {
+  for (let depth = path.length - 1; depth > 0; depth--) {
+    const parent = path.slice(0, depth);
+    const node = document.getIn(parent, true);
+    if (isMap(node) && node.items.length === 0) {
+      document.deleteIn(parent);
+    } else {
+      return;
+    }
+  }
+}
+
+/**
+ * Applies edits to `config.yaml` and returns the resulting configuration. The file is edited as a
+ * document, so the comments and the order a person wrote survive. The result is validated before
+ * anything is written, and written through a temporary file then `rename`: a crash or an invalid
+ * edit never leaves a half-written or broken file, which the server could not start from.
+ * The file holds secrets, so a new one is created readable by its owner only.
+ */
+export async function editConfig(directory: string, edits: readonly ConfigEdit[]): Promise<Config> {
+  const path = join(directory, CONFIG_FILE);
+  const text = await readText(path);
+  const document = parseText(text ?? '', path);
+  for (const edit of edits) {
+    if (edit.value === undefined) {
+      document.deleteIn(edit.path);
+      pruneEmptyParents(document, edit.path);
+    } else {
+      document.setIn(edit.path, edit.value);
+    }
+  }
+  const config = validate(document.toJS(), path);
+
+  const mode = text === undefined ? 0o600 : (await stat(path)).mode & 0o777;
+  const temporary = `${path}.${process.pid}.tmp`;
+  await writeFile(temporary, document.toString(), { mode });
+  await rename(temporary, path);
+  return config;
 }

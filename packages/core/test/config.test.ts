@@ -1,7 +1,12 @@
-import { chmod } from 'node:fs/promises';
+import { chmod, readFile, readdir, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { configDirectory, ensureConfigDirectory, loadConfig } from '../src/config/config.js';
+import {
+  configDirectory,
+  editConfig,
+  ensureConfigDirectory,
+  loadConfig,
+} from '../src/config/config.js';
 import { KinoshelfError } from '../src/errors.js';
 import { cleanup, makeDir, put } from './workspace.js';
 
@@ -177,5 +182,67 @@ describe('configDirectory', () => {
     expect(configDirectory(undefined, { KINOSHELF_CONFIG_DIR: '/env' })).toBe('/env');
     expect(configDirectory(undefined, { XDG_CONFIG_HOME: '/xdg' })).toBe('/xdg/kinoshelf');
     expect(configDirectory(undefined, {})).toMatch(/\.config[\\/]kinoshelf$/);
+  });
+});
+
+describe('editConfig', () => {
+  const read = (dir: string): Promise<string> => readFile(join(dir, 'config.yaml'), 'utf8');
+
+  it('creates the file, readable by its owner only, when there is none', async () => {
+    const dir = await makeDir();
+    const config = await editConfig(dir, [{ path: ['locale'], value: 'fr' }]);
+    expect(config).toEqual({ locale: 'fr' });
+    expect(await read(dir)).toBe('locale: fr\n');
+    expect((await stat(join(dir, 'config.yaml'))).mode & 0o777).toBe(0o600);
+  });
+
+  it('keeps comments and order, and changes only what is asked', async () => {
+    const dir = await makeDir();
+    await put(
+      join(dir, 'config.yaml'),
+      '# my library\nmode: copy # keep the seeds\napiKey:\n  tmdb: abc\nlocale: en\n',
+    );
+    await editConfig(dir, [
+      { path: ['mode'], value: 'hardlink' },
+      { path: ['apiKey', 'plex'], value: 'token' },
+    ]);
+    expect(await read(dir)).toBe(
+      '# my library\nmode: hardlink # keep the seeds\napiKey:\n  tmdb: abc\n  plex: token\nlocale: en\n',
+    );
+  });
+
+  it('removes a key, and the map it leaves empty', async () => {
+    const dir = await makeDir();
+    await put(join(dir, 'config.yaml'), 'locale: fr\napiKey:\n  tmdb: abc\n');
+    const config = await editConfig(dir, [{ path: ['apiKey', 'tmdb'] }]);
+    expect(config).toEqual({ locale: 'fr' });
+    expect(await read(dir)).toBe('locale: fr\n');
+  });
+
+  it('refuses an invalid result without touching the file', async () => {
+    const dir = await makeDir();
+    await put(join(dir, 'config.yaml'), 'locale: fr\n');
+    await expect(editConfig(dir, [{ path: ['mode'], value: 'teleport' }])).rejects.toMatchObject({
+      info: { code: 'config.invalid' },
+    });
+    expect(await read(dir)).toBe('locale: fr\n');
+    expect(await readdir(dir)).toEqual(['config.yaml']);
+  });
+
+  it('refuses a file that is not valid YAML instead of overwriting it', async () => {
+    const dir = await makeDir();
+    await put(join(dir, 'config.yaml'), 'locale: [fr\n');
+    await expect(editConfig(dir, [{ path: ['mode'], value: 'copy' }])).rejects.toMatchObject({
+      info: { code: 'config.invalid' },
+    });
+    expect(await read(dir)).toBe('locale: [fr\n');
+  });
+
+  it('keeps the mode of an existing file', async () => {
+    const dir = await makeDir();
+    await put(join(dir, 'config.yaml'), 'locale: fr\n');
+    await chmod(join(dir, 'config.yaml'), 0o640);
+    await editConfig(dir, [{ path: ['mode'], value: 'copy' }]);
+    expect((await stat(join(dir, 'config.yaml'))).mode & 0o777).toBe(0o640);
   });
 });

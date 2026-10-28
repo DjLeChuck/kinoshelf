@@ -53,11 +53,14 @@ export {
   type Classification,
 } from './pipeline/analyze.js';
 export {
+  CONFIG_FILE,
   configDirectory,
   DATABASE_FILE,
+  editConfig,
   ensureConfigDirectory,
   loadConfig,
   type Config,
+  type ConfigEdit,
   type NotifyConfig,
 } from './config/config.js';
 export {

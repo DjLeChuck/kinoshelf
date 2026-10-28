@@ -46,13 +46,24 @@ export interface TestResult {
  * and nothing is kept for later, so a notification still waiting when the server stops is lost.
  */
 export class Notifier {
-  private readonly webhooks: readonly WebhookConfig[];
-  private readonly plex: PlexClient | undefined;
-  private readonly jellyfin: JellyfinClient | undefined;
+  private webhooks: readonly WebhookConfig[] = [];
+  private plex: PlexClient | undefined;
+  private jellyfin: JellyfinClient | undefined;
+  private translate: Translate;
   private readonly pending = new Set<Promise<void>>();
 
   constructor(private readonly deps: NotifierDeps) {
-    const { config, log } = deps;
+    this.translate = deps.translate;
+    this.configure(deps.config);
+  }
+
+  /**
+   * Rebuilds the targets from a configuration, so a change made in the UI applies at once. What
+   * is already in flight keeps the clients it started with.
+   */
+  configure(config: Config, translate: Translate = this.translate): void {
+    const { log } = this.deps;
+    this.translate = translate;
     this.webhooks = config.notify?.webhooks ?? [];
 
     const { plex, jellyfin } = config.notify ?? {};
@@ -84,7 +95,7 @@ export class Notifier {
 
   /** The analysis of a job failed. */
   jobFailed(job: Job, error: ErrorBody): void {
-    this.dispatch(jobFailedNotification(this.deps.translate, job, error, this.now()));
+    this.dispatch(jobFailedNotification(this.translate, job, error, this.now()));
   }
 
   /** The analysis finished: say so when files wait for a human. */
@@ -92,12 +103,7 @@ export class Notifier {
     const { ambiguous, unrecognized, conflict } = counts;
     if (ambiguous + unrecognized + conflict > 0) {
       this.dispatch(
-        reviewNotification(
-          this.deps.translate,
-          job,
-          { ambiguous, unrecognized, conflict },
-          this.now(),
-        ),
+        reviewNotification(this.translate, job, { ambiguous, unrecognized, conflict }, this.now()),
       );
     }
   }
@@ -108,9 +114,7 @@ export class Notifier {
     if (done + failed === 0) {
       return;
     }
-    this.dispatch(
-      transferredNotification(this.deps.translate, job, execution, outcome, this.now()),
-    );
+    this.dispatch(transferredNotification(this.translate, job, execution, outcome, this.now()));
     if (done > 0) {
       this.refreshMediaServers(outcome);
     }
@@ -118,9 +122,7 @@ export class Notifier {
 
   /** A transfer failed outright. Files may have been transferred before it did: look at those too. */
   executionFailed(job: Job, execution: Execution, error: ErrorBody): void {
-    this.dispatch(
-      executionFailedNotification(this.deps.translate, job, execution, error, this.now()),
-    );
+    this.dispatch(executionFailedNotification(this.translate, job, execution, error, this.now()));
   }
 
   /** Whether anything is configured to talk to. */
@@ -148,7 +150,7 @@ export class Notifier {
 
   /** Reaches every target once, whatever it listens to, and says how it went. */
   async test(): Promise<TestResult[]> {
-    const notification = testNotification(this.deps.translate, this.now());
+    const notification = testNotification(this.translate, this.now());
     const outcome = (
       target: string,
       kind: TestResult['kind'],

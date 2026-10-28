@@ -19,6 +19,8 @@ import { JobRunner, type JobProcessor } from './runner.js';
 import { healthSchema } from './schemas.js';
 import { Service } from './service.js';
 import { isValidSession } from './sessions.js';
+import { registerSettingsRoutes } from './settings-routes.js';
+import { ConfigStore } from './settings.js';
 import { registerSessionRoutes, sameOrigin, sessionToken } from './session-routes.js';
 
 declare module 'fastify' {
@@ -93,6 +95,12 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
       },
     },
     ...(options.delivery && { delivery: options.delivery }),
+  });
+  const configStore = new ConfigStore(options.configDir, options.config, (config) => {
+    notifier.configure(
+      config,
+      createTranslator(detectLocale(undefined, config.locale, options.env)),
+    );
   });
   const runner = new JobRunner(
     jobs,
@@ -242,6 +250,13 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     });
 
     closeStreams = registerEventRoutes(api, events);
+    registerSettingsRoutes(api, {
+      store: configStore,
+      database: options.database,
+      env: options.env,
+      events,
+      service,
+    });
     registerRoutes(api, { jobs, entries, executions, service, runner, notifier, events, history });
     done();
   });

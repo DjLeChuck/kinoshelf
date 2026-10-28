@@ -4,7 +4,7 @@ import type { FastifyInstance } from 'fastify';
  * What changed, not how: a client refetches the view it shows. Payloads would duplicate the REST
  * shapes and drift from them, and a missed event costs one refetch.
  */
-export type EventTopic = 'jobs' | 'queue' | 'history';
+export type EventTopic = 'jobs' | 'queue' | 'history' | 'settings';
 
 export type EventListener = (topic: EventTopic) => void;
 
@@ -47,7 +47,7 @@ export function registerEventRoutes(
       schema: {
         summary: 'Stream of changes (Server-Sent Events)',
         description:
-          'Each event is named after what changed (`jobs`, `queue`, `history`) and carries no ' +
+          'Each event is named after what changed (`jobs`, `queue`, `history`, `settings`) and carries no ' +
           'data: refetch the matching list. A `ready` event opens the stream.',
         response: { 200: { type: 'string', description: 'text/event-stream' } },
       },

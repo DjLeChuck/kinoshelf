@@ -329,3 +329,175 @@ export const notificationTestSchema = {
     },
   },
 } as const;
+
+const nullable = <T extends object>(schema: T) => ({ ...schema, nullable: true }) as const;
+const pathMappings = {
+  type: 'array',
+  items: {
+    type: 'object',
+    required: ['from', 'to'],
+    additionalProperties: false,
+    properties: { from: { type: 'string', minLength: 1 }, to: { type: 'string', minLength: 1 } },
+  },
+} as const;
+const webhookFormats = ['generic', 'gotify', 'ntfy', 'discord'] as const;
+const webhookEvents = ['transferred', 'failed', 'needs-review'] as const;
+const destination = {
+  oneOf: [
+    { type: 'null' },
+    { type: 'string', minLength: 1 },
+    {
+      type: 'object',
+      required: ['movies', 'series'],
+      additionalProperties: false,
+      properties: {
+        movies: { type: 'string', minLength: 1 },
+        series: { type: 'string', minLength: 1 },
+      },
+    },
+  ],
+} as const;
+
+/** What `GET /api/settings` returns: secrets are only ever reported as set or not. */
+export const settingsSchema = {
+  type: 'object',
+  required: ['tmdb', 'locale', 'plex', 'jellyfin', 'webhooks', 'processing', 'apiKey'],
+  properties: {
+    tmdb: {
+      type: 'object',
+      required: ['configured', 'source', 'language'],
+      properties: {
+        configured: { type: 'boolean' },
+        source: { type: 'string', enum: ['env', 'file'], nullable: true },
+        language: { type: 'string', nullable: true },
+      },
+    },
+    locale: { type: 'string', enum: ['en', 'fr'], nullable: true },
+    plex: {
+      type: 'object',
+      nullable: true,
+      required: ['url', 'section', 'tokenConfigured', 'paths'],
+      properties: {
+        url: { type: 'string' },
+        section: { type: 'integer', nullable: true },
+        tokenConfigured: { type: 'boolean' },
+        paths: pathMappings,
+      },
+    },
+    jellyfin: {
+      type: 'object',
+      nullable: true,
+      required: ['url', 'tokenConfigured', 'paths'],
+      properties: {
+        url: { type: 'string' },
+        tokenConfigured: { type: 'boolean' },
+        paths: pathMappings,
+      },
+    },
+    webhooks: {
+      type: 'array',
+      items: {
+        type: 'object',
+        required: ['id', 'target', 'format', 'on', 'headerNames'],
+        properties: {
+          id: { type: 'string', description: 'Names this webhook in a `PATCH`.' },
+          target: {
+            type: 'string',
+            description: 'The origin only: the rest of a URL is a secret.',
+          },
+          format: { type: 'string', enum: webhookFormats },
+          on: { type: 'array', items: { type: 'string', enum: webhookEvents } },
+          headerNames: { type: 'array', items: { type: 'string' } },
+        },
+      },
+    },
+    processing: {
+      type: 'object',
+      required: ['profile', 'mode', 'threshold', 'destination'],
+      properties: {
+        profile: { type: 'string', nullable: true },
+        mode: { type: 'string', enum: ['copy', 'hardlink', 'move'], nullable: true },
+        threshold: { type: 'number', nullable: true },
+        destination,
+      },
+    },
+    apiKey: {
+      type: 'object',
+      required: ['source'],
+      properties: {
+        source: {
+          type: 'string',
+          enum: ['env', 'database'],
+          nullable: true,
+          description: 'Where the key comes from. It cannot be read back, only replaced.',
+        },
+      },
+    },
+  },
+} as const;
+
+/** `null` removes a value, a value sets it, an absent key keeps what is there. */
+export const settingsPatchSchema = {
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    tmdb: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        apiKey: nullable({ type: 'string', minLength: 1 }),
+        language: nullable({ type: 'string', minLength: 2 }),
+      },
+    },
+    locale: nullable({ type: 'string', enum: ['en', 'fr'] }),
+    plex: nullable({
+      type: 'object',
+      required: ['url'],
+      additionalProperties: false,
+      properties: {
+        url: { type: 'string', format: 'uri' },
+        section: nullable({ type: 'integer', minimum: 1 }),
+        token: nullable({ type: 'string', minLength: 1 }),
+        paths: nullable(pathMappings),
+      },
+    }),
+    jellyfin: nullable({
+      type: 'object',
+      required: ['url'],
+      additionalProperties: false,
+      properties: {
+        url: { type: 'string', format: 'uri' },
+        token: nullable({ type: 'string', minLength: 1 }),
+        paths: nullable(pathMappings),
+      },
+    }),
+    webhooks: {
+      type: 'array',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          id: { type: 'string' },
+          url: { type: 'string', format: 'uri' },
+          format: nullable({ type: 'string', enum: webhookFormats }),
+          on: nullable({
+            type: 'array',
+            minItems: 1,
+            items: { type: 'string', enum: webhookEvents },
+          }),
+          headers: nullable({ type: 'object', additionalProperties: { type: 'string' } }),
+        },
+      },
+    },
+    processing: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        profile: nullable({ type: 'string', minLength: 1 }),
+        mode: nullable({ type: 'string', enum: ['copy', 'hardlink', 'move'] }),
+        threshold: nullable({ type: 'number', minimum: 0, maximum: 100 }),
+        destination,
+      },
+    },
+  },
+} as const;
