@@ -26,18 +26,22 @@ RUN set -eu; \
 
 # Alpine alone: the node:alpine image adds npm, yarn and corepack, which the runtime does not use.
 FROM alpine:3.24
-RUN apk add --no-cache libstdc++ \
- && addgroup -g 1000 node && adduser -u 1000 -G node -s /bin/sh -D node
+RUN apk add --no-cache libstdc++ su-exec
+COPY docker/entrypoint.sh /usr/local/bin/docker-entrypoint
 COPY --from=build /out-node /usr/local/bin/node
 COPY --from=build /out /app
 # Both commands are on the PATH: `kinoshelf-server api-key create`, `kinoshelf cleanup --apply`…
-RUN printf '#!/bin/sh\nexec node /app/node_modules/@kinoshelf/server/dist/main.js "$@"\n' > /usr/local/bin/kinoshelf-server \
- && printf '#!/bin/sh\nexec node /app/node_modules/@kinoshelf/cli/dist/main.js "$@"\n' > /usr/local/bin/kinoshelf \
+# They go through the entrypoint, so a `docker exec` (root) does not leave root-owned files in /config.
+RUN printf '#!/bin/sh\nexec docker-entrypoint node /app/node_modules/@kinoshelf/server/dist/main.js "$@"\n' > /usr/local/bin/kinoshelf-server \
+ && printf '#!/bin/sh\nexec docker-entrypoint node /app/node_modules/@kinoshelf/cli/dist/main.js "$@"\n' > /usr/local/bin/kinoshelf \
  && chmod +x /usr/local/bin/kinoshelf-server /usr/local/bin/kinoshelf
 WORKDIR /app
 ENV NODE_ENV=production \
     KINOSHELF_CONFIG_DIR=/config
 VOLUME /config
 EXPOSE 8484
-USER node
+# /health is public. busybox wget is enough: no need to ship curl for this.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+  CMD wget -q -O /dev/null "http://127.0.0.1:${KINOSHELF_PORT:-8484}/health" || exit 1
+ENTRYPOINT ["docker-entrypoint"]
 CMD ["kinoshelf-server"]

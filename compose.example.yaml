@@ -1,0 +1,23 @@
+# Copy to compose.yaml and adjust the paths. Everything Kinoshelf writes goes under /config; the
+# media folders are yours.
+services:
+  kinoshelf:
+    image: ghcr.io/djlechuck/kinoshelf:latest
+    restart: unless-stopped
+    ports:
+      - '8484:8484'
+    environment:
+      # The owner of your media folders (`id <user>` prints both). Kinoshelf runs as this user,
+      # so what it moves or links belongs to you.
+      PUID: 1000
+      PGID: 1000
+      TMDB_API_KEY: your-tmdb-key
+      # At least 32 characters; or run `docker compose exec kinoshelf kinoshelf-server api-key create`.
+      KINOSHELF_API_KEY: change-me-to-a-long-random-string
+    volumes:
+      - ./config:/config
+      # Same filesystem for downloads and library: a hardlink cannot cross two mounts.
+      - /srv/media:/media
+    # A copy can last minutes and a stop waits for it. Docker kills the container after 10 s by
+    # default; what is interrupted is resumed at the next start, but a longer grace avoids it.
+    stop_grace_period: 5m
