@@ -81,6 +81,68 @@ describe('loadConfig', () => {
     }
   });
 
+  it('reads the notification targets and the media server keys', async () => {
+    const dir = await makeDir();
+    await put(
+      join(dir, 'config.yaml'),
+      [
+        'apiKey:',
+        '  plex: tok',
+        '  jellyfin: key',
+        'notify:',
+        '  webhooks:',
+        '    - url: https://gotify.example/message',
+        '      format: gotify',
+        '      on: [failed, needs-review]',
+        '      headers: { X-Gotify-Key: abc }',
+        '  plex:',
+        '    url: http://plex:32400',
+        '    section: 3',
+        '    paths:',
+        '      - { from: /media/movies, to: /mnt/videos/movies }',
+        '  jellyfin:',
+        '    url: http://jellyfin:8096',
+        '',
+      ].join('\n'),
+    );
+    expect(await loadConfig(dir)).toEqual({
+      apiKey: { plex: 'tok', jellyfin: 'key' },
+      notify: {
+        webhooks: [
+          {
+            url: 'https://gotify.example/message',
+            format: 'gotify',
+            on: ['failed', 'needs-review'],
+            headers: { 'X-Gotify-Key': 'abc' },
+          },
+        ],
+        plex: {
+          url: 'http://plex:32400',
+          section: 3,
+          paths: [{ from: '/media/movies', to: '/mnt/videos/movies' }],
+        },
+        jellyfin: { url: 'http://jellyfin:8096' },
+      },
+    });
+  });
+
+  it.each([
+    ['a webhook without url', 'notify:\n  webhooks:\n    - format: ntfy\n'],
+    ['an unknown format', 'notify:\n  webhooks:\n    - { url: "https://a.b/c", format: slack }\n'],
+    ['an unknown event', 'notify:\n  webhooks:\n    - { url: "https://a.b/c", on: [done] }\n'],
+    ['no event at all', 'notify:\n  webhooks:\n    - { url: "https://a.b/c", on: [] }\n'],
+    ['a url that is not one', 'notify:\n  plex:\n    url: plex\n'],
+    [
+      'a mapping without target',
+      'notify:\n  plex:\n    url: "http://p:1"\n    paths:\n      - { from: /a }\n',
+    ],
+    ['an unknown notify key', 'notify:\n  email: a@b.c\n'],
+  ])('rejects a notify section with %s', async (_name, content) => {
+    const dir = await makeDir();
+    await put(join(dir, 'config.yaml'), content);
+    await expect(loadConfig(dir)).rejects.toMatchObject({ info: { code: 'config.invalid' } });
+  });
+
   it('treats an empty file as no configuration', async () => {
     const dir = await makeDir();
     await put(join(dir, 'config.yaml'), '');

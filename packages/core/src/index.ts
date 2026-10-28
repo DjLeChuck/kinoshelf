@@ -58,6 +58,7 @@ export {
   ensureConfigDirectory,
   loadConfig,
   type Config,
+  type NotifyConfig,
 } from './config/config.js';
 export {
   resolveSettings,
