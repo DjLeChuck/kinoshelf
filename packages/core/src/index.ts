@@ -18,3 +18,4 @@ export {
   type TemplateValue,
   type TemplateVariables,
 } from './profiles/template.js';
+export { GuessitParser, type GuessitParserOptions } from './parsing/guessit-parser.js';

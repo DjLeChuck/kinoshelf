@@ -27,6 +27,11 @@ export interface ParsedMedia {
   readonly episodeTitle?: string;
   /** Extension without the dot, lowercase (e.g. `mkv`). */
   readonly extension?: string;
+  /**
+   * Ids already present in the names (e.g. `{tmdb-438631}`, `[tmdbid-438631]`), typically
+   * because the file was named by a previous run. A strong hint for the matcher.
+   */
+  readonly knownIds?: readonly ExternalId[];
   readonly releaseGroup?: string;
   readonly languages?: readonly string[];
 }
