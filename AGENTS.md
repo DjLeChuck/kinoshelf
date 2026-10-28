@@ -5,7 +5,9 @@ renames them for a media player (Plex, Jellyfin) and writes their metadata (NFO,
 
 ## Where we are
 
-v0.1 (core, CLI and matching corpus) is done; v0.2 (server and Docker) is next.
+v0.1 (core, CLI and matching corpus) and v0.2 (REST server, notifications, multi-arch Docker image)
+are done, except the folder watcher, postponed: scripts submit files through `POST /api/jobs`. The
+web UI (v0.3) is next.
 
 ## Golden rules
 
