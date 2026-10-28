@@ -1,8 +1,8 @@
-import { and, asc, desc, eq, isNull } from 'drizzle-orm';
+import { and, asc, desc, eq, isNull, sql } from 'drizzle-orm';
 import { drizzle, type BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import { integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 import type { Database } from 'better-sqlite3';
-import type { Journal, JournalEntry } from '../types/journal.js';
+import type { Journal, JournalBatch, JournalEntry } from '../types/journal.js';
 import type { TransferMode } from '../types/operation.js';
 import { applyMigrations, CORE_MIGRATIONS } from './migrations.js';
 
@@ -79,5 +79,27 @@ export class SqliteJournal implements Journal {
       .set({ undoneAt: new Date().toISOString() })
       .where(and(eq(journalEntries.batchId, batchId), isNull(journalEntries.undoneAt)))
       .run();
+  }
+
+  batches(): readonly JournalBatch[] {
+    return this.db
+      .select({
+        batchId: journalEntries.batchId,
+        at: sql<string>`min(${journalEntries.at})`,
+        operations: sql<number>`count(*)`,
+        modes: sql<string>`group_concat(${journalEntries.mode}, ',')`,
+        pending: sql<number>`sum(${journalEntries.undoneAt} is null)`,
+      })
+      .from(journalEntries)
+      .groupBy(journalEntries.batchId)
+      .orderBy(desc(sql`max(${journalEntries.seq})`))
+      .all()
+      .map((row) => ({
+        batchId: row.batchId,
+        at: row.at,
+        operations: row.operations,
+        modes: [...new Set(row.modes.split(','))] as TransferMode[],
+        undone: row.pending === 0,
+      }));
   }
 }

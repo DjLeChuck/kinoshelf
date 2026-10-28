@@ -1,4 +1,4 @@
-import type { Journal, JournalEntry } from '../types/journal.js';
+import type { Journal, JournalBatch, JournalEntry } from '../types/journal.js';
 
 /** Journal kept in memory: for tests and throw-away runs. */
 export class MemoryJournal implements Journal {
@@ -27,5 +27,24 @@ export class MemoryJournal implements Journal {
         stored.undone = true;
       }
     }
+  }
+
+  batches(): readonly JournalBatch[] {
+    const byBatch = new Map<string, { entry: JournalEntry; undone: boolean; index: number }[]>();
+    this.entries.forEach((stored, index) => {
+      const { batchId } = stored.entry;
+      byBatch.set(batchId, [...(byBatch.get(batchId) ?? []), { ...stored, index }]);
+    });
+    // Most recent first, by the latest operation of each batch (as the SQLite journal does).
+    const latest = (stored: { index: number }[]): number => stored[stored.length - 1]?.index ?? 0;
+    return [...byBatch.entries()]
+      .sort(([, a], [, b]) => latest(b) - latest(a))
+      .map(([batchId, stored]) => ({
+        batchId,
+        at: stored[0]?.entry.at ?? '',
+        operations: stored.length,
+        modes: [...new Set(stored.map((s) => s.entry.mode))],
+        undone: stored.every((s) => s.undone),
+      }));
   }
 }

@@ -3,6 +3,7 @@ import type { StoredError } from './entries.js';
 import { ApiError } from './api-error.js';
 import type { Execution, ExecutionStore } from './executions.js';
 import type { Job, JobStore, ProcessedJob } from './jobs.js';
+import type { EventTopic } from './events.js';
 import type { ExecutionOutcome } from './notify/message.js';
 
 export type JobProcessor = (job: Job) => Promise<ProcessedJob>;
@@ -15,6 +16,8 @@ export interface RunnerHooks {
   jobFailed?(job: Job, error: StoredError): void;
   executionDone?(job: Job, execution: Execution, outcome: ExecutionOutcome): void;
   executionFailed?(job: Job, execution: Execution, error: StoredError): void;
+  /** A task started or ended: what a watching client should refetch. */
+  changed?(...topics: EventTopic[]): void;
 }
 
 /** Code for a failure that is not one of the core's typed errors: a bug, not a user mistake. */
@@ -91,15 +94,34 @@ export class JobRunner {
 
   private async runExecution(execution: Execution): Promise<void> {
     const job = this.jobs.get(execution.jobId);
+    this.tell(() => this.hooks.changed?.('jobs'));
     try {
       const outcome = await this.execute(execution);
-      this.executions.complete(execution.id, outcome.summary);
+      this.executions.complete(
+        execution.id,
+        outcome.summary,
+        outcome.files.flatMap((file) =>
+          file.status === 'failed' && file.error
+            ? [
+                {
+                  path: file.path,
+                  destination: file.destination,
+                  error: {
+                    code: file.error.code,
+                    ...(file.error.params && { params: file.error.params }),
+                  },
+                },
+              ]
+            : [],
+        ),
+      );
       this.tell(() => {
         const finished = this.executions.get(execution.id);
         if (job && finished) {
           this.hooks.executionDone?.(job, finished, outcome);
         }
       });
+      this.tell(() => this.hooks.changed?.('jobs', 'queue', 'history'));
     } catch (error) {
       const info = this.describe(error);
       this.executions.fail(execution.id, info);
@@ -108,17 +130,21 @@ export class JobRunner {
           this.hooks.executionFailed?.(job, this.executions.get(execution.id) ?? execution, info);
         }
       });
+      this.tell(() => this.hooks.changed?.('jobs', 'history'));
     }
   }
 
   private async runJob(job: Job): Promise<void> {
+    this.tell(() => this.hooks.changed?.('jobs'));
     try {
       this.jobs.complete(job, await this.process(job));
       this.tell(() => this.hooks.jobDone?.(job));
+      this.tell(() => this.hooks.changed?.('jobs', 'queue'));
     } catch (error) {
       const info = this.describe(error);
       this.jobs.fail(job.id, info);
       this.tell(() => this.hooks.jobFailed?.(job, info));
+      this.tell(() => this.hooks.changed?.('jobs'));
     }
   }
 

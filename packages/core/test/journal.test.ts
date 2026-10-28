@@ -36,6 +36,33 @@ function behavesLikeAJournal(name: string, make: () => Journal | Promise<Journal
       expect(journal.entriesOf('b1')[0]).toEqual(first);
     });
 
+    it('lists batches, the most recent first, with their size, modes and state', async () => {
+      const journal = await make();
+      expect(journal.batches()).toEqual([]);
+      journal.record(entry('a', 'b1', { at: '2026-10-28T09:00:00.000Z' }));
+      journal.record(entry('b', 'b2', { mode: 'move', at: '2026-10-28T10:00:00.000Z' }));
+      journal.record(entry('c', 'b1', { mode: 'hardlink', at: '2026-10-28T09:05:00.000Z' }));
+      journal.record(entry('d', 'b1', { mode: 'hardlink', at: '2026-10-28T09:06:00.000Z' }));
+      journal.markUndone('b2');
+
+      expect(journal.batches()).toEqual([
+        {
+          batchId: 'b1',
+          at: '2026-10-28T09:00:00.000Z',
+          operations: 3,
+          modes: ['copy', 'hardlink'],
+          undone: false,
+        },
+        {
+          batchId: 'b2',
+          at: '2026-10-28T10:00:00.000Z',
+          operations: 1,
+          modes: ['move'],
+          undone: true,
+        },
+      ]);
+    });
+
     it('reports the batch of the most recent entry as the last one', async () => {
       const journal = await make();
       journal.record(entry('a', 'b1'));

@@ -1,10 +1,14 @@
 import type { Candidate, MovieCandidate, SeriesCandidate } from '@kinoshelf/core';
 import type { FastifyInstance } from 'fastify';
 import type { Entry, EntryStore } from './entries.js';
+import type { EventBus } from './events.js';
 import type { ExecutionStore } from './executions.js';
+import type { History } from './history.js';
 import type { Job, JobStore } from './jobs.js';
 import type { JobRunner } from './runner.js';
 import {
+  batchDetailSchema,
+  batchSummarySchema,
   candidateSchema,
   classificationValues,
   entrySchema,
@@ -27,6 +31,8 @@ export interface RouteContext {
   readonly service: Service;
   readonly runner: JobRunner;
   readonly notifier: Notifier;
+  readonly events: EventBus;
+  readonly history: History;
 }
 
 interface Paging {
@@ -99,7 +105,7 @@ const emptyBodyByDefault = (
 
 /** Thin HTTP layer: validate, call the store or the service, shape the answer. */
 export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
-  const { jobs, entries, executions, service, runner, notifier } = ctx;
+  const { jobs, entries, executions, service, runner, notifier, events, history } = ctx;
   const presentJob = (job: Job): unknown => {
     const latest = executions.latestOf(job.id);
     return {
@@ -138,6 +144,7 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
     },
     (request, reply) => {
       const job = jobs.create(request.body.path, request.body.apply ?? false);
+      events.emit('jobs');
       runner.kick();
       return reply.code(202).send(presentJob(job));
     },
@@ -266,8 +273,11 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
         response: { 200: entrySchema, 401: errorSchema, 404: errorSchema, 409: errorSchema },
       },
     },
-    async (request) =>
-      presentEntry(await service.match(request.params.id, toCandidate(request.body))),
+    async (request) => {
+      const entry = await service.match(request.params.id, toCandidate(request.body));
+      events.emit('queue');
+      return presentEntry(entry);
+    },
   );
 
   api.post<{ Params: { id: string } }>(
@@ -279,7 +289,11 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
         response: { 200: entrySchema, 401: errorSchema, 404: errorSchema, 409: errorSchema },
       },
     },
-    (request) => presentEntry(service.ignore(request.params.id)),
+    (request) => {
+      const entry = service.ignore(request.params.id);
+      events.emit('queue');
+      return presentEntry(entry);
+    },
   );
 
   api.post<{ Params: { id: string }; Body?: { dryRun?: boolean; entries?: string[] } }>(
@@ -318,6 +332,7 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
         return service.dryRun(request.params.id, entryIds);
       }
       const execution = service.enqueue(request.params.id, entryIds);
+      events.emit('jobs');
       runner.kick();
       return reply.code(202).send(execution);
     },
@@ -339,6 +354,36 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
     },
   );
 
+  api.get<{ Querystring: Paging }>(
+    '/api/batches',
+    {
+      schema: {
+        summary: 'List executed batches, newest first',
+        description:
+          'Every batch of the journal, and the executions that moved nothing (`failed`). A batch ' +
+          'made by the CLI is listed too, without an origin.',
+        querystring: { type: 'object', properties: paging },
+        response: { 200: { type: 'array', items: batchSummarySchema }, 401: errorSchema },
+      },
+    },
+    (request) =>
+      history.list({ limit: request.query.limit ?? 50, offset: request.query.offset ?? 0 }),
+  );
+
+  api.get<{ Params: { id: string } }>(
+    '/api/batches/:id',
+    {
+      schema: {
+        summary: 'A batch and each of its operations',
+        params: idParams,
+        response: { 200: batchDetailSchema, 401: errorSchema, 404: errorSchema },
+      },
+    },
+    (request, reply) =>
+      history.get(request.params.id) ??
+      reply.code(404).send({ error: { code: 'batch.not-found' } }),
+  );
+
   api.post<{ Params: { id: string }; Body?: { dryRun?: boolean } }>(
     '/api/batches/:id/undo',
     {
@@ -354,7 +399,14 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
         response: { 200: undoSchema, 401: errorSchema, 404: errorSchema, 409: errorSchema },
       },
     },
-    (request) => service.undo(request.params.id, { dryRun: request.body?.dryRun ?? false }),
+    async (request) => {
+      const dryRun = request.body?.dryRun ?? false;
+      const report = await service.undo(request.params.id, { dryRun });
+      if (!dryRun) {
+        events.emit('history', 'queue');
+      }
+      return report;
+    },
   );
 
   api.post(

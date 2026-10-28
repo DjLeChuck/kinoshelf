@@ -15,6 +15,18 @@ export interface JournalEntry {
   readonly at: string;
 }
 
+/** What a list of batches shows; `entriesOf` gives the operations. */
+export interface JournalBatch {
+  readonly batchId: string;
+  /** When its first operation was recorded (ISO 8601). */
+  readonly at: string;
+  readonly operations: number;
+  /** The modes used, in the order they first appear. */
+  readonly modes: readonly TransferMode[];
+  /** Every operation was undone. */
+  readonly undone: boolean;
+}
+
 /**
  * Journal of executed operations, the basis of undo.
  * The SQLite implementation is provided by the core; an in-memory one serves tests.
@@ -27,4 +39,6 @@ export interface Journal {
   isUndone(batchId: string): boolean;
   entriesOf(batchId: string): readonly JournalEntry[];
   markUndone(batchId: string): void;
+  /** Every batch, the most recent first. */
+  batches(): readonly JournalBatch[];
 }

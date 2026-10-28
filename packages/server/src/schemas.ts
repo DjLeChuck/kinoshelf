@@ -255,6 +255,58 @@ export const undoSchema = {
   },
 } as const;
 
+const batchProperties = {
+  /** The batch id for a batch that transferred something; the execution's for one that did not. */
+  id: { type: 'string' },
+  at: { type: 'string', format: 'date-time' },
+  status: {
+    type: 'string',
+    enum: ['done', 'undone', 'failed'],
+    description: '`failed`: nothing was transferred, so there is nothing to undo.',
+  },
+  operations: { type: 'integer', description: 'Transfers recorded in the journal.' },
+  modes: { type: 'array', items: { type: 'string', enum: ['copy', 'hardlink', 'move'] } },
+  failed: { type: 'integer', description: 'Files that did not go through.' },
+  origin: {
+    type: 'object',
+    nullable: true,
+    required: ['jobId', 'path'],
+    properties: { jobId: { type: 'string' }, path: { type: 'string' } },
+    description: 'The job that made the batch; absent for a batch made by the CLI.',
+  },
+  error: { ...errorInfo, nullable: true },
+} as const;
+
+const batchRequired = ['id', 'at', 'status', 'operations', 'modes', 'failed', 'origin', 'error'];
+
+export const batchSummarySchema = {
+  type: 'object',
+  required: batchRequired,
+  properties: batchProperties,
+} as const;
+
+export const batchDetailSchema = {
+  type: 'object',
+  required: [...batchRequired, 'items'],
+  properties: {
+    ...batchProperties,
+    items: {
+      type: 'array',
+      items: {
+        type: 'object',
+        required: ['source', 'destination', 'mode', 'status', 'error'],
+        properties: {
+          source: { type: 'string' },
+          destination: { type: 'string', nullable: true },
+          mode: { type: 'string', enum: ['copy', 'hardlink', 'move'] },
+          status: { type: 'string', enum: ['done', 'undone', 'failed'] },
+          error: { ...errorInfo, nullable: true },
+        },
+      },
+    },
+  },
+} as const;
+
 export const paging = {
   limit: { type: 'integer', minimum: 1, maximum: 200, default: 50 },
   offset: { type: 'integer', minimum: 0, default: 0 },

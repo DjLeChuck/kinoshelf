@@ -94,6 +94,12 @@ export const SERVER_MIGRATIONS: readonly { readonly name: string; readonly sql: 
       );
     `,
   },
+  {
+    // A file that fails goes back to the queue, where a later attempt may settle it, so its entry
+    // cannot tell what happened in this execution. The history keeps it here.
+    name: 'server:006-execution-failures',
+    sql: 'ALTER TABLE executions ADD COLUMN failures TEXT;',
+  },
 ];
 
 /** Opens the single SQLite file of the config directory, shared with the CLI and the cache. */

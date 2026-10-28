@@ -255,6 +255,7 @@ describe('a transfer in progress', () => {
           markUndone: (batchId) => {
             real.markUndone(batchId);
           },
+          batches: () => real.batches(),
         };
       },
     });

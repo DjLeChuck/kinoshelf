@@ -5,7 +5,9 @@ import Fastify, { type FastifyInstance } from 'fastify';
 import { ApiError } from './api-error.js';
 import { hasApiKey, isValidApiKey } from './auth.js';
 import { EntryStore } from './entries.js';
+import { EventBus, registerEventRoutes } from './events.js';
 import { ExecutionStore } from './executions.js';
+import { History } from './history.js';
 import { JobStore } from './jobs.js';
 import { createTranslator, detectLocale } from '@kinoshelf/i18n';
 import type { DeliveryOptions } from './notify/delivery.js';
@@ -63,16 +65,19 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     // supported rather than believe it was honored.
     ajv: { customOptions: { removeAdditional: false } },
   });
+  const events = new EventBus();
   const entries = new EntryStore(options.database);
   const executions = new ExecutionStore(options.database);
   const jobs = new JobStore(options.database, entries, executions);
+  const journal = options.journal?.(options.database) ?? new SqliteJournal(options.database);
   const service = new Service({
     ...options,
     jobs,
     entries,
     executions,
-    journal: options.journal?.(options.database) ?? new SqliteJournal(options.database),
+    journal,
   });
+  const history = new History(journal, executions, jobs);
   const notifier = new Notifier({
     config: options.config,
     translate: createTranslator(detectLocale(undefined, options.config.locale, options.env)),
@@ -107,6 +112,9 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
       executionFailed: (job, execution, error) => {
         notifier.executionFailed(job, execution, error);
       },
+      changed: (...topics) => {
+        events.emit(...topics);
+      },
     },
     (error) => {
       app.log.error(error);
@@ -116,6 +124,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
   app.decorate('notifier', notifier);
 
   let purgeTimer: NodeJS.Timeout | undefined;
+  let closeStreams = (): void => undefined;
   const purge = (): void => {
     const purged = purgeHistory(options.database, { olderThanDays: options.retentionDays ?? 0 });
     if (purged.jobs > 0) {
@@ -129,6 +138,10 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
       // Not kept alive by the timer: the process leaves when the server closes.
       purgeTimer = setInterval(purge, 86_400_000).unref();
     }
+  });
+  // `preClose` runs before the server waits for its connections: an event stream never ends alone.
+  app.addHook('preClose', () => {
+    closeStreams();
   });
   app.addHook('onClose', async () => {
     clearInterval(purgeTimer);
@@ -228,7 +241,8 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
         .send({ error: { code: 'auth.unauthorized' } });
     });
 
-    registerRoutes(api, { jobs, entries, executions, service, runner, notifier });
+    closeStreams = registerEventRoutes(api, events);
+    registerRoutes(api, { jobs, entries, executions, service, runner, notifier, events, history });
     done();
   });
 

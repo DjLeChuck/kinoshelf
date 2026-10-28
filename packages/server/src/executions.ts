@@ -10,6 +10,13 @@ export interface ExecutionSummary {
   readonly failed: number;
 }
 
+/** A file that did not go through, as it was when the execution ended. */
+export interface ExecutionFailure {
+  readonly path: string;
+  readonly destination: string | null;
+  readonly error: StoredError;
+}
+
 export interface Execution {
   readonly id: string;
   readonly jobId: string;
@@ -23,6 +30,7 @@ export interface Execution {
   readonly batchId: string | null;
   readonly summary: ExecutionSummary | null;
   readonly error: StoredError | null;
+  readonly failures: readonly ExecutionFailure[];
 }
 
 interface ExecutionRow {
@@ -36,10 +44,11 @@ interface ExecutionRow {
   batch_id: string | null;
   summary: string | null;
   error: string | null;
+  failures: string | null;
 }
 
 const COLUMNS =
-  'id, job_id, status, entry_ids, created_at, started_at, finished_at, batch_id, summary, error';
+  'id, job_id, status, entry_ids, created_at, started_at, finished_at, batch_id, summary, error, failures';
 
 function toExecution(row: ExecutionRow): Execution {
   return {
@@ -53,6 +62,7 @@ function toExecution(row: ExecutionRow): Execution {
     batchId: row.batch_id,
     summary: row.summary === null ? null : (JSON.parse(row.summary) as ExecutionSummary),
     error: row.error === null ? null : (JSON.parse(row.error) as StoredError),
+    failures: row.failures === null ? [] : (JSON.parse(row.failures) as ExecutionFailure[]),
   };
 }
 
@@ -94,6 +104,30 @@ export class ExecutionStore {
     return row && toExecution(row);
   }
 
+  /** The execution that ran under this batch, if the batch came from the server. */
+  ofBatch(batchId: string): Execution | undefined {
+    const row = this.database
+      .prepare<[string], ExecutionRow>(
+        `SELECT ${COLUMNS} FROM executions WHERE batch_id = ? ORDER BY seq DESC LIMIT 1`,
+      )
+      .get(batchId);
+    return row && toExecution(row);
+  }
+
+  /**
+   * Finished executions that settled a batch, newest first. History shows those that moved
+   * nothing too, which the journal never saw.
+   */
+  finishedWithBatch(): Execution[] {
+    return this.database
+      .prepare<[], ExecutionRow>(
+        `SELECT ${COLUMNS} FROM executions
+         WHERE batch_id IS NOT NULL AND status IN ('done', 'failed') ORDER BY seq DESC`,
+      )
+      .all()
+      .map(toExecution);
+  }
+
   latestOf(jobId: string): Execution | undefined {
     const row = this.database
       .prepare<[string], ExecutionRow>(
@@ -126,10 +160,21 @@ export class ExecutionStore {
     this.database.prepare('UPDATE executions SET batch_id = ? WHERE id = ?').run(batchId, id);
   }
 
-  complete(id: string, summary: ExecutionSummary): void {
+  complete(
+    id: string,
+    summary: ExecutionSummary,
+    failures: readonly ExecutionFailure[] = [],
+  ): void {
     this.database
-      .prepare("UPDATE executions SET status = 'done', finished_at = ?, summary = ? WHERE id = ?")
-      .run(new Date().toISOString(), JSON.stringify(summary), id);
+      .prepare(
+        "UPDATE executions SET status = 'done', finished_at = ?, summary = ?, failures = ? WHERE id = ?",
+      )
+      .run(
+        new Date().toISOString(),
+        JSON.stringify(summary),
+        failures.length > 0 ? JSON.stringify(failures) : null,
+        id,
+      );
   }
 
   fail(id: string, error: StoredError): void {
