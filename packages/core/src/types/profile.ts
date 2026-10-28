@@ -8,6 +8,8 @@
 export interface Profile {
   readonly id: string;
   readonly name: string;
+  /** Joins first and last episode of a multi-episode file, e.g. `-e` gives `s02e18-e19`. */
+  readonly episodeRangeSeparator: string;
   readonly templates: PathTemplates;
   /** `null`: the profile writes no NFO. */
   readonly nfo: NfoSpec | null;

@@ -38,6 +38,10 @@ profiles/*.yaml            declarative output profiles; the core contains no pla
   a backslash must use **single quotes** (a double-quoted `"\{"` is a YAML error); the profile
   loader must reject that case with a clear error. Verify Plex/Jellyfin conventions against their official documentation before changing a
   profile.
+- Plex has two modes: the default agents ignore NFO (profile `plex`), the optional "Plex NFO"
+  agent (PMS 1.43.1+) reads Kodi-format NFO, `tvshow.nfo`, per-episode `<file>.nfo`,
+  `poster.jpg` and `background.jpg` (profile `plex-nfo`, planned for v1.0 with Jellyfin; needs
+  `<uniqueid type="tmdb">` in the NFO).
 - Each user provides their own TMDB key; none is ever embedded.
 
 ## Stack

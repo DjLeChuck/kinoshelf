@@ -7,3 +7,14 @@ export type * from './types/operation.js';
 export type * from './types/plan.js';
 export type * from './types/journal.js';
 export type * from './types/errors.js';
+export { KinoshelfError } from './errors.js';
+export { loadProfileFile, parseProfile } from './profiles/loader.js';
+export {
+  parseTemplate,
+  renderTemplate,
+  templateVariables,
+  type ParsedTemplate,
+  type RenderContext,
+  type TemplateValue,
+  type TemplateVariables,
+} from './profiles/template.js';

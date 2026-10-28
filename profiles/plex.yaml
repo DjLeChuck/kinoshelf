@@ -1,0 +1,31 @@
+# Plex naming, per https://support.plex.tv/articles/naming-and-organizing-your-movie-media-files/
+# and https://support.plex.tv/articles/naming-and-organizing-your-tv-show-files/
+#
+# Templates containing `\{` / `\}` (literal braces) must use single quotes.
+id: plex
+name: Plex
+
+# Multi-episode files are named with the first and last episode: s02e18-e19.
+episodeRangeSeparator: '-e'
+
+templates:
+  # Plex matches `{tmdb-<id>}` in the movie folder and file name.
+  movieFolder: '{title} ({year}) \{tmdb-{tmdb}\}'
+  movieFile: '{title} ({year}) \{tmdb-{tmdb}\}'
+  # For series the id belongs to the series folder only; the year is recommended.
+  seriesFolder: '{title} ({year}) \{tmdb-{tmdb}\}'
+  # The English word "Season" is mandatory, whatever the content language.
+  seasonFolder: 'Season {season:02}'
+  episodeFile: '{title} ({year}) - s{season:02}e{episode:02}'
+
+# Targets Plex's default agents, which fetch their own metadata and artwork and ignore NFO files.
+# Libraries using the optional "Plex NFO" agent (Plex Media Server 1.43.1+) need a separate
+# `plex-nfo` profile: Kodi-format NFO, `poster.jpg` and `background.jpg`. Planned for v1.0, with Jellyfin.
+nfo: null
+artwork: []
+
+filesystem:
+  # Libraries are often shared over SMB: avoid characters Windows cannot store.
+  forbidden: windows
+  replacement: ''
+  maxSegmentBytes: 255
