@@ -117,6 +117,114 @@ describe('GuessitParser', () => {
     });
   });
 
+  describe('movie subtitles', () => {
+    it.each([
+      [
+        'Thor - Le Monde des ténèbres (2013)/Thor - Le Monde des ténèbres (2013) 1080p AC3.mkv',
+        'Thor',
+        'Le Monde des ténèbres',
+      ],
+      [
+        "Divergente 2 - L'Insurrection (2015)/Divergente 2 - L'Insurrection (2015) 1080p.mkv",
+        'Divergente 2',
+        "L'Insurrection",
+      ],
+      ['Dune - Part Two (2024)/Dune - Part Two (2024).mkv', 'Dune', 'Part Two'],
+    ])('keeps the part after the dash of %s', (path, title, subtitle) => {
+      expect(parser.parse(path)).toMatchObject({ kind: 'movie', title, subtitle });
+    });
+
+    it('has none when there is no dash', () => {
+      expect(parser.parse('Dune.2021.2160p.mkv').subtitle).toBeUndefined();
+    });
+
+    it('does not turn an episode title into a subtitle', () => {
+      expect(parser.parse('Show/Season 1/Show - S01E02 - Pilot.mkv').subtitle).toBeUndefined();
+    });
+  });
+
+  describe('numbers that are not an episode', () => {
+    it('reads Blade Runner 2049 as a movie, not as season 20 episode 49', () => {
+      const parsed = parser.parse(
+        'Blade Runner 2049 - Special Edition (2017)/Blade Runner 2049 - Special Edition (2017) 1080p AC3.mkv',
+      );
+      expect(parsed).toMatchObject({ kind: 'movie', title: 'Blade Runner 2049', year: 2017 });
+      expect(parsed.season).toBeUndefined();
+      expect(parsed.episodes).toEqual([]);
+    });
+
+    it('does not take a year for a season', () => {
+      const mulan = parser.parse(
+        "Mulan 2 (la mission de l'Empereur) (2004)/Mulan 2 (la mission de l'Empereur) (2004) 1080p AC3.mkv",
+      );
+      expect(mulan).toMatchObject({ kind: 'movie', year: 2004 });
+      expect(mulan.season).toBeUndefined();
+
+      // A real marker with an impossible season: not enough to know which episode it is.
+      expect(parser.parse('Firefly (2002)/Firefly.ep00_Special_Features.avi').kind).toBe('unknown');
+    });
+
+    it('leaves the type unknown when a bare number could be S01E16 or absolute episode 116', () => {
+      const parsed = parser.parse(
+        'Dragon Ball/Dragon Ball French 116 Kame-sennin est en vie !.mkv',
+      );
+      expect(parsed.kind).toBe('unknown');
+      expect(parsed.episodes).toEqual([]);
+      expect(parsed.season).toBeUndefined();
+      expect(parser.parse('Show/Show 116.mkv').kind).toBe('unknown');
+    });
+
+    it('still reads an explicit episode whose digits look like a year', () => {
+      expect(parser.parse('Show/Season 20/Show - S20E49 - 1080p.mkv')).toMatchObject({
+        kind: 'episode',
+        season: 20,
+        episodes: [49],
+      });
+      expect(parser.parse('Show/Show.20x49.mkv')).toMatchObject({ kind: 'episode', season: 20 });
+    });
+  });
+
+  describe('a folder that hides the real title', () => {
+    it('prefers the file name when the folder was read as the title', () => {
+      expect(
+        parser.parse('Lego Ninjago/Saison 11/new/Ninjago_S12E02_l-ile-dyer.mkv'),
+      ).toMatchObject({
+        kind: 'episode',
+        title: 'Ninjago',
+        season: 12,
+        episodes: [2],
+      });
+    });
+
+    it('keeps the year of the folder when only the title comes from the file', () => {
+      expect(
+        parser.parse('Fondation (2021)/Saison 01/Foundation.S01E01.MULTi.VFF.1080p.mkv'),
+      ).toMatchObject({
+        title: 'Foundation',
+        year: 2021,
+        season: 1,
+        episodes: [1],
+      });
+    });
+
+    it('keeps the folder title when the file names the same show with a number', () => {
+      expect(
+        parser.parse('Bref. (2011)/Saison 02/Bref.2-S02E02.PROPER.FRENCH.1080p.WEB.H264-FW.mkv'),
+      ).toMatchObject({
+        title: 'Bref',
+        season: 2,
+        episodes: [2],
+      });
+    });
+
+    it('still takes the title from the folder when the file has none', () => {
+      expect(parser.parse('Breaking Bad/Season 2/02x05.mkv')).toMatchObject({
+        title: 'Breaking Bad',
+      });
+      expect(parser.parse('Show Name/Season 1/e05.mkv')).toMatchObject({ title: 'Show Name' });
+    });
+  });
+
   describe('country', () => {
     it.each([
       ['The.Office.US.S03E04.720p.mkv', 'US'],

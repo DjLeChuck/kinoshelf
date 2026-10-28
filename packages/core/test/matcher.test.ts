@@ -200,20 +200,43 @@ describe('episodes', () => {
     expect(expectAmbiguous(outcome).candidates[0]?.score).toBeLessThan(85);
   });
 
-  it('ranks first the series that actually has the episode', async () => {
+  it('matches the only same-titled series that has the season, even without a year', async () => {
+    // A long-running series next to a short namesake: `Show - S10E01` fits only one of them.
+    const long = series(1, 'Supernatural', 2005);
+    const short = series(2, 'Supernatural', 1977);
+    const provider = new FakeProvider([short, long], {
+      '1:10': season(10, [1, 2, 3]),
+    });
+    const { best } = expectMatched(
+      await new Matcher(provider).match(parsedEpisode('Supernatural', 10, [1])),
+    );
+    expect(best.candidate.id.id).toBe(1);
+  });
+
+  it('stays ambiguous when several same-titled series have the episode and nothing else tells them apart', async () => {
     const remake = series(2, 'Doctor Who', 2005);
     const classic = series(3, 'Doctor Who', 1963);
     const provider = new FakeProvider([classic, remake], {
       '2:1': season(1, [1, 2, 3]),
-      '3:1': season(1, [1, 2]),
+      '3:1': season(1, [1, 2, 3]),
     });
-    const matcher = new Matcher(provider);
+    const outcome = expectAmbiguous(
+      await new Matcher(provider).match(parsedEpisode('Doctor Who', 1, [3])),
+    );
+    expect(outcome.candidates[0]?.breakdown.margin).toBe(0);
+  });
 
-    // Without a year the gap is modest: it ranks right but still wants a human.
-    const undated = expectAmbiguous(await matcher.match(parsedEpisode('Doctor Who', 1, [3])));
-    expect(undated.candidates[0]?.candidate.id.id).toBe(2);
-
-    const dated = expectMatched(await matcher.match(parsedEpisode('Doctor Who', 1, [3], 2005)));
+  it('lets the year choose between same-titled series that both have the episode', async () => {
+    const provider = new FakeProvider(
+      [series(3, 'Doctor Who', 1963), series(2, 'Doctor Who', 2005)],
+      {
+        '2:1': season(1, [1, 2, 3]),
+        '3:1': season(1, [1, 2, 3]),
+      },
+    );
+    const dated = expectMatched(
+      await new Matcher(provider).match(parsedEpisode('Doctor Who', 1, [3], 2005)),
+    );
     expect(dated.best.candidate.id.id).toBe(2);
   });
 
@@ -256,6 +279,54 @@ describe('episodes', () => {
     await new Matcher(provider, { maxSeasonLookups: 1 }).match(parsed);
     const looked = provider.calls.filter((c) => c.method === 'getSeason').map((c) => c.id?.id);
     expect(looked).toContain(4);
+  });
+});
+
+describe('series year', () => {
+  // The year in a folder name may be the first release, the local one or a guess.
+  const kaamelott = series(11466, 'Kaamelott', 2005);
+  const seasons = { '11466:1': season(1, [1, 2, 3, 49]) };
+
+  it.each([2005, 2004, 2003, 2020])(
+    'matches a lone series when the file year is %i',
+    async (year) => {
+      const matcher = new Matcher(new FakeProvider([kaamelott], seasons));
+      const outcome = await matcher.match(parsedEpisode('Kaamelott', 1, [49], year));
+      expect(outcome.status).toBe('matched');
+    },
+  );
+
+  it('still loses to the series whose year agrees', async () => {
+    const remake = series(2, 'Doctor Who', 2005);
+    const classic = series(3, 'Doctor Who', 1963);
+    const provider = new FakeProvider([classic, remake], {
+      '2:1': season(1, [1, 2, 3]),
+      '3:1': season(1, [1, 2, 3]),
+    });
+    const { best, others } = expectMatched(
+      await new Matcher(provider).match(parsedEpisode('Doctor Who', 1, [3], 2005)),
+    );
+    expect(best.candidate.id.id).toBe(2);
+    expect(others[0]?.score).toBeLessThan(85);
+  });
+
+  it('does not let a far year rescue an episode the series does not have', async () => {
+    const matcher = new Matcher(new FakeProvider([kaamelott], seasons));
+    expectAmbiguous(await matcher.match(parsedEpisode('Kaamelott', 1, [99], 2020)));
+  });
+
+  it('keeps a movie strict: three years off is a different film', async () => {
+    const matcher = new Matcher(new FakeProvider([movie(1, 'Parasite', 2019)]));
+    expectAmbiguous(await matcher.match(parsedMovie('Parasite', 2003)));
+  });
+
+  it('gives no id bonus to a series whose year the file contradicts', async () => {
+    const provider = new FakeProvider([series(1, 'Kaamelott', 2005)], { '1:1': season(1, [1]) });
+    const parsed = parsedEpisode('Kaamelott', 1, [1], 1990, {
+      knownIds: [{ provider: 'tmdb', id: 1 }],
+    });
+    const { best } = expectMatched(await new Matcher(provider).match(parsed));
+    expect(best.breakdown.knownId).toBe(0);
   });
 });
 
@@ -330,6 +401,27 @@ describe('known ids', () => {
     const parsed = parsedMovie('Dune', 2021, { knownIds: [{ provider: 'tvdb', id: 1 }] });
     const { best } = expectMatched(await new Matcher(provider).match(parsed));
     expect(best.breakdown.knownId).toBe(0);
+  });
+});
+
+describe('subtitles', () => {
+  const thor = movie(10195, 'Thor', 2011);
+  const darkWorld = movie(76338, 'Thor : Le Monde des ténèbres', 2013);
+
+  it('reads `Title - Subtitle` as the full TMDB title', async () => {
+    const matcher = new Matcher(new FakeProvider([thor, darkWorld]));
+    const named = parsedMovie('Thor', 2013, { subtitle: 'Le Monde des ténèbres' });
+    const { best } = expectMatched(await matcher.match(named));
+    expect(best.candidate.id.id).toBe(76338);
+  });
+
+  it('does not let a subtitle pull a movie onto an unrelated title', async () => {
+    const matcher = new Matcher(new FakeProvider([thor, darkWorld]));
+    const wrong = parsedMovie('Thor', 2013, { subtitle: 'Ragnarok' });
+    const outcome = await matcher.match(wrong);
+    if (outcome.status === 'matched') {
+      expect(outcome.best.candidate.id.id).not.toBe(76338);
+    }
   });
 });
 

@@ -38,7 +38,12 @@ export { executePlan, type ExecuteOptions } from './execution/executor.js';
 export { MemoryJournal } from './journal/memory-journal.js';
 export { SqliteJournal } from './journal/sqlite-journal.js';
 export { undoLastBatch, type UndoEntryResult, type UndoResult } from './journal/undo.js';
-export { discoverVideos, VIDEO_EXTENSIONS, type DiscoveredFile } from './pipeline/discover.js';
+export {
+  discoverVideos,
+  isSample,
+  VIDEO_EXTENSIONS,
+  type DiscoveredFile,
+} from './pipeline/discover.js';
 export {
   analyze,
   type Analysis,

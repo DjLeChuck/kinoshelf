@@ -13,9 +13,15 @@ import { run, type CliDeps } from '../src/cli.js';
 
 const created: string[] = [];
 
+/**
+ * A fresh empty directory with a fixed name: the parser reads the folder name too, and a random
+ * one (`kinoshelf-cli-S86e68`) can look like an episode marker and flip a test now and then.
+ */
 export async function makeDir(): Promise<string> {
-  const directory = await mkdtemp(join(tmpdir(), 'kinoshelf-cli-'));
-  created.push(directory);
+  const root = await mkdtemp(join(tmpdir(), 'kinoshelf-cli-'));
+  created.push(root);
+  const directory = join(root, 'dir');
+  await mkdir(directory);
   return directory;
 }
 

@@ -12,7 +12,12 @@ export interface MatchingConfig {
   /** Minimum score (0–100) for automatic processing; below it the file goes to validation. */
   readonly threshold: number;
   readonly weights: ScoreWeights;
-  /** Raw-score gap (in points, out of 100 minus margin) that earns the full margin weight. */
+  /**
+   * Raw-score gap with the runner-up that earns the full margin weight. 10 is the weight of a
+   * single criterion: when only one of several same-titled candidates has the season and
+   * episode, that alone is conclusive. Calibrated on a real library, where 20 left every
+   * undated episode of a long-running series (Supernatural) waiting for validation.
+   */
   readonly marginFullGap: number;
   readonly knownId: {
     /** Points added when an id found in the file names matches the candidate. */
@@ -45,7 +50,7 @@ export interface MatchingConfig {
 export const DEFAULT_MATCHING_CONFIG: MatchingConfig = {
   threshold: 85,
   weights: { title: 45, year: 20, kind: 10, episodeExists: 10, margin: 15 },
-  marginFullGap: 20,
+  marginFullGap: 10,
   knownId: { bonus: 40, minTitleSimilarity: 0.4 },
   country: { bonus: 10, penalty: 15, minTitleSimilarity: 0.4 },
   maxSeasonLookups: 3,

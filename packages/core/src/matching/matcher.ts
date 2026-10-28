@@ -76,7 +76,11 @@ export class Matcher {
     const title = parsed.title;
     const series = candidates.filter((c) => c.kind === 'series');
     const likeliest = [...series]
-      .sort((a, b) => candidateTitleSimilarity(title, b) - candidateTitleSimilarity(title, a))
+      .sort(
+        (a, b) =>
+          candidateTitleSimilarity(title, b, parsed.subtitle) -
+          candidateTitleSimilarity(title, a, parsed.subtitle),
+      )
       .slice(0, this.config.maxSeasonLookups);
     const hinted = series.filter((c) =>
       parsed.knownIds?.some((known) => known.provider === c.id.provider && known.id === c.id.id),

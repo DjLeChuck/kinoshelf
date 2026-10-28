@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import {
   analyze,
   discoverVideos,
+  isSample,
   GuessitParser,
   KinoshelfError,
   loadBundledProfile,
@@ -30,6 +31,33 @@ describe('discoverVideos', () => {
       'Film.mp4',
       join('Show', 'Season 1', 'e01.MKV'),
     ]);
+  });
+
+  it('skips promotional samples shipped with a release', async () => {
+    const root = await makeDir();
+    await put(join(root, 'Film (2016)', 'Film.2016.1080p.mkv'));
+    await put(join(root, 'Film (2016)', 'sample.avi'));
+    await put(join(root, 'Film (2016)', 'Film.2016.1080p-sample.mkv'));
+    await put(join(root, 'Film (2016)', 'Sample', 'proof.mkv'));
+    await put(join(root, 'Sampler.2020.mkv'));
+    const found = await discoverVideos(root);
+    expect(found.map((f) => f.displayPath).sort()).toEqual([
+      join('Film (2016)', 'Film.2016.1080p.mkv'),
+      'Sampler.2020.mkv',
+    ]);
+  });
+
+  it.each([
+    ['sample.avi', true],
+    ['Film.2016-SAMPLE.mkv', true],
+    ['Film [sample].mkv', true],
+    ['Sample/proof.mkv', true],
+    ['movie/samples/a.mkv', true],
+    ['Sampler.2020.mkv', false],
+    ['Resampled.mkv', false],
+    ['Film.2016.mkv', false],
+  ])('isSample(%j) is %s', (path, expected) => {
+    expect(isSample(path)).toBe(expected);
   });
 
   it('keeps the scanned folder name in the path given to the parser', async () => {

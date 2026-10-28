@@ -1,18 +1,22 @@
 import type { Candidate } from '../types/provider.js';
 
-/**
- * Brings titles to a comparable form: guessit and file names lose accents, apostrophes and
- * casing (`dune part two`, `d Amelie`), so both sides are flattened the same way.
- */
-export function normalizeTitle(title: string): string {
+function flatten(title: string, apostrophe: string): string {
   return title
     .normalize('NFKD')
     .replace(/\p{M}/gu, '')
     .toLowerCase()
     .replace(/&/g, ' and ')
-    .replace(/['’`]/g, ' ')
+    .replace(/['’`]/g, apostrophe)
     .replace(/[^\p{L}\p{N}]+/gu, ' ')
     .trim();
+}
+
+/**
+ * Brings titles to a comparable form: guessit and file names lose accents, apostrophes and
+ * casing (`dune part two`, `d Amelie`), so both sides are flattened the same way.
+ */
+export function normalizeTitle(title: string): string {
+  return flatten(title, ' ');
 }
 
 function levenshtein(a: string, b: string): number {
@@ -37,17 +41,35 @@ function levenshtein(a: string, b: string): number {
 
 /** Similarity of two titles, from 0 (nothing in common) to 1 (identical once normalized). */
 export function titleSimilarity(a: string, b: string): number {
-  const left = normalizeTitle(a);
-  const right = normalizeTitle(b);
-  const longest = Math.max(left.length, right.length);
-  return longest === 0 ? 0 : 1 - levenshtein(left, right) / longest;
+  // An apostrophe is a word break in `d'Amélie` (file: `d Amelie`) but disappears in
+  // `Hell's` (file: `Hells`): both readings are tried, the better one counts.
+  const readings = (title: string): string[] => [flatten(title, ' '), flatten(title, '')];
+  let best = 0;
+  for (const left of readings(a)) {
+    for (const right of readings(b)) {
+      const longest = Math.max(left.length, right.length);
+      if (longest > 0) {
+        best = Math.max(best, 1 - levenshtein(left, right) / longest);
+      }
+    }
+  }
+  return best;
 }
 
-/** Best similarity over the localized, original and alternative titles of a candidate. */
-export function candidateTitleSimilarity(title: string, candidate: Candidate): number {
+/**
+ * Best similarity over the localized, original and alternative titles of a candidate. A
+ * movie named `Title - Subtitle` is also read as the one title `Title Subtitle`, which is how
+ * TMDB writes it (`Thor : Le Monde des ténèbres`).
+ */
+export function candidateTitleSimilarity(
+  title: string,
+  candidate: Candidate,
+  subtitle?: string,
+): number {
+  const readings = subtitle === undefined ? [title] : [title, `${title} ${subtitle}`];
   return Math.max(
-    ...[candidate.title, candidate.originalTitle, ...candidate.alternativeTitles].map((t) =>
-      titleSimilarity(title, t),
+    ...[candidate.title, candidate.originalTitle, ...candidate.alternativeTitles].flatMap((t) =>
+      readings.map((reading) => titleSimilarity(reading, t)),
     ),
   );
 }

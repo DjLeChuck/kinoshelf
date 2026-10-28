@@ -10,19 +10,38 @@ export type SeasonLookup = ReadonlyMap<string, SeasonInfo | null>;
 export const candidateKey = (candidate: Candidate): string =>
   `${candidate.kind}:${candidate.id.provider}:${candidate.id.id}`;
 
-// Release years differ between countries and festivals, so a movie tolerates a gap of one or
-// two years better than a series, whose first air year is usually unambiguous.
+/** Gap in years between the file and the candidate; `undefined` when either is unknown. */
+function yearGap(parsed: ParsedMedia, candidate: Candidate): number | undefined {
+  return parsed.year === undefined || candidate.year === undefined
+    ? undefined
+    : Math.abs(parsed.year - candidate.year);
+}
+
+/** From this gap on, the years are taken as pointing at different works. */
+const YEAR_CONTRADICTION_GAP = 3;
+
+// A file's year can be the first release, the local release, or a guess (`Kaamelott (2003)`
+// where TMDB says 2005, `Le Bureau des Légendes (2020)` for a 2015 series), so it is never
+// worth much alone. A movie still loses everything past two years: its year is often the only
+// thing telling same-titled films apart, and nothing else checks it. A series keeps a floor,
+// because its season and episode must exist as well, which a wrong series rarely satisfies.
 const YEAR_CLOSENESS = {
-  movie: [1, 0.7, 0.3],
-  series: [1, 0.6],
+  movie: [1, 0.7, 0.3, 0],
+  series: [1, 0.8, 0.6, 0.3],
 } as const;
 
 function yearCloseness(parsed: ParsedMedia, candidate: Candidate): number {
-  if (parsed.year === undefined || candidate.year === undefined) {
+  const gap = yearGap(parsed, candidate);
+  if (gap === undefined) {
     return 0.5; // Nothing to compare: neither a confirmation nor a contradiction.
   }
-  return YEAR_CLOSENESS[candidate.kind][Math.abs(parsed.year - candidate.year)] ?? 0;
+  const table = YEAR_CLOSENESS[candidate.kind];
+  return table[Math.min(gap, table.length - 1)] ?? 0;
 }
+
+/** True when both years are known and too far apart to be the same work. */
+const yearContradicts = (parsed: ParsedMedia, candidate: Candidate): boolean =>
+  (yearGap(parsed, candidate) ?? 0) >= YEAR_CONTRADICTION_GAP;
 
 function kindCloseness(parsed: ParsedMedia, candidate: Candidate): number {
   if (parsed.kind === 'unknown') {
@@ -94,7 +113,7 @@ export function scoreCandidates(
   const title = parsed.title ?? '';
 
   const raws: Raw[] = candidates.map((candidate) => {
-    const similarity = candidateTitleSimilarity(title, candidate);
+    const similarity = candidateTitleSimilarity(title, candidate, parsed.subtitle);
     const agreement = countryAgreement(parsed, candidate);
     const parts = {
       title: weights.title * similarity,
@@ -129,7 +148,7 @@ export function scoreCandidates(
       raw.kind > 0 &&
       raw.episodeExists > 0 &&
       raw.similarity >= config.knownId.minTitleSimilarity &&
-      raw.year > 0
+      !yearContradicts(parsed, raw.candidate)
         ? config.knownId.bonus
         : 0;
 

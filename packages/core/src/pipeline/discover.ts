@@ -18,6 +18,19 @@ export const VIDEO_EXTENSIONS: readonly string[] = [
   'iso',
 ];
 
+/**
+ * Promotional extracts shipped with a release: a file named `sample` (`sample.avi`,
+ * `movie-sample.mkv`) or anything inside a `Sample` folder. By name only: a size check would
+ * need a stat per file and could drop a genuinely short film.
+ */
+export function isSample(path: string): boolean {
+  const segments = path.split(/[\\/]+/);
+  const name = (segments.pop() ?? '').replace(/\.[^.]+$/, '');
+  return (
+    /(^|[\s._\-[(])sample($|[\s._\-\])])/i.test(name) || segments.some((s) => /^samples?$/i.test(s))
+  );
+}
+
 export interface DiscoveredFile {
   /** Absolute path of the video. */
   readonly path: string;
@@ -60,7 +73,7 @@ export async function discoverVideos(
   }
 
   const isVideo = (path: string): boolean =>
-    extensions.includes(extname(path).slice(1).toLowerCase());
+    extensions.includes(extname(path).slice(1).toLowerCase()) && !isSample(path);
   const base = info.isDirectory() ? root : dirname(root);
   const paths: string[] = [];
   if (info.isDirectory()) {

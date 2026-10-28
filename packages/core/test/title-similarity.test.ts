@@ -21,6 +21,15 @@ describe('titleSimilarity', () => {
     expect(titleSimilarity('Dune Part Two', 'Dune: Part Two')).toBe(1);
   });
 
+  it('treats an apostrophe as a word break or as nothing, whichever fits', () => {
+    expect(titleSimilarity('Hells Kitchen', "Hell's Kitchen")).toBe(1); // possessive: dropped
+    expect(
+      titleSimilarity('Le Fabuleux Destin d Amelie Poulain', "Le Fabuleux Destin d'Amélie Poulain"),
+    ).toBe(1);
+    expect(titleSimilarity('Greys Anatomy', "Grey's Anatomy")).toBe(1);
+    expect(titleSimilarity('Dont Look Up', "Don't Look Up")).toBe(1);
+  });
+
   it('is high for a small typo and low for a different title', () => {
     expect(titleSimilarity('Interstelar', 'Interstellar')).toBeGreaterThan(0.9);
     expect(titleSimilarity('Dune', 'Dune: Part Two')).toBeLessThan(0.4);

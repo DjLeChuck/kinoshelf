@@ -6,10 +6,16 @@ import type { ParsedMedia } from '../src/index.js';
 
 const created: string[] = [];
 
-/** A fresh empty directory, removed by `cleanup`. `base` picks the filesystem it lives on. */
+/**
+ * A fresh empty directory, removed by `cleanup`; `base` picks the filesystem it lives on. Its name
+ * is fixed: the parser reads the folder name too, and a random one (`kinoshelf-test-S86e68`) can
+ * look like an episode marker and flip a test now and then.
+ */
 export async function makeDir(base = tmpdir()): Promise<string> {
-  const directory = await mkdtemp(join(base, 'kinoshelf-test-'));
-  created.push(directory);
+  const root = await mkdtemp(join(base, 'kinoshelf-test-'));
+  created.push(root);
+  const directory = join(root, 'dir');
+  await mkdir(directory);
   return directory;
 }
 

@@ -34,6 +34,9 @@ const text = (value: unknown): string | undefined =>
 const count = (value: unknown): number | undefined =>
   typeof value === 'number' && Number.isFinite(value) ? value : undefined;
 // guessit already folds `UK` into `GB`; only a plain two-letter code is trusted.
+// An explicit marker that a number is a season/episode: `S02E05`, `2x05`, `Season 2`, `Épisode 5`.
+const EPISODE_MARKER =
+  /s\d+\s*[-.]?\s*e\d+|\b\d{1,2}x\d{2,3}\b|saison|season|[ée]pisode|\bep?\s?\d/i;
 const countryOf = (value: unknown): string | undefined =>
   typeof value === 'string' && /^[A-Za-z]{2}$/.test(value) ? value.toUpperCase() : undefined;
 
@@ -46,9 +49,12 @@ export class GuessitParser implements Parser {
   }
 
   /** `undefined` when guessit gives up on the input. */
-  private guess(segments: readonly string[]): GuessItResult | undefined {
+  private guess(
+    segments: readonly string[],
+    options?: { type: 'movie' },
+  ): GuessItResult | undefined {
     try {
-      return guessit(segments.map((segment) => segment.replace(TAG, '')).join('/'));
+      return guessit(segments.map((segment) => segment.replace(TAG, '')).join('/'), options);
     } catch (error) {
       if (error instanceof GuessItException) {
         return undefined;
@@ -79,6 +85,68 @@ export class GuessitParser implements Parser {
       return { path, kind: 'unknown', episodes: [] };
     }
 
+    // With a folder in the way guessit may take the folder for the title and push the file's
+    // own leading words into `episode_title` (`Lego Ninjago/Saison 11/new/Ninjago_S12E02.mkv`
+    // reads as "new"). The file name alone then names the show better, but only its title is
+    // borrowed: the year and the rest still come from the folder (`Fondation (2021)/Foundation.S01E01`).
+    const fileName = context.slice(-1);
+    if (context.length > 1) {
+      const alone = this.guess(fileName);
+      const aloneTitle = text(alone?.title);
+      const contextTitle = text(guess.title);
+      if (aloneTitle !== undefined && contextTitle !== aloneTitle) {
+        const flat = (value: string): string => value.toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
+        const [file, folder, base] = [
+          flat(aloneTitle),
+          flat(contextTitle ?? ''),
+          flat(fileName[0] ?? ''),
+        ];
+        const pushedAside = toList(guess.episode_title).map((t) => text(t)?.toLowerCase());
+        // The file must *start* with that title (`Ninjago_S12E02…`; in `05 - Breakage` the same
+        // words are the episode's title), and the two titles must not be one inside the other:
+        // `Bref` for the folder and `Bref 2` for the file are the same show, season 2.
+        const unrelated = !file.startsWith(folder) && !folder.startsWith(file);
+        if (pushedAside.includes(aloneTitle.toLowerCase()) && base.startsWith(file) && unrelated) {
+          guess = { ...guess, title: aloneTitle };
+        }
+      }
+    }
+
+    // A number with no marker that reassembles from season and episode (`2049` = S20E49, `116` =
+    // S01E16) is not necessarily an episode. A year-like one is part of a title (`Blade Runner
+    // 2049`), so the file is a movie. Any other could equally be an absolute episode number
+    // (`Dragon Ball 116`), which cannot be told from S01E16: the type is left unknown.
+    const base = fileName[0] ?? '';
+    const [seasonList, episodeList] = [toList(guess.season), toList(guess.episode)];
+    let numbersAreAmbiguous = false;
+    // A "season" between 1900 and 2099 is a year (`Mulan 2 (...) (2004)` reads as S2004E02).
+    const seasonIsYear =
+      guess.type === 'episode' &&
+      seasonList.length === 1 &&
+      (seasonList[0] ?? 0) >= 1900 &&
+      (seasonList[0] ?? 0) <= 2099;
+    if (seasonIsYear) {
+      if (EPISODE_MARKER.test(base)) {
+        numbersAreAmbiguous = true;
+      } else {
+        guess = this.guess(context, { type: 'movie' }) ?? guess;
+      }
+    } else if (
+      guess.type === 'episode' &&
+      seasonList.length === 1 &&
+      episodeList.length === 1 &&
+      !EPISODE_MARKER.test(base)
+    ) {
+      const token = (seasonList[0] ?? 0) * 100 + (episodeList[0] ?? 0);
+      if (base.includes(String(token))) {
+        if (token >= 1900 && token <= 2099) {
+          guess = this.guess(context, { type: 'movie' }) ?? guess;
+        } else {
+          numbersAreAmbiguous = true;
+        }
+      }
+    }
+
     const seasons = toList(guess.season);
     const episodes = [...new Set(toList(guess.episode))].sort((a, b) => a - b);
     const season = seasons.length === 1 ? seasons[0] : undefined;
@@ -92,8 +160,9 @@ export class GuessitParser implements Parser {
     const episodeTitle = text(guess.episode_title);
     const releaseGroup = text(guess.release_group);
     const country = countryOf(guess.country);
+    const subtitle = text(guess.alternative_title);
     let kind: ParsedKind = 'unknown';
-    if (title !== undefined) {
+    if (title !== undefined && !numbersAreAmbiguous) {
       if (guess.type === 'movie') {
         kind = 'movie';
       } else if (guess.type === 'episode' && episodes.length > 0 && season !== undefined) {
@@ -106,6 +175,7 @@ export class GuessitParser implements Parser {
       kind,
       episodes: kind === 'episode' ? episodes : [],
       ...(title !== undefined && { title }),
+      ...(kind === 'movie' && subtitle !== undefined && { subtitle }),
       ...(year !== undefined && { year }),
       ...(kind === 'episode' && season !== undefined && { season }),
       ...(kind === 'episode' && episodeTitle !== undefined && { episodeTitle }),
