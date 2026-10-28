@@ -236,7 +236,7 @@ describe('POST /api/batches/{id}/undo', () => {
     expect(again.items).toHaveLength(1);
   });
 
-  it('only undoes the last batch, and 404s on an unknown one', async () => {
+  it('undoes an older batch and leaves the newer one alone', async () => {
     const h = await harness();
     const first = await analyzed(h);
     const one = (
@@ -253,14 +253,41 @@ describe('POST /api/batches/{id}/undo', () => {
       batchId: string;
     }>();
     expect(two).not.toBe(one.batchId);
+    const alienTarget = join(
+      h.destination,
+      'Alien (1979) {tmdb-348}',
+      'Alien (1979) {tmdb-348}.mkv',
+    );
 
-    const refused = await h.request('POST', `/api/batches/${one.batchId}/undo`);
-    expect(refused.statusCode).toBe(409);
-    expect(refused.json()).toEqual({ error: { code: 'batch.not-last', params: { last: two } } });
-    expect((await stat(duneTarget(h))).isFile()).toBe(true);
-
-    expect((await h.request('POST', `/api/batches/${two}/undo`)).statusCode).toBe(200);
+    // The first batch, although the second is the last one.
     expect((await h.request('POST', `/api/batches/${one.batchId}/undo`)).statusCode).toBe(200);
+    await expect(stat(duneTarget(h))).rejects.toThrow();
+    expect((await stat(alienTarget)).isFile()).toBe(true);
+
+    const entries = (
+      await h.request('GET', `/api/jobs/${first.jobId}/entries?classification=to-rename`)
+    ).json<EntryBody[]>();
+    expect(entries.find((e) => e.id === first.dune.id)).toMatchObject({
+      resolution: null,
+      batchId: null,
+    });
+    const alienEntries = (await h.request('GET', `/api/jobs/${alien.id}/entries`)).json<
+      EntryBody[]
+    >();
+    expect(alienEntries[0]).toMatchObject({ resolution: 'done', batchId: two });
+  });
+
+  it('refuses a batch already undone with 409, and answers 404 for an unknown one', async () => {
+    const h = await harness();
+    const { jobId } = await analyzed(h);
+    const { batchId } = (
+      await h.request('POST', `/api/plans/${jobId}/execute`)
+    ).json<ExecutionBody>();
+
+    expect((await h.request('POST', `/api/batches/${batchId}/undo`)).statusCode).toBe(200);
+    const again = await h.request('POST', `/api/batches/${batchId}/undo`);
+    expect(again.statusCode).toBe(409);
+    expect(again.json()).toEqual({ error: { code: 'batch.already-undone' } });
     expect((await h.request('POST', '/api/batches/nope/undo')).statusCode).toBe(404);
   });
 });

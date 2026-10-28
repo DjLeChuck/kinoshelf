@@ -307,8 +307,9 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
       schema: {
         summary: 'Undo a batch',
         description:
-          'Only the last batch that was not undone can be (a move goes back where it came from). ' +
-          'Whatever no longer matches is skipped and reported, never forced.',
+          'Any batch not undone yet can be, not only the last (a move goes back where it came ' +
+          'from). Each file is checked as it is now: whatever a later batch moved on or took ' +
+          'the place of is skipped and reported, never forced.',
         params: idParams,
         body: dryRunBody,
         response: { 200: undoSchema, 401: errorSchema, 404: errorSchema, 409: errorSchema },

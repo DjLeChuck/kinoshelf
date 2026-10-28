@@ -2,7 +2,7 @@ import {
   createPlan,
   loadProfile,
   executePlan,
-  undoLastBatch,
+  undoBatch,
   type Candidate,
   type Classification,
   type ErrorInfo,
@@ -178,22 +178,24 @@ export class Service {
     return (await this.execute(job.id, { dryRun: false })).batchId;
   }
 
-  /** Only the last batch can be undone (the journal is a stack), so any other id is refused. */
+  /**
+   * Any batch that was not undone yet can be, not only the last: each entry is checked against
+   * the disk as it is, so a later batch is never damaged (see `undoBatch`).
+   */
   async undo(batchId: string, options: { dryRun: boolean }): Promise<UndoReport> {
     const { journal, entries } = this.deps;
     if (journal.entriesOf(batchId).length === 0) {
       throw new ApiError(404, 'batch.not-found');
     }
-    const last = journal.lastBatchId();
-    if (last !== batchId) {
-      throw new ApiError(409, 'batch.not-last', last === null ? {} : { last });
+    if (journal.isUndone(batchId)) {
+      throw new ApiError(409, 'batch.already-undone');
     }
-    const result = await undoLastBatch(journal, { dryRun: options.dryRun });
+    const result = await undoBatch(journal, batchId, { dryRun: options.dryRun });
     if (!result) {
       throw new ApiError(404, 'batch.not-found');
     }
     // Marked undone only when nothing failed: otherwise the files stay as they were.
-    if (!options.dryRun && journal.lastBatchId() !== batchId) {
+    if (!options.dryRun && journal.isUndone(batchId)) {
       entries.reopenBatch(batchId);
     }
     return {
