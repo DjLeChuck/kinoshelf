@@ -1,0 +1,28 @@
+{
+  "name": "@kinoshelf/web",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Kinoshelf web UI (Svelte 5), served statically by the server.",
+  "license": "MIT",
+  "type": "module",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "check": "svelte-check --tsconfig ./tsconfig.json"
+  },
+  "dependencies": {
+    "@fontsource-variable/inter": "^5.3.0",
+    "@fontsource-variable/jetbrains-mono": "^5.3.0",
+    "@kinoshelf/i18n": "workspace:*"
+  },
+  "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "^7.3.1",
+    "svelte": "^5.57.3",
+    "svelte-check": "^4.7.7",
+    "vite": "^8.3.5",
+    "vitest": "^5.0.5"
+  }
+}

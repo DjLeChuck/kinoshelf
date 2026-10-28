@@ -20,5 +20,6 @@
     "packages/providers/*/src",
     "packages/providers/*/test",
     "packages/providers/*/*.ts"
-  ]
+  ],
+  "exclude": ["packages/web"]
 }

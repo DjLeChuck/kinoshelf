@@ -10,6 +10,7 @@ export default defineConfig({
       'packages/cli',
       'packages/server',
       'packages/corpus',
+      'packages/web',
     ],
   },
 });

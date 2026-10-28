@@ -2,11 +2,12 @@
   "name": "@kinoshelf/image",
   "version": "0.0.0",
   "private": true,
-  "description": "What the Docker image ships: the server and the CLI, deployed as one dependency tree.",
+  "description": "What the Docker image ships: the server, the CLI and the web UI, deployed as one dependency tree.",
   "license": "MIT",
   "type": "module",
   "dependencies": {
     "@kinoshelf/cli": "workspace:*",
-    "@kinoshelf/server": "workspace:*"
+    "@kinoshelf/server": "workspace:*",
+    "@kinoshelf/web": "workspace:*"
   }
 }

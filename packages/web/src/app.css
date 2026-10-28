@@ -1,0 +1,239 @@
+@import '@fontsource-variable/inter';
+@import '@fontsource-variable/jetbrains-mono';
+
+/* The palette of the brand kit: amber on near-black, with a light counterpart. */
+:root,
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #14161a;
+  --surface: #1c1f25;
+  --surface-2: #23272f;
+  --border: #2a2e36;
+  --border-strong: #3a3f49;
+  --text: #e8e6e1;
+  --muted: #9ba1ab;
+  --accent: #f2a93b;
+  --accent-text: #f2a93b;
+  --accent-hover: #ffc56b;
+  --on-accent: #14161a;
+  --ok: #5fc48a;
+  --warn: #f2a93b;
+  --danger: #f07a6a;
+  --info: #8ab4f8;
+  --ok-bg: rgb(95 196 138 / 14%);
+  --warn-bg: rgb(242 169 59 / 14%);
+  --danger-bg: rgb(240 122 106 / 14%);
+  --neutral-bg: rgb(155 161 171 / 12%);
+  --logo-dark: block;
+  --logo-light: none;
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+  --bg: #faf9f5;
+  --surface: #ffffff;
+  --surface-2: #f1efe8;
+  --border: #e2dfd6;
+  --border-strong: #bdb8aa;
+  --text: #14161a;
+  --muted: #5b6068;
+  --accent: #f2a93b;
+  --accent-text: #8f5600;
+  --accent-hover: #ffc56b;
+  --on-accent: #14161a;
+  --ok: #1e7f4c;
+  --warn: #8f5600;
+  --danger: #b3382a;
+  --info: #2b5db8;
+  --ok-bg: rgb(30 127 76 / 12%);
+  --warn-bg: rgb(143 86 0 / 12%);
+  --danger-bg: rgb(179 56 42 / 12%);
+  --neutral-bg: rgb(91 96 104 / 12%);
+  --logo-dark: none;
+  --logo-light: block;
+}
+
+:root {
+  --font: 'Inter Variable', system-ui, sans-serif;
+  --mono: 'JetBrains Mono Variable', ui-monospace, monospace;
+  --radius: 12px;
+  --radius-sm: 8px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 14px/1.5 var(--font);
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+a {
+  color: var(--accent-text);
+}
+
+a:hover {
+  color: var(--accent-hover);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+.mono {
+  font-family: var(--mono);
+  font-size: 12.5px;
+  word-break: break-all;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Buttons: every target is at least 44px tall. */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 18px;
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  background: transparent;
+  cursor: pointer;
+  text-decoration: none;
+  color: var(--text);
+}
+
+.btn:hover:not(:disabled) {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  min-height: 48px;
+  padding: 0 22px;
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: 700;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--accent-hover);
+  color: var(--on-accent);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field > label {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.input {
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.chip {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.chip-ok {
+  color: var(--ok);
+  background: var(--ok-bg);
+}
+
+.chip-warn {
+  color: var(--warn);
+  background: var(--warn-bg);
+}
+
+.chip-danger {
+  color: var(--danger);
+  background: var(--danger-bg);
+}
+
+.chip-neutral {
+  color: var(--muted);
+  background: var(--neutral-bg);
+}
+
+.alert {
+  padding: 12px 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+}
+
+.alert-danger {
+  color: var(--danger);
+  background: var(--danger-bg);
+  border-color: var(--danger);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}

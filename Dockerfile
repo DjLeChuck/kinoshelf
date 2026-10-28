@@ -6,9 +6,9 @@ WORKDIR /app
 COPY . .
 # Install scripts are skipped (here and in `deploy`): better-sqlite3 would compile itself with
 # node-gyp, but it ships a prebuilt binary for musl (x64 and arm64) that it loads instead.
-RUN pnpm install --frozen-lockfile --ignore-scripts && pnpm build
+RUN pnpm install --frozen-lockfile --ignore-scripts && pnpm build && pnpm build:web
 
-# One self-contained dependency tree for the server and the CLI, without dev tooling.
+# One self-contained dependency tree for the server, the CLI and the web UI, without dev tooling.
 RUN pnpm --filter @kinoshelf/image deploy --prod --legacy --ignore-scripts /out
 
 # Trim what the runtime never reads. Licenses stay: the dependencies' terms require them.

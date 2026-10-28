@@ -11,7 +11,7 @@
   },
   "scripts": {
     "build": "tsc -b",
-    "typecheck": "tsc -b && tsc -p tsconfig.check.json",
+    "typecheck": "tsc -b && tsc -p tsconfig.check.json && pnpm --filter @kinoshelf/web check",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
@@ -19,13 +19,18 @@
     "test:corpus": "pnpm build && vitest run --project corpus",
     "test:live": "pnpm --filter @kinoshelf/provider-tmdb test:live",
     "corpus:report": "pnpm build && pnpm --filter @kinoshelf/corpus report",
-    "corpus:record": "pnpm build && pnpm --filter @kinoshelf/corpus record"
+    "corpus:record": "pnpm build && pnpm --filter @kinoshelf/corpus record",
+    "build:web": "pnpm --filter @kinoshelf/web build"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@types/node": "^26.6.5",
     "eslint": "^10.13.0",
+    "eslint-plugin-svelte": "^3.23.1",
     "prettier": "^3.9.10",
+    "prettier-plugin-svelte": "^4.1.1",
+    "svelte": "^5.57.3",
+    "svelte-eslint-parser": "^1.10.0",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.72.0",
     "vitest": "^5.0.5"
