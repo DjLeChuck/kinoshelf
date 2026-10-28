@@ -96,6 +96,15 @@ importers:
         specifier: ^4.8.0
         version: 4.8.0
 
+  packages/image:
+    dependencies:
+      '@kinoshelf/cli':
+        specifier: workspace:*
+        version: link:../cli
+      '@kinoshelf/server':
+        specifier: workspace:*
+        version: link:../server
+
   packages/providers/tmdb:
     dependencies:
       '@kinoshelf/core':

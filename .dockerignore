@@ -1,0 +1,11 @@
+.git
+.claude
+.env
+.direnv
+.work
+node_modules
+**/node_modules
+**/dist
+**/*.tsbuildinfo
+*.sqlite
+*.sqlite-*
