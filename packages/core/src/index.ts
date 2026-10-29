@@ -69,6 +69,7 @@ export {
   type Config,
   type ConfigEdit,
   type NotifyConfig,
+  type WatchConfig,
 } from './config/config.js';
 export {
   resolveSettings,

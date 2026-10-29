@@ -32,6 +32,17 @@ const webhookSchema = z.strictObject({
   headers: z.record(z.string(), z.string()).optional(),
 });
 
+const watchSchema = z.strictObject({
+  /** Folders that only ever hold finished downloads (the client moves them there when done). */
+  folders: z.array(z.string().min(1)).min(1),
+  /** Seconds a file must stay unchanged before it is submitted: a copy in progress keeps moving. */
+  settleSeconds: z.number().int().min(0).optional(),
+  /** 0 (default) listens for changes; above, scans every N seconds (network shares send none). */
+  pollSeconds: z.number().int().min(0).optional(),
+  /** Transfer what is matched with confidence, instead of leaving everything to validation. */
+  apply: z.boolean().optional(),
+});
+
 const configSchema = z.strictObject({
   /** One key per metadata service, so a second provider adds a key here, not a new setting. */
   apiKey: z
@@ -57,6 +68,8 @@ const configSchema = z.strictObject({
       jellyfin: mediaServerSchema.optional(),
     })
     .optional(),
+  /** Server: submit what lands in these folders, once complete. */
+  watch: watchSchema.optional(),
   /** Server: days after which a finished job, all its files settled, is forgotten. 0 keeps all. */
   retentionDays: z.number().int().min(0).optional(),
   /** One root for everything, or one per kind (Plex asks for separate libraries). */
@@ -69,6 +82,7 @@ const configSchema = z.strictObject({
 });
 
 export type Config = z.infer<typeof configSchema>;
+export type WatchConfig = NonNullable<Config['watch']>;
 export type NotifyConfig = NonNullable<Config['notify']>;
 
 export const DATABASE_FILE = 'kinoshelf.sqlite';
