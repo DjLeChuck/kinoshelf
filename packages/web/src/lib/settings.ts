@@ -38,6 +38,12 @@ export interface Settings {
     readonly on: readonly WebhookEvent[];
     readonly headerNames: readonly string[];
   }[];
+  readonly watch: {
+    readonly folders: readonly string[];
+    readonly settleSeconds: number | null;
+    readonly pollSeconds: number | null;
+    readonly apply: boolean;
+  } | null;
   readonly processing: {
     readonly profile: string | null;
     readonly mode: Mode | null;
@@ -190,4 +196,51 @@ export function profileOf(form: ProfileForm): string | null | undefined {
     return nullIfBlank(form.path) ?? undefined;
   }
   return nullIfBlank(form.choice);
+}
+
+/** A whole number of seconds: blank unsets it, anything else is `undefined` (refused by the form). */
+export function secondsOf(text: string): number | null | undefined {
+  const trimmed = text.trim();
+  if (trimmed === '') {
+    return null;
+  }
+  const value = Number(trimmed);
+  return Number.isInteger(value) && value >= 0 ? value : undefined;
+}
+
+export interface WatchForm {
+  enabled: boolean;
+  folders: { path: string }[];
+  settle: string;
+  poll: string;
+  apply: boolean;
+}
+
+export function watchForm(watch: Settings['watch']): WatchForm {
+  return {
+    enabled: watch !== null,
+    folders: (watch ? [...watch.folders] : ['']).map((path) => ({ path })),
+    settle: watch?.settleSeconds == null ? '' : String(watch.settleSeconds),
+    poll: watch?.pollSeconds == null ? '' : String(watch.pollSeconds),
+    apply: watch?.apply ?? false,
+  };
+}
+
+/** What `PATCH /api/settings` takes for the form; `undefined` names the first thing refused. */
+export function watchPatch(
+  form: WatchForm,
+): { watch: object | null } | { invalid: 'folders' | 'seconds' } {
+  if (!form.enabled) {
+    return { watch: null };
+  }
+  const folders = form.folders.map(({ path }) => path.trim()).filter((folder) => folder !== '');
+  if (folders.length === 0 || folders.some((folder) => !folder.startsWith('/'))) {
+    return { invalid: 'folders' };
+  }
+  const settleSeconds = secondsOf(form.settle);
+  const pollSeconds = secondsOf(form.poll);
+  if (settleSeconds === undefined || pollSeconds === undefined) {
+    return { invalid: 'seconds' };
+  }
+  return { watch: { folders, settleSeconds, pollSeconds, apply: form.apply } };
 }

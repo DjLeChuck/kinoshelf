@@ -166,6 +166,11 @@ textarea {
   gap: 6px;
 }
 
+/* A checkbox row is 44px tall for touch, its text centered: take the hint back up under it. */
+.check + .hint {
+  margin-top: -24px;
+}
+
 .field > label {
   font-size: 13px;
   color: var(--muted);

@@ -2,6 +2,7 @@
   import SettingsAliases from '../components/SettingsAliases.svelte';
   import SettingsAccess from '../components/SettingsAccess.svelte';
   import SettingsGeneral from '../components/SettingsGeneral.svelte';
+  import SettingsWatch from '../components/SettingsWatch.svelte';
   import SettingsProcessing from '../components/SettingsProcessing.svelte';
   import SettingsServer from '../components/SettingsServer.svelte';
   import SettingsWebhooks from '../components/SettingsWebhooks.svelte';
@@ -43,6 +44,7 @@
   {:else if settings}
     <SettingsGeneral {settings} {save} />
     <SettingsProcessing {settings} {save} />
+    <SettingsWatch {settings} {save} />
     <SettingsServer kind="plex" {settings} {save} />
     <SettingsServer kind="jellyfin" {settings} {save} />
     <SettingsWebhooks {settings} {save} />

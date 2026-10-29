@@ -8,7 +8,10 @@ import {
   nullIfBlank,
   profileForm,
   profileOf,
+  secondsOf,
   thresholdOf,
+  watchForm,
+  watchPatch,
   webhookRows,
   webhooksPatch,
 } from '../src/lib/settings.js';
@@ -144,5 +147,70 @@ describe('profile', () => {
 
   it('refuses "my own file" without a path', () => {
     expect(profileOf({ choice: CUSTOM_PROFILE, path: '  ' })).toBeUndefined();
+  });
+});
+
+describe('secondsOf', () => {
+  it.each([
+    ['', null],
+    [' 45 ', 45],
+    ['0', 0],
+    ['-1', undefined],
+    ['1.5', undefined],
+    ['soon', undefined],
+  ])('%j gives %j', (text, expected) => {
+    expect(secondsOf(text)).toBe(expected);
+  });
+});
+
+describe('the watch form', () => {
+  const settings = {
+    folders: ['/downloads/done'],
+    settleSeconds: 30,
+    pollSeconds: null,
+    apply: true,
+  };
+
+  it('starts off, with one empty folder to fill', () => {
+    expect(watchForm(null)).toEqual({
+      enabled: false,
+      folders: [{ path: '' }],
+      settle: '',
+      poll: '',
+      apply: false,
+    });
+  });
+
+  it('shows what is saved', () => {
+    expect(watchForm(settings)).toEqual({
+      enabled: true,
+      folders: [{ path: '/downloads/done' }],
+      settle: '30',
+      poll: '',
+      apply: true,
+    });
+  });
+
+  it('turns the switch off into removing the setting, whatever else is typed', () => {
+    expect(watchPatch({ ...watchForm(settings), enabled: false })).toEqual({ watch: null });
+  });
+
+  it('sends the trimmed folders and the numbers, an empty field unsetting its value', () => {
+    const form = {
+      ...watchForm(settings),
+      folders: [{ path: ' /downloads/done ' }, { path: '  ' }],
+    };
+    expect(watchPatch(form)).toEqual({
+      watch: { folders: ['/downloads/done'], settleSeconds: 30, pollSeconds: null, apply: true },
+    });
+  });
+
+  it('refuses no folder, a relative one, and seconds that are not a number', () => {
+    const form = watchForm(settings);
+    expect(watchPatch({ ...form, folders: [{ path: ' ' }] })).toEqual({ invalid: 'folders' });
+    expect(watchPatch({ ...form, folders: [{ path: 'downloads' }] })).toEqual({
+      invalid: 'folders',
+    });
+    expect(watchPatch({ ...form, poll: 'often' })).toEqual({ invalid: 'seconds' });
   });
 });

@@ -1,5 +1,6 @@
 <script lang="ts">
   import QueueDetail from '../components/QueueDetail.svelte';
+  import QueueSources from '../components/QueueSources.svelte';
   import { api } from '../lib/api.js';
   import { messageOf } from '../lib/errors.js';
   import { refetchOn } from '../lib/events.svelte.js';
@@ -41,6 +42,12 @@
     <h1>{t('web.queue.title')}</h1>
     <p class="muted">{t('web.queue.intro')}</p>
   </div>
+
+  <QueueSources
+    onresult={(message: string) => {
+      notice = message;
+    }}
+  />
 
   {#if notice}
     <p class="alert notice" role="status">{notice}</p>
