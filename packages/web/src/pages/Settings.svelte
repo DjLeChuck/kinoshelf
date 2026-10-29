@@ -1,4 +1,5 @@
 <script lang="ts">
+  import SettingsAliases from '../components/SettingsAliases.svelte';
   import SettingsAccess from '../components/SettingsAccess.svelte';
   import SettingsGeneral from '../components/SettingsGeneral.svelte';
   import SettingsProcessing from '../components/SettingsProcessing.svelte';
@@ -45,6 +46,7 @@
     <SettingsServer kind="plex" {settings} {save} />
     <SettingsServer kind="jellyfin" {settings} {save} />
     <SettingsWebhooks {settings} {save} />
+    <SettingsAliases />
     <SettingsAccess {settings} />
   {:else}
     <p class="muted" role="status">{t('web.loading')}</p>

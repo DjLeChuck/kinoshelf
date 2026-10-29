@@ -150,6 +150,15 @@ describe('validate', () => {
     expect(calls).toHaveLength(1);
   });
 
+  it('asks the server to remember nothing only when told not to', async () => {
+    const { calls, post } = recorder(() => entry({ classification: 'to-rename' }));
+    await validate(entry(), dune, post);
+    await validate(entry(), dune, post, { remember: false });
+    const matchBodies = calls.filter((c) => c.url.includes('/match')).map((c) => c.body);
+    expect(matchBodies[0]).not.toHaveProperty('remember');
+    expect(matchBodies[1]).toMatchObject({ remember: false });
+  });
+
   it('gives the error back when the transfer cannot be queued', async () => {
     const failure = new Error('down');
     const { post } = recorder((url) =>

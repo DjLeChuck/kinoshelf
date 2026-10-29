@@ -140,15 +140,21 @@ export type ValidateOutcome =
 
 /**
  * The two steps of "Validate": match the file with the chosen candidate (it leaves the queue),
- * then queue the transfer of that file alone. The server queues it behind any transfer of the same
+ * then queue the transfer of that file alone. Unless told not to, the server also remembers the
+ * title of the file for next time. The server queues it behind any transfer of the same
  * job, so a matched file is never left without one.
  */
 export async function validate(
   entry: QueueEntry,
   candidate: Candidate,
   post: Post,
+  { remember = true }: { remember?: boolean } = {},
 ): Promise<ValidateOutcome> {
-  const matched = await post<QueueEntry>(`/api/queue/${entry.id}/match`, toMatchBody(candidate));
+  const matched = await post<QueueEntry>(`/api/queue/${entry.id}/match`, {
+    ...toMatchBody(candidate),
+    // The server remembers by default; only a refusal needs saying.
+    ...(!remember && { remember: false }),
+  });
   if (matched.classification !== 'to-rename') {
     return { status: 'conflict', entry: matched };
   }

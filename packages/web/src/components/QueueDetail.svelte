@@ -39,6 +39,7 @@
   let year = $state(entry.parsed.year ? String(entry.parsed.year) : '');
   let kind = $state<'' | 'movie' | 'series'>('');
   let busy = $state(false);
+  let remember = $state(true);
   let failure = $state<unknown>(undefined);
   let refused = $state<readonly ConflictBody[]>([]);
 
@@ -120,7 +121,7 @@
     busy = true;
     failure = undefined;
     try {
-      const outcome = await validate(entry, selected, api.post);
+      const outcome = await validate(entry, selected, api.post, { remember });
       if (outcome.status === 'conflict') {
         refused = outcome.entry.conflicts;
       } else {
@@ -270,6 +271,13 @@
     <p class="alert alert-danger" role="alert">{messageOf(t, failure)}</p>
   {/if}
 
+  {#if entry.parsed.title}
+    <label class="remember">
+      <input type="checkbox" bind:checked={remember} />
+      <span>{t('web.queue.remember', { title: entry.parsed.title })}</span>
+    </label>
+  {/if}
+
   <footer>
     <button
       type="button"
@@ -334,6 +342,14 @@
 
   .results {
     margin-top: 12px;
+  }
+
+  .remember {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 12px;
+    font-size: 13px;
   }
 
   footer {
