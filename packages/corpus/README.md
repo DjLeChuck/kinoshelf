@@ -19,7 +19,8 @@ TMDB responses (`data/recordings.json`), so CI needs no key. It runs with `pnpm 
 
 ```sh
 pnpm corpus:report      # every verdict with its score and runners-up (needs the recordings)
-pnpm corpus:record      # re-record the TMDB responses the entries need (needs TMDB_API_KEY in .env)
+pnpm corpus:record      # record the TMDB responses the entries still need (needs TMDB_API_KEY in .env)
+pnpm corpus:record --refresh   # record them all again (TMDB's data drifts: rewrites much of the file)
 ```
 
 ## Adding a library (a list of paths)

@@ -2570,6 +2570,46 @@
     }
   },
   {
+    "path": "Harry.Potter.And.The.Deathly.Hallows.Part.2.2011.1080p.BluRay.x264-GRP.mkv",
+    "note": "synthetic. guessit sets `Part.2` aside from the title; TMDB writes it `: Part 2`",
+    "expect": {
+      "status": "matched",
+      "tmdb": 12445,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Harry.Potter.And.The.Deathly.Hallows.Part.1.2010.1080p.BluRay.x264-GRP.mkv",
+    "expect": {
+      "status": "matched",
+      "tmdb": 12444,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Harry.Potter.And.The.Deathly.Hallows.Part.2.1080p.BluRay.x264-GRP.mkv",
+    "note": "synthetic. no year: only the part tells the two films apart",
+    "expect": {
+      "status": "matched",
+      "tmdb": 12445,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Harry.Potter.And.The.Deathly.Hallows.Part.2.2010.1080p.BluRay.x264-GRP.mkv",
+    "note": "synthetic. the number says Part 2, the year says Part 1: a human decides",
+    "expect": {
+      "status": "review"
+    }
+  },
+  {
+    "path": "Harry.Potter.And.The.Deathly.Hallows.Part.3.2011.1080p.BluRay.x264-GRP.mkv",
+    "note": "synthetic. there is no Part 3",
+    "expect": {
+      "status": "review"
+    }
+  },
+  {
     "path": "Better.Call.Saul.S01/Better Call Saul S01 WEB-DL x264-FUM[ettv]/Better.Call.Saul.S01E06.Five-O.WEB-DL.x264-FUM.mp4",
     "language": "fr",
     "note": "from a real library",

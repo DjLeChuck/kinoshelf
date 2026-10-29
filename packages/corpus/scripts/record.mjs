@@ -1,8 +1,12 @@
 // Records the TMDB responses the corpus needs into data/recordings.json, trimmed to the fields
 // Kinoshelf reads (search results, alternative titles, seasons). Run with
 // `pnpm corpus:record` (needs TMDB_API_KEY in .env, and a build). It prints counts only,
-// never a URL: with a v3 key the URL carries the key.
+// never a URL: with a v3 key the URL carries the key. Only what is not recorded yet is fetched, so
+// adding entries does not rewrite the rest of the file; `--refresh` records everything again
+// (TMDB's data drifts, so that rewrites much of it).
 import { readFile, writeFile } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
+import { format, resolveConfig } from 'prettier';
 import { TmdbProvider } from '@kinoshelf/provider-tmdb';
 import { Matcher, GuessitParser } from '@kinoshelf/core';
 import { aliasesOf } from '../dist/run.js';
@@ -15,7 +19,11 @@ if (!key) {
 
 const data = new URL('../data/', import.meta.url);
 const entries = JSON.parse(await readFile(new URL('corpus.json', data), 'utf8'));
-const recordings = {};
+const refresh = process.argv.includes('--refresh');
+const recordings = refresh
+  ? {}
+  : JSON.parse(await readFile(new URL('recordings.json', data), 'utf8').catch(() => '{}'));
+let fetched = 0;
 
 const keyOf = (url) => {
   const query = new URLSearchParams(url.searchParams);
@@ -26,6 +34,11 @@ const keyOf = (url) => {
 
 const recording = async (input, init) => {
   const url = new URL(input instanceof Request ? input.url : input);
+  const known = recordings[keyOf(url)];
+  if (known) {
+    return new Response(known.body, { status: known.status });
+  }
+  fetched++;
   const response = await fetch(url, init);
   const body = await response.text();
   if (response.status === 200 || response.status === 404) {
@@ -118,7 +131,13 @@ for (const entry of entries) {
 const sorted = Object.fromEntries(
   Object.entries(recordings).sort(([a], [b]) => a.localeCompare(b)),
 );
-await writeFile(new URL('recordings.json', data), `${JSON.stringify(sorted, null, 1)}\n`);
+// Written the way `pnpm format` would, so recording leaves nothing for it to rewrite afterwards.
+const file = new URL('recordings.json', data);
+const path = fileURLToPath(file);
+await writeFile(
+  file,
+  await format(JSON.stringify(sorted, null, 1), { ...(await resolveConfig(path)), filepath: path }),
+);
 console.log(
-  `recorded ${Object.keys(sorted).length} distinct responses for ${entries.length} entries`,
+  `recorded ${Object.keys(sorted).length} distinct responses for ${entries.length} entries (${fetched} fetched)`,
 );
