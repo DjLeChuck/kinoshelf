@@ -38,6 +38,7 @@ import {
   renderUndo,
 } from './render.js';
 import { resolveSettings, type CommonOptions } from './settings.js';
+import { runSubmit } from './submit.js';
 
 export interface Io {
   out(line: string): void;
@@ -51,6 +52,8 @@ export interface CliDeps {
   readonly io: Io;
   /** Replaces TMDB, for tests. */
   readonly createProvider?: (options: { language: string; cache: HttpCache }) => MetadataProvider;
+  /** Replaces the network for `submit`, for tests. */
+  readonly fetch?: typeof fetch;
   /** Replaces the clock, so a test can age files without waiting. */
   readonly now?: () => number;
 }
@@ -324,6 +327,18 @@ function buildProgram(context: Context, exit: { code: number }): Command {
     .exitOverride()
     .action((batch: string | undefined, options: { apply?: boolean }) =>
       act(() => runUndo(batch, options, context))(),
+    );
+
+  program
+    .command('submit')
+    .description(t('help.submit'))
+    .argument('<path>', t('help.arg.path'))
+    .option('--url <url>', t('help.opt.url'))
+    .option('--apply', t('help.opt.submit-apply'))
+    .option('--json', t('help.opt.json'))
+    .exitOverride()
+    .action((path: string, options: { url?: string; apply?: boolean; json?: boolean }) =>
+      act(() => runSubmit(path, options, context))(),
     );
 
   program
