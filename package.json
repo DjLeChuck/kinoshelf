@@ -12,7 +12,7 @@
   "scripts": {
     "build": "tsc -b",
     "typecheck": "tsc -b && tsc -p tsconfig.check.json && pnpm --filter @kinoshelf/web check",
-    "lint": "eslint .",
+    "lint": "pnpm build && eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "pnpm build && vitest run",
