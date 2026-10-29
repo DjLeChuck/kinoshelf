@@ -11,6 +11,7 @@ import {
   batchSummarySchema,
   candidateSchema,
   classificationValues,
+  aliasSchema,
   entrySchema,
   errorSchema,
   executionReportSchema,
@@ -22,6 +23,7 @@ import {
   previewSchema,
   undoSchema,
 } from './schemas.js';
+import type { AliasStore } from './aliases.js';
 import type { Notifier } from './notify/notifier.js';
 import type { Service } from './service.js';
 
@@ -29,6 +31,7 @@ export interface RouteContext {
   readonly jobs: JobStore;
   readonly entries: EntryStore;
   readonly executions: ExecutionStore;
+  readonly aliases: AliasStore;
   readonly service: Service;
   readonly runner: JobRunner;
   readonly notifier: Notifier;
@@ -112,7 +115,7 @@ const emptyBodyByDefault = (
 
 /** Thin HTTP layer: validate, call the store or the service, shape the answer. */
 export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
-  const { jobs, entries, executions, service, runner, notifier, events, history } = ctx;
+  const { jobs, entries, executions, aliases, service, runner, notifier, events, history } = ctx;
   const presentJob = (job: Job): unknown => {
     const latest = executions.latestOf(job.id);
     return {
@@ -267,22 +270,33 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
     (request) => service.search(request.query),
   );
 
-  api.post<{ Params: { id: string }; Body: CandidateBody }>(
+  api.post<{ Params: { id: string }; Body: CandidateBody & { remember?: boolean } }>(
     '/api/queue/:id/match',
     {
       schema: {
         summary: 'Validate a match',
         description:
           'Plans the file with a candidate returned by `GET /api/search`; it overrides the score. ' +
-          'The file ends up `to-rename`, or in `conflict` if its target cannot be used.',
+          'The file ends up `to-rename`, or in `conflict` if its target cannot be used. Unless ' +
+          '`remember` is false, the title of the file is tied to the candidate: later scans match ' +
+          'it alone, and the files waiting in the queue under that title are matched too (an ' +
+          'episode the work does not have stays in the queue).',
         params: idParams,
-        body: matchBodySchema,
+        body: {
+          ...matchBodySchema,
+          properties: {
+            ...matchBodySchema.properties,
+            remember: { type: 'boolean', description: 'Defaults to true' },
+          },
+        },
         response: { 200: entrySchema, 401: errorSchema, 404: errorSchema, 409: errorSchema },
       },
     },
     async (request) => {
-      const entry = await service.match(request.params.id, toCandidate(request.body));
-      events.emit('queue');
+      const entry = await service.match(request.params.id, toCandidate(request.body), {
+        ...(request.body.remember !== undefined && { remember: request.body.remember }),
+      });
+      events.emit('queue', 'settings');
       return presentEntry(entry);
     },
   );
@@ -408,6 +422,44 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
     (request, reply) =>
       history.get(request.params.id) ??
       reply.code(404).send({ error: { code: 'batch.not-found' } }),
+  );
+
+  api.get(
+    '/api/aliases',
+    {
+      schema: {
+        summary: 'The titles Kinoshelf remembers',
+        description:
+          'What validations in the queue taught: a title as files spell it, tied to a work. Later ' +
+          'scans match such a file alone.',
+        response: { 200: { type: 'array', items: aliasSchema }, 401: errorSchema },
+      },
+    },
+    () => aliases.list(),
+  );
+
+  api.delete<{ Params: { id: number } }>(
+    '/api/aliases/:id',
+    {
+      schema: {
+        summary: 'Forget a title',
+        description:
+          'Files already matched keep their match; the next scan reads the title afresh.',
+        params: {
+          type: 'object',
+          required: ['id'],
+          properties: { id: { type: 'integer' } },
+        },
+        response: { 204: { type: 'null' }, 401: errorSchema, 404: errorSchema },
+      },
+    },
+    (request, reply) => {
+      if (!aliases.remove(request.params.id)) {
+        return reply.code(404).send({ error: { code: 'alias.not-found' } });
+      }
+      events.emit('settings');
+      return reply.code(204).send();
+    },
   );
 
   api.post<{ Params: { id: string }; Body?: { dryRun?: boolean } }>(

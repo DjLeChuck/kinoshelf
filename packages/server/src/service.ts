@@ -1,7 +1,9 @@
 import { randomUUID } from 'node:crypto';
 import {
+  aliasKey,
   createPlan,
   loadProfile,
+  Matcher,
   executePlan,
   undoBatch,
   type Candidate,
@@ -13,9 +15,11 @@ import {
   type OperationResult,
   type Plan,
   type PlanItem,
+  type TitleAlias,
   type UndoEntryResult,
 } from '@kinoshelf/core';
 import { ApiError } from './api-error.js';
+import type { AliasStore } from './aliases.js';
 import type { EntryStore, Entry, StoredError } from './entries.js';
 import type { Execution, ExecutionStore } from './executions.js';
 import type { Job, JobStore, PlanSettings } from './jobs.js';
@@ -65,6 +69,7 @@ export interface ServiceDeps extends ProcessorDeps {
   readonly entries: EntryStore;
   readonly executions: ExecutionStore;
   readonly journal: Journal;
+  readonly aliases: AliasStore;
 }
 
 const report = (result: OperationResult): OperationReport => ({
@@ -86,10 +91,9 @@ export class Service {
   constructor(private readonly deps: ServiceDeps) {}
 
   async search(query: SearchQuery): Promise<Candidate[]> {
-    const { config } = this.deps;
-    const language =
-      query.language ?? config.metadataLanguage ?? (config.locale === 'fr' ? 'fr' : 'en-US');
-    const provider: MetadataProvider = makeProvider(this.deps, language);
+    const provider: MetadataProvider = query.language
+      ? makeProvider(this.deps, query.language)
+      : this.provider();
     const search = { title: query.query, ...(query.year !== undefined && { year: query.year }) };
     const [movies, series] = await Promise.all([
       query.kind === 'series' ? [] : provider.searchMovies(search),
@@ -102,11 +106,91 @@ export class Service {
    * A human picked the candidate: it overrides the score. The file is planned like the others,
    * so a name that cannot be built or a destination already taken still lands in conflict.
    */
-  async match(entryId: string, candidate: Candidate): Promise<Entry> {
+  async match(
+    entryId: string,
+    candidate: Candidate,
+    options: { remember?: boolean } = {},
+  ): Promise<Entry> {
     const entry = this.pendingEntry(entryId);
     const item = await this.planWith(entry, candidate);
     this.deps.entries.setMatch(entry.id, classify(item), item);
+    if (options.remember ?? true) {
+      await this.remember(entry, candidate);
+    }
     return this.require(entry.id);
+  }
+
+  /**
+   * Ties the title of the file to the work the human chose, so the next scan decides alone, and
+   * lets the files already waiting under that title follow. Skipped when the choice says nothing
+   * about the title: a file read as an episode but matched with a film would never look it up.
+   */
+  private async remember(entry: Entry, candidate: Candidate): Promise<void> {
+    const { parsed } = entry;
+    const kind =
+      parsed.kind === 'episode' ? 'series' : parsed.kind === 'movie' ? 'movie' : undefined;
+    if (!parsed.title || kind !== candidate.kind || parsed.knownIds?.length) {
+      return;
+    }
+    const alias: TitleAlias = {
+      kind,
+      title: parsed.title,
+      ...(parsed.year !== undefined && { year: parsed.year }),
+      id: candidate.id,
+    };
+    this.deps.aliases.remember(alias, {
+      title: candidate.title,
+      ...(candidate.year !== undefined && { year: candidate.year }),
+    });
+    await this.rematch(aliasKey(alias), entry.id);
+  }
+
+  /**
+   * Gives the undecided files with this alias's title another go, now that it is known. They go
+   * through the matcher like any file, so an episode the work does not have stays in the queue.
+   * One that fails (the provider is down, say) is left as it was: the alias is already saved.
+   */
+  private async rematch(key: string, exceptId: string): Promise<void> {
+    const { config, entries, aliases } = this.deps;
+    const same = entries.undecided().filter(
+      (other) =>
+        other.id !== exceptId &&
+        other.parsed.title !== undefined &&
+        aliasKey({
+          kind: other.parsed.kind === 'episode' ? 'series' : 'movie',
+          title: other.parsed.title,
+          ...(other.parsed.year !== undefined && { year: other.parsed.year }),
+        }) === key &&
+        other.parsed.kind !== 'unknown',
+    );
+    if (same.length === 0) {
+      return;
+    }
+    const matcher = new Matcher(
+      this.provider(),
+      config.threshold !== undefined ? { threshold: config.threshold } : {},
+      aliases,
+    );
+    for (const other of same) {
+      try {
+        const outcome = await matcher.match(other.parsed);
+        if (outcome.status !== 'matched') {
+          continue;
+        }
+        const item = await this.planWith(other, outcome.best.candidate);
+        entries.setMatch(other.id, classify(item), item);
+      } catch {
+        // See above: not worth failing the validation that taught the alias.
+      }
+    }
+  }
+
+  private provider(): MetadataProvider {
+    const { config } = this.deps;
+    return makeProvider(
+      this.deps,
+      config.metadataLanguage ?? (config.locale === 'fr' ? 'fr' : 'en-US'),
+    );
   }
 
   private async planWith(entry: Entry, candidate: Candidate): Promise<PlanItem> {

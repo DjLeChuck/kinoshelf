@@ -61,8 +61,16 @@ contains no player-specific rule.
   is boosted only if its type, title, season/episode and year agree. If the id designates a
   candidate yet another one scores higher (`Dune (2021) {tmdb-841}`: 841 is the 1984 film), the
   name contradicts itself and nothing is decided automatically. An id absent from the results
-  cannot be verified and is ignored; looking a work up by id (`getMovie`/`getSeries`) is planned
-  later.
+  cannot be verified and is ignored (the provider can look a work up by id, `getMovie`/`getSeries`,
+  but only aliases use it so far).
+- **Aliases** (`title_aliases`, server migration 007): validating a file in the queue ties its title
+  to the chosen work (`Gordon Ramsay Hells Kitchen` → TMDB's `Hell's Kitchen`), unless the user
+  declines (`remember: false`). The `Matcher` takes an optional `AliasLookup`: a title it knows is
+  read as that work, fetched by id with no search, and scored like any candidate, so a season, an
+  episode or a year the work does not have still sends the file to review. A series alias ignores
+  the year, a movie one includes it. Files carrying ids (`knownIds`) skip aliases. A validation
+  also re-matches the undecided files of the same title. Aliases are listed and forgotten in the
+  settings (`GET /api/aliases`, `DELETE /api/aliases/{id}`).
 - `ParsedMedia.country` (`The.Office.US`) is matched against `Candidate.countries` (TMDB gives
   `origin_country` for series only): a bonus on agreement, a penalty when both are known and
   differ, neutral otherwise.

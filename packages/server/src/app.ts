@@ -5,6 +5,7 @@ import type { Database } from 'better-sqlite3';
 import Fastify, { type FastifyInstance } from 'fastify';
 import { ApiError } from './api-error.js';
 import { hasApiKey, isValidApiKey } from './auth.js';
+import { AliasStore } from './aliases.js';
 import { EntryStore } from './entries.js';
 import { EventBus, registerEventRoutes } from './events.js';
 import { ExecutionStore } from './executions.js';
@@ -78,6 +79,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
   const entries = new EntryStore(options.database);
   const executions = new ExecutionStore(options.database);
   const jobs = new JobStore(options.database, entries, executions);
+  const aliases = new AliasStore(options.database);
   const journal = options.journal?.(options.database) ?? new SqliteJournal(options.database);
   const service = new Service({
     ...options,
@@ -85,6 +87,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     entries,
     executions,
     journal,
+    aliases,
   });
   const history = new History(journal, executions, jobs);
   const notifier = new Notifier({
@@ -271,7 +274,17 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
       }),
       ...(options.fetch && { fetch: options.fetch }),
     });
-    registerRoutes(api, { jobs, entries, executions, service, runner, notifier, events, history });
+    registerRoutes(api, {
+      jobs,
+      entries,
+      executions,
+      aliases,
+      service,
+      runner,
+      notifier,
+      events,
+      history,
+    });
     done();
   });
 

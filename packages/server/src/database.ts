@@ -100,6 +100,25 @@ export const SERVER_MIGRATIONS: readonly { readonly name: string; readonly sql: 
     name: 'server:006-execution-failures',
     sql: 'ALTER TABLE executions ADD COLUMN failures TEXT;',
   },
+  {
+    // What a validation taught: a title (as a file spells it) tied to a work. The work's own title
+    // is kept to list the alias without asking the provider.
+    name: 'server:007-title-aliases',
+    sql: `
+      CREATE TABLE title_aliases (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        key TEXT NOT NULL UNIQUE,
+        kind TEXT NOT NULL,
+        title TEXT NOT NULL,
+        year INTEGER,
+        provider TEXT NOT NULL,
+        work_id INTEGER NOT NULL,
+        work_title TEXT NOT NULL,
+        work_year INTEGER,
+        created_at TEXT NOT NULL
+      );
+    `,
+  },
 ];
 
 /** Opens the single SQLite file of the config directory, shared with the CLI and the cache. */

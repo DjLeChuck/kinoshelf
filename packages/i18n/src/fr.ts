@@ -165,6 +165,7 @@ export const fr: Record<keyof typeof en, string> = {
     'Aucune clé d’API n’existe encore. Lancez « kinoshelf-server api-key create » ou définissez KINOSHELF_API_KEY.',
   'error.auth.unauthorized': 'Clé d’API incorrecte, ou session expirée.',
   'error.batch.already-undone': 'Ce lot a déjà été annulé.',
+  'error.alias.not-found': 'Ce titre mémorisé n’existe pas.',
   'error.batch.not-found': 'Ce lot n’existe pas.',
   'error.execution.not-found': 'Ce transfert n’existe pas.',
   'error.image.not-found': 'Cette image n’existe pas.',
@@ -253,6 +254,8 @@ export const fr: Record<keyof typeof en, string> = {
   'web.queue.validate': 'Valider',
   'web.queue.validating': 'Validation…',
   'web.queue.ignore': 'Ignorer',
+  'web.queue.remember':
+    'Mémoriser « {title} » comme cette œuvre : les prochains scans l’apparieront seuls, et les fichiers déjà en attente sous ce titre le sont maintenant.',
   'web.queue.validated': 'Transfert lancé pour {name}.',
   'web.queue.ignored': '{name} mis de côté.',
   'web.history.title': 'Historique',
@@ -368,6 +371,12 @@ export const fr: Record<keyof typeof en, string> = {
   'web.settings.webhooks.test.failed': 'Échec',
   'web.settings.webhooks.test.none':
     'Rien à tester : aucun webhook, Plex ni Jellyfin n’est défini.',
+  'web.settings.aliases.title': 'Titres mémorisés',
+  'web.settings.aliases.hint':
+    'Les titres que vous avez liés à une œuvre dans la file. Un fichier portant l’un de ces titres est apparié seul ; en oublier un n’agit que sur les prochains scans.',
+  'web.settings.aliases.empty': 'Rien n’est mémorisé pour l’instant.',
+  'web.settings.aliases.forget': 'Oublier',
+  'web.settings.aliases.forget.label': 'Oublier « {title} »',
   'web.settings.access.title': 'Clé d’API',
   'web.settings.access.env':
     'La clé vient de KINOSHELF_API_KEY : changez la variable pour la remplacer.',

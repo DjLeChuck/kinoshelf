@@ -133,6 +133,29 @@ export const matchBodySchema = {
   properties: candidateSchema.properties,
 } as const;
 
+export const aliasSchema = {
+  type: 'object',
+  required: ['id', 'kind', 'title', 'work', 'createdAt'],
+  properties: {
+    id: { type: 'integer' },
+    kind: { type: 'string', enum: ['movie', 'series'] },
+    /** The title as files spell it. */
+    title: { type: 'string' },
+    /** Only for a film: the same title names several, told apart by year. */
+    year: { type: 'integer' },
+    work: {
+      type: 'object',
+      required: ['id', 'title'],
+      properties: {
+        id: candidateProperties.id,
+        title: { type: 'string' },
+        year: { type: 'integer' },
+      },
+    },
+    createdAt: { type: 'string', format: 'date-time' },
+  },
+} as const;
+
 export const entrySchema = {
   type: 'object',
   required: [

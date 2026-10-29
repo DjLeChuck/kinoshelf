@@ -171,6 +171,18 @@ export class EntryStore {
       .map(toEntry);
   }
 
+  /** Files nothing decided yet (no candidate was convincing, or none found), across all jobs. */
+  undecided(): Entry[] {
+    return this.database
+      .prepare<[], EntryRow>(
+        `SELECT ${COLUMNS} FROM job_entries
+         WHERE classification IN ('ambiguous', 'unrecognized') AND resolution IS NULL
+         ORDER BY seq`,
+      )
+      .all()
+      .map(toEntry);
+  }
+
   summary(jobId: string): JobSummary {
     const summary: JobSummary = {
       compliant: 0,

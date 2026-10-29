@@ -163,6 +163,7 @@ export const en = {
     'No API key exists yet. Run “kinoshelf-server api-key create”, or set KINOSHELF_API_KEY.',
   'error.auth.unauthorized': 'Wrong API key, or your session has expired.',
   'error.batch.already-undone': 'This batch was already undone.',
+  'error.alias.not-found': 'This remembered title does not exist.',
   'error.batch.not-found': 'This batch does not exist.',
   'error.execution.not-found': 'This transfer does not exist.',
   'error.image.not-found': 'This image does not exist.',
@@ -249,6 +250,8 @@ export const en = {
   'web.queue.validate': 'Validate',
   'web.queue.validating': 'Validating…',
   'web.queue.ignore': 'Ignore',
+  'web.queue.remember':
+    'Remember “{title}” as this work: the next scans match it alone, and the files already waiting under that title are matched now.',
   'web.queue.validated': 'Transfer started for {name}.',
   'web.queue.ignored': '{name} set aside.',
   'web.history.title': 'History',
@@ -362,6 +365,12 @@ export const en = {
   'web.settings.webhooks.test.ok': 'Reached',
   'web.settings.webhooks.test.failed': 'Failed',
   'web.settings.webhooks.test.none': 'Nothing to test: no webhook, Plex or Jellyfin is set.',
+  'web.settings.aliases.title': 'Remembered titles',
+  'web.settings.aliases.hint':
+    'Titles you tied to a work in the queue. A file with one of these titles is matched alone; forgetting one only affects the next scans.',
+  'web.settings.aliases.empty': 'Nothing remembered yet.',
+  'web.settings.aliases.forget': 'Forget',
+  'web.settings.aliases.forget.label': 'Forget “{title}”',
   'web.settings.access.title': 'API key',
   'web.settings.access.env':
     'The key comes from KINOSHELF_API_KEY: change the variable to replace it.',

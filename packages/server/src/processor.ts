@@ -11,6 +11,7 @@ import {
   type MetadataProvider,
 } from '@kinoshelf/core';
 import { SqliteHttpCache, TmdbProvider } from '@kinoshelf/provider-tmdb';
+import { AliasStore } from './aliases.js';
 import type { Job, ProcessedJob } from './jobs.js';
 
 export interface ProcessorDeps {
@@ -48,6 +49,8 @@ export function createProcessor(deps: ProcessorDeps): (job: Job) => Promise<Proc
       profile: settings.profile,
       destinationRoot: settings.destinations,
       mode: settings.mode,
+      // What a validation taught applies to every later scan.
+      aliases: new AliasStore(deps.database),
       ...(settings.threshold !== undefined && { matching: { threshold: settings.threshold } }),
     });
     return {

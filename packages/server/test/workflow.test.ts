@@ -1,8 +1,10 @@
 import { readdir, readFile, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
+import Database from 'better-sqlite3';
 import { SqliteJournal } from '@kinoshelf/core';
 import { buildApp } from '../src/app.js';
+import { migrated } from '../src/database.js';
 import { createProcessor } from '../src/processor.js';
 import { cleanup, fakeProvider, harness, makeDir, put, track, type Harness } from './harness.js';
 
@@ -299,7 +301,7 @@ describe('a queue that is busy', () => {
     const real = createProcessor({
       config,
       configDir: '/nonexistent',
-      database: undefined as never, // only a real TMDB provider reads it
+      database: migrated(new Database(':memory:')), // the aliases are read from it
       env: {},
       createProvider: () => fakeProvider,
     });
@@ -448,7 +450,7 @@ describe('apply jobs', () => {
     const real = createProcessor({
       config,
       configDir: '/nonexistent',
-      database: undefined as never,
+      database: migrated(new Database(':memory:')),
       env: {},
       createProvider: () => fakeProvider,
     });
