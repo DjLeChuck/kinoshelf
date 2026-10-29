@@ -26,7 +26,6 @@ export const API_ERROR_CODES = [
   'image.not-found',
   'image.unavailable',
   'internal.unexpected',
-  'job.busy',
   'job.not-done',
   'job.not-found',
   'queue.entry-not-found',

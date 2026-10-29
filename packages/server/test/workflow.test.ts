@@ -315,7 +315,7 @@ describe('a queue that is busy', () => {
     return { h, release, destination };
   }
 
-  it('refuses a second transfer of the same job while one is queued, and accepts it afterwards', async () => {
+  it('queues a second transfer of the same job behind the first rather than refusing it', async () => {
     const { h, release } = await busyHarness();
     const { jobId } = await analyzed(h);
     await h.request('POST', '/api/jobs', { path: '/blocked' }); // the runner now waits on it
@@ -323,8 +323,8 @@ describe('a queue that is busy', () => {
     const first = await h.request('POST', `/api/plans/${jobId}/execute`);
     const second = await h.request('POST', `/api/plans/${jobId}/execute`);
     expect(first.statusCode).toBe(202);
-    expect(second.statusCode).toBe(409);
-    expect(second.json()).toEqual({ error: { code: 'job.busy' } });
+    expect(second.statusCode).toBe(202);
+    expect(second.json<{ id: string }>().id).not.toBe(first.json<{ id: string }>().id);
 
     // Checking what a transfer would do is not a transfer: allowed meanwhile.
     expect(
@@ -333,7 +333,14 @@ describe('a queue that is busy', () => {
 
     release();
     await h.app.jobs.idle();
-    expect((await h.request('POST', `/api/plans/${jobId}/execute`)).statusCode).toBe(202);
+    const [a, b] = await Promise.all(
+      [first, second].map((r) =>
+        h.request('GET', `/api/executions/${r.json<{ id: string }>().id}`),
+      ),
+    );
+    // The first took the file; the second found nothing left to do, so nothing was copied twice.
+    expect(a?.json()).toMatchObject({ status: 'done', summary: { done: 1, failed: 0 } });
+    expect(b?.json()).toMatchObject({ status: 'done', summary: { done: 0, failed: 0 } });
   });
 
   it('refuses a transfer of a job that is still being analyzed', async () => {

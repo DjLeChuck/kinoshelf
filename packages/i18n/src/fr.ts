@@ -171,7 +171,6 @@ export const fr: Record<keyof typeof en, string> = {
   'error.image.unavailable': 'Impossible de récupérer l’image depuis TMDB.',
   'error.internal.unexpected':
     'Une erreur est survenue sur le serveur. Consultez son journal pour les détails.',
-  'error.job.busy': 'Un transfert est déjà en attente ou en cours pour ce travail.',
   'error.job.not-done': 'L’analyse de ce travail n’est pas terminée ({status}).',
   'error.job.not-found': 'Ce travail n’existe pas.',
   'error.queue.entry-not-found': 'Ce fichier n’est plus dans la file.',

@@ -149,16 +149,13 @@ export class Service {
   }
 
   /**
-   * Queues the transfer: a copy can last minutes, longer than a request should. One at a time per
-   * job: a second would copy the same files again, for nothing.
+   * Queues the transfer: a copy can last minutes, longer than a request should. Transfers of one
+   * job wait their turn rather than being refused: a file validated while another copy runs must
+   * not be left matched and never transferred.
    */
   enqueue(jobId: string, entryIds?: readonly string[]): Execution {
     this.requireDoneJob(jobId);
-    const execution = this.deps.executions.createIfIdle(jobId, entryIds);
-    if (!execution) {
-      throw new ApiError(409, 'job.busy');
-    }
-    return execution;
+    return this.deps.executions.create(jobId, entryIds);
   }
 
   /**

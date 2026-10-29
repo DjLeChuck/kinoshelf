@@ -120,9 +120,7 @@
     busy = true;
     failure = undefined;
     try {
-      const outcome = await validate(entry, selected, api.post, {
-        isBusy: (error) => error instanceof ApiError && error.code === 'job.busy',
-      });
+      const outcome = await validate(entry, selected, api.post);
       if (outcome.status === 'conflict') {
         refused = outcome.entry.conflicts;
       } else {

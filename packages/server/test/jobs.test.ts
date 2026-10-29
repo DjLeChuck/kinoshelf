@@ -195,7 +195,7 @@ describe('JobRunner', () => {
     );
     jobs.create('/a');
     jobs.create('/b');
-    executions.createIfIdle('job-x');
+    executions.create('job-x');
     runner.kick();
     await runner.idle();
     expect(order).toEqual(['transfer job-x', 'analyze /a', 'analyze /b']);
@@ -205,21 +205,21 @@ describe('JobRunner', () => {
     const { jobs, executions } = newQueue();
     const job = jobs.create('/a');
     expect(jobs.claimNext()?.id).toBe(job.id); // the previous process died here...
-    const execution = executions.createIfIdle('job-x');
-    expect(executions.claimNext()?.id).toBe(execution?.id); // ...and here
+    const execution = executions.create('job-x');
+    expect(executions.claimNext()?.id).toBe(execution.id); // ...and here
     expect(jobs.get(job.id)?.status).toBe('running');
-    expect(executions.get(execution?.id ?? '')?.status).toBe('running');
+    expect(executions.get(execution.id)?.status).toBe('running');
 
     const runner = new JobRunner(jobs, executions, () => Promise.resolve(empty), idle);
     runner.start();
     await runner.idle();
     expect(jobs.get(job.id)?.status).toBe('done');
-    expect(executions.get(execution?.id ?? '')?.status).toBe('done');
+    expect(executions.get(execution.id)?.status).toBe('done');
   });
 
   it('records a failed transfer with its error and goes on', async () => {
     const { jobs, executions } = newQueue();
-    const execution = executions.createIfIdle('job-x');
+    const execution = executions.create('job-x');
     jobs.create('/a');
     const runner = new JobRunner(
       jobs,
@@ -229,7 +229,7 @@ describe('JobRunner', () => {
     );
     runner.kick();
     await runner.idle();
-    expect(executions.get(execution?.id ?? '')).toMatchObject({
+    expect(executions.get(execution.id)).toMatchObject({
       status: 'failed',
       error: { code: 'internal.unexpected', params: { message: 'disk on fire' } },
     });
@@ -239,7 +239,7 @@ describe('JobRunner', () => {
   it('does not let a failing notification fail the task it reports on', async () => {
     const { jobs, executions } = newQueue();
     const job = jobs.create('/a');
-    const execution = executions.createIfIdle(job.id);
+    const execution = executions.create(job.id);
     const errors: unknown[] = [];
     const boom = (): never => {
       throw new Error('notifier is down');
@@ -256,17 +256,17 @@ describe('JobRunner', () => {
     await runner.idle();
 
     expect(jobs.get(job.id)?.status).toBe('done');
-    expect(executions.get(execution?.id ?? '')?.status).toBe('done');
+    expect(executions.get(execution.id)?.status).toBe('done');
     expect(errors).toHaveLength(2); // both reported, none thrown
   });
 
-  it('refuses a second pending execution for a job, but not for another', () => {
+  it('queues several executions for a job and runs them in order', () => {
     const { executions } = newQueue();
-    expect(executions.createIfIdle('job-x')).toBeDefined();
-    expect(executions.createIfIdle('job-x')).toBeUndefined();
-    expect(executions.createIfIdle('job-y')).toBeDefined();
-    executions.claimNext();
-    expect(executions.createIfIdle('job-x')).toBeUndefined(); // running still counts
+    const first = executions.create('job-x');
+    const second = executions.create('job-x');
+    expect(executions.claimNext()?.id).toBe(first.id);
+    expect(executions.create('job-x').status).toBe('queued'); // one is running: still accepted
+    expect(executions.claimNext()?.id).toBe(second.id);
   });
 
   it('starts no task once stopped, and leaves none half claimed', async () => {

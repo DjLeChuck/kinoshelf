@@ -138,37 +138,20 @@ export type ValidateOutcome =
   /** The plan refused the choice (target taken, name not buildable): the file stays in the queue. */
   | { readonly status: 'conflict'; readonly entry: QueueEntry };
 
-interface ValidateOptions {
-  /** Attempts at queuing the transfer while another one of the same job is running. */
-  readonly attempts?: number;
-  readonly delayMs?: number;
-  readonly isBusy?: (error: unknown) => boolean;
-}
-
 /**
  * The two steps of "Validate": match the file with the chosen candidate (it leaves the queue),
- * then queue the transfer of that file alone. A transfer is one at a time per job, so a busy job
- * is waited for: giving up would leave a matched file nobody lists any more.
+ * then queue the transfer of that file alone. The server queues it behind any transfer of the same
+ * job, so a matched file is never left without one.
  */
 export async function validate(
   entry: QueueEntry,
   candidate: Candidate,
   post: Post,
-  { attempts = 8, delayMs = 1000, isBusy = () => false }: ValidateOptions = {},
 ): Promise<ValidateOutcome> {
   const matched = await post<QueueEntry>(`/api/queue/${entry.id}/match`, toMatchBody(candidate));
   if (matched.classification !== 'to-rename') {
     return { status: 'conflict', entry: matched };
   }
-  for (let attempt = 1; ; attempt++) {
-    try {
-      await post(`/api/plans/${entry.jobId}/execute`, { entries: [entry.id] });
-      return { status: 'started' };
-    } catch (error) {
-      if (!isBusy(error) || attempt >= attempts) {
-        throw error;
-      }
-      await new Promise((resolve) => setTimeout(resolve, delayMs));
-    }
-  }
+  await post(`/api/plans/${entry.jobId}/execute`, { entries: [entry.id] });
+  return { status: 'started' };
 }

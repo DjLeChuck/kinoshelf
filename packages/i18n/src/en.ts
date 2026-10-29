@@ -168,7 +168,6 @@ export const en = {
   'error.image.not-found': 'This image does not exist.',
   'error.image.unavailable': 'The image could not be fetched from TMDB.',
   'error.internal.unexpected': 'Something went wrong on the server. See its log for details.',
-  'error.job.busy': 'A transfer is already queued or running for this job.',
   'error.job.not-done': 'This job has not finished its analysis yet ({status}).',
   'error.job.not-found': 'This job does not exist.',
   'error.queue.entry-not-found': 'This file is not in the queue any more.',

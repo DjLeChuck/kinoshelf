@@ -71,30 +71,17 @@ export class ExecutionStore {
   constructor(private readonly database: Database) {}
 
   /**
-   * Queues an execution unless one is already queued or running for the job, which would copy the
-   * same files twice. Check and insert are one transaction.
+   * Several can wait for the same job: the worker runs them one at a time, and each only takes the
+   * files still executable when its turn comes, so none is copied twice.
    */
-  createIfIdle(jobId: string, entryIds?: readonly string[]): Execution | undefined {
-    return this.database.transaction((): Execution | undefined => {
-      if (this.hasPending(jobId)) {
-        return undefined;
-      }
-      const id = randomUUID();
-      this.database
-        .prepare(
-          "INSERT INTO executions (id, job_id, status, entry_ids, created_at) VALUES (?, ?, 'queued', ?, ?)",
-        )
-        .run(id, jobId, entryIds ? JSON.stringify(entryIds) : null, new Date().toISOString());
-      return this.require(id);
-    })();
-  }
-
-  hasPending(jobId: string): boolean {
-    return (
-      this.database
-        .prepare("SELECT 1 FROM executions WHERE job_id = ? AND status IN ('queued', 'running')")
-        .get(jobId) !== undefined
-    );
+  create(jobId: string, entryIds?: readonly string[]): Execution {
+    const id = randomUUID();
+    this.database
+      .prepare(
+        "INSERT INTO executions (id, job_id, status, entry_ids, created_at) VALUES (?, ?, 'queued', ?, ?)",
+      )
+      .run(id, jobId, entryIds ? JSON.stringify(entryIds) : null, new Date().toISOString());
+    return this.require(id);
   }
 
   get(id: string): Execution | undefined {

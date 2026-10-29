@@ -150,31 +150,11 @@ describe('validate', () => {
     expect(calls).toHaveLength(1);
   });
 
-  it('waits for a busy job rather than leaving a matched file behind', async () => {
-    const busy = new Error('busy');
-    let executes = 0;
-    const { post } = recorder((url) => {
-      if (url.includes('/match')) {
-        return entry({ classification: 'to-rename' });
-      }
-      return ++executes < 3 ? busy : {};
-    });
-    const options = { delayMs: 0, isBusy: (error: unknown) => error === busy };
-    expect(await validate(entry(), dune, post, options)).toEqual({ status: 'started' });
-    expect(executes).toBe(3);
-  });
-
-  it('gives the error back once the attempts are spent, or at once if it is not a busy job', async () => {
-    const busy = new Error('busy');
+  it('gives the error back when the transfer cannot be queued', async () => {
+    const failure = new Error('down');
     const { post } = recorder((url) =>
-      url.includes('/match') ? entry({ classification: 'to-rename' }) : busy,
+      url.includes('/match') ? entry({ classification: 'to-rename' }) : failure,
     );
-    const options = { attempts: 2, delayMs: 0 };
-    await expect(validate(entry(), dune, post, { ...options, isBusy: () => true })).rejects.toBe(
-      busy,
-    );
-    await expect(validate(entry(), dune, post, { ...options, isBusy: () => false })).rejects.toBe(
-      busy,
-    );
+    await expect(validate(entry(), dune, post)).rejects.toBe(failure);
   });
 });

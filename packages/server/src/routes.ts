@@ -332,8 +332,8 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
           'The plan of a job is the set of its matched files not transferred yet; its id is the ' +
           "job's. With `dryRun`, every precondition is checked, nothing is written and the report " +
           'comes back at once (200). Otherwise the transfer is queued (202): poll the execution ' +
-          'until it is `done` or `failed`. One at a time per job: another request while one is ' +
-          'queued or running is refused (409 `job.busy`). A destination that exists is never ' +
+          'until it is `done` or `failed`. Transfers run one at a time: a request made while another ' +
+          'is queued or running waits its turn. A destination that exists is never ' +
           'overwritten, and hardlink never falls back to copy.',
         params: idParams,
         body: {

@@ -33,10 +33,10 @@ describe('request', () => {
 
   it('turns an error answer into an ApiError with its code and parameters', async () => {
     const fetcher = () =>
-      Promise.resolve(json(409, { error: { code: 'job.busy', params: { status: 'running' } } }));
+      Promise.resolve(json(409, { error: { code: 'job.not-done', params: { status: 'running' } } }));
     await expect(request('POST', '/api/x', undefined, fetcher)).rejects.toMatchObject({
       status: 409,
-      code: 'job.busy',
+      code: 'job.not-done',
       params: { status: 'running' },
     });
   });

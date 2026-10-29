@@ -129,7 +129,7 @@ export class JobStore {
         .prepare("UPDATE jobs SET status = 'done', finished_at = ?, settings = ? WHERE id = ?")
         .run(new Date().toISOString(), JSON.stringify(processed.settings), job.id);
       if (job.apply) {
-        this.executions.createIfIdle(job.id);
+        this.executions.create(job.id);
       }
     })();
   }
