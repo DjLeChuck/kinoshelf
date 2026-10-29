@@ -87,6 +87,54 @@ webhook (`generic`, `gotify`, `ntfy`, `discord`) is told what happened. If the m
 the folders under other paths, map them with `paths: [{ from, to }]`. Check the setup without
 starting the server: `kinoshelf-server notify test`.
 
+### Getting downloads in
+
+Kinoshelf never polls a download folder: a file that stopped growing may be a finished download or
+a dead torrent, and the disk cannot tell. Three ways instead, from the most to the least precise.
+
+**1. Let the client say it is done.** Run `kinoshelf submit <path>` (or `POST /api/jobs`) from the
+client's "on completion" hook. It reads `KINOSHELF_API_KEY` and `KINOSHELF_URL` (default
+`http://localhost:8484`) from the environment, so a secret never sits in a command line; `--apply`
+also transfers what is matched with confidence.
+
+| Client       | Where                                                  | Command                                                                                                |
+| ------------ | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------ |
+| qBittorrent  | Options › Downloads › Run external program on finished | `kinoshelf submit "%F"`                                                                                |
+| Transmission | `script-torrent-done-filename` (a script)              | `kinoshelf submit "$TR_TORRENT_DIR/$TR_TORRENT_NAME"`                                                  |
+| Deluge       | Execute plugin, event _Torrent Complete_               | `kinoshelf submit "$3/$2"` (save path, torrent name)                                                   |
+| SABnzbd      | post-processing script                                 | `kinoshelf submit "$1"` (final folder)                                                                 |
+| rTorrent     | `.rtorrent.rc`                                         | `method.set_key = event.download.finished,kinoshelf,"execute.throw.bg=kinoshelf,submit,$d.base_path="` |
+
+When the client runs elsewhere (another container), it has no `kinoshelf` command: make the same
+call with `curl -fsS -X POST http://kinoshelf:8484/api/jobs -H "Authorization: Bearer $KEY" -H
+'content-type: application/json' -d '{"path": "/downloads/Dune.2021.mkv"}'`. Either way **the path
+is read by Kinoshelf**: mount the downloads at the same path in both containers.
+
+**2. Watch the folder downloads end up in, with the incomplete ones kept elsewhere.** This only
+works if your client writes unfinished downloads **outside** the watched folder, which it does not
+do by default: enable qBittorrent's "Keep incomplete torrents in" (or Transmission's incomplete
+folder) and set it to a different folder than "Save files to location" (Transmission's download
+folder). A download moves to the final folder only once it is complete, and that final folder is the
+one to watch. Without this, a stalled torrent and a finished one look the same in it.
+
+```yaml
+watch:
+  folders: [/downloads/complete]
+  settleSeconds: 30 # a release is submitted once none of its files changed for this long
+  pollSeconds: 0 # 0 listens for changes (no disk reads); 120 scans every 2 minutes
+  apply: false # true also transfers what is matched with confidence
+```
+
+The kernel's change notifications only wake a scan, which then decides whether a release is
+complete: all its files stable, none still named `.!qB`, `.part` and the like. A release is
+submitted once; a file that is replaced is submitted again. Network shares (NFS, SMB) announce no
+change, so give them a `pollSeconds`. What is already in the folder when watching starts is
+submitted too. Prefer the `hardlink` or `copy` mode: `move` takes the file from under its torrent.
+
+**3. Ask by hand.** The validation queue has a **Check now** button that scans the watched folders
+without waiting for files to settle (`POST /api/watch/scan`, `GET /api/watch`). It is greyed out
+while no folder is watched.
+
 ## Web UI
 
 The server also serves a web UI on the same port (`http://localhost:8484`), in French or English

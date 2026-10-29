@@ -6,8 +6,8 @@ renames them for a media player (Plex, Jellyfin) and writes their metadata (NFO,
 ## Where we are
 
 v0.1 (core, CLI and matching corpus) and v0.2 (REST server, notifications, multi-arch Docker image)
-are done, except the folder watcher, postponed: scripts submit files through `POST /api/jobs`. The
-web UI (v0.3) is next.
+are done. Getting downloads in is decided (see "Getting downloads in" below). The web UI (v0.3) is
+next.
 
 ## Golden rules
 
@@ -90,6 +90,27 @@ contains no player-specific rule.
 - Each user provides their own TMDB key; none is ever embedded. Put it in `.env` (git-ignored) as
   `TMDB_API_KEY`; never read or print it. `pnpm test:live` runs the contract tests against the
   real API.
+
+## Getting downloads in
+
+Kinoshelf **never polls a live download folder**: a stalled torrent and a finished one look the same
+on disk, so no heuristic (stable size, suffix) is trusted to decide. Three entry points, all ending
+in the same job queue:
+
+- `kinoshelf submit <path>` (`packages/cli/src/submit.ts`), meant for a client's on-completion hook:
+  `POST /api/jobs` with `KINOSHELF_API_KEY` / `KINOSHELF_URL` from the environment (no key on the
+  command line). Recipes per client are in the README.
+- `FolderWatcher` (`packages/server/src/watcher.ts`, `watch:` in `config.yaml`, `GET /api/watch`): for
+  a folder that **only holds finished downloads**. `fs.watch` (inotify) only wakes a scan; the scan
+  judges completeness (every file unchanged for `settleSeconds`, no `.!qB`/`.part`-style suffix) and
+  submits a release (a folder under the watched one, or a loose file) once, remembered in
+  `watched_files` (migration 008, keyed by path, size and date). `pollSeconds > 0` replaces events
+  for network shares; if events cannot be had it falls back to a minute-long poll and logs it.
+- A manual **Check now** (`POST /api/watch/scan`, which skips the settling time but never an
+  incomplete suffix) in the queue page, greyed out when no folder is watched.
+
+Backlog, not built: reading completion from the client's own API (qBittorrent, Transmission), which
+would need one plugin per client. Watching the raw download folder stays out by design.
 
 ## CLI and i18n
 
