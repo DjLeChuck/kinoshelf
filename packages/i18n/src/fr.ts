@@ -352,6 +352,7 @@ export const fr: Record<keyof typeof en, string> = {
   'web.settings.remove': 'Retirer',
   'web.settings.general.title': 'TMDB et langues',
   'web.settings.tmdb.status.env': 'Clé définie par TMDB_API_KEY.',
+  'web.settings.nav.label': 'Sur cette page',
   'web.settings.tmdb.status.file': 'Clé enregistrée dans config.yaml.',
   'web.settings.tmdb.status.none': 'Pas encore de clé : rien ne peut être identifié.',
   'web.settings.tmdb.key': 'Nouvelle clé TMDB',

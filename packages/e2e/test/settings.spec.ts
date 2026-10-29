@@ -112,3 +112,40 @@ test('says where the API key comes from, and leaves it alone when a variable set
   await expect(section.getByText('The key comes from KINOSHELF_API_KEY')).toBeVisible();
   await expect(section.getByRole('button', { name: 'Replace the API key' })).toHaveCount(0);
 });
+
+test('jumps to a section from the side menu and follows the scroll', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 1000 });
+  const menu = page.getByRole('navigation', { name: 'On this page' });
+  await expect(menu.getByRole('button', { name: 'TMDB & languages' })).toHaveAttribute(
+    'aria-current',
+    'true',
+  );
+
+  await menu.getByRole('button', { name: 'Webhooks' }).click();
+  await expect(page.getByRole('heading', { name: 'Webhooks', exact: true })).toBeInViewport();
+  await expect(menu.getByRole('button', { name: 'Webhooks' })).toHaveAttribute(
+    'aria-current',
+    'true',
+  );
+
+  // Webhooks is too near the end to reach the top: the highlight must stay on it once the scroll
+  // is over, not move to the sections crossed or to the last one.
+  await expect
+    .poll(async () => {
+      const before = await page.evaluate('window.scrollY');
+      await page.waitForTimeout(200);
+      return before === (await page.evaluate('window.scrollY'));
+    })
+    .toBe(true);
+  await expect(menu.getByRole('button', { name: 'Webhooks' })).toHaveAttribute(
+    'aria-current',
+    'true',
+  );
+  await expect(menu.locator('[aria-current]')).toHaveCount(1);
+
+  await page.keyboard.press('Home');
+  await expect(menu.getByRole('button', { name: 'TMDB & languages' })).toHaveAttribute(
+    'aria-current',
+    'true',
+  );
+});

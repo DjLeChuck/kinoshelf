@@ -345,6 +345,7 @@ export const en = {
   'web.settings.remove': 'Remove',
   'web.settings.general.title': 'TMDB & languages',
   'web.settings.tmdb.status.env': 'Key set by TMDB_API_KEY.',
+  'web.settings.nav.label': 'On this page',
   'web.settings.tmdb.status.file': 'Key stored in config.yaml.',
   'web.settings.tmdb.status.none': 'No key yet: nothing can be identified.',
   'web.settings.tmdb.key': 'New TMDB key',
