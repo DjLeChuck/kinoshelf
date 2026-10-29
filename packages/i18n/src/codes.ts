@@ -5,6 +5,9 @@
 export const CLI_ERROR_CODES = [
   'cleanup.no-folder',
   'config.invalid-value',
+  'submit.no-api-key',
+  'submit.rejected',
+  'submit.unreachable',
   'undo.batch-already-undone',
   'undo.batch-not-found',
 ] as const;
@@ -41,6 +44,7 @@ export const API_ERROR_CODES = [
   'settings.api-key-from-env',
   'settings.webhook-not-found',
   'settings.webhook-url-required',
+  'watch.not-configured',
 ] as const;
 
 export type ApiErrorCode = (typeof API_ERROR_CODES)[number];

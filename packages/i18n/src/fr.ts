@@ -147,6 +147,14 @@ export const fr: Record<keyof typeof en, string> = {
     'L’âge minimum est de {min} heure : un fichier plus récent est peut-être en cours de copie.',
   'error.cleanup.no-folder':
     'Indiquez le ou les dossiers à parcourir, ou définissez « destination » dans {path}.',
+  'help.submit':
+    'Met un fichier ou un dossier en file d’attente sur un serveur en marche (pour le script de fin de téléchargement d’un client).',
+  'help.opt.url': 'adresse du serveur (par défaut : KINOSHELF_URL, sinon localhost)',
+  'help.opt.submit-apply': 'transfère aussi les fichiers identifiés avec confiance',
+  'submit.queued': '{path} mis en file d’attente sur {url} (tâche {id}).',
+  'error.submit.no-api-key': 'Définissez KINOSHELF_API_KEY avec la clé d’API du serveur.',
+  'error.submit.unreachable': 'Impossible de joindre le serveur à {url}. Est-il démarré ?',
+  'error.submit.rejected': 'Le serveur a refusé la requête (HTTP {status}).',
   'help.arg.source': 'dossier ou fichier vidéo à analyser',
   'help.arg.path': 'fichier vidéo ou dossier à traiter',
   'help.opt.dest': 'dossier de destination des films et des séries',
@@ -187,6 +195,8 @@ export const fr: Record<keyof typeof en, string> = {
     'La clé d’API est définie par KINOSHELF_API_KEY, qui la remettrait au prochain démarrage. Modifiez plutôt la variable.',
   'error.settings.webhook-not-found': 'Ce webhook n’existe plus. Rechargez les réglages.',
   'error.settings.webhook-url-required': 'Un nouveau webhook a besoin d’une URL.',
+  'error.watch.not-configured':
+    'Aucun dossier n’est surveillé. Configurez-en un dans les réglages.',
   'web.skip-to-content': 'Aller au contenu',
   'web.nav.label': 'Navigation principale',
   'web.nav.queue': 'File',
@@ -224,6 +234,39 @@ export const fr: Record<keyof typeof en, string> = {
   'web.queue.intro':
     'Les fichiers que Kinoshelf n’a pas pu placer en confiance. Rien n’est déplacé tant que vous ne validez pas.',
   'web.queue.list.label': 'Fichiers en attente',
+  'web.queue.sources.title': 'Ajouter des fichiers',
+  'web.queue.sources.watching':
+    'Surveillance de {count} dossier(s) pour les téléchargements terminés.',
+  'web.queue.sources.watching.poll':
+    'Parcours régulier de {count} dossier(s) pour les téléchargements terminés.',
+  'web.queue.sources.pending': '{count} release(s) en cours d’écriture ou de stabilisation.',
+  'web.queue.sources.unavailable': 'inaccessible',
+  'web.queue.sources.none':
+    'Aucun dossier n’est surveillé. Choisissez-en un dans les réglages, sous « Téléchargements terminés ».',
+  'web.queue.sources.scan': 'Vérifier maintenant',
+  'web.queue.sources.scan.hint':
+    'N’attend pas que les fichiers se stabilisent : à utiliser quand vous savez qu’un téléchargement est terminé.',
+  'web.queue.sources.scanned': '{submitted} release(s) soumise(s), {pending} en cours d’écriture.',
+  'web.settings.watch.title': 'Téléchargements terminés',
+  'web.settings.watch.intro':
+    'Soumet automatiquement ce qui arrive dans un dossier. Votre client de téléchargement doit garder les téléchargements en cours dans un autre dossier (« Keep incomplete torrents in » de qBittorrent, dossier incomplet de Transmission, désactivés par défaut) et ne les déplacer ici qu’une fois terminés. Sinon, on ne distingue pas un fichier terminé d’un fichier à l’arrêt.',
+  'web.settings.watch.enabled': 'Surveiller des dossiers',
+  'web.settings.watch.folders': 'Dossiers de téléchargements terminés',
+  'web.settings.watch.folders.hint':
+    'Ce qui s’y trouve déjà est soumis une fois, au début de la surveillance. Préférez le mode lien dur ou copie : déplacer un fichier empêche son torrent de continuer à être partagé.',
+  'web.settings.watch.add-folder': 'Ajouter un dossier',
+  'web.settings.watch.settle': 'Délai de stabilisation (secondes)',
+  'web.settings.watch.settle.hint':
+    'Une release est soumise quand aucun de ses fichiers n’a changé depuis ce délai. 30 par défaut.',
+  'web.settings.watch.poll': 'Intervalle de parcours (secondes)',
+  'web.settings.watch.poll.hint':
+    'Vide ou 0 : Kinoshelf écoute les changements, sans aucune lecture du disque. Sur un partage réseau (NFS, SMB), aucun changement n’est signalé : indiquez une valeur comme 120.',
+  'web.settings.watch.apply': 'Transférer ce qui est identifié avec confiance',
+  'web.settings.watch.apply.hint':
+    'Désactivé, tout attend dans la file de validation jusqu’à ce que vous l’appliquiez.',
+  'web.settings.invalid.watch-folders': 'Indiquez au moins un dossier, en chemin absolu.',
+  'web.settings.invalid.watch-seconds':
+    'Indiquez un nombre entier de secondes, ou laissez le champ vide.',
   'web.queue.empty':
     'Rien à valider. Les nouveaux fichiers qui demandent une décision apparaissent ici.',
   'web.queue.status.to-validate': 'À valider',

@@ -145,6 +145,14 @@ export const en = {
   'error.cleanup.age-too-short':
     'The minimum age is {min} hour: a younger file may still be being copied.',
   'error.cleanup.no-folder': 'Give the folder(s) to scan, or set "destination" in {path}.',
+  'help.submit':
+    'Queue a file or folder on a running server (for a download client’s “on completion” hook).',
+  'help.opt.url': 'address of the server (default: KINOSHELF_URL, else localhost)',
+  'help.opt.submit-apply': 'also transfer the files matched with confidence',
+  'submit.queued': 'Queued {path} on {url} (job {id}).',
+  'error.submit.no-api-key': 'Set KINOSHELF_API_KEY to the server’s API key.',
+  'error.submit.unreachable': 'Cannot reach the server at {url}. Is it running?',
+  'error.submit.rejected': 'The server refused the request (HTTP {status}).',
   'help.arg.source': 'folder or video file to analyze',
   'help.arg.path': 'video file or folder to process',
   'help.opt.dest': 'destination folder for movies and series',
@@ -184,6 +192,7 @@ export const en = {
     'The API key is set by KINOSHELF_API_KEY, which would put it back at the next start. Change the variable instead.',
   'error.settings.webhook-not-found': 'This webhook no longer exists. Reload the settings.',
   'error.settings.webhook-url-required': 'A new webhook needs a URL.',
+  'error.watch.not-configured': 'No folder is watched. Set one in the settings first.',
   'web.skip-to-content': 'Skip to content',
   'web.nav.label': 'Main navigation',
   'web.nav.queue': 'Queue',
@@ -221,6 +230,37 @@ export const en = {
   'web.queue.intro':
     'Files Kinoshelf could not place with confidence. Nothing is moved until you validate.',
   'web.queue.list.label': 'Files waiting',
+  'web.queue.sources.title': 'Add files',
+  'web.queue.sources.watching': 'Watching {count} folder(s) for finished downloads.',
+  'web.queue.sources.watching.poll':
+    'Scanning {count} folder(s) for finished downloads at a regular interval.',
+  'web.queue.sources.pending': '{count} release(s) still being written or settling.',
+  'web.queue.sources.unavailable': 'unreachable',
+  'web.queue.sources.none':
+    'No folder is watched. Choose one in the settings, under “Finished downloads”.',
+  'web.queue.sources.scan': 'Check now',
+  'web.queue.sources.scan.hint':
+    'Does not wait for files to settle: use it when you know a download is complete.',
+  'web.queue.sources.scanned': '{submitted} release(s) submitted, {pending} still being written.',
+  'web.settings.watch.title': 'Finished downloads',
+  'web.settings.watch.intro':
+    'Submit what lands in a folder by itself. Your download client must keep unfinished downloads in another folder (qBittorrent’s “Keep incomplete torrents in”, Transmission’s incomplete folder, both off by default) and only move them here once complete. Otherwise a finished file cannot be told from a stalled one.',
+  'web.settings.watch.enabled': 'Watch folders',
+  'web.settings.watch.folders': 'Folders of finished downloads',
+  'web.settings.watch.folders.hint':
+    'What is already there is submitted once, when watching starts. Prefer the hardlink or copy mode: moving a file stops its torrent from seeding.',
+  'web.settings.watch.add-folder': 'Add a folder',
+  'web.settings.watch.settle': 'Settling time (seconds)',
+  'web.settings.watch.settle.hint':
+    'A release is submitted once none of its files has changed for this long. Default 30.',
+  'web.settings.watch.poll': 'Scan interval (seconds)',
+  'web.settings.watch.poll.hint':
+    'Empty or 0: Kinoshelf listens for changes, which costs no disk reads. On a network share (NFS, SMB) no change is announced: set a value such as 120.',
+  'web.settings.watch.apply': 'Transfer what is matched with confidence',
+  'web.settings.watch.apply.hint':
+    'Off, everything waits in the validation queue until you apply it.',
+  'web.settings.invalid.watch-folders': 'Give at least one folder, as an absolute path.',
+  'web.settings.invalid.watch-seconds': 'Give a whole number of seconds, or leave the field empty.',
   'web.queue.empty': 'Nothing to validate. New files that need a decision appear here.',
   'web.queue.status.to-validate': 'To validate',
   'web.queue.status.nothing-found': 'Nothing found',
