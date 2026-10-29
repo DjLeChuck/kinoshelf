@@ -61,4 +61,7 @@ export interface MetadataProvider {
    * regular season. Checking that an episode exists in the returned season is the matcher's job.
    */
   getSeason(seriesId: ExternalId, season: number, language?: string): Promise<SeasonInfo | null>;
+  /** Looks a work up by id; `null` if the provider does not know it (any other failure throws). */
+  getMovie(id: ExternalId, language?: string): Promise<MovieCandidate | null>;
+  getSeries(id: ExternalId, language?: string): Promise<SeriesCandidate | null>;
 }

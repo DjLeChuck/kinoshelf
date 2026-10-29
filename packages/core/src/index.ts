@@ -32,6 +32,13 @@ export {
   type ScoreWeights,
 } from './matching/config.js';
 export { Matcher } from './matching/matcher.js';
+export {
+  aliasKey,
+  StaticAliases,
+  type AliasLookup,
+  type AliasQuery,
+  type TitleAlias,
+} from './matching/aliases.js';
 export { normalizeTitle, titleSimilarity } from './matching/title-similarity.js';
 export { createPlan, type PlanInput, type PlannerOptions } from './planning/planner.js';
 export { DEFAULT_SIDECAR_EXTENSIONS, findSidecars, type Sidecar } from './planning/sidecars.js';

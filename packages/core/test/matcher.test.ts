@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { Matcher, type MatchOutcome, type ParsedMedia } from '../src/index.js';
+import { Matcher, StaticAliases, type MatchOutcome, type ParsedMedia } from '../src/index.js';
 import { FakeProvider, movie, season, series } from './fake-provider.js';
 
 const parsedMovie = (
@@ -498,5 +498,83 @@ describe('scores', () => {
     expect(outcome.candidates).toHaveLength(5);
     const scores = outcome.candidates.map((c) => c.score);
     expect(scores).toEqual([...scores].sort((a, b) => b - a));
+  });
+});
+
+describe('aliases', () => {
+  const us = { ...series(2, "Hell's Kitchen", 2005), countries: ['US'] };
+  const uk = { ...series(3, "Hell's Kitchen", 2007), countries: ['GB'] };
+  const seasons = { '2:1': season(1, [1, 2, 3]), '3:1': season(1, [1, 2, 3]) };
+  const file = (title: string, seasonNumber = 1, episode = 1) =>
+    parsedEpisode(title, seasonNumber, [episode]);
+  const alias = (id: number) =>
+    new StaticAliases([
+      { kind: 'series', title: 'Gordon Ramsay Hells Kitchen', id: { provider: 'tmdb', id } },
+    ]);
+
+  it('reads a title a human tied to a work as that work, where the search would not decide', async () => {
+    const provider = new FakeProvider([us, uk], seasons);
+    expectAmbiguous(await new Matcher(provider).match(file('Gordon Ramsay Hells Kitchen')));
+
+    const outcome = expectMatched(
+      await new Matcher(provider, {}, alias(2)).match(file('Gordon Ramsay Hells Kitchen')),
+    );
+    expect(outcome.best.candidate.id.id).toBe(2);
+    expect(provider.calls.some((c) => c.method === 'searchSeries')).toBe(true); // the first run
+  });
+
+  it('does not search when the alias answers', async () => {
+    const provider = new FakeProvider([us, uk], seasons);
+    await new Matcher(provider, {}, alias(2)).match(file('Gordon Ramsay Hells Kitchen'));
+    expect(provider.calls.map((c) => c.method)).toEqual(['getSeries', 'getSeason']);
+  });
+
+  it('finds the alias whatever the casing and punctuation of the title', async () => {
+    const provider = new FakeProvider([us, uk], seasons);
+    expectMatched(
+      await new Matcher(provider, {}, alias(2)).match(file('gordon.ramsay hells-kitchen')),
+    );
+  });
+
+  it('still sends to review an episode the aliased series does not have', async () => {
+    const provider = new FakeProvider([us, uk], seasons);
+    expectAmbiguous(
+      await new Matcher(provider, {}, alias(2)).match(file('Gordon Ramsay Hells Kitchen', 1, 9)),
+    );
+  });
+
+  it('searches as usual when the provider no longer knows the work', async () => {
+    const provider = new FakeProvider([us, uk], seasons);
+    const outcome = await new Matcher(provider, {}, alias(999)).match(
+      file('Gordon Ramsay Hells Kitchen'),
+    );
+    expect(outcome.status).toBe('ambiguous');
+    expect(provider.calls.some((c) => c.method === 'searchSeries')).toBe(true);
+  });
+
+  it('tells same-titled films apart by year, and ignores an alias of the other kind', async () => {
+    const provider = new FakeProvider([movie(841, 'Dune', 1984), movie(438631, 'Dune', 2021)]);
+    const aliases = new StaticAliases([
+      { kind: 'movie', title: 'Duna', year: 2021, id: { provider: 'tmdb', id: 438631 } },
+    ]);
+    const matcher = new Matcher(provider, {}, aliases);
+
+    expect(expectMatched(await matcher.match(parsedMovie('Duna', 2021))).best.candidate.id.id).toBe(
+      438631,
+    );
+    provider.calls.length = 0;
+    await matcher.match(parsedMovie('Duna', 1984)); // another year: no alias
+    expect(provider.calls.map((c) => c.method)).not.toContain('getMovie');
+    await matcher.match(file('Duna'));
+    expect(provider.calls.map((c) => c.method)).not.toContain('getSeries');
+  });
+
+  it('leaves a file that carries ids to the id logic', async () => {
+    const provider = new FakeProvider([us, uk], seasons);
+    await new Matcher(provider, {}, alias(2)).match({
+      ...file('Gordon Ramsay Hells Kitchen'),
+      knownIds: [{ provider: 'tmdb', id: 3 }],
+    });
+    expect(provider.calls.map((c) => c.method)).not.toContain('getSeries');
   });
 });

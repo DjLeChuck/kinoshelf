@@ -5,6 +5,7 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { TmdbProvider } from '@kinoshelf/provider-tmdb';
 import { Matcher, GuessitParser } from '@kinoshelf/core';
+import { aliasesOf } from '../dist/run.js';
 
 const key = process.env.TMDB_API_KEY ?? '';
 if (!key) {
@@ -42,6 +43,24 @@ const recording = async (input, init) => {
         })),
       });
     }
+    // A work looked up by id (an alias) is one record shaped like a search result.
+    if (/^\/3\/(movie|tv)\/\d+$/.test(url.pathname) && response.status === 200) {
+      const keep = url.pathname.startsWith('/3/movie')
+        ? ['id', 'title', 'original_title', 'release_date', 'poster_path', 'popularity']
+        : [
+            'id',
+            'name',
+            'original_name',
+            'first_air_date',
+            'origin_country',
+            'poster_path',
+            'popularity',
+          ];
+      const work = JSON.parse(body);
+      stored = JSON.stringify(
+        Object.fromEntries(keep.filter((k) => k in work).map((k) => [k, work[k]])),
+      );
+    }
     // Search results are 20 long records; keep only the fields Kinoshelf reads.
     if (/^\/3\/search\/(movie|tv)$/.test(url.pathname) && response.status === 200) {
       const keep = url.pathname.endsWith('movie')
@@ -77,16 +96,23 @@ const recording = async (input, init) => {
 };
 
 const parser = new GuessitParser();
+const providers = new Map();
 const matchers = new Map();
 for (const entry of entries) {
   const language = entry.language ?? 'en-US';
-  if (!matchers.has(language)) {
-    matchers.set(
-      language,
-      new Matcher(new TmdbProvider({ apiKey: key, fetch: recording, language })),
-    );
+  if (!providers.has(language)) {
+    providers.set(language, new TmdbProvider({ apiKey: key, fetch: recording, language }));
   }
-  await matchers.get(language).match(parser.parse(entry.path));
+  const parsed = parser.parse(entry.path);
+  const aliases = aliasesOf(entry, parsed);
+  if (aliases) {
+    await new Matcher(providers.get(language), {}, aliases).match(parsed);
+    continue;
+  }
+  if (!matchers.has(language)) {
+    matchers.set(language, new Matcher(providers.get(language)));
+  }
+  await matchers.get(language).match(parsed);
 }
 
 const sorted = Object.fromEntries(

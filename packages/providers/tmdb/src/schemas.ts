@@ -32,6 +32,10 @@ export const tvSearchSchema = z.object({
   ),
 });
 
+// The detail endpoints answer with one record shaped like a search result.
+export const movieDetailSchema = movieSearchSchema.shape.results.element;
+export const tvDetailSchema = tvSearchSchema.shape.results.element;
+
 export const seasonSchema = z.object({
   season_number: z.number().int(),
   episodes: z.array(

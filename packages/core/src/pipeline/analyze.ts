@@ -1,3 +1,4 @@
+import type { AliasLookup } from '../matching/aliases.js';
 import { Matcher } from '../matching/matcher.js';
 import type { MatchingConfig } from '../matching/config.js';
 import { createPlan, type PlanInput } from '../planning/planner.js';
@@ -40,6 +41,8 @@ export interface AnalyzeOptions {
   readonly destinationRoot: DestinationRoots;
   readonly mode: TransferMode;
   readonly matching?: Partial<MatchingConfig>;
+  /** Titles a human already tied to a work. */
+  readonly aliases?: AliasLookup;
   readonly sidecarExtensions?: readonly string[];
   /** Files matched at the same time (each may issue several provider requests). */
   readonly concurrency?: number;
@@ -73,7 +76,7 @@ export async function analyze(
   files: readonly DiscoveredFile[],
   options: AnalyzeOptions,
 ): Promise<Analysis> {
-  const matcher = new Matcher(options.provider, options.matching);
+  const matcher = new Matcher(options.provider, options.matching, options.aliases);
   let done = 0;
 
   const matched = await mapLimited(files, options.concurrency ?? 4, async (file) => {

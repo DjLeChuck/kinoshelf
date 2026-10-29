@@ -245,6 +245,71 @@ describe('getSeason', () => {
   });
 });
 
+describe('getMovie and getSeries', () => {
+  // Synthetic: the detail endpoints answer with one record shaped like a search result.
+  const routes = [
+    at('/3/movie/841', () =>
+      json(
+        JSON.stringify({
+          id: 841,
+          title: 'Dune',
+          original_title: 'Dune',
+          release_date: '1984-12-14',
+        }),
+      ),
+    ),
+    at('/3/movie/841/alternative_titles', () => json(JSON.stringify({ id: 841, titles: [] }))),
+    at('/3/tv/2', () =>
+      json(
+        JSON.stringify({
+          id: 2,
+          name: "Hell's Kitchen",
+          original_name: "Hell's Kitchen",
+          first_air_date: '2005-05-30',
+          origin_country: ['US'],
+        }),
+      ),
+    ),
+    at('/3/tv/2/alternative_titles', () =>
+      json(JSON.stringify({ id: 2, results: [{ title: 'Hells Kitchen USA' }] })),
+    ),
+    at('/3/movie/404', () => json('{"success":false,"status_code":34}', 404)),
+  ];
+
+  it('maps a movie looked up by id', async () => {
+    const { provider } = make(routes);
+    expect(await provider.getMovie({ provider: 'tmdb', id: 841 }, 'fr')).toMatchObject({
+      kind: 'movie',
+      id: { provider: 'tmdb', id: 841 },
+      title: 'Dune',
+      year: 1984,
+    });
+  });
+
+  it('maps a series with its country and alternative titles', async () => {
+    const { provider } = make(routes);
+    expect(await provider.getSeries({ provider: 'tmdb', id: 2 })).toMatchObject({
+      kind: 'series',
+      title: "Hell's Kitchen",
+      year: 2005,
+      countries: ['US'],
+      alternativeTitles: ['Hells Kitchen USA'],
+    });
+  });
+
+  it('returns null for an id the provider does not know', async () => {
+    const { provider } = make(routes);
+    expect(await provider.getMovie({ provider: 'tmdb', id: 404 })).toBeNull();
+  });
+
+  it('rejects an id from another provider', async () => {
+    const { provider } = make(routes);
+    expect(await codeOf(provider.getSeries({ provider: 'tvdb', id: 1 }))).toBe(
+      'provider.foreign-id',
+    );
+  });
+});
+
 describe('caching', () => {
   it('serves a repeated request from the cache, including a 404', async () => {
     const { provider, requests } = make();

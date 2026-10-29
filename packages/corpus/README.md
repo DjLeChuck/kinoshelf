@@ -6,6 +6,11 @@ TMDB responses (`data/recordings.json`), so CI needs no key. It runs with `pnpm 
 - `data/corpus.json`: entries `{ path, language?, note?, expect }`. `expect` is `matched` (this
   tmdb id, kind, and for a series this season and these episodes) or `review` (a human must
   decide). `language` is the TMDB metadata language (`fr` for a French library, default `en-US`).
+- An entry may carry `"alias": {"tmdb": 2370, "kind": "series"}`: the file's title is then tied to
+  that work, as if a human had validated it in the queue and the server had remembered it. The
+  file must match that work (unless its season or episode does not exist there). Pair it with an
+  entry of the same title without `alias` that expects `review`, and one with an episode the work
+  lacks, so the corpus shows what the alias changes and what it does not vouch for.
 - `data/baseline.json`: the lowest acceptable pass rate. A ratchet: raise it when the rate
   improves, never lower it without saying why in the PR.
 - Gates (`test/corpus.test.ts`): **zero wrong automatic matches** (a file renamed to the wrong
@@ -89,6 +94,8 @@ harder entries and nothing regressed; write the reason here.
 - 0.99 to 0.98: 41 entries from a second library (English release names matched through French TMDB
   titles) added one known gap, a bilingual title (`Anatomy.Of.A.Fall-Anatomie.d.une.chute`),
   with no regression: 281 of 284.
+- 0.98 to 0.99: a validated title is remembered as an alias, so `Gordon.Ramsay.Hells.Kitchen` passes
+  (the entry with its alias), with two guard entries added: 284 of 286.
 
 ## Things to know
 

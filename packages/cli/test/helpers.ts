@@ -74,6 +74,16 @@ export class FakeProvider implements MetadataProvider {
     return Promise.resolve(this.find('series', query.title) as SeriesCandidate[]);
   }
 
+  getMovie(id: ExternalId): Promise<MovieCandidate | null> {
+    const found = this.catalog.find((c) => c.kind === 'movie' && c.id.id === id.id);
+    return Promise.resolve((found as MovieCandidate | undefined) ?? null);
+  }
+
+  getSeries(id: ExternalId): Promise<SeriesCandidate | null> {
+    const found = this.catalog.find((c) => c.kind === 'series' && c.id.id === id.id);
+    return Promise.resolve((found as SeriesCandidate | undefined) ?? null);
+  }
+
   getSeason(id: ExternalId, season: number): Promise<SeasonInfo | null> {
     return Promise.resolve(this.seasons[`${id.id}:${season}`] ?? null);
   }

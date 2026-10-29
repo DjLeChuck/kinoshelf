@@ -1,6 +1,7 @@
 import type { MatchOutcome, ScoredCandidate } from '../types/matching.js';
 import type { ParsedMedia } from '../types/media.js';
 import type { Candidate, MetadataProvider, SearchQuery, SeasonInfo } from '../types/provider.js';
+import type { AliasLookup } from './aliases.js';
 import { DEFAULT_MATCHING_CONFIG, type MatchingConfig } from './config.js';
 import { candidateKey, scoreCandidates } from './score.js';
 import { candidateTitleSimilarity } from './title-similarity.js';
@@ -9,9 +10,11 @@ import { candidateTitleSimilarity } from './title-similarity.js';
 export class Matcher {
   private readonly config: MatchingConfig;
 
+  /** `aliases`: titles a human already tied to a work; the file is read as that work. */
   constructor(
     private readonly provider: MetadataProvider,
     config: Partial<MatchingConfig> = {},
+    private readonly aliases?: AliasLookup,
   ) {
     this.config = { ...DEFAULT_MATCHING_CONFIG, ...config };
   }
@@ -21,7 +24,8 @@ export class Matcher {
       return { status: 'unrecognized', reason: 'no-title' };
     }
 
-    const candidates = await this.search(parsed, parsed.title);
+    const candidates =
+      (await this.aliased(parsed, parsed.title)) ?? (await this.search(parsed, parsed.title));
     if (candidates.length === 0) {
       return { status: 'unrecognized', reason: 'no-candidates' };
     }
@@ -37,6 +41,38 @@ export class Matcher {
       status: 'ambiguous',
       candidates: scored.slice(0, this.config.maxAmbiguousCandidates),
     };
+  }
+
+  /**
+   * The work a human tied to this title, looked up by id and nothing else: the choice was made, so
+   * it is not weighed against search results. It is still scored, so a season or an episode the
+   * work does not have, or a year that disagrees, sends the file to review. `undefined` when there
+   * is no alias, or the provider no longer knows the work.
+   */
+  private async aliased(parsed: ParsedMedia, title: string): Promise<Candidate[] | undefined> {
+    // Ids in the names are their own hint (see `knownIds`); an unknown kind cannot tell which
+    // alias is meant.
+    if (!this.aliases || parsed.kind === 'unknown' || parsed.knownIds?.length) {
+      return undefined;
+    }
+    const kind = parsed.kind === 'episode' ? 'series' : 'movie';
+    const id = this.aliases.find({
+      kind,
+      title,
+      ...(parsed.year !== undefined && { year: parsed.year }),
+    });
+    if (!id) {
+      return undefined;
+    }
+    const language = this.config.language;
+    const found =
+      kind === 'movie'
+        ? await this.provider.getMovie(id, language)
+        : await this.provider.getSeries(id, language);
+    // The file's own title becomes one the work answers to: that is what the alias says.
+    return found
+      ? [{ ...found, alternativeTitles: [...found.alternativeTitles, title] }]
+      : undefined;
   }
 
   /** Title + year first; a second search without the year when the first finds nothing. */

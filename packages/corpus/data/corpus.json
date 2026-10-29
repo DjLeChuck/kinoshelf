@@ -542,13 +542,35 @@
   },
   {
     "path": "Gordon.Ramsay.Hells.Kitchen.S15.FRENCH.1080p.HDTV.x264-COLL3CTiF/Gordon.Ramsay.Hells.Kitchen.S15E12.FRENCH.1080p.HDTV.x264-COLL3CTiF.mkv",
-    "note": "from a real library. Known gap: the file says \"Gordon Ramsay Hells Kitchen\" while TMDB calls the show \"Hell's Kitchen\"; a title alias or batch validation is planned",
+    "note": "from a real library. TMDB calls the show \"Hell's Kitchen\", so the file's title only matches once a human tied it to the show (the alias a validation remembers)",
+    "alias": {
+      "tmdb": 2370,
+      "kind": "series"
+    },
     "expect": {
       "status": "matched",
       "tmdb": 2370,
       "kind": "series",
       "season": 15,
       "episodes": [12]
+    }
+  },
+  {
+    "path": "Gordon.Ramsay.Hells.Kitchen.S15.FRENCH.1080p.HDTV.x264-COLL3CTiF/Gordon.Ramsay.Hells.Kitchen.S15E13.FRENCH.1080p.HDTV.x264-COLL3CTiF.mkv",
+    "note": "same file name, no alias learned yet: a human has to decide",
+    "expect": {
+      "status": "review"
+    }
+  },
+  {
+    "path": "Gordon.Ramsay.Hells.Kitchen.S15.FRENCH.1080p.HDTV.x264-COLL3CTiF/Gordon.Ramsay.Hells.Kitchen.S15E99.FRENCH.1080p.HDTV.x264-COLL3CTiF.mkv",
+    "note": "an alias does not vouch for an episode the show does not have",
+    "alias": {
+      "tmdb": 2370,
+      "kind": "series"
+    },
+    "expect": {
+      "status": "review"
     }
   },
   {

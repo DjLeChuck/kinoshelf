@@ -7,12 +7,15 @@ import {
   type SeasonInfo,
   type SeriesCandidate,
 } from '@kinoshelf/core';
+import type { z } from 'zod';
 import { TmdbClient, type TmdbClientOptions } from './client.js';
 import {
   movieAlternativeTitlesSchema,
+  movieDetailSchema,
   movieSearchSchema,
   seasonSchema,
   tvAlternativeTitlesSchema,
+  tvDetailSchema,
   tvSearchSchema,
 } from './schemas.js';
 
@@ -31,6 +34,7 @@ const SEARCH_TTL_MS = DAY_MS;
 // New episodes appear in a season over time: keep this short so they are found.
 const SEASON_TTL_MS = DAY_MS;
 const ALTERNATIVE_TITLES_TTL_MS = 30 * DAY_MS;
+const DETAIL_TTL_MS = DAY_MS;
 
 const yearOf = (date: string | null | undefined): number | undefined => {
   const year = date ? /^(\d{4})/.exec(date)?.[1] : undefined;
@@ -68,33 +72,50 @@ export class TmdbProvider implements MetadataProvider {
     );
 
     return Promise.all(
-      (response?.results ?? []).map(async (result, index): Promise<MovieCandidate> => {
-        const alternatives =
-          index < this.alternativeTitlesFor
-            ? await this.client.get(
-                `/3/movie/${result.id}/alternative_titles`,
-                {},
-                movieAlternativeTitlesSchema,
-                { ttlMs: ALTERNATIVE_TITLES_TTL_MS, nullOn404: true },
-              )
-            : null;
-        const year = yearOf(result.release_date);
-        return {
-          kind: 'movie',
-          id: { provider: this.name, id: result.id },
-          title: result.title,
-          originalTitle: result.original_title,
-          alternativeTitles: extraTitles(alternatives?.titles.map((t) => t.title) ?? [], [
-            result.title,
-            result.original_title,
-          ]),
-          ...(year !== undefined && { year }),
-          ...(result.overview && { overview: result.overview }),
-          ...(result.poster_path && { posterPath: result.poster_path }),
-          ...(result.popularity != null && { popularity: result.popularity }),
-        };
-      }),
+      (response?.results ?? []).map((result, index) =>
+        this.movieCandidate(result, index < this.alternativeTitlesFor),
+      ),
     );
+  }
+
+  async getMovie(id: ExternalId, language?: string): Promise<MovieCandidate | null> {
+    this.requireOwn(id);
+    const response = await this.client.get(
+      `/3/movie/${id.id}`,
+      { language: language ?? this.language },
+      movieDetailSchema,
+      { ttlMs: DETAIL_TTL_MS, nullOn404: true },
+    );
+    return response && this.movieCandidate(response, true);
+  }
+
+  private async movieCandidate(
+    result: z.infer<typeof movieDetailSchema>,
+    withAlternatives: boolean,
+  ): Promise<MovieCandidate> {
+    const alternatives = withAlternatives
+      ? await this.client.get(
+          `/3/movie/${result.id}/alternative_titles`,
+          {},
+          movieAlternativeTitlesSchema,
+          { ttlMs: ALTERNATIVE_TITLES_TTL_MS, nullOn404: true },
+        )
+      : null;
+    const year = yearOf(result.release_date);
+    return {
+      kind: 'movie',
+      id: { provider: this.name, id: result.id },
+      title: result.title,
+      originalTitle: result.original_title,
+      alternativeTitles: extraTitles(alternatives?.titles.map((t) => t.title) ?? [], [
+        result.title,
+        result.original_title,
+      ]),
+      ...(year !== undefined && { year }),
+      ...(result.overview && { overview: result.overview }),
+      ...(result.poster_path && { posterPath: result.poster_path }),
+      ...(result.popularity != null && { popularity: result.popularity }),
+    };
   }
 
   async searchSeries(query: SearchQuery): Promise<readonly SeriesCandidate[]> {
@@ -111,35 +132,52 @@ export class TmdbProvider implements MetadataProvider {
     );
 
     return Promise.all(
-      (response?.results ?? []).map(async (result, index): Promise<SeriesCandidate> => {
-        const alternatives =
-          index < this.alternativeTitlesFor
-            ? await this.client.get(
-                `/3/tv/${result.id}/alternative_titles`,
-                {},
-                tvAlternativeTitlesSchema,
-                { ttlMs: ALTERNATIVE_TITLES_TTL_MS, nullOn404: true },
-              )
-            : null;
-        const year = yearOf(result.first_air_date);
-        return {
-          kind: 'series',
-          id: { provider: this.name, id: result.id },
-          title: result.name,
-          originalTitle: result.original_name,
-          alternativeTitles: extraTitles(alternatives?.results.map((t) => t.title) ?? [], [
-            result.name,
-            result.original_name,
-          ]),
-          ...(year !== undefined && { year }),
-          ...(result.overview && { overview: result.overview }),
-          ...(result.poster_path && { posterPath: result.poster_path }),
-          ...(result.popularity != null && { popularity: result.popularity }),
-          ...(result.origin_country &&
-            result.origin_country.length > 0 && { countries: result.origin_country }),
-        };
-      }),
+      (response?.results ?? []).map((result, index) =>
+        this.seriesCandidate(result, index < this.alternativeTitlesFor),
+      ),
     );
+  }
+
+  async getSeries(id: ExternalId, language?: string): Promise<SeriesCandidate | null> {
+    this.requireOwn(id);
+    const response = await this.client.get(
+      `/3/tv/${id.id}`,
+      { language: language ?? this.language },
+      tvDetailSchema,
+      { ttlMs: DETAIL_TTL_MS, nullOn404: true },
+    );
+    return response && this.seriesCandidate(response, true);
+  }
+
+  private async seriesCandidate(
+    result: z.infer<typeof tvDetailSchema>,
+    withAlternatives: boolean,
+  ): Promise<SeriesCandidate> {
+    const alternatives = withAlternatives
+      ? await this.client.get(
+          `/3/tv/${result.id}/alternative_titles`,
+          {},
+          tvAlternativeTitlesSchema,
+          { ttlMs: ALTERNATIVE_TITLES_TTL_MS, nullOn404: true },
+        )
+      : null;
+    const year = yearOf(result.first_air_date);
+    return {
+      kind: 'series',
+      id: { provider: this.name, id: result.id },
+      title: result.name,
+      originalTitle: result.original_name,
+      alternativeTitles: extraTitles(alternatives?.results.map((t) => t.title) ?? [], [
+        result.name,
+        result.original_name,
+      ]),
+      ...(year !== undefined && { year }),
+      ...(result.overview && { overview: result.overview }),
+      ...(result.poster_path && { posterPath: result.poster_path }),
+      ...(result.popularity != null && { popularity: result.popularity }),
+      ...(result.origin_country &&
+        result.origin_country.length > 0 && { countries: result.origin_country }),
+    };
   }
 
   async getSeason(
@@ -147,12 +185,7 @@ export class TmdbProvider implements MetadataProvider {
     season: number,
     language?: string,
   ): Promise<SeasonInfo | null> {
-    if (seriesId.provider !== this.name) {
-      throw new KinoshelfError('provider.foreign-id', {
-        expected: this.name,
-        received: seriesId.provider,
-      });
-    }
+    this.requireOwn(seriesId);
 
     const response = await this.client.get(
       `/3/tv/${seriesId.id}/season/${season}`,
@@ -172,5 +205,14 @@ export class TmdbProvider implements MetadataProvider {
         })),
       }
     );
+  }
+
+  private requireOwn(id: ExternalId): void {
+    if (id.provider !== this.name) {
+      throw new KinoshelfError('provider.foreign-id', {
+        expected: this.name,
+        received: id.provider,
+      });
+    }
   }
 }
