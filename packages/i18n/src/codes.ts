@@ -23,6 +23,8 @@ export const API_ERROR_CODES = [
   'batch.already-undone',
   'batch.not-found',
   'execution.not-found',
+  'image.not-found',
+  'image.unavailable',
   'internal.unexpected',
   'job.busy',
   'job.not-done',

@@ -97,6 +97,22 @@ describe('validation queue', () => {
     expect(await queue(h)).toEqual([]);
   });
 
+  it('previews where a candidate would send a file, without recording anything', async () => {
+    const h = await harness();
+    const { mystery } = await analyzed(h);
+
+    const preview = await h.request('POST', `/api/queue/${mystery.id}/preview`, DUNE);
+    expect(preview.statusCode).toBe(200);
+    expect(preview.json()).toEqual({ destination: duneTarget(h), conflicts: [] });
+    expect((await queue(h))[0]).toMatchObject({ id: mystery.id, classification: 'unrecognized' });
+
+    await put(duneTarget(h), 'already here');
+    const taken = (await h.request('POST', `/api/queue/${mystery.id}/preview`, DUNE)).json<{
+      conflicts: { reason: string }[];
+    }>();
+    expect(taken.conflicts.map((c) => c.reason)).toContain('destination-exists');
+  });
+
   it('keeps a match whose target is taken in the queue, as a conflict', async () => {
     const h = await harness();
     const { mystery } = await analyzed(h);

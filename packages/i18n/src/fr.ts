@@ -167,6 +167,8 @@ export const fr: Record<keyof typeof en, string> = {
   'error.batch.already-undone': 'Ce lot a déjà été annulé.',
   'error.batch.not-found': 'Ce lot n’existe pas.',
   'error.execution.not-found': 'Ce transfert n’existe pas.',
+  'error.image.not-found': 'Cette image n’existe pas.',
+  'error.image.unavailable': 'Impossible de récupérer l’image depuis TMDB.',
   'error.internal.unexpected':
     'Une erreur est survenue sur le serveur. Consultez son journal pour les détails.',
   'error.job.busy': 'Un transfert est déjà en attente ou en cours pour ce travail.',

@@ -196,6 +196,16 @@ export const entrySchema = {
   },
 } as const;
 
+/** Where a file would go, and what would stop it. */
+export const previewSchema = {
+  type: 'object',
+  required: ['destination', 'conflicts'],
+  properties: {
+    destination: entrySchema.properties.destination,
+    conflicts: entrySchema.properties.conflicts,
+  },
+} as const;
+
 /** What a dry run reports: every operation of the plan, checked and not run. */
 export const executionReportSchema = {
   type: 'object',

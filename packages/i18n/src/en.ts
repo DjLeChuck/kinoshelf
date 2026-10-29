@@ -165,6 +165,8 @@ export const en = {
   'error.batch.already-undone': 'This batch was already undone.',
   'error.batch.not-found': 'This batch does not exist.',
   'error.execution.not-found': 'This transfer does not exist.',
+  'error.image.not-found': 'This image does not exist.',
+  'error.image.unavailable': 'The image could not be fetched from TMDB.',
   'error.internal.unexpected': 'Something went wrong on the server. See its log for details.',
   'error.job.busy': 'A transfer is already queued or running for this job.',
   'error.job.not-done': 'This job has not finished its analysis yet ({status}).',

@@ -1,4 +1,4 @@
-import type { Candidate, MovieCandidate, SeriesCandidate } from '@kinoshelf/core';
+import type { Candidate, MovieCandidate, PlanItem, SeriesCandidate } from '@kinoshelf/core';
 import type { FastifyInstance } from 'fastify';
 import type { Entry, EntryStore } from './entries.js';
 import type { EventBus } from './events.js';
@@ -19,6 +19,7 @@ import {
   matchBodySchema,
   notificationTestSchema,
   paging,
+  previewSchema,
   undoSchema,
 } from './schemas.js';
 import type { Notifier } from './notify/notifier.js';
@@ -64,8 +65,19 @@ function toCandidate(body: CandidateBody): Candidate {
   return candidate;
 }
 
+function presentPlan(item: PlanItem | null) {
+  const main = item?.operations.find((op) => op.type === 'transfer' && op.role === 'main');
+  return {
+    destination: main?.destination ?? null,
+    conflicts: (item?.conflicts ?? []).map((conflict) => ({
+      reason: conflict.reason,
+      path: conflict.path,
+      detail: conflict.detail ?? null,
+    })),
+  };
+}
+
 function presentEntry(entry: Entry): unknown {
-  const main = entry.item?.operations.find((op) => op.type === 'transfer' && op.role === 'main');
   const { parsed } = entry;
   return {
     id: entry.id,
@@ -82,12 +94,7 @@ function presentEntry(entry: Entry): unknown {
     },
     reason: entry.reason,
     candidates: entry.candidates,
-    destination: main?.destination ?? null,
-    conflicts: (entry.item?.conflicts ?? []).map((conflict) => ({
-      reason: conflict.reason,
-      path: conflict.path,
-      detail: conflict.detail ?? null,
-    })),
+    ...presentPlan(entry.item),
     error: entry.error,
     batchId: entry.batchId,
   };
@@ -277,6 +284,25 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
       const entry = await service.match(request.params.id, toCandidate(request.body));
       events.emit('queue');
       return presentEntry(entry);
+    },
+  );
+
+  api.post<{ Params: { id: string }; Body: CandidateBody }>(
+    '/api/queue/:id/preview',
+    {
+      schema: {
+        summary: 'Where a file would go with a candidate',
+        description:
+          'Plans the file like `match` does, and records nothing: the destination, and the ' +
+          'conflicts that would send it back to the queue.',
+        params: idParams,
+        body: matchBodySchema,
+        response: { 200: previewSchema, 401: errorSchema, 404: errorSchema, 409: errorSchema },
+      },
+    },
+    async (request) => {
+      const item = await service.preview(request.params.id, toCandidate(request.body));
+      return presentPlan(item);
     },
   );
 

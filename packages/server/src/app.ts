@@ -1,3 +1,4 @@
+import { join } from 'node:path';
 import swagger from '@fastify/swagger';
 import { KinoshelfError, SqliteJournal, type Journal } from '@kinoshelf/core';
 import type { Database } from 'better-sqlite3';
@@ -8,6 +9,7 @@ import { EntryStore } from './entries.js';
 import { EventBus, registerEventRoutes } from './events.js';
 import { ExecutionStore } from './executions.js';
 import { History } from './history.js';
+import { registerImageRoutes } from './images.js';
 import { JobStore } from './jobs.js';
 import { createTranslator, detectLocale } from '@kinoshelf/i18n';
 import type { DeliveryOptions } from './notify/delivery.js';
@@ -49,6 +51,8 @@ export interface AppOptions extends Omit<ProcessorDeps, 'database'> {
   readonly delivery?: DeliveryOptions;
   /** The built web UI to serve, if any (see `findWebRoot`). */
   readonly webRoot?: string;
+  /** Replaces the network for poster downloads, for tests. */
+  readonly fetch?: typeof fetch;
   /** Wraps or replaces the journal, for tests. */
   readonly journal?: (database: Database) => Journal;
 }
@@ -259,6 +263,10 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
       env: options.env,
       events,
       service,
+    });
+    registerImageRoutes(api, {
+      cacheDir: join(options.configDir, 'images'),
+      ...(options.fetch && { fetch: options.fetch }),
     });
     registerRoutes(api, { jobs, entries, executions, service, runner, notifier, events, history });
     done();

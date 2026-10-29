@@ -104,6 +104,12 @@ export class Service {
    */
   async match(entryId: string, candidate: Candidate): Promise<Entry> {
     const entry = this.pendingEntry(entryId);
+    const item = await this.planWith(entry, candidate);
+    this.deps.entries.setMatch(entry.id, classify(item), item);
+    return this.require(entry.id);
+  }
+
+  private async planWith(entry: Entry, candidate: Candidate): Promise<PlanItem> {
     const settings = this.settingsOf(entry.jobId);
     const plan = await createPlan([{ parsed: entry.parsed, candidate }], {
       profile: await loadProfile(settings.profile),
@@ -114,8 +120,13 @@ export class Service {
     if (!item) {
       throw new Error('the planner returned no item for one input');
     }
-    this.deps.entries.setMatch(entry.id, classify(item), item);
-    return this.require(entry.id);
+    return item;
+  }
+
+  /** Where the file would go with this candidate, without recording anything. */
+  async preview(entryId: string, candidate: Candidate): Promise<PlanItem> {
+    const entry = this.pendingEntry(entryId);
+    return this.planWith(entry, candidate);
   }
 
   ignore(entryId: string): Entry {
