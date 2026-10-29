@@ -133,8 +133,8 @@ export function pickSelection(
 type Post = <T>(url: string, body?: unknown) => Promise<T>;
 
 export type ValidateOutcome =
-  /** Matched, and the transfer is queued. */
-  | { readonly status: 'started' }
+  /** Matched, and the transfer is queued. `rematched`: other files the remembered title matched. */
+  | { readonly status: 'started'; readonly rematched: number }
   /** The plan refused the choice (target taken, name not buildable): the file stays in the queue. */
   | { readonly status: 'conflict'; readonly entry: QueueEntry };
 
@@ -150,7 +150,7 @@ export async function validate(
   post: Post,
   { remember = true }: { remember?: boolean } = {},
 ): Promise<ValidateOutcome> {
-  const matched = await post<QueueEntry>(`/api/queue/${entry.id}/match`, {
+  const matched = await post<QueueEntry & { rematched?: number }>(`/api/queue/${entry.id}/match`, {
     ...toMatchBody(candidate),
     // The server remembers by default; only a refusal needs saying.
     ...(!remember && { remember: false }),
@@ -159,5 +159,5 @@ export async function validate(
     return { status: 'conflict', entry: matched };
   }
   await post(`/api/plans/${entry.jobId}/execute`, { entries: [entry.id] });
-  return { status: 'started' };
+  return { status: 'started', rematched: matched.rematched ?? 0 };
 }

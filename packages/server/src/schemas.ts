@@ -601,3 +601,14 @@ export const settingsPatchSchema = {
     },
   },
 } as const;
+
+/** The entry as `match` returns it, with what remembering its title did to the other files. */
+export const matchResultSchema = {
+  ...entrySchema,
+  required: [...entrySchema.required, 'rematched'],
+  properties: {
+    ...entrySchema.properties,
+    /** Other files, waiting under the same title, that were matched and left the queue. */
+    rematched: { type: 'integer' },
+  },
+} as const;

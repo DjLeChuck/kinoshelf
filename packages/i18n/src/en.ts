@@ -297,6 +297,8 @@ export const en = {
   'web.queue.remember':
     'Remember “{title}” as this work: the next scans match it alone, and the files already waiting under that title are matched now.',
   'web.queue.validated': 'Transfer started for {name}.',
+  'web.queue.validated.rematched':
+    'Transfer started for {name}. {count} other file(s) with the same title are now matched.',
   'web.queue.ignored': '{name} set aside.',
   'web.history.title': 'History',
   'web.history.intro':

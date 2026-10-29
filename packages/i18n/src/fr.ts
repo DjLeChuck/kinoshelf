@@ -304,6 +304,8 @@ export const fr: Record<keyof typeof en, string> = {
   'web.queue.remember':
     'Mémoriser « {title} » comme cette œuvre : les prochains scans l’apparieront seuls, et les fichiers déjà en attente sous ce titre le sont maintenant.',
   'web.queue.validated': 'Transfert lancé pour {name}.',
+  'web.queue.validated.rematched':
+    'Transfert lancé pour {name}. {count} autre(s) fichier(s) de même titre sont maintenant appariés.',
   'web.queue.ignored': '{name} mis de côté.',
   'web.history.title': 'Historique',
   'web.history.intro':

@@ -125,7 +125,11 @@
       if (outcome.status === 'conflict') {
         refused = outcome.entry.conflicts;
       } else {
-        ondone(t('web.queue.validated', { name }));
+        ondone(
+          outcome.rematched > 0
+            ? t('web.queue.validated.rematched', { name, count: outcome.rematched })
+            : t('web.queue.validated', { name }),
+        );
       }
     } catch (error) {
       failure = error;

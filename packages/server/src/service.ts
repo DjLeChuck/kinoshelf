@@ -57,6 +57,12 @@ export interface UndoReport {
   }[];
 }
 
+export interface MatchResult {
+  readonly entry: Entry;
+  /** Other files that the remembered title matched at once, and that left the queue. */
+  readonly rematched: number;
+}
+
 export interface SearchQuery {
   readonly query: string;
   readonly year?: number;
@@ -110,27 +116,26 @@ export class Service {
     entryId: string,
     candidate: Candidate,
     options: { remember?: boolean } = {},
-  ): Promise<Entry> {
+  ): Promise<MatchResult> {
     const entry = this.pendingEntry(entryId);
     const item = await this.planWith(entry, candidate);
     this.deps.entries.setMatch(entry.id, classify(item), item);
-    if (options.remember ?? true) {
-      await this.remember(entry, candidate);
-    }
-    return this.require(entry.id);
+    const rematched = (options.remember ?? true) ? await this.remember(entry, candidate) : 0;
+    return { entry: this.require(entry.id), rematched };
   }
 
   /**
    * Ties the title of the file to the work the human chose, so the next scan decides alone, and
    * lets the files already waiting under that title follow. Skipped when the choice says nothing
    * about the title: a file read as an episode but matched with a film would never look it up.
+   * Returns how many other files left the queue because of it.
    */
-  private async remember(entry: Entry, candidate: Candidate): Promise<void> {
+  private async remember(entry: Entry, candidate: Candidate): Promise<number> {
     const { parsed } = entry;
     const kind =
       parsed.kind === 'episode' ? 'series' : parsed.kind === 'movie' ? 'movie' : undefined;
     if (!parsed.title || kind !== candidate.kind || parsed.knownIds?.length) {
-      return;
+      return 0;
     }
     const alias: TitleAlias = {
       kind,
@@ -142,15 +147,16 @@ export class Service {
       title: candidate.title,
       ...(candidate.year !== undefined && { year: candidate.year }),
     });
-    await this.rematch(aliasKey(alias), entry.id);
+    return this.rematch(aliasKey(alias), entry.id);
   }
 
   /**
    * Gives the undecided files with this alias's title another go, now that it is known. They go
    * through the matcher like any file, so an episode the work does not have stays in the queue.
    * One that fails (the provider is down, say) is left as it was: the alias is already saved.
+   * Returns how many were matched and no longer wait (one whose target is taken stays queued).
    */
-  private async rematch(key: string, exceptId: string): Promise<void> {
+  private async rematch(key: string, exceptId: string): Promise<number> {
     const { config, entries, aliases } = this.deps;
     const same = entries.undecided().filter(
       (other) =>
@@ -164,13 +170,14 @@ export class Service {
         other.parsed.kind !== 'unknown',
     );
     if (same.length === 0) {
-      return;
+      return 0;
     }
     const matcher = new Matcher(
       this.provider(),
       config.threshold !== undefined ? { threshold: config.threshold } : {},
       aliases,
     );
+    let rematched = 0;
     for (const other of same) {
       try {
         const outcome = await matcher.match(other.parsed);
@@ -178,11 +185,16 @@ export class Service {
           continue;
         }
         const item = await this.planWith(other, outcome.best.candidate);
-        entries.setMatch(other.id, classify(item), item);
+        const classification = classify(item);
+        entries.setMatch(other.id, classification, item);
+        if (classification !== 'conflict') {
+          rematched++;
+        }
       } catch {
         // See above: not worth failing the validation that taught the alias.
       }
     }
+    return rematched;
   }
 
   private provider(): MetadataProvider {

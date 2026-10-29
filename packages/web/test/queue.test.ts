@@ -137,7 +137,7 @@ describe('validate', () => {
     const { calls, post } = recorder((url) =>
       url.includes('/match') ? entry({ classification: 'to-rename' }) : {},
     );
-    expect(await validate(entry(), dune, post)).toEqual({ status: 'started' });
+    expect(await validate(entry(), dune, post)).toEqual({ status: 'started', rematched: 0 });
     expect(calls.map((c) => c.url)).toEqual(['/api/queue/e1/match', '/api/plans/j1/execute']);
     expect(calls[0]?.body).not.toHaveProperty('score');
     expect(calls[1]?.body).toEqual({ entries: ['e1'] });
@@ -148,6 +148,13 @@ describe('validate', () => {
     const outcome = await validate(entry(), dune, post);
     expect(outcome.status).toBe('conflict');
     expect(calls).toHaveLength(1);
+  });
+
+  it('reports how many other files the remembered title matched', async () => {
+    const { post } = recorder((url) =>
+      url.includes('/match') ? { ...entry({ classification: 'to-rename' }), rematched: 77 } : {},
+    );
+    expect(await validate(entry(), dune, post)).toEqual({ status: 'started', rematched: 77 });
   });
 
   it('asks the server to remember nothing only when told not to', async () => {

@@ -13,6 +13,7 @@ import {
   classificationValues,
   aliasSchema,
   entrySchema,
+  matchResultSchema,
   errorSchema,
   executionReportSchema,
   executionSchema,
@@ -280,7 +281,7 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
           'The file ends up `to-rename`, or in `conflict` if its target cannot be used. Unless ' +
           '`remember` is false, the title of the file is tied to the candidate: later scans match ' +
           'it alone, and the files waiting in the queue under that title are matched too (an ' +
-          'episode the work does not have stays in the queue).',
+          'episode the work does not have stays in the queue). `rematched` counts those other files.',
         params: idParams,
         body: {
           ...matchBodySchema,
@@ -289,15 +290,17 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
             remember: { type: 'boolean', description: 'Defaults to true' },
           },
         },
-        response: { 200: entrySchema, 401: errorSchema, 404: errorSchema, 409: errorSchema },
+        response: { 200: matchResultSchema, 401: errorSchema, 404: errorSchema, 409: errorSchema },
       },
     },
     async (request) => {
-      const entry = await service.match(request.params.id, toCandidate(request.body), {
-        ...(request.body.remember !== undefined && { remember: request.body.remember }),
-      });
+      const { entry, rematched } = await service.match(
+        request.params.id,
+        toCandidate(request.body),
+        { ...(request.body.remember !== undefined && { remember: request.body.remember }) },
+      );
       events.emit('queue', 'settings');
-      return presentEntry(entry);
+      return { ...(presentEntry(entry) as object), rematched };
     },
   );
 

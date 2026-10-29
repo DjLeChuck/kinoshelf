@@ -78,6 +78,58 @@ describe('remembered titles', () => {
     expect(await classificationOf(h, jobId, 'Mystery.Home.Video.mkv')).toBe('unrecognized');
   });
 
+  it('says how many other files the remembered title matched', async () => {
+    const h = await harness();
+    const { named } = await scan(h, [
+      'Duna.2021.1080p.mkv',
+      'Duna.2021.720p.mkv',
+      'Duna.2021.2160p.mkv',
+      'Duna.1984.mkv', // another film: not counted
+    ]);
+
+    const matched = await h.request(
+      'POST',
+      `/api/queue/${named('Duna.2021.1080p.mkv').id}/match`,
+      DUNE,
+    );
+    expect(matched.json<{ rematched: number }>().rematched).toBe(2);
+  });
+
+  it('counts nothing when the file is not remembered, or nothing else waits', async () => {
+    const h = await harness();
+    const { named } = await scan(h, ['Duna.2021.1080p.mkv', 'Duna.2021.720p.mkv']);
+    const declined = await h.request(
+      'POST',
+      `/api/queue/${named('Duna.2021.1080p.mkv').id}/match`,
+      { ...DUNE, remember: false },
+    );
+    expect(declined.json<{ rematched: number }>().rematched).toBe(0);
+
+    const alone = await h.request(
+      'POST',
+      `/api/queue/${named('Duna.2021.720p.mkv').id}/match`,
+      DUNE,
+    );
+    expect(alone.json<{ rematched: number }>().rematched).toBe(0);
+  });
+
+  it('does not count a file whose target is taken: it stays in the queue', async () => {
+    const h = await harness();
+    await put(
+      join(h.destination, 'Dune (2021) {tmdb-438631}', 'Dune (2021) {tmdb-438631}.mkv'),
+      'already here',
+    );
+    const { jobId, named } = await scan(h, ['Duna.2021.1080p.mkv', 'Duna.2021.720p.mkv']);
+
+    const first = await h.request(
+      'POST',
+      `/api/queue/${named('Duna.2021.1080p.mkv').id}/match`,
+      DUNE,
+    );
+    expect(first.json<{ rematched: number }>().rematched).toBe(0);
+    expect(await classificationOf(h, jobId, 'Duna.2021.720p.mkv')).toBe('conflict');
+  });
+
   it('lets a later scan match the title alone', async () => {
     const h = await harness();
     const first = await scan(h, ['Duna.2021.1080p.mkv']);
