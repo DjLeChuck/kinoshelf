@@ -117,6 +117,32 @@ describe('GuessitParser', () => {
     });
   });
 
+  describe('titles that are a year', () => {
+    it.each([
+      ['1923.S02E01.720p.x264-FENiX.mkv', '1923', undefined],
+      ['1923 - S02E01 - Title.mkv', '1923', undefined],
+      ['1923.2022.S01E03.1080p.WEB.mkv', '1923', 2022],
+      ['1883/Season 1/1883 - 1x03.mkv', '1883', undefined],
+    ])('reads the title and the year of %s apart', (path, title, year) => {
+      const parsed = parser.parse(path);
+      expect(parsed).toMatchObject({ kind: 'episode', title });
+      expect(parsed.year).toBe(year);
+    });
+
+    it('still reads a year inside a movie title as part of it', () => {
+      expect(parser.parse('Blade.Runner.2049.2017.mkv')).toMatchObject({
+        kind: 'movie',
+        title: 'Blade Runner 2049',
+        year: 2017,
+      });
+      expect(parser.parse('2012.2009.1080p.BluRay.mkv')).toMatchObject({
+        kind: 'movie',
+        title: '2012',
+        year: 2009,
+      });
+    });
+  });
+
   describe('volumes', () => {
     it.each([
       ['Kill Bill Vol 2 (2004)/Kill.Bill.Vol.2.2004.1080p.mp4', 2],
