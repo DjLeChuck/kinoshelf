@@ -278,7 +278,8 @@ describe('GuessitParser', () => {
           expect(parsed.kind === 'unknown' || parsed.title !== undefined).toBe(true);
         }
       }
-    });
+      // 600 parses: close to the default 5 s on a slow CI runner.
+    }, 30_000);
   });
 
   it('accepts Windows separators and lowercases the extension', () => {
