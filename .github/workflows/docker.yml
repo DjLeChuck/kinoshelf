@@ -16,8 +16,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      # arm64 is built under QEMU: slow, but the image is only pnpm and tsc, nothing to compile
-      # (better-sqlite3 ships a prebuilt binary for musl arm64).
+      # QEMU only runs the cheap arm64 steps (apk, strip): the Dockerfile builds on the runner's
+      # own architecture, because esbuild and rollup crash under emulation (exit 132).
       - uses: docker/setup-qemu-action@v3
       - uses: docker/setup-buildx-action@v3
       # A pull request builds both platforms without publishing, so a broken arm64 build shows up

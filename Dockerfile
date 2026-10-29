@@ -1,7 +1,12 @@
 # syntax=docker/dockerfile:1
 
-FROM node:22-alpine AS build
-RUN apk add --no-cache binutils && corepack enable
+# The build runs on the builder's own architecture: esbuild and rollup are native binaries that
+# crash (SIGILL, exit 132) under QEMU. Only JavaScript comes out of it, so it is the same for every
+# target; the one thing that depends on the target (better-sqlite3's prebuild) is picked by
+# TARGETARCH below.
+FROM --platform=$BUILDPLATFORM node:22-alpine AS build
+ARG TARGETARCH
+RUN corepack enable
 WORKDIR /app
 COPY . .
 # Install scripts are skipped (here and in `deploy`): better-sqlite3 would compile itself with
@@ -13,7 +18,7 @@ RUN pnpm --filter @kinoshelf/image deploy --prod --legacy --ignore-scripts /out
 
 # Trim what the runtime never reads. Licenses stay: the dependencies' terms require them.
 RUN set -eu; \
-    arch="$(uname -m | sed 's/x86_64/x64/; s/aarch64/arm64/')"; \
+    arch="$(echo "$TARGETARCH" | sed 's/amd64/x64/')"; \
     sqlite="$(ls -d /out/node_modules/.pnpm/better-sqlite3@*/node_modules/better-sqlite3)"; \
     # better-sqlite3 ships a binary per platform and the SQLite sources: only ours is loaded.
     find "$sqlite/prebuilds" -type f ! -name "linuxmusl-$arch.node" -delete; \
@@ -22,15 +27,17 @@ RUN set -eu; \
     # names: a looser glob such as `HISTORY*` also deletes our own `history.js`.
     find /out/node_modules \( -name '*.d.ts' -o -name '*.d.cts' -o -name '*.d.mts' -o -name '*.map' \
          -o -iname 'README' -o -iname 'README.md' -o -iname 'CHANGELOG' -o -iname 'CHANGELOG.md' \
-         -o -iname 'HISTORY' -o -iname 'HISTORY.md' \) -type f -delete; \
-    # The node binary carries debug symbols it never uses.
-    strip --strip-unneeded -o /out-node /usr/local/bin/node
+         -o -iname 'HISTORY' -o -iname 'HISTORY.md' \) -type f -delete
+
+# The node binary of the target platform, without the debug symbols it never uses.
+FROM node:22-alpine AS node
+RUN apk add --no-cache binutils && strip --strip-unneeded -o /out-node /usr/local/bin/node
 
 # Alpine alone: the node:alpine image adds npm, yarn and corepack, which the runtime does not use.
 FROM alpine:3.24
 RUN apk add --no-cache libstdc++ su-exec
 COPY docker/entrypoint.sh /usr/local/bin/docker-entrypoint
-COPY --from=build /out-node /usr/local/bin/node
+COPY --from=node /out-node /usr/local/bin/node
 COPY --from=build /out /app
 # Both commands are on the PATH: `kinoshelf-server api-key create`, `kinoshelf cleanup --apply`…
 # They go through the entrypoint, so a `docker exec` (root) does not leave root-owned files in /config.
