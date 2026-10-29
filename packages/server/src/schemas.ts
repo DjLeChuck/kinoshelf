@@ -420,7 +420,17 @@ const destination = {
 /** What `GET /api/settings` returns: secrets are only ever reported as set or not. */
 export const settingsSchema = {
   type: 'object',
-  required: ['tmdb', 'locale', 'plex', 'jellyfin', 'webhooks', 'processing', 'apiKey', 'profiles'],
+  required: [
+    'tmdb',
+    'locale',
+    'plex',
+    'jellyfin',
+    'webhooks',
+    'watch',
+    'processing',
+    'apiKey',
+    'profiles',
+  ],
   properties: {
     tmdb: {
       type: 'object',
@@ -468,6 +478,17 @@ export const settingsSchema = {
           on: { type: 'array', items: { type: 'string', enum: webhookEvents } },
           headerNames: { type: 'array', items: { type: 'string' } },
         },
+      },
+    },
+    watch: {
+      type: 'object',
+      nullable: true,
+      required: ['folders', 'settleSeconds', 'pollSeconds', 'apply'],
+      properties: {
+        folders: { type: 'array', items: { type: 'string' } },
+        settleSeconds: { type: 'integer', nullable: true },
+        pollSeconds: { type: 'integer', nullable: true },
+        apply: { type: 'boolean' },
       },
     },
     processing: {
@@ -557,6 +578,17 @@ export const settingsPatchSchema = {
         },
       },
     },
+    watch: nullable({
+      type: 'object',
+      required: ['folders'],
+      additionalProperties: false,
+      properties: {
+        folders: { type: 'array', minItems: 1, items: { type: 'string', pattern: '^/' } },
+        settleSeconds: nullable({ type: 'integer', minimum: 0 }),
+        pollSeconds: nullable({ type: 'integer', minimum: 0 }),
+        apply: nullable({ type: 'boolean' }),
+      },
+    }),
     processing: {
       type: 'object',
       additionalProperties: false,

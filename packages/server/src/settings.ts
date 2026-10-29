@@ -31,6 +31,13 @@ export interface SettingsPatch {
     on?: Nullable<('transferred' | 'failed' | 'needs-review')[]>;
     headers?: Nullable<Record<string, string>>;
   }[];
+  /** Folders of finished downloads to submit as they appear; `null` stops watching. */
+  watch?: Nullable<{
+    folders: string[];
+    settleSeconds?: Nullable<number>;
+    pollSeconds?: Nullable<number>;
+    apply?: Nullable<boolean>;
+  }>;
   processing?: {
     profile?: Nullable<string>;
     mode?: Nullable<'copy' | 'hardlink' | 'move'>;
@@ -82,6 +89,14 @@ export function presentSettings(config: Config, env: Env): unknown {
       on: webhook.on ?? ['transferred', 'failed'],
       headerNames: Object.keys(webhook.headers ?? {}),
     })),
+    watch: config.watch
+      ? {
+          folders: config.watch.folders,
+          settleSeconds: config.watch.settleSeconds ?? null,
+          pollSeconds: config.watch.pollSeconds ?? null,
+          apply: config.watch.apply ?? false,
+        }
+      : null,
     processing: {
       profile: config.profile ?? null,
       mode: config.mode ?? null,
@@ -110,7 +125,7 @@ function merged(
 /** Turns a request into the edits of `config.yaml`, against the configuration as it is now. */
 export function editsFor(patch: SettingsPatch, config: Config): ConfigEdit[] {
   const edits: ConfigEdit[] = [];
-  const { tmdb, plex, jellyfin, webhooks, processing } = patch;
+  const { tmdb, plex, jellyfin, webhooks, watch, processing } = patch;
 
   if (tmdb?.apiKey !== undefined) {
     edits.push(set(['apiKey', 'tmdb'], tmdb.apiKey));
@@ -158,6 +173,10 @@ export function editsFor(patch: SettingsPatch, config: Config): ConfigEdit[] {
       return merged(base, changes);
     });
     edits.push(set(['notify', 'webhooks'], next.length > 0 ? next : null));
+  }
+
+  if (watch !== undefined) {
+    edits.push(set(['watch'], watch === null ? null : merged(config.watch, watch)));
   }
 
   for (const [key, value] of Object.entries(processing ?? {})) {

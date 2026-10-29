@@ -48,6 +48,8 @@ describe('GET /api/openapi.json', () => {
       '/api/settings',
       '/api/settings/api-key',
       '/api/settings/tmdb/test',
+      '/api/watch',
+      '/api/watch/scan',
       '/health',
     ]);
     expect(spec.paths['/health']?.get?.security).toEqual([]);

@@ -25,6 +25,8 @@ import { Service } from './service.js';
 import { isValidSession } from './sessions.js';
 import { registerSettingsRoutes } from './settings-routes.js';
 import { ConfigStore } from './settings.js';
+import { registerWatchRoutes } from './watch-routes.js';
+import { FolderWatcher } from './watcher.js';
 import { registerWeb } from './web.js';
 import { registerSessionRoutes, sameOrigin, sessionToken } from './session-routes.js';
 
@@ -34,6 +36,8 @@ declare module 'fastify' {
     jobs: JobRunner;
     /** Tells the targets of `notify`; tests await `notifier.idle()` for what is in flight. */
     notifier: Notifier;
+    /** The folder watcher; tests await `watcher.idle()`. */
+    watcher: FolderWatcher;
   }
 }
 
@@ -108,6 +112,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     ...(options.delivery && { delivery: options.delivery }),
   });
   const configStore = new ConfigStore(options.configDir, options.config, (config) => {
+    watcher.configure(config.watch);
     notifier.configure(
       config,
       createTranslator(detectLocale(undefined, config.locale, options.env)),
@@ -139,7 +144,22 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
       app.log.error(error);
     },
   );
+  // The same queue as `POST /api/jobs`, fed by a folder instead of a client.
+  const watcher = new FolderWatcher({
+    database: options.database,
+    submit: (path, apply) => {
+      jobs.create(path, apply);
+      events.emit('jobs');
+      runner.kick();
+    },
+    log: {
+      warn: (message) => {
+        app.log.warn(message);
+      },
+    },
+  });
   app.decorate('jobs', runner);
+  app.decorate('watcher', watcher);
   app.decorate('notifier', notifier);
 
   let purgeTimer: NodeJS.Timeout | undefined;
@@ -152,6 +172,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
   };
   app.addHook('onReady', () => {
     runner.start();
+    watcher.configure(options.config.watch);
     if (options.retentionDays) {
       purge();
       // Not kept alive by the timer: the process leaves when the server closes.
@@ -164,6 +185,8 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
   });
   app.addHook('onClose', async () => {
     clearInterval(purgeTimer);
+    watcher.stop();
+    await watcher.idle();
     await runner.stop();
     await notifier.idle();
   });
@@ -269,6 +292,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
       service,
     });
     registerFsRoutes(api);
+    registerWatchRoutes(api, watcher);
     registerImageRoutes(api, {
       cacheDir: join(options.configDir, 'images'),
       ...((options.env.KINOSHELF_TMDB_IMAGES_URL ?? '') !== '' && {

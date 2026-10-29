@@ -119,6 +119,20 @@ export const SERVER_MIGRATIONS: readonly { readonly name: string; readonly sql: 
       );
     `,
   },
+  {
+    // What the folder watcher already submitted, by what identifies a download: a file that is
+    // replaced (other size or date) is new again; one that stays (copy, hardlink) is not.
+    name: 'server:008-watched-files',
+    sql: `
+      CREATE TABLE watched_files (
+        path TEXT NOT NULL,
+        size INTEGER NOT NULL,
+        mtime_ms INTEGER NOT NULL,
+        submitted_at TEXT NOT NULL,
+        PRIMARY KEY (path, size, mtime_ms)
+      );
+    `,
+  },
 ];
 
 /** Opens the single SQLite file of the config directory, shared with the CLI and the cache. */
