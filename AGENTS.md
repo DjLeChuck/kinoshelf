@@ -6,8 +6,14 @@ renames them for a media player (Plex, Jellyfin) and writes their metadata (NFO,
 ## Where we are
 
 v0.1 (core, CLI and matching corpus) and v0.2 (REST server, notifications, multi-arch Docker image)
-are done. Getting downloads in is decided (see "Getting downloads in" below). The web UI (v0.3) is
-next.
+are done, and so is getting downloads in (see "Getting downloads in" below). The web UI (v0.3) has
+its validation queue, history and settings, with a server-side path picker; the "Movies & series"
+and "Libraries & scan" pages are still "coming soon". Validating a file in the queue remembers its
+title (aliases). Next is v1.0: the NFO and artwork writers, and the `jellyfin` and `plex-nfo`
+profiles.
+
+Backlog, not built: skipping samples by size (today only by name: `sample.*`, a `Sample` folder);
+reading completion from a download client's own API (see "Getting downloads in").
 
 ## Golden rules
 
@@ -78,9 +84,11 @@ contains no player-specific rule.
   configured roots, which is what is being chosen: the API key already lets its holder submit any
   path to `POST /api/jobs`. Keep it to names; never return file contents. The Plex/Jellyfin path
   mappings only "Path in Kinoshelf" uses it; the other side is a path on _their_ machine, typed.
-- `ParsedMedia.volume` (`Kill.Bill.Vol.2`, movies only) is compared with the number in a candidate's
-  title (`Kill Bill : Volume 2`, `Vol. 2`, `Tome 2`): a signed adjustment like the country's, neutral
-  when either side names none. `ParsedMedia.otherTitles` holds the two halves of a bilingual title
+- `ParsedMedia.volume` (`Kill.Bill.Vol.2`, `Deathly.Hallows.Part.2`, movies only: guessit's `volume`
+  or `part`) is compared with the installment number in a candidate's title (`Volume 2`, `Part II`,
+  `Part Two`, `Tome 3`, `2ème partie`, see `matching/installment.ts`): a signed adjustment like the
+  country's, neutral when either side names none. When the number and the year name different films
+  (`Part.2` with the year of Part 1) nothing is decided automatically. `ParsedMedia.otherTitles` holds the two halves of a bilingual title
   glued by a dash (`Anatomy.Of.A.Fall-Anatomie.d.une.chute`), each a further reading of the title
   (best similarity wins); the dash must have two words on each side, so `Spider-Man` is untouched.
   The search itself still uses the whole title.
@@ -157,7 +165,8 @@ workflow, including the checks that a change regresses nothing.
 episodes), which keeps `recordings.json` under a megabyte.
 
 Add an entry whenever a real file is mis-handled, then `pnpm corpus:record` (needs `TMDB_API_KEY`
-in `.env`; it rewrites `recordings.json`) and `pnpm corpus:report` to see every verdict with its
+in `.env`; it fetches only what is not recorded yet, `--refresh` records it all again and rewrites
+most of `recordings.json`) and `pnpm corpus:report` to see every verdict with its
 score and runner-ups, which is how the weights in `matching/config.ts` get calibrated. Check that a
 new entry can fail: break the matcher on purpose and see it go red.
 
