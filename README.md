@@ -104,6 +104,9 @@ pnpm install
 pnpm typecheck && pnpm lint && pnpm test
 ```
 
+A `Makefile` wraps these scripts: `make help` lists the targets, `make check` runs the whole
+pre-merge suite.
+
 See [AGENTS.md](AGENTS.md) for the project conventions.
 
 ## License

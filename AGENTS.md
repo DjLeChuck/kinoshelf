@@ -142,6 +142,7 @@ pnpm test:corpus    # matching corpus; a success-rate drop must fail the PR
 ```
 
 Run `pnpm typecheck && pnpm lint && pnpm format:check && pnpm test` before considering work done.
+`make check` does the same; the `Makefile` also wraps the other scripts (`make help` lists them).
 
 ## Conventions
 
