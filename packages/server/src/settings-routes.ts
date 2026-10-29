@@ -1,3 +1,4 @@
+import { listBundledProfiles, loadBundledProfile } from '@kinoshelf/core';
 import type { Database } from 'better-sqlite3';
 import type { FastifyInstance } from 'fastify';
 import { ApiError } from './api-error.js';
@@ -17,13 +18,24 @@ export interface SettingsContext {
   readonly service: Service;
 }
 
+/** The profiles shipped with Kinoshelf, for the UI to offer them instead of asking for a name. */
+async function bundledProfiles(): Promise<{ id: string; name: string }[]> {
+  return Promise.all(
+    (await listBundledProfiles()).map(async (id) => ({
+      id,
+      name: (await loadBundledProfile(id)).name,
+    })),
+  );
+}
+
 const apiKeySource = (ctx: SettingsContext): 'env' | 'database' | null =>
   (ctx.env.KINOSHELF_API_KEY ?? '') !== '' ? 'env' : hasApiKey(ctx.database) ? 'database' : null;
 
 export function registerSettingsRoutes(api: FastifyInstance, ctx: SettingsContext): void {
-  const present = (): unknown => ({
+  const present = async (): Promise<unknown> => ({
     ...(presentSettings(ctx.store.config, ctx.env) as object),
     apiKey: { source: apiKeySource(ctx) },
+    profiles: await bundledProfiles(),
   });
 
   api.get(
@@ -65,7 +77,7 @@ export function registerSettingsRoutes(api: FastifyInstance, ctx: SettingsContex
         await ctx.store.update((current) => editsFor(request.body, current));
         ctx.events.emit('settings');
       }
-      return present();
+      return await present();
     },
   );
 

@@ -376,7 +376,7 @@ const destination = {
 /** What `GET /api/settings` returns: secrets are only ever reported as set or not. */
 export const settingsSchema = {
   type: 'object',
-  required: ['tmdb', 'locale', 'plex', 'jellyfin', 'webhooks', 'processing', 'apiKey'],
+  required: ['tmdb', 'locale', 'plex', 'jellyfin', 'webhooks', 'processing', 'apiKey', 'profiles'],
   properties: {
     tmdb: {
       type: 'object',
@@ -434,6 +434,15 @@ export const settingsSchema = {
         mode: { type: 'string', enum: ['copy', 'hardlink', 'move'], nullable: true },
         threshold: { type: 'number', nullable: true },
         destination,
+      },
+    },
+    profiles: {
+      type: 'array',
+      description: 'The profiles shipped with Kinoshelf; `processing.profile` may also be a path.',
+      items: {
+        type: 'object',
+        required: ['id', 'name'],
+        properties: { id: { type: 'string' }, name: { type: 'string' } },
       },
     },
     apiKey: {

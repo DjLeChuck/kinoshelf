@@ -37,6 +37,13 @@ async function withConfig(yaml: string, overrides: Parameters<typeof harness>[0]
 }
 
 describe('GET /api/settings', () => {
+  it('lists the bundled profiles, so the UI can offer them', async () => {
+    const h = await withConfig('destination: /media\n');
+    expect(
+      (await h.request('GET', '/api/settings')).json<{ profiles: unknown }>().profiles,
+    ).toEqual([{ id: 'plex', name: 'Plex' }]);
+  });
+
   it('reports what is set and never the secrets', async () => {
     const h = await withConfig(`
 apiKey:
