@@ -20,7 +20,8 @@
     "test:live": "pnpm --filter @kinoshelf/provider-tmdb test:live",
     "corpus:report": "pnpm build && pnpm --filter @kinoshelf/corpus report",
     "corpus:record": "pnpm build && pnpm --filter @kinoshelf/corpus record",
-    "build:web": "pnpm --filter @kinoshelf/web build"
+    "build:web": "pnpm --filter @kinoshelf/web build",
+    "test:e2e": "pnpm build && pnpm build:web && pnpm --filter @kinoshelf/e2e test"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

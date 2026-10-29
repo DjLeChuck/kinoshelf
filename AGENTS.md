@@ -139,10 +139,14 @@ pnpm lint
 pnpm format         # prettier --write
 pnpm test           # builds then runs Vitest
 pnpm test:corpus    # matching corpus; a success-rate drop must fail the PR
+pnpm test:e2e       # web UI in a real browser (Playwright), against the real server and a fake TMDB
 ```
 
-Run `pnpm typecheck && pnpm lint && pnpm format:check && pnpm test` before considering work done.
-`make check` does the same; the `Makefile` also wraps the other scripts (`make help` lists them).
+Run `pnpm typecheck && pnpm lint && pnpm format:check && pnpm test` before considering work done;
+`make check` does the same, and the `Makefile` also wraps the other scripts (`make help` lists them).
+`pnpm test:e2e` is separate (it needs a browser: the Nix shell provides it, CI installs
+Chromium) and runs in its own CI job; `@playwright/test` is pinned to the version of nixpkgs'
+`playwright-driver`, so bump both together.
 
 ## Conventions
 

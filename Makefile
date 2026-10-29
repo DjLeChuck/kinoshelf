@@ -7,7 +7,7 @@ IMAGE ?= kinoshelf:dev
 .DEFAULT_GOAL := help
 
 .PHONY: help install build build-web dev-server dev-web typecheck lint format format-check test test-corpus \
-        test-live corpus-report corpus-record check docker-build flake-check clean
+        test-e2e test-live corpus-report corpus-record check docker-build flake-check clean
 
 help: ## List the targets
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}'
@@ -44,6 +44,9 @@ test: ## Run every test, corpus included (builds first)
 
 test-corpus: ## Run the matching corpus only
 	$(PNPM) test:corpus
+
+test-e2e: ## End-to-end tests of the web UI (Playwright; builds the server and the UI first)
+	$(PNPM) test:e2e
 
 test-live: ## Contract tests against the real TMDB API (needs TMDB_API_KEY in .env)
 	$(PNPM) test:live
