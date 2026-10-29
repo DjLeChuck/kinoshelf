@@ -1,4 +1,6 @@
 import { expect, test } from '@playwright/test';
+import { mkdir } from 'node:fs/promises';
+import { library } from '../support.js';
 import { signIn } from './helpers.js';
 
 const SECRET = 'very-secret-token-4242';
@@ -40,6 +42,51 @@ test('offers the bundled profiles and asks for a path only for one’s own file'
   await section.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(section.getByRole('alert')).toContainText('path of your profile file');
   await section.getByLabel('Path of the YAML file').fill('/config/mine.yaml');
+});
+
+test('picks a destination folder on the server’s disk instead of typing it', async ({ page }) => {
+  await mkdir(library('Films'), { recursive: true });
+  const section = page.locator('form', { has: page.getByRole('heading', { name: 'Processing' }) });
+
+  await section.getByRole('button', { name: 'Browse…' }).first().click();
+  const browser = section.getByRole('group', { name: 'Folders of the server' });
+  await expect(browser.getByText(library(), { exact: true })).toBeVisible();
+
+  await browser.getByRole('button', { name: 'Films' }).click();
+  await expect(browser.getByText(library('Films'), { exact: true })).toBeVisible();
+  await browser.getByRole('button', { name: 'Use this folder' }).click();
+
+  await expect(section.getByRole('group', { name: 'Folders of the server' })).toHaveCount(0);
+  await expect(section.getByRole('textbox', { name: 'Destination folder' })).toHaveValue(
+    library('Films'),
+  );
+});
+
+test('picks the Kinoshelf side of a path mapping, and types the server’s side', async ({
+  page,
+}) => {
+  await mkdir(library('Series'), { recursive: true });
+  const section = page.locator('form', {
+    has: page.getByRole('heading', { name: 'Plex server' }),
+  });
+  await section.getByLabel('Tell Plex about each transfer').check();
+  await section.getByRole('button', { name: 'Add a mapping' }).click();
+
+  // The picker opens where the typed value is.
+  await section.getByLabel('Path in Kinoshelf').fill(library());
+  await section.getByRole('button', { name: 'Browse…' }).click();
+
+  // Under the whole mapping, not squeezed into the column of the field it belongs to.
+  const panel = await section.getByRole('group', { name: 'Folders of the server' }).boundingBox();
+  const field = await section.getByLabel('Path in Kinoshelf').boundingBox();
+  const other = await section.getByLabel('Path on the server').boundingBox();
+  expect(panel?.width).toBeGreaterThan((field?.width ?? 0) + (other?.width ?? 0));
+
+  await section.getByRole('button', { name: 'Series' }).click();
+  await section.getByRole('button', { name: 'Use this folder' }).click();
+
+  await expect(section.getByLabel('Path in Kinoshelf')).toHaveValue(library('Series'));
+  await expect(section.getByLabel('Path on the server')).toHaveValue('');
 });
 
 test('adds a webhook whose address is never shown back', async ({ page }) => {

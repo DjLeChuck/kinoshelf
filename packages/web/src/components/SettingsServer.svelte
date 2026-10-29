@@ -104,7 +104,7 @@
       {/if}
     </div>
 
-    <PathMappings bind:rows={paths} />
+    <PathMappings bind:rows={paths} idPrefix={kind} />
   {/if}
 </SettingsSection>
 

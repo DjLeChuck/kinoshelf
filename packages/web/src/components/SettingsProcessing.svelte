@@ -12,6 +12,7 @@
     type Mode,
     type Settings,
   } from '../lib/settings.js';
+  import PathField from './PathField.svelte';
   import SettingsSection from './SettingsSection.svelte';
 
   let { settings, save }: { settings: Settings; save: (patch: object) => Promise<void> } = $props();
@@ -67,9 +68,9 @@
   {#if profile.choice === CUSTOM_PROFILE}
     <div class="field sub">
       <label for="profile-path">{t('web.settings.processing.profile.path')}</label>
-      <input
+      <PathField
         id="profile-path"
-        class="input mono"
+        kind="file"
         placeholder="/config/my-profile.yaml"
         bind:value={profile.path}
       />
@@ -124,16 +125,16 @@
     {#if folders.separate}
       <div class="field">
         <label for="dest-movies">{t('web.settings.processing.destination.movies')}</label>
-        <input id="dest-movies" class="input mono" bind:value={folders.movies} />
+        <PathField id="dest-movies" bind:value={folders.movies} />
       </div>
       <div class="field">
         <label for="dest-series">{t('web.settings.processing.destination.series')}</label>
-        <input id="dest-series" class="input mono" bind:value={folders.series} />
+        <PathField id="dest-series" bind:value={folders.series} />
       </div>
     {:else}
       <div class="field">
         <label class="sr-only" for="dest-single">{t('web.settings.processing.destination')}</label>
-        <input id="dest-single" class="input mono" bind:value={folders.single} />
+        <PathField id="dest-single" bind:value={folders.single} />
       </div>
     {/if}
   </fieldset>
