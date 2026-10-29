@@ -6,7 +6,7 @@ IMAGE ?= kinoshelf:dev
 
 .DEFAULT_GOAL := help
 
-.PHONY: help install build build-web dev-web typecheck lint format format-check test test-corpus \
+.PHONY: help install build build-web dev-server dev-web typecheck lint format format-check test test-corpus \
         test-live corpus-report corpus-record check docker-build flake-check clean
 
 help: ## List the targets
@@ -20,6 +20,9 @@ build: ## Build every package (tsc -b)
 
 build-web: ## Build the web UI
 	$(PNPM) build:web
+
+dev-server: build ## Start the REST server on :8484 (API key: KINOSHELF_API_KEY, or `kinoshelf-server api-key create`)
+	$(RUN) node packages/server/dist/main.js
 
 dev-web: ## Start the web UI dev server (Vite)
 	$(PNPM) --filter @kinoshelf/web dev
