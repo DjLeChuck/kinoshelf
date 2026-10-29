@@ -213,13 +213,20 @@ export class FolderWatcher {
     const settleMs = (config.settleSeconds ?? DEFAULT_SETTLE_SECONDS) * 1000;
     const now = this.now();
     const known = this.knownFiles(folder);
+    // Someone who asks for a scan wants what is not queued: a file remembered while its job was
+    // since deleted (history cleared) would otherwise stay unreachable until its date changes.
+    const queued = force ? this.queuedPaths(folder) : undefined;
     let submitted = 0;
     let pending = 0;
     const seen: VideoFile[] = [];
 
     for (const release of releases.values()) {
       seen.push(...release.videos);
-      const fresh = release.videos.filter((file) => !known.has(key(file)));
+      const fresh = release.videos.filter(
+        (file) =>
+          !known.has(key(file)) ||
+          (queued !== undefined && !queued.has(release.path) && !queued.has(file.path)),
+      );
       if (fresh.length === 0) {
         continue;
       }
@@ -249,6 +256,15 @@ export class FolderWatcher {
       )
       .all(`${escapeLike(folder)}/%`);
     return new Set(rows.map((row) => `${row.path}\0${row.size}\0${row.mtime_ms}`));
+  }
+
+  private queuedPaths(folder: string): Set<string> {
+    const rows = this.deps.database
+      .prepare<[string], { path: string }>(
+        "SELECT DISTINCT path FROM jobs WHERE path LIKE ? ESCAPE '\\'",
+      )
+      .all(`${escapeLike(folder)}/%`);
+    return new Set(rows.map((row) => row.path));
   }
 
   private remember(files: readonly VideoFile[]): void {

@@ -87,6 +87,26 @@ describe('FolderWatcher', () => {
     expect(submitted).toHaveLength(1);
   });
 
+  it('lets a manual scan submit a remembered file whose job is gone', async () => {
+    const { folder, submitted, watcher, database } = await setup();
+    const file = join(folder, 'Alien.1979.mkv');
+    await age(await put(file), SETTLE + 1);
+    await watcher.scan();
+    expect(submitted).toHaveLength(1);
+
+    // The job is still there: nothing to do, even when forced.
+    database
+      .prepare("INSERT INTO jobs (id, path, status, created_at) VALUES ('a', ?, 'done', '')")
+      .run(file);
+    expect(await watcher.scan({ force: true })).toEqual({ submitted: 0, pending: 0 });
+
+    // History cleared: the file is remembered but unreachable, unless asked for.
+    database.prepare('DELETE FROM jobs').run();
+    expect(await watcher.scan()).toEqual({ submitted: 0, pending: 0 });
+    expect(await watcher.scan({ force: true })).toEqual({ submitted: 1, pending: 0 });
+    expect(submitted).toHaveLength(2);
+  });
+
   it('submits only the new files of a release that grew', async () => {
     const { folder, submitted, watcher } = await setup();
     const release = join(folder, 'Show.S01');
