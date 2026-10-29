@@ -25,7 +25,7 @@ test('validates a file with a candidate found by hand, and the transfer happens'
   await item.click();
   await expect(page.getByText('Nothing found').first()).toBeVisible();
 
-  await page.getByLabel('Title').fill('Dune');
+  await page.getByRole('searchbox', { name: 'Title' }).fill('Dune');
   await page.getByRole('button', { name: 'Search', exact: true }).click();
   await page.getByRole('radio', { name: /Dune \(2021\)/ }).check({ force: true });
 
@@ -51,7 +51,7 @@ test('shows the poster of a candidate through the server, never from TMDB', asyn
   });
   await signIn(page);
   await page.getByRole('button', { name: /Mystery\.Poster\.Check\.mkv/ }).click();
-  await page.getByLabel('Title').fill('Dune');
+  await page.getByRole('searchbox', { name: 'Title' }).fill('Dune');
   await page.getByRole('button', { name: 'Search', exact: true }).click();
 
   const poster = page.locator('img[src^="/api/images/w92/"]').first();
@@ -66,7 +66,7 @@ test('refuses a choice whose destination is already taken', async ({ page, reque
   await signIn(page);
 
   await page.getByRole('button', { name: /Another\.Unknown\.File\.mkv/ }).click();
-  await page.getByLabel('Title').fill('Dune');
+  await page.getByRole('searchbox', { name: 'Title' }).fill('Dune');
   await page.getByRole('button', { name: 'Search', exact: true }).click();
   await page.getByRole('radio', { name: /Dune \(2021\)/ }).check({ force: true });
 
