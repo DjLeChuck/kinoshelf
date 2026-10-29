@@ -1,12 +1,24 @@
-# Kinoshelf
+<h1 align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="packages/web/src/assets/kinoshelf-logo.svg">
+    <img alt="Kinoshelf" src="packages/web/src/assets/kinoshelf-logo-light.svg" width="280">
+  </picture>
+</h1>
+
+<p align="center">
+  <a href="https://github.com/DjLeChuck/kinoshelf/actions/workflows/ci.yml">
+    <img alt="CI" src="https://github.com/DjLeChuck/kinoshelf/actions/workflows/ci.yml/badge.svg">
+  </a>
+</p>
 
 Identifies video files (movies, series) **already on disk**, renames them to match your player's
 conventions (Plex, Jellyfin) and writes their metadata (NFO, artwork). A web-native equivalent of
 tinyMediaManager and a companion to Radarr/Sonarr: it never downloads anything.
 
-> **Status: v0.2**: the headless core, the CLI, the REST server and the Docker image work. The web
-> UI (v0.3) is next, and there is no folder watcher yet: a script or a scheduled call submits
-> the files (see [Server](#server)).
+> **Status: v0.3**: the headless core, the CLI, the REST server, the Docker image and the web UI
+> (validation queue, history, settings) work. There is no folder watcher yet: a script or a
+> scheduled call submits the files (see [Server](#server)). Browsing the library, scanning a whole
+> library from the browser and several libraries are planned (the UI shows them as “coming soon”).
 
 ## Usage (v0.1, from source)
 
@@ -52,6 +64,7 @@ next start.
 | `KINOSHELF_HOST`    | address to listen on (default `0.0.0.0`)                           |
 | `KINOSHELF_PORT`    | port (default `8484`)                                              |
 | config directory    | `KINOSHELF_CONFIG_DIR`; holds `config.yaml` and `kinoshelf.sqlite` |
+| `KINOSHELF_WEB_DIR` | built web UI to serve (found by itself in the Docker image)        |
 
 `config.yaml` is the one source of the other settings (`destination`, `profile`, `mode`,
 `threshold`, `locale`, `metadataLanguage`, `retentionDays`) and of the notifications:
@@ -65,10 +78,33 @@ notify:
     - { url: 'https://ntfy.sh/my-topic', format: ntfy, on: [transferred, failed, needs-review] }
 ```
 
+To reach TMDB through a proxy (or a fake one in tests), set `KINOSHELF_TMDB_URL` (default
+`https://api.themoviedb.org`) and `KINOSHELF_TMDB_IMAGES_URL` (default `https://image.tmdb.org/t/p`).
+
 After a transfer, Plex or Jellyfin is asked to refresh only the libraries concerned, and each
 webhook (`generic`, `gotify`, `ntfy`, `discord`) is told what happened. If the media server sees
 the folders under other paths, map them with `paths: [{ from, to }]`. Check the setup without
 starting the server: `kinoshelf-server notify test`.
+
+## Web UI
+
+The server also serves a web UI on the same port (`http://localhost:8484`), in French or English
+(follows your browser, switchable in the header), with a dark and a light theme. Sign in with the
+API key: the browser keeps a session cookie for 7 days, so the key itself is not stored.
+
+- **Queue.** The files Kinoshelf could not place with confidence, with their TMDB candidates and
+  score, a manual search, and the destination path a choice would give. **Validate** transfers the
+  file, **Ignore** sets it aside. Nothing is moved until you validate, and an existing file is never
+  overwritten.
+- **History.** Every transfer as a batch, with each file. **Undo** shows what would be restored,
+  then asks for confirmation; a file moved or replaced since is left alone.
+- **Settings.** The TMDB key, languages, output profile, file mode, threshold, destination folders,
+  Plex, Jellyfin, webhooks (with a test) and the API key. They are saved in `config.yaml` and apply
+  at once, without a restart. Secrets are never shown again.
+
+The screens update by themselves when a job ends or a file is validated elsewhere. Posters come
+through the server, which fetches each one from TMDB once and keeps it in `/config/images`: your
+browser never contacts TMDB.
 
 ## Docker
 
@@ -103,6 +139,11 @@ With Nix: `nix develop` (or direnv). Otherwise: Node.js 22 and pnpm.
 pnpm install
 pnpm typecheck && pnpm lint && pnpm test
 ```
+
+`pnpm test` includes the matching corpus. The web UI is tested in a real browser with Playwright,
+against the real server and a fake TMDB: `pnpm test:e2e` (the Nix shell provides the browsers; elsewhere
+run `pnpm --filter @kinoshelf/e2e exec playwright install chromium` once). To work on the UI, start
+the server (`make dev-server`) and `make dev-web`, which proxies the API to it.
 
 A `Makefile` wraps these scripts: `make help` lists the targets, `make check` runs the whole
 pre-merge suite.
