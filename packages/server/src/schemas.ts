@@ -340,7 +340,12 @@ export const notificationTestSchema = {
   },
 } as const;
 
-const nullable = <T extends object>(schema: T) => ({ ...schema, nullable: true }) as const;
+/** An `enum` must list `null` itself, or Ajv refuses it though the schema says nullable. */
+const nullable = <T extends object>(schema: T) => {
+  const choices: unknown[] | undefined =
+    'enum' in schema && Array.isArray(schema.enum) ? (schema.enum as unknown[]) : undefined;
+  return { ...schema, nullable: true, ...(choices && { enum: [...choices, null] }) } as const;
+};
 const pathMappings = {
   type: 'array',
   items: {

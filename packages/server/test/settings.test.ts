@@ -111,6 +111,33 @@ describe('presentSettings', () => {
 });
 
 describe('PATCH /api/settings', () => {
+  it('creates config.yaml when the server started without one', async () => {
+    const configDir = await makeDir();
+    const h = await harness({ configDir, config: { destination: '/media' } });
+    const response = await h.app.inject({
+      method: 'PATCH',
+      url: '/api/settings',
+      headers: { authorization: `Bearer ${h.apiKey}` },
+      payload: { processing: { mode: null, threshold: 90 } },
+    });
+    expect(response.statusCode).toBe(200);
+    expect(response.json<SettingsBody>().processing.threshold).toBe(90);
+  });
+
+  it('unsets a value restricted to a list of choices (the form sends null for an empty field)', async () => {
+    const h = await withConfig('destination: /media\nmode: copy\nlocale: en\n');
+    const response = await h.patch({
+      locale: null,
+      processing: { profile: null, mode: null, threshold: null },
+    });
+    expect(response.statusCode).toBe(200);
+    expect(response.json<SettingsBody>()).toMatchObject({
+      locale: null,
+      processing: { mode: null, threshold: null },
+    });
+    expect(await h.file()).not.toMatch(/mode:|locale:/);
+  });
+
   it('writes config.yaml in place, keeping the comments, and applies it at once', async () => {
     const h = await withConfig('# mine\nmode: copy # seeds\nlocale: en\n');
     const response = await h.patch({
