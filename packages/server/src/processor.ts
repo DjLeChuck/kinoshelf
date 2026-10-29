@@ -71,5 +71,11 @@ export function makeProvider(deps: ProcessorDeps, language: string): MetadataPro
       path: join(deps.configDir, 'config.yaml'),
     });
   }
-  return new TmdbProvider({ apiKey, language, cache: new SqliteHttpCache(deps.database) });
+  const baseUrl = (deps.env.KINOSHELF_TMDB_URL ?? '').trim();
+  return new TmdbProvider({
+    apiKey,
+    language,
+    cache: new SqliteHttpCache(deps.database),
+    ...(baseUrl !== '' && { baseUrl }),
+  });
 }

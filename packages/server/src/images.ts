@@ -22,6 +22,8 @@ export interface ImageOptions {
   readonly cacheDir: string;
   /** Replaces the network, for tests. */
   readonly fetch?: typeof fetch;
+  /** Where posters are fetched from, without a trailing slash; TMDB's own by default. */
+  readonly baseUrl?: string;
 }
 
 /**
@@ -34,7 +36,7 @@ export function registerImageRoutes(api: FastifyInstance, options: ImageOptions)
   const download = async (size: string, file: string): Promise<Uint8Array> => {
     let response: Response;
     try {
-      response = await get(`${TMDB_IMAGES}/${size}/${file}`, {
+      response = await get(`${options.baseUrl ?? TMDB_IMAGES}/${size}/${file}`, {
         signal: AbortSignal.timeout(TIMEOUT_MS),
       });
     } catch {

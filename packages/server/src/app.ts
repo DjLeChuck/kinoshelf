@@ -266,6 +266,9 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     });
     registerImageRoutes(api, {
       cacheDir: join(options.configDir, 'images'),
+      ...((options.env.KINOSHELF_TMDB_IMAGES_URL ?? '') !== '' && {
+        baseUrl: (options.env.KINOSHELF_TMDB_IMAGES_URL ?? '').replace(/\/+$/, ''),
+      }),
       ...(options.fetch && { fetch: options.fetch }),
     });
     registerRoutes(api, { jobs, entries, executions, service, runner, notifier, events, history });

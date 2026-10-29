@@ -8,10 +8,10 @@ afterEach(cleanup);
 
 const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 1, 2, 3]);
 
-async function withImages(answer: () => Response) {
+async function withImages(answer: () => Response, env: Record<string, string> = {}) {
   const configDir = await mkdtemp(join(tmpdir(), 'kinoshelf-images-'));
   const fetcher = vi.fn<typeof fetch>(() => Promise.resolve(answer()));
-  const h = await harness({ configDir, fetch: fetcher });
+  const h = await harness({ configDir, fetch: fetcher, env });
   return { ...h, configDir, fetcher, drop: () => rm(configDir, { recursive: true, force: true }) };
 }
 
@@ -29,6 +29,15 @@ describe('GET /api/images', () => {
     expect(second.rawPayload).toEqual(Buffer.from(PNG));
     expect(h.fetcher).toHaveBeenCalledTimes(1);
     expect(await readdir(join(h.configDir, 'images', 'w154'))).toEqual(['abc123.jpg']);
+    await h.drop();
+  });
+
+  it('can fetch from another host than TMDB, for tests or a proxy', async () => {
+    const h = await withImages(() => new Response(PNG), {
+      KINOSHELF_TMDB_IMAGES_URL: 'http://127.0.0.1:9/t/p/',
+    });
+    expect((await h.request('GET', '/api/images/w92/abc.jpg')).statusCode).toBe(200);
+    expect(h.fetcher.mock.calls[0]?.[0]).toBe('http://127.0.0.1:9/t/p/w92/abc.jpg');
     await h.drop();
   });
 
