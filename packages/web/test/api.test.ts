@@ -56,6 +56,15 @@ describe('request', () => {
     });
   });
 
+  it('fills the detail when an error answers without our envelope', async () => {
+    const fetcher = () => Promise.resolve(new Response('', { status: 500 }));
+    await expect(request('GET', '/api/x', undefined, fetcher)).rejects.toMatchObject({
+      status: 500,
+      code: 'request.rejected',
+      params: { detail: 'HTTP 500' },
+    });
+  });
+
   it('tells the app when the session is refused, except while signing in', async () => {
     const handler = vi.fn();
     setUnauthorizedHandler(handler);

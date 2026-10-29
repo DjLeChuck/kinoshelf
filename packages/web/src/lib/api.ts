@@ -62,7 +62,10 @@ export async function request<T>(
   }
   if (!response.ok) {
     const { error } = (parsed ?? {}) as ErrorBody;
-    const failure = new ApiError(response.status, error?.code ?? 'request.rejected', error?.params);
+    // A reply without our error envelope (a proxy with no upstream, say) still has to fill `{detail}`.
+    const failure = error?.code
+      ? new ApiError(response.status, error.code, error.params)
+      : new ApiError(response.status, 'request.rejected', { detail: `HTTP ${response.status}` });
     // Signing in is the one request allowed to answer 401 without ending a session.
     if (response.status === 401 && url !== '/api/session') {
       onUnauthorized();
