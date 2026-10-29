@@ -57,16 +57,31 @@ export function titleSimilarity(a: string, b: string): number {
 }
 
 /**
- * Best similarity over the localized, original and alternative titles of a candidate. A
- * movie named `Title - Subtitle` is also read as the one title `Title Subtitle`, which is how
- * TMDB writes it (`Thor : Le Monde des ténèbres`).
+ * The ways a file's title may be written at the provider: as is, with its subtitle (`Thor : Le
+ * Monde des ténèbres` is one title for TMDB, `Thor - Le Monde des ténèbres` two parts for us),
+ * and each language of a bilingual one.
+ */
+export function titleReadings(parsed: {
+  readonly title?: string;
+  readonly subtitle?: string;
+  readonly otherTitles?: readonly string[];
+}): string[] {
+  const title = parsed.title ?? '';
+  return [
+    title,
+    ...(parsed.subtitle === undefined ? [] : [`${title} ${parsed.subtitle}`]),
+    ...(parsed.otherTitles ?? []),
+  ];
+}
+
+/**
+ * Best similarity of any reading of the file's title with the localized, original and
+ * alternative titles of a candidate.
  */
 export function candidateTitleSimilarity(
-  title: string,
+  readings: readonly string[],
   candidate: Candidate,
-  subtitle?: string,
 ): number {
-  const readings = subtitle === undefined ? [title] : [title, `${title} ${subtitle}`];
   return Math.max(
     ...[candidate.title, candidate.originalTitle, ...candidate.alternativeTitles].flatMap((t) =>
       readings.map((reading) => titleSimilarity(reading, t)),

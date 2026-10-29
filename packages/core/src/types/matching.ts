@@ -15,6 +15,11 @@ export interface ScoreBreakdown {
    * when both are known and differ, 0 otherwise.
    */
   readonly country: number;
+  /**
+   * Signed: a bonus when the volume named in the file (`Vol.2`) agrees with the one in the
+   * candidate's title, a penalty when both name one and they differ, 0 otherwise.
+   */
+  readonly volume: number;
   /** Bonus when the candidate's id was already present in the file names (0 otherwise). */
   readonly knownId: number;
 }

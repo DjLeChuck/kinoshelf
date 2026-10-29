@@ -35,6 +35,16 @@ export interface MatchingConfig {
     /** The bonus is withheld below this title similarity: a country must not rescue a title. */
     readonly minTitleSimilarity: number;
   };
+  /**
+   * The volume named in the file (`Kill.Bill.Vol.2`) against the one in the candidate's title
+   * (`Kill Bill : Volume 2`). Neutral when either side names none.
+   */
+  readonly volume: {
+    readonly bonus: number;
+    readonly penalty: number;
+    /** The bonus is withheld below this title similarity: a number must not rescue a title. */
+    readonly minTitleSimilarity: number;
+  };
   /** Candidates whose season is looked up (one request each, cached by the provider). */
   readonly maxSeasonLookups: number;
   /** Candidates reported when nothing reaches the threshold. */
@@ -53,6 +63,7 @@ export const DEFAULT_MATCHING_CONFIG: MatchingConfig = {
   marginFullGap: 10,
   knownId: { bonus: 40, minTitleSimilarity: 0.4 },
   country: { bonus: 10, penalty: 15, minTitleSimilarity: 0.4 },
+  volume: { bonus: 10, penalty: 15, minTitleSimilarity: 0.4 },
   maxSeasonLookups: 3,
   maxAmbiguousCandidates: 5,
 };

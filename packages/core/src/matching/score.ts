@@ -2,7 +2,7 @@ import type { ParsedMedia } from '../types/media.js';
 import type { ScoreBreakdown, ScoredCandidate } from '../types/matching.js';
 import type { Candidate, SeasonInfo } from '../types/provider.js';
 import type { MatchingConfig } from './config.js';
-import { candidateTitleSimilarity } from './title-similarity.js';
+import { candidateTitleSimilarity, titleReadings } from './title-similarity.js';
 
 /** Seasons by candidate key; `null` means the provider has no such season. */
 export type SeasonLookup = ReadonlyMap<string, SeasonInfo | null>;
@@ -80,6 +80,26 @@ function countryAgreement(parsed: ParsedMedia, candidate: Candidate): -1 | 0 | 1
   return candidate.countries.includes(parsed.country) ? 1 : -1;
 }
 
+// `Vol. 2`, `Volume 2`, and the French `Tome 2`, in any of a candidate's titles.
+const VOLUME = /\b(?:vol(?:ume)?s?|tome)\.?\s*(\d{1,2})\b/i;
+
+/** `1` the volumes agree, `-1` both name one and they differ, `0` nothing to compare. */
+function volumeAgreement(parsed: ParsedMedia, candidate: Candidate): -1 | 0 | 1 {
+  if (parsed.volume === undefined) {
+    return 0;
+  }
+  const named = [candidate.title, candidate.originalTitle, ...candidate.alternativeTitles].flatMap(
+    (title) => {
+      const number = VOLUME.exec(title)?.[1];
+      return number === undefined ? [] : [Number(number)];
+    },
+  );
+  if (named.length === 0) {
+    return 0;
+  }
+  return named.includes(parsed.volume) ? 1 : -1;
+}
+
 const knownIdMatches = (parsed: ParsedMedia, candidate: Candidate): boolean =>
   parsed.knownIds?.some(
     (known) => known.provider === candidate.id.provider && known.id === candidate.id.id,
@@ -93,6 +113,7 @@ interface Raw {
   readonly kind: number;
   readonly episodeExists: number;
   readonly country: number;
+  readonly volume: number;
   readonly sum: number;
 }
 
@@ -110,11 +131,12 @@ export function scoreCandidates(
   config: MatchingConfig,
 ): ScoredCandidate[] {
   const { weights } = config;
-  const title = parsed.title ?? '';
+  const readings = titleReadings(parsed);
 
   const raws: Raw[] = candidates.map((candidate) => {
-    const similarity = candidateTitleSimilarity(title, candidate, parsed.subtitle);
+    const similarity = candidateTitleSimilarity(readings, candidate);
     const agreement = countryAgreement(parsed, candidate);
+    const volumes = volumeAgreement(parsed, candidate);
     const parts = {
       title: weights.title * similarity,
       year: weights.year * yearCloseness(parsed, candidate),
@@ -127,12 +149,19 @@ export function scoreCandidates(
           : agreement === 1 && similarity >= config.country.minTitleSimilarity
             ? config.country.bonus
             : 0,
+      volume:
+        volumes === -1
+          ? -config.volume.penalty
+          : volumes === 1 && similarity >= config.volume.minTitleSimilarity
+            ? config.volume.bonus
+            : 0,
     };
     return {
       candidate,
       similarity,
       ...parts,
-      sum: parts.title + parts.year + parts.kind + parts.episodeExists + parts.country,
+      sum:
+        parts.title + parts.year + parts.kind + parts.episodeExists + parts.country + parts.volume,
     };
   });
 
@@ -159,6 +188,7 @@ export function scoreCandidates(
       episodeExists: raw.episodeExists,
       margin,
       country: raw.country,
+      volume: raw.volume,
       knownId,
     };
     const total = Math.min(100, Math.round(raw.sum + margin + knownId));

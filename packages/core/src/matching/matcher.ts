@@ -4,7 +4,7 @@ import type { Candidate, MetadataProvider, SearchQuery, SeasonInfo } from '../ty
 import type { AliasLookup } from './aliases.js';
 import { DEFAULT_MATCHING_CONFIG, type MatchingConfig } from './config.js';
 import { candidateKey, scoreCandidates } from './score.js';
-import { candidateTitleSimilarity } from './title-similarity.js';
+import { candidateTitleSimilarity, titleReadings } from './title-similarity.js';
 
 /** Turns a parsed file into a match against a metadata provider. */
 export class Matcher {
@@ -109,14 +109,10 @@ export class Matcher {
       return seasons;
     }
 
-    const title = parsed.title;
+    const readings = titleReadings(parsed);
     const series = candidates.filter((c) => c.kind === 'series');
     const likeliest = [...series]
-      .sort(
-        (a, b) =>
-          candidateTitleSimilarity(title, b, parsed.subtitle) -
-          candidateTitleSimilarity(title, a, parsed.subtitle),
-      )
+      .sort((a, b) => candidateTitleSimilarity(readings, b) - candidateTitleSimilarity(readings, a))
       .slice(0, this.config.maxSeasonLookups);
     const hinted = series.filter((c) =>
       parsed.knownIds?.some((known) => known.provider === c.id.provider && known.id === c.id.id),

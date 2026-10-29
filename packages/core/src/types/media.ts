@@ -24,7 +24,18 @@ export interface ParsedMedia {
    * as one title (`Thor : Le Monde des ténèbres`), so the matcher compares both readings.
    */
   readonly subtitle?: string;
+  /**
+   * A title written in two languages with a dash and no spaces around it
+   * (`Anatomy.Of.A.Fall-Anatomie.d.une.chute`): each half, as another reading of the title, since
+   * TMDB knows the work under one language or the other, never under both at once.
+   */
+  readonly otherTitles?: readonly string[];
   readonly year?: number;
+  /**
+   * A movie of a numbered series (`Kill.Bill.Vol.2`): the number, which tells the volumes apart
+   * when the rest of the title is the same.
+   */
+  readonly volume?: number;
   /** Season number (series). */
   readonly season?: number;
   /** Episode numbers; several values for a double episode. Empty for a movie. */

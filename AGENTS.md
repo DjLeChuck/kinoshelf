@@ -78,6 +78,12 @@ contains no player-specific rule.
   configured roots, which is what is being chosen: the API key already lets its holder submit any
   path to `POST /api/jobs`. Keep it to names; never return file contents. The Plex/Jellyfin path
   mappings only "Path in Kinoshelf" uses it; the other side is a path on _their_ machine, typed.
+- `ParsedMedia.volume` (`Kill.Bill.Vol.2`, movies only) is compared with the number in a candidate's
+  title (`Kill Bill : Volume 2`, `Vol. 2`, `Tome 2`): a signed adjustment like the country's, neutral
+  when either side names none. `ParsedMedia.otherTitles` holds the two halves of a bilingual title
+  glued by a dash (`Anatomy.Of.A.Fall-Anatomie.d.une.chute`), each a further reading of the title
+  (best similarity wins); the dash must have two words on each side, so `Spider-Man` is untouched.
+  The search itself still uses the whole title.
 - `ParsedMedia.country` (`The.Office.US`) is matched against `Candidate.countries` (TMDB gives
   `origin_country` for series only): a bonus on agreement, a penalty when both are known and
   differ, neutral otherwise.

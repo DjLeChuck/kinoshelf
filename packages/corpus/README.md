@@ -96,6 +96,8 @@ harder entries and nothing regressed; write the reason here.
   with no regression: 281 of 284.
 - 0.98 to 0.99: a validated title is remembered as an alias, so `Gordon.Ramsay.Hells.Kitchen` passes
   (the entry with its alias), with two guard entries added: 284 of 286.
+- 0.99 to 1: the parser keeps `Vol.2` and reads each language of `A-B` as a title, which fixed the
+  last two known gaps: 286 of 286.
 
 ## Things to know
 

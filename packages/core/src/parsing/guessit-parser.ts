@@ -37,6 +37,24 @@ const count = (value: unknown): number | undefined =>
 // An explicit marker that a number is a season/episode: `S02E05`, `2x05`, `Season 2`, `Épisode 5`.
 const EPISODE_MARKER =
   /s\d+\s*[-.]?\s*e\d+|\b\d{1,2}x\d{2,3}\b|saison|season|[ée]pisode|\bep?\s?\d/i;
+/**
+ * `A B-C D`: a dash glued to both sides, with at least two words each. `Spider-Man` and
+ * `X-Men Days Of Future Past` have a word on one side, and are one title.
+ */
+function otherTitlesOf(title: string): readonly string[] {
+  for (let at = title.indexOf('-'); at !== -1; at = title.indexOf('-', at + 1)) {
+    const [left, right] = [title.slice(0, at), title.slice(at + 1)];
+    if (
+      /\S$/.test(left) &&
+      /^\S/.test(right) &&
+      [left, right].every((half) => /\S\s+\S/.test(half.trim()))
+    ) {
+      return [left.trim(), right.trim()];
+    }
+  }
+  return [];
+}
+
 const countryOf = (value: unknown): string | undefined =>
   typeof value === 'string' && /^[A-Za-z]{2}$/.test(value) ? value.toUpperCase() : undefined;
 
@@ -161,6 +179,8 @@ export class GuessitParser implements Parser {
     const releaseGroup = text(guess.release_group);
     const country = countryOf(guess.country);
     const subtitle = text(guess.alternative_title);
+    const volume = count(guess.volume);
+    const otherTitles = title === undefined ? [] : otherTitlesOf(title);
     let kind: ParsedKind = 'unknown';
     if (title !== undefined && !numbersAreAmbiguous) {
       if (guess.type === 'movie') {
@@ -176,7 +196,9 @@ export class GuessitParser implements Parser {
       episodes: kind === 'episode' ? episodes : [],
       ...(title !== undefined && { title }),
       ...(kind === 'movie' && subtitle !== undefined && { subtitle }),
+      ...(otherTitles.length > 0 && { otherTitles }),
       ...(year !== undefined && { year }),
+      ...(kind === 'movie' && volume !== undefined && { volume }),
       ...(kind === 'episode' && season !== undefined && { season }),
       ...(kind === 'episode' && episodeTitle !== undefined && { episodeTitle }),
       ...(extension && { extension }),

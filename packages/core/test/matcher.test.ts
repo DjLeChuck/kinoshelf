@@ -578,3 +578,75 @@ describe('aliases', () => {
     expect(provider.calls.map((c) => c.method)).not.toContain('getSeries');
   });
 });
+
+describe('volumes', () => {
+  const vol1 = movie(24, 'Kill Bill : Volume 1', 2003);
+  const vol2 = movie(393, 'Kill Bill : Volume 2', 2004);
+
+  it('tells the volumes apart when the rest of the title is the same', async () => {
+    const matcher = new Matcher(new FakeProvider([vol1, vol2]));
+    const two = expectMatched(await matcher.match(parsedMovie('Kill Bill', 2004, { volume: 2 })));
+    expect(two.best.candidate.id.id).toBe(393);
+    expect(two.best.breakdown.volume).toBe(10);
+    expect(two.others[0]?.breakdown.volume).toBe(-15);
+    const one = expectMatched(await matcher.match(parsedMovie('Kill Bill', 2003, { volume: 1 })));
+    expect(one.best.candidate.id.id).toBe(24);
+  });
+
+  it('does not let the volume overrule the year: a year of the other volume stays in review', async () => {
+    const matcher = new Matcher(new FakeProvider([vol1, vol2]));
+    // Vol.2 with the year of Vol.1: neither the number nor the year can be trusted over the other.
+    expectAmbiguous(await matcher.match(parsedMovie('Kill Bill', 2003, { volume: 2 })));
+  });
+
+  it('sends a volume that does not exist to review', async () => {
+    const matcher = new Matcher(new FakeProvider([vol1, vol2]));
+    expectAmbiguous(await matcher.match(parsedMovie('Kill Bill', 2004, { volume: 3 })));
+  });
+
+  it('is neutral when the candidate names no volume, or the file names none', async () => {
+    const plain = expectMatched(
+      await new Matcher(new FakeProvider([movie(1, 'Dune', 2021)])).match(
+        parsedMovie('Dune', 2021, { volume: 2 }),
+      ),
+    );
+    expect(plain.best.breakdown.volume).toBe(0);
+    const unnumbered = await new Matcher(new FakeProvider([vol1, vol2])).match(
+      parsedMovie('Kill Bill', 2004),
+    );
+    expect(unnumbered.status === 'matched' ? unnumbered.best.breakdown.volume : 0).toBe(0);
+  });
+});
+
+describe('bilingual titles', () => {
+  const anatomie = {
+    ...movie(915935, "Anatomie d'une chute", 2023),
+    originalTitle: 'Anatomie d’une chute',
+  };
+  const bilingual = (year: number) =>
+    parsedMovie('Anatomy Of A Fall-Anatomie d une chute', year, {
+      otherTitles: ['Anatomy Of A Fall', 'Anatomie d une chute'],
+    });
+
+  it('matches through the language the provider knows the work in', async () => {
+    const matcher = new Matcher(new FakeProvider([anatomie]));
+    expectAmbiguous(
+      await matcher.match(parsedMovie('Anatomy Of A Fall-Anatomie d une chute', 2023)),
+    );
+    expect(expectMatched(await matcher.match(bilingual(2023))).best.candidate.id.id).toBe(915935);
+  });
+
+  it('does not let a half rescue a wrong year', async () => {
+    const matcher = new Matcher(new FakeProvider([anatomie]));
+    expectAmbiguous(await matcher.match(bilingual(2019)));
+  });
+
+  it('does not let a half pull a file onto an unrelated work', async () => {
+    const impossible = movie(954, 'Mission: Impossible', 1996);
+    const matcher = new Matcher(new FakeProvider([impossible]));
+    const file = parsedMovie('Mission Impossible-Dead Reckoning', 2023, {
+      otherTitles: ['Mission Impossible', 'Dead Reckoning'],
+    });
+    expectAmbiguous(await matcher.match(file));
+  });
+});

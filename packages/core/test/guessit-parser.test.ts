@@ -117,6 +117,38 @@ describe('GuessitParser', () => {
     });
   });
 
+  describe('volumes', () => {
+    it.each([
+      ['Kill Bill Vol 2 (2004)/Kill.Bill.Vol.2.2004.1080p.mp4', 2],
+      ['Kill.Bill.Volume.1.2003.mkv', 1],
+    ])('keeps the volume of %s', (path, volume) => {
+      expect(parser.parse(path)).toMatchObject({ kind: 'movie', title: 'Kill Bill', volume });
+    });
+
+    it('has none for a film that names no volume', () => {
+      expect(parser.parse('Dune.2021.2160p.mkv').volume).toBeUndefined();
+    });
+  });
+
+  describe('bilingual titles', () => {
+    it('reads each language of `A-B` as another reading of the title', () => {
+      expect(
+        parser.parse('Anatomy.Of.A.Fall-Anatomie.d.une.chute--2023-720p-x265.mkv'),
+      ).toMatchObject({
+        title: 'Anatomy Of A Fall-Anatomie d une chute',
+        otherTitles: ['Anatomy Of A Fall', 'Anatomie d une chute'],
+      });
+    });
+
+    it.each([
+      'Spider-Man.2002.1080p.mkv',
+      'X-Men.Days.Of.Future.Past.2014.1080p.mkv',
+      'Mission.Impossible.2.2000.mkv',
+    ])('leaves a hyphenated word alone in %s', (path) => {
+      expect(parser.parse(path).otherTitles).toBeUndefined();
+    });
+  });
+
   describe('movie subtitles', () => {
     it.each([
       [
