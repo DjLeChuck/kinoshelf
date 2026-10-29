@@ -43,8 +43,8 @@
     <button type="button" class="btn" onclick={() => void load()}>{t('web.retry')}</button>
   {:else if settings}
     <SettingsGeneral {settings} {save} />
-    <SettingsProcessing {settings} {save} />
     <SettingsWatch {settings} {save} />
+    <SettingsProcessing {settings} {save} />
     <SettingsServer kind="plex" {settings} {save} />
     <SettingsServer kind="jellyfin" {settings} {save} />
     <SettingsWebhooks {settings} {save} />

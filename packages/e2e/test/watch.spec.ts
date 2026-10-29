@@ -16,7 +16,7 @@ test('watches a folder of finished downloads, and checks it on demand', async ({
 
   await page.getByRole('link', { name: 'Settings' }).click();
   const section = page.locator('form', {
-    has: page.getByRole('heading', { name: 'Finished downloads' }),
+    has: page.getByRole('heading', { name: 'Folders to watch (source)' }),
   });
   await section.getByRole('checkbox', { name: 'Watch folders' }).check();
   await section.locator('#watch-folder-0').fill(folder);
@@ -40,7 +40,7 @@ test('refuses a watched folder that is not an absolute path', async ({ page }) =
   await signIn(page);
   await page.getByRole('link', { name: 'Settings' }).click();
   const section = page.locator('form', {
-    has: page.getByRole('heading', { name: 'Finished downloads' }),
+    has: page.getByRole('heading', { name: 'Folders to watch (source)' }),
   });
   await section.getByRole('checkbox', { name: 'Watch folders' }).check();
   await section.locator('#watch-folder-0').fill('downloads');

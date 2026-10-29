@@ -242,16 +242,16 @@ export const fr: Record<keyof typeof en, string> = {
   'web.queue.sources.pending': '{count} release(s) en cours d’écriture ou de stabilisation.',
   'web.queue.sources.unavailable': 'inaccessible',
   'web.queue.sources.none':
-    'Aucun dossier n’est surveillé. Choisissez-en un dans les réglages, sous « Téléchargements terminés ».',
+    'Aucun dossier n’est surveillé. Choisissez-en un dans les réglages, sous « Dossiers à surveiller ».',
   'web.queue.sources.scan': 'Vérifier maintenant',
   'web.queue.sources.scan.hint':
     'N’attend pas que les fichiers se stabilisent : à utiliser quand vous savez qu’un téléchargement est terminé.',
   'web.queue.sources.scanned': '{submitted} release(s) soumise(s), {pending} en cours d’écriture.',
-  'web.settings.watch.title': 'Téléchargements terminés',
+  'web.settings.watch.title': 'Dossiers à surveiller (source)',
   'web.settings.watch.intro':
-    'Soumet automatiquement ce qui arrive dans un dossier. Votre client de téléchargement doit garder les téléchargements en cours dans un autre dossier (« Keep incomplete torrents in » de qBittorrent, dossier incomplet de Transmission, désactivés par défaut) et ne les déplacer ici qu’une fois terminés. Sinon, on ne distingue pas un fichier terminé d’un fichier à l’arrêt.',
+    'Là où Kinoshelf cherche les fichiers à identifier. Ce qui arrive ici est analysé automatiquement, puis rangé dans les dossiers de destination définis dans Traitement. Votre client de téléchargement doit garder les téléchargements en cours dans un autre dossier (« Keep incomplete torrents in » de qBittorrent, dossier incomplet de Transmission, désactivés par défaut) et ne les déplacer ici qu’une fois terminés. Sinon, on ne distingue pas un fichier terminé d’un fichier à l’arrêt.',
   'web.settings.watch.enabled': 'Surveiller des dossiers',
-  'web.settings.watch.folders': 'Dossiers de téléchargements terminés',
+  'web.settings.watch.folders': 'Dossiers sources',
   'web.settings.watch.folders.hint':
     'Ce qui s’y trouve déjà est soumis une fois, au début de la surveillance. Préférez le mode lien dur ou copie : déplacer un fichier empêche son torrent de continuer à être partagé.',
   'web.settings.watch.add-folder': 'Ajouter un dossier',
@@ -376,7 +376,9 @@ export const fr: Record<keyof typeof en, string> = {
   'web.settings.processing.threshold': 'Seuil automatique (0–100)',
   'web.settings.processing.threshold.hint':
     'Une correspondance sous ce score attend dans la file. Vide : la valeur par défaut.',
-  'web.settings.processing.destination': 'Dossier de destination',
+  'web.settings.processing.destination': 'Bibliothèque (destination)',
+  'web.settings.processing.destination.hint':
+    'Où les fichiers identifiés sont rangés, pour que Plex ou Jellyfin les lisent. Ils viennent des dossiers surveillés, ou d’un chemin que vous soumettez.',
   'web.settings.processing.destination.single': 'Un seul dossier',
   'web.settings.processing.destination.separate': 'Bibliothèques séparées',
   'web.settings.processing.destination.movies': 'Dossier des films',

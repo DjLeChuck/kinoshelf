@@ -57,7 +57,7 @@ test('picks a destination folder on the server’s disk instead of typing it', a
   await browser.getByRole('button', { name: 'Use this folder' }).click();
 
   await expect(section.getByRole('group', { name: 'Folders of the server' })).toHaveCount(0);
-  await expect(section.getByRole('textbox', { name: 'Destination folder' })).toHaveValue(
+  await expect(section.getByRole('textbox', { name: 'Library (destination)' })).toHaveValue(
     library('Films'),
   );
 });

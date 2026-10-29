@@ -237,16 +237,16 @@ export const en = {
   'web.queue.sources.pending': '{count} release(s) still being written or settling.',
   'web.queue.sources.unavailable': 'unreachable',
   'web.queue.sources.none':
-    'No folder is watched. Choose one in the settings, under “Finished downloads”.',
+    'No folder is watched. Choose one in the settings, under “Folders to watch”.',
   'web.queue.sources.scan': 'Check now',
   'web.queue.sources.scan.hint':
     'Does not wait for files to settle: use it when you know a download is complete.',
   'web.queue.sources.scanned': '{submitted} release(s) submitted, {pending} still being written.',
-  'web.settings.watch.title': 'Finished downloads',
+  'web.settings.watch.title': 'Folders to watch (source)',
   'web.settings.watch.intro':
-    'Submit what lands in a folder by itself. Your download client must keep unfinished downloads in another folder (qBittorrent’s “Keep incomplete torrents in”, Transmission’s incomplete folder, both off by default) and only move them here once complete. Otherwise a finished file cannot be told from a stalled one.',
+    'Where Kinoshelf looks for files to identify. What lands here is analyzed by itself, then placed in the destination folders set under Processing. Your download client must keep unfinished downloads in another folder (qBittorrent’s “Keep incomplete torrents in”, Transmission’s incomplete folder, both off by default) and only move them here once complete. Otherwise a finished file cannot be told from a stalled one.',
   'web.settings.watch.enabled': 'Watch folders',
-  'web.settings.watch.folders': 'Folders of finished downloads',
+  'web.settings.watch.folders': 'Source folders',
   'web.settings.watch.folders.hint':
     'What is already there is submitted once, when watching starts. Prefer the hardlink or copy mode: moving a file stops its torrent from seeding.',
   'web.settings.watch.add-folder': 'Add a folder',
@@ -369,7 +369,9 @@ export const en = {
   'web.settings.processing.threshold': 'Automatic threshold (0–100)',
   'web.settings.processing.threshold.hint':
     'A match scoring below it waits in the queue. Empty: the default.',
-  'web.settings.processing.destination': 'Destination folder',
+  'web.settings.processing.destination': 'Library (destination)',
+  'web.settings.processing.destination.hint':
+    'Where identified files are placed, for Plex or Jellyfin to read. They come from the watched folders, or from a path you submit.',
   'web.settings.processing.destination.single': 'One folder',
   'web.settings.processing.destination.separate': 'Separate libraries',
   'web.settings.processing.destination.movies': 'Movies folder',

@@ -111,6 +111,7 @@
 
   <fieldset>
     <legend>{t('web.settings.processing.destination')}</legend>
+    <span class="muted hint">{t('web.settings.processing.destination.hint')}</span>
     <div class="choices">
       <label class="check">
         <input type="radio" name="destination-kind" value={false} bind:group={folders.separate} />
