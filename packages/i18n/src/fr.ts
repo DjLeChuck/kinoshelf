@@ -246,7 +246,8 @@ export const fr: Record<keyof typeof en, string> = {
   'web.queue.sources.scan': 'Vérifier maintenant',
   'web.queue.sources.scan.hint':
     'N’attend pas que les fichiers se stabilisent : à utiliser quand vous savez qu’un téléchargement est terminé.',
-  'web.queue.sources.scanned': '{submitted} release(s) soumise(s), {pending} en cours d’écriture.',
+  'web.queue.sources.scanned':
+    '{submitted} release(s) soumise(s), {pending} en cours d’écriture, {known} déjà soumise(s).',
   'web.settings.watch.title': 'Dossiers à surveiller (source)',
   'web.settings.watch.intro':
     'Là où Kinoshelf cherche les fichiers à identifier. Ce qui arrive ici est analysé automatiquement, puis rangé dans les dossiers de destination définis dans Traitement. Votre client de téléchargement doit garder les téléchargements en cours dans un autre dossier (« Keep incomplete torrents in » de qBittorrent, dossier incomplet de Transmission, désactivés par défaut) et ne les déplacer ici qu’une fois terminés. Sinon, on ne distingue pas un fichier terminé d’un fichier à l’arrêt.',

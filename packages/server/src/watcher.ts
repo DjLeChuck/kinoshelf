@@ -32,6 +32,8 @@ export interface ScanResult {
   /** Jobs created by this scan. */
   readonly submitted: number;
   readonly pending: number;
+  /** Releases seen again that an earlier scan already submitted. */
+  readonly known: number;
 }
 
 export interface WatcherDeps {
@@ -178,11 +180,13 @@ export class FolderWatcher {
     const config = this.config;
     let submitted = 0;
     let pending = 0;
+    let known = 0;
     if (config) {
       for (const folder of config.folders) {
         const result = await this.scanFolder(folder, config, force);
         submitted += result.submitted;
         pending += result.pending;
+        known += result.known;
       }
     }
     this.pending = pending;
@@ -191,7 +195,7 @@ export class FolderWatcher {
     if (pending > 0 && !this.polling) {
       this.schedule(Math.max(5, config?.settleSeconds ?? DEFAULT_SETTLE_SECONDS) * 1000);
     }
-    return { submitted, pending };
+    return { submitted, pending, known };
   }
 
   private now(): number {
@@ -207,7 +211,7 @@ export class FolderWatcher {
     this.available.set(folder, releases !== undefined);
     // An unreadable folder says nothing about what is in it: keep what was recorded.
     if (!releases) {
-      return { submitted: 0, pending: 0 };
+      return { submitted: 0, pending: 0, known: 0 };
     }
 
     const settleMs = (config.settleSeconds ?? DEFAULT_SETTLE_SECONDS) * 1000;
@@ -218,6 +222,7 @@ export class FolderWatcher {
     const queued = force ? this.queuedPaths(folder) : undefined;
     let submitted = 0;
     let pending = 0;
+    let remembered = 0;
     const seen: VideoFile[] = [];
 
     for (const release of releases.values()) {
@@ -228,6 +233,10 @@ export class FolderWatcher {
           (queued !== undefined && !queued.has(release.path) && !queued.has(file.path)),
       );
       if (fresh.length === 0) {
+        // A folder with only samples or an NFO has nothing to be known for.
+        if (release.videos.length > 0) {
+          remembered++;
+        }
         continue;
       }
       const settled = release.videos.every((file) => now - file.mtimeMs >= settleMs);
@@ -246,7 +255,7 @@ export class FolderWatcher {
     }
 
     this.forget(folder, seen);
-    return { submitted, pending };
+    return { submitted, pending, known: remembered };
   }
 
   private knownFiles(folder: string): Set<string> {

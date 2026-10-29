@@ -42,10 +42,12 @@
 
   const scan = (): Promise<void> =>
     run(async () => {
-      const { submitted, pending } = await api.post<{ submitted: number; pending: number }>(
-        '/api/watch/scan',
-      );
-      return t('web.queue.sources.scanned', { submitted, pending });
+      const { submitted, pending, known } = await api.post<{
+        submitted: number;
+        pending: number;
+        known: number;
+      }>('/api/watch/scan');
+      return t('web.queue.sources.scanned', { submitted, pending, known });
     });
 </script>
 

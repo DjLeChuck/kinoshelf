@@ -241,7 +241,8 @@ export const en = {
   'web.queue.sources.scan': 'Check now',
   'web.queue.sources.scan.hint':
     'Does not wait for files to settle: use it when you know a download is complete.',
-  'web.queue.sources.scanned': '{submitted} release(s) submitted, {pending} still being written.',
+  'web.queue.sources.scanned':
+    '{submitted} release(s) submitted, {pending} still being written, {known} already submitted.',
   'web.settings.watch.title': 'Folders to watch (source)',
   'web.settings.watch.intro':
     'Where Kinoshelf looks for files to identify. What lands here is analyzed by itself, then placed in the destination folders set under Processing. Your download client must keep unfinished downloads in another folder (qBittorrent’s “Keep incomplete torrents in”, Transmission’s incomplete folder, both off by default) and only move them here once complete. Otherwise a finished file cannot be told from a stalled one.',

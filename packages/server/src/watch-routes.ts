@@ -47,8 +47,15 @@ export function registerWatchRoutes(api: FastifyInstance, watcher: FolderWatcher
         response: {
           200: {
             type: 'object',
-            required: ['submitted', 'pending'],
-            properties: { submitted: { type: 'integer' }, pending: { type: 'integer' } },
+            required: ['submitted', 'pending', 'known'],
+            properties: {
+              submitted: { type: 'integer' },
+              pending: { type: 'integer' },
+              known: {
+                type: 'integer',
+                description: 'Releases an earlier scan already submitted.',
+              },
+            },
           },
           401: errorSchema,
           409: errorSchema,
