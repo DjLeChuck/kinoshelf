@@ -39,6 +39,15 @@
             {#if candidate.originalTitle !== candidate.title}· {candidate.originalTitle}{/if}
           </span>
         </span>
+        <!-- Inside the label, a link does not select the card: it only opens the page. -->
+        <a
+          class="tmdb"
+          href={`https://www.themoviedb.org/${candidate.kind === 'movie' ? 'movie' : 'tv'}/${candidate.id.id}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={t('web.queue.tmdb-link')}
+          title={t('web.queue.tmdb-link')}>TMDB ↗</a
+        >
         {#if candidate.score !== undefined}
           <span class="chip chip-neutral">{t('web.queue.score', { score: candidate.score })}</span>
         {/if}
@@ -87,6 +96,11 @@
   label:has(input:focus-visible) {
     outline: 2px solid var(--accent);
     outline-offset: 2px;
+  }
+
+  .tmdb {
+    font-size: 0.85em;
+    white-space: nowrap;
   }
 
   .text {

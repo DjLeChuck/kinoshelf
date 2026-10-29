@@ -276,6 +276,7 @@ export const en = {
   'web.queue.candidates': 'Candidates on TMDB',
   'web.queue.no-candidates': 'No candidate. Search by hand below.',
   'web.queue.score': '{score}% match',
+  'web.queue.tmdb-link': 'Open the TMDB page (new tab)',
   'web.queue.kind.series': 'Series',
   'web.queue.no-poster': 'No poster',
   'web.queue.search.title': 'Search by hand',

@@ -283,6 +283,7 @@ export const fr: Record<keyof typeof en, string> = {
   'web.queue.candidates': 'Candidats TMDB',
   'web.queue.no-candidates': 'Aucun candidat. Cherchez à la main ci-dessous.',
   'web.queue.score': '{score} % de correspondance',
+  'web.queue.tmdb-link': 'Ouvrir la fiche TMDB (nouvel onglet)',
   'web.queue.kind.series': 'Série',
   'web.queue.no-poster': 'Pas d’affiche',
   'web.queue.search.title': 'Recherche manuelle',
