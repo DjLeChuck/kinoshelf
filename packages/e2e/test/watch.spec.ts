@@ -30,7 +30,9 @@ test('watches a folder of finished downloads, and checks it on demand', async ({
   // Just written: the settling time has not passed, which is what "Check now" is for.
   await writeFile(`${folder}/Mystery.Finished.Download.mkv`, 'video');
   await page.getByRole('button', { name: 'Check now' }).click();
-  await expect(page.getByText('1 release(s) submitted, 0 still being written.')).toBeVisible();
+  await expect(
+    page.getByText('1 release(s) submitted, 0 still being written, 0 already submitted.'),
+  ).toBeVisible();
   await expect(
     page.getByRole('button', { name: /Mystery\.Finished\.Download\.mkv/ }),
   ).toBeVisible();
