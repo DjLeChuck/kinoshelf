@@ -17,6 +17,7 @@ import type { DeliveryOptions } from './notify/delivery.js';
 import { Notifier } from './notify/notifier.js';
 import { createProcessor, type ProcessorDeps } from './processor.js';
 import { purgeHistory } from './purge.js';
+import { registerFsRoutes } from './fs-routes.js';
 import { registerRoutes } from './routes.js';
 import { JobRunner, type JobProcessor } from './runner.js';
 import { healthSchema } from './schemas.js';
@@ -267,6 +268,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
       events,
       service,
     });
+    registerFsRoutes(api);
     registerImageRoutes(api, {
       cacheDir: join(options.configDir, 'images'),
       ...((options.env.KINOSHELF_TMDB_IMAGES_URL ?? '') !== '' && {

@@ -133,6 +133,27 @@ export const matchBodySchema = {
   properties: candidateSchema.properties,
 } as const;
 
+export const folderListingSchema = {
+  type: 'object',
+  required: ['path', 'parent', 'entries', 'truncated'],
+  properties: {
+    path: { type: 'string' },
+    parent: { type: 'string', nullable: true },
+    entries: {
+      type: 'array',
+      items: {
+        type: 'object',
+        required: ['name', 'kind'],
+        properties: {
+          name: { type: 'string' },
+          kind: { type: 'string', enum: ['directory', 'file'] },
+        },
+      },
+    },
+    truncated: { type: 'boolean' },
+  },
+} as const;
+
 export const aliasSchema = {
   type: 'object',
   required: ['id', 'kind', 'title', 'work', 'createdAt'],

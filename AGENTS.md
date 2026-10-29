@@ -71,6 +71,13 @@ contains no player-specific rule.
   the year, a movie one includes it. Files carrying ids (`knownIds`) skip aliases. A validation
   also re-matches the undecided files of the same title. Aliases are listed and forgotten in the
   settings (`GET /api/aliases`, `DELETE /api/aliases/{id}`).
+- **Path picker** (`GET /api/fs?path=…[&files=yaml]`): the settings browse the server's disk for the
+  destination folders and a custom profile, since a browser cannot see it (and in Docker only
+  mounted folders exist). It lists sub-folders (and YAML files when asked), names only, hidden
+  entries left out, symlinks shown as their target, at most 2000 entries. It is not restricted to
+  configured roots, which is what is being chosen: the API key already lets its holder submit any
+  path to `POST /api/jobs`. Keep it to names; never return file contents. The Plex/Jellyfin path
+  mappings only "Path in Kinoshelf" uses it; the other side is a path on _their_ machine, typed.
 - `ParsedMedia.country` (`The.Office.US`) is matched against `Candidate.countries` (TMDB gives
   `origin_country` for series only): a bonus on agreement, a penalty when both are known and
   differ, neutral otherwise.

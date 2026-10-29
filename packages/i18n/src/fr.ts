@@ -166,6 +166,10 @@ export const fr: Record<keyof typeof en, string> = {
   'error.auth.unauthorized': 'Clé d’API incorrecte, ou session expirée.',
   'error.batch.already-undone': 'Ce lot a déjà été annulé.',
   'error.alias.not-found': 'Ce titre mémorisé n’existe pas.',
+  'error.fs.not-a-directory': '{path} est un fichier, pas un dossier.',
+  'error.fs.not-absolute': 'Un chemin doit être absolu (il commence par /).',
+  'error.fs.not-found': 'Aucun dossier à {path}.',
+  'error.fs.unreadable': 'Kinoshelf n’a pas le droit de lire {path}.',
   'error.batch.not-found': 'Ce lot n’existe pas.',
   'error.execution.not-found': 'Ce transfert n’existe pas.',
   'error.image.not-found': 'Cette image n’existe pas.',
@@ -371,6 +375,16 @@ export const fr: Record<keyof typeof en, string> = {
   'web.settings.webhooks.test.failed': 'Échec',
   'web.settings.webhooks.test.none':
     'Rien à tester : aucun webhook, Plex ni Jellyfin n’est défini.',
+  'web.path.browse': 'Parcourir…',
+  'web.path.browser': 'Dossiers du serveur',
+  'web.path.loading': 'Lecture du dossier…',
+  'web.path.up': 'Dossier parent',
+  'web.path.use': 'Choisir ce dossier',
+  'web.path.close': 'Fermer',
+  'web.path.empty': 'Aucun sous-dossier ici.',
+  'web.path.empty.file': 'Aucun dossier ni fichier YAML ici.',
+  'web.path.truncated':
+    'Seules les premières entrées sont affichées : saisissez le chemin pour le reste.',
   'web.settings.aliases.title': 'Titres mémorisés',
   'web.settings.aliases.hint':
     'Les titres que vous avez liés à une œuvre dans la file. Un fichier portant l’un de ces titres est apparié seul ; en oublier un n’agit que sur les prochains scans.',

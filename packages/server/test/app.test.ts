@@ -32,6 +32,7 @@ describe('GET /api/openapi.json', () => {
       '/api/batches/{id}/undo',
       '/api/events',
       '/api/executions/{id}',
+      '/api/fs',
       '/api/images/{size}/{file}',
       '/api/jobs',
       '/api/jobs/{id}',
