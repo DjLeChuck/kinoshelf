@@ -36,8 +36,9 @@ export interface MatchingConfig {
     readonly minTitleSimilarity: number;
   };
   /**
-   * The volume named in the file (`Kill.Bill.Vol.2`) against the one in the candidate's title
-   * (`Kill Bill : Volume 2`). Neutral when either side names none.
+   * The installment named in the file (`Kill.Bill.Vol.2`, `Deathly.Hallows.Part.2`) against the
+   * one in the candidate's title (`Kill Bill : Volume 2`, `Part II`, `2ème partie`). Neutral when
+   * either side names none.
    */
   readonly volume: {
     readonly bonus: number;

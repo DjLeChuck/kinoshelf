@@ -151,6 +151,17 @@ describe('GuessitParser', () => {
       expect(parser.parse(path)).toMatchObject({ kind: 'movie', title: 'Kill Bill', volume });
     });
 
+    it('reads a part as a volume, when guessit sets it aside', () => {
+      expect(
+        parser.parse('Harry.Potter.And.The.Deathly.Hallows.Part.2.2011.1080p.mkv'),
+      ).toMatchObject({ kind: 'movie', title: 'Harry Potter And The Deathly Hallows', volume: 2 });
+    });
+
+    it('leaves a part that stays in the title to the title', () => {
+      expect(parser.parse('Dune.Part.Two.2024.mkv')).toMatchObject({ title: 'Dune Part Two' });
+      expect(parser.parse('Dune.Part.Two.2024.mkv').volume).toBeUndefined();
+    });
+
     it('has none for a film that names no volume', () => {
       expect(parser.parse('Dune.2021.2160p.mkv').volume).toBeUndefined();
     });

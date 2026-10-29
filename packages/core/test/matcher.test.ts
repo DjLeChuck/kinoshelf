@@ -618,6 +618,64 @@ describe('volumes', () => {
   });
 });
 
+describe('parts', () => {
+  const hallows = (id: number, title: string, year: number) => movie(id, title, year);
+  const part1 = hallows(12444, 'Harry Potter and the Deathly Hallows: Part 1', 2010);
+  const part2 = hallows(12445, 'Harry Potter and the Deathly Hallows: Part 2', 2011);
+  const file = (number: number, year?: number) =>
+    parsedMovie('Harry Potter And The Deathly Hallows', year, { volume: number });
+
+  it('picks the part when the file has no year to tell them apart', async () => {
+    const matcher = new Matcher(new FakeProvider([part1, part2]));
+    expect(expectMatched(await matcher.match(file(2))).best.candidate.id.id).toBe(12445);
+    expect(expectMatched(await matcher.match(file(1))).best.candidate.id.id).toBe(12444);
+  });
+
+  it('reads the French way of writing it, and a part spelled out', async () => {
+    const french = [
+      movie(12444, 'Harry Potter et les Reliques de la Mort : 1ère partie', 2010),
+      movie(12445, 'Harry Potter et les Reliques de la Mort : 2ème partie', 2011),
+    ];
+    const outcome = expectMatched(
+      await new Matcher(new FakeProvider(french)).match(
+        parsedMovie('Harry Potter et les Reliques de la Mort', undefined, { volume: 2 }),
+      ),
+    );
+    expect(outcome.best.candidate.id.id).toBe(12445);
+
+    const roman = [
+      movie(1, 'The Godfather Part II', 1974),
+      movie(2, 'The Godfather Part III', 1990),
+    ];
+    expect(
+      expectMatched(
+        await new Matcher(new FakeProvider(roman)).match(
+          parsedMovie('The Godfather', 1990, { volume: 3 }),
+        ),
+      ).best.candidate.id.id,
+    ).toBe(2);
+  });
+
+  it('sends a part that does not exist to review', async () => {
+    const matcher = new Matcher(new FakeProvider([part1, part2]));
+    expectAmbiguous(await matcher.match(file(3)));
+  });
+
+  it('leaves to a human a part whose number and year name different films', async () => {
+    const matcher = new Matcher(new FakeProvider([part1, part2]));
+    // `Part.2` with the year of Part 1: the year is tolerated one off, which alone would let
+    // Part 2 win at 97.
+    expectAmbiguous(await matcher.match(file(2, 2010)));
+    expectAmbiguous(await matcher.match(file(1, 2011)));
+  });
+
+  it('still takes the part when the year agrees or is one off with no rival on that year', async () => {
+    const matcher = new Matcher(new FakeProvider([part1, part2]));
+    expect(expectMatched(await matcher.match(file(2, 2011))).best.candidate.id.id).toBe(12445);
+    expect(expectMatched(await matcher.match(file(2, 2012))).best.candidate.id.id).toBe(12445);
+  });
+});
+
 describe('bilingual titles', () => {
   const anatomie = {
     ...movie(915935, "Anatomie d'une chute", 2023),

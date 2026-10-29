@@ -2,6 +2,7 @@ import type { ParsedMedia } from '../types/media.js';
 import type { ScoreBreakdown, ScoredCandidate } from '../types/matching.js';
 import type { Candidate, SeasonInfo } from '../types/provider.js';
 import type { MatchingConfig } from './config.js';
+import { installmentsOf } from './installment.js';
 import { candidateTitleSimilarity, titleReadings } from './title-similarity.js';
 
 /** Seasons by candidate key; `null` means the provider has no such season. */
@@ -80,19 +81,13 @@ function countryAgreement(parsed: ParsedMedia, candidate: Candidate): -1 | 0 | 1
   return candidate.countries.includes(parsed.country) ? 1 : -1;
 }
 
-// `Vol. 2`, `Volume 2`, and the French `Tome 2`, in any of a candidate's titles.
-const VOLUME = /\b(?:vol(?:ume)?s?|tome)\.?\s*(\d{1,2})\b/i;
-
 /** `1` the volumes agree, `-1` both name one and they differ, `0` nothing to compare. */
 function volumeAgreement(parsed: ParsedMedia, candidate: Candidate): -1 | 0 | 1 {
   if (parsed.volume === undefined) {
     return 0;
   }
   const named = [candidate.title, candidate.originalTitle, ...candidate.alternativeTitles].flatMap(
-    (title) => {
-      const number = VOLUME.exec(title)?.[1];
-      return number === undefined ? [] : [Number(number)];
-    },
+    installmentsOf,
   );
   if (named.length === 0) {
     return 0;
@@ -203,6 +198,19 @@ export function scoreCandidates(
   });
 
   const ranked = scored.sort((a, b) => b.score - a.score);
+
+  // The installment and the year name different films (`Part.2` with the year of Part 1): the
+  // year is tolerated one off, so the number would win alone, but neither can be trusted over the
+  // other and a human must look.
+  const lead = ranked[0];
+  if (
+    lead &&
+    lead.breakdown.volume > 0 &&
+    (yearGap(parsed, lead.candidate) ?? 0) > 0 &&
+    ranked.some((s) => s.breakdown.volume < 0 && yearGap(parsed, s.candidate) === 0)
+  ) {
+    return ranked.map((s) => ({ ...s, score: Math.min(s.score, config.threshold - 1) }));
+  }
 
   // The names carry an id and the candidate it designates is in the results, yet something
   // else scores higher: the tag and the rest of the name disagree (e.g. `Dune (2021)

@@ -32,8 +32,9 @@ export interface ParsedMedia {
   readonly otherTitles?: readonly string[];
   readonly year?: number;
   /**
-   * A movie of a numbered series (`Kill.Bill.Vol.2`): the number, which tells the volumes apart
-   * when the rest of the title is the same.
+   * A movie that is one installment of several (`Kill.Bill.Vol.2`, `Deathly.Hallows.Part.2`): its
+   * number, which tells them apart when the rest of the title is the same. Only when guessit set
+   * it aside; `Dune.Part.Two` keeps it in the title, where title similarity already sees it.
    */
   readonly volume?: number;
   /** Season number (series). */

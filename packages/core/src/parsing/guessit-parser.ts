@@ -179,7 +179,8 @@ export class GuessitParser implements Parser {
     const releaseGroup = text(guess.release_group);
     const country = countryOf(guess.country);
     const subtitle = text(guess.alternative_title);
-    const volume = count(guess.volume);
+    // guessit calls it a volume (`Vol.2`) or a part (`Part.2`); a title names it either way.
+    const volume = count(guess.volume) ?? count(guess.part);
     const otherTitles = title === undefined ? [] : otherTitlesOf(title);
     let kind: ParsedKind = 'unknown';
     if (title !== undefined && !numbersAreAmbiguous) {
