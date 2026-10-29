@@ -196,6 +196,17 @@ describe('editConfig', () => {
     expect((await stat(join(dir, 'config.yaml'))).mode & 0o777).toBe(0o600);
   });
 
+  it('ignores the removal of a value the file does not have, even when there is no file', async () => {
+    const dir = await makeDir();
+    const config = await editConfig(dir, [
+      { path: ['mode'], value: undefined },
+      { path: ['apiKey', 'tmdb'], value: undefined },
+      { path: ['locale'], value: 'fr' },
+    ]);
+    expect(config).toEqual({ locale: 'fr' });
+    expect(await read(dir)).toBe('locale: fr\n');
+  });
+
   it('keeps comments and order, and changes only what is asked', async () => {
     const dir = await makeDir();
     await put(

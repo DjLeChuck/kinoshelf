@@ -189,8 +189,12 @@ export async function editConfig(directory: string, edits: readonly ConfigEdit[]
   const document = parseText(text ?? '', path);
   for (const edit of edits) {
     if (edit.value === undefined) {
-      document.deleteIn(edit.path);
-      pruneEmptyParents(document, edit.path);
+      // Nothing to remove from a file that does not exist yet (or lacks the key): a form unsets
+      // every field it leaves blank, and `deleteIn` throws on an empty document.
+      if (document.hasIn(edit.path)) {
+        document.deleteIn(edit.path);
+        pruneEmptyParents(document, edit.path);
+      }
     } else {
       document.setIn(edit.path, edit.value);
     }
