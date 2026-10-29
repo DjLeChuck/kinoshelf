@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
+  CUSTOM_PROFILE,
   cleanMappings,
   destinationForm,
   destinationOf,
   isHttpUrl,
   nullIfBlank,
+  profileForm,
+  profileOf,
   thresholdOf,
   webhookRows,
   webhooksPatch,
@@ -116,5 +119,30 @@ describe('isHttpUrl', () => {
     ['', false],
   ])('%j is %s', (text, expected) => {
     expect(isHttpUrl(text)).toBe(expected);
+  });
+});
+
+describe('profile', () => {
+  const bundled = [{ id: 'plex' }];
+
+  it('reads a bundled id, the default and a path back into the form', () => {
+    expect(profileForm(null, bundled)).toEqual({ choice: '', path: '' });
+    expect(profileForm('plex', bundled)).toEqual({ choice: 'plex', path: '' });
+    expect(profileForm('/config/mine.yaml', bundled)).toEqual({
+      choice: CUSTOM_PROFILE,
+      path: '/config/mine.yaml',
+    });
+  });
+
+  it('saves the choice, or the path of the user’s own file', () => {
+    expect(profileOf({ choice: '', path: '' })).toBeNull();
+    expect(profileOf({ choice: 'plex', path: '/ignored' })).toBe('plex');
+    expect(profileOf({ choice: CUSTOM_PROFILE, path: ' /config/mine.yaml ' })).toBe(
+      '/config/mine.yaml',
+    );
+  });
+
+  it('refuses "my own file" without a path', () => {
+    expect(profileOf({ choice: CUSTOM_PROFILE, path: '  ' })).toBeUndefined();
   });
 });

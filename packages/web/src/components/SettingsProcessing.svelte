@@ -2,10 +2,12 @@
   import { t } from '../lib/i18n.svelte.js';
   import {
     FormError,
+    CUSTOM_PROFILE,
     MODES,
     destinationForm,
     destinationOf,
-    nullIfBlank,
+    profileForm,
+    profileOf,
     thresholdOf,
     type Mode,
     type Settings,
@@ -14,10 +16,13 @@
 
   let { settings, save }: { settings: Settings; save: (patch: object) => Promise<void> } = $props();
 
+  const EXPLAINED: readonly ('default' | Mode)[] = ['default', ...MODES];
+
   // Read once: the page replaces nothing under a form being edited.
   /* svelte-ignore state_referenced_locally */
   const { processing } = settings;
-  let profile = $state(processing.profile ?? '');
+  /* svelte-ignore state_referenced_locally */
+  let profile = $state(profileForm(processing.profile, settings.profiles));
   let mode = $state<Mode | ''>(processing.mode ?? '');
   let threshold = $state(processing.threshold === null ? '' : String(processing.threshold));
   let folders = $state(destinationForm(processing.destination));
@@ -31,9 +36,13 @@
     if (destination === undefined) {
       throw new FormError(t('web.settings.invalid.destination'));
     }
+    const chosen = profileOf(profile);
+    if (chosen === undefined) {
+      throw new FormError(t('web.settings.invalid.profile'));
+    }
     await save({
       processing: {
-        profile: nullIfBlank(profile),
+        profile: chosen,
         mode: mode === '' ? null : mode,
         threshold: limit,
         destination,
@@ -45,9 +54,28 @@
 <SettingsSection title={t('web.settings.processing.title')} onsubmit={submit}>
   <div class="field">
     <label for="profile">{t('web.settings.processing.profile')}</label>
-    <input id="profile" class="input mono" bind:value={profile} placeholder="plex" />
+    <select id="profile" class="input" bind:value={profile.choice}>
+      <option value="">{t('web.settings.processing.profile.default')}</option>
+      {#each settings.profiles as option (option.id)}
+        <option value={option.id}>{option.name}</option>
+      {/each}
+      <option value={CUSTOM_PROFILE}>{t('web.settings.processing.profile.custom')}</option>
+    </select>
     <span class="muted hint">{t('web.settings.processing.profile.hint')}</span>
   </div>
+
+  {#if profile.choice === CUSTOM_PROFILE}
+    <div class="field sub">
+      <label for="profile-path">{t('web.settings.processing.profile.path')}</label>
+      <input
+        id="profile-path"
+        class="input mono"
+        placeholder="/config/my-profile.yaml"
+        bind:value={profile.path}
+      />
+      <span class="muted hint">{t('web.settings.processing.profile.path.hint')}</span>
+    </div>
+  {/if}
 
   <div class="field">
     <label for="mode">{t('web.settings.processing.mode')}</label>
@@ -58,6 +86,15 @@
       {/each}
     </select>
   </div>
+
+  <dl class="explain" aria-label={t('web.settings.processing.mode.explain')}>
+    {#each EXPLAINED as option (option)}
+      <div class:current={option === (mode === '' ? 'default' : mode)}>
+        <dt>{t(`web.settings.processing.mode.${option}`)}</dt>
+        <dd class="muted">{t(`web.settings.processing.mode.${option}.help`)}</dd>
+      </div>
+    {/each}
+  </dl>
 
   <div class="field">
     <label for="threshold">{t('web.settings.processing.threshold')}</label>
@@ -73,14 +110,16 @@
 
   <fieldset>
     <legend>{t('web.settings.processing.destination')}</legend>
-    <label class="check">
-      <input type="radio" name="destination-kind" value={false} bind:group={folders.separate} />
-      {t('web.settings.processing.destination.single')}
-    </label>
-    <label class="check">
-      <input type="radio" name="destination-kind" value={true} bind:group={folders.separate} />
-      {t('web.settings.processing.destination.separate')}
-    </label>
+    <div class="choices">
+      <label class="check">
+        <input type="radio" name="destination-kind" value={false} bind:group={folders.separate} />
+        {t('web.settings.processing.destination.single')}
+      </label>
+      <label class="check">
+        <input type="radio" name="destination-kind" value={true} bind:group={folders.separate} />
+        {t('web.settings.processing.destination.separate')}
+      </label>
+    </div>
 
     {#if folders.separate}
       <div class="field">
@@ -126,5 +165,45 @@
 
   .hint {
     font-size: 12px;
+  }
+
+  .choices {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 24px;
+  }
+
+  /* A field that belongs to the one above it. */
+  .sub {
+    margin-left: 16px;
+    padding-left: 12px;
+    border-left: 2px solid var(--border);
+  }
+
+  .explain {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin: 0;
+    font-size: 12.5px;
+  }
+
+  .explain > div {
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+  }
+
+  .explain > .current {
+    border-color: var(--accent);
+    background: var(--warn-bg);
+  }
+
+  dt {
+    font-weight: 600;
+  }
+
+  dd {
+    margin: 2px 0 0;
   }
 </style>

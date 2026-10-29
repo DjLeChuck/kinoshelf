@@ -318,9 +318,9 @@ export const fr: Record<keyof typeof en, string> = {
   'web.settings.processing.title': 'Traitement',
   'web.settings.processing.profile': 'Profil de sortie',
   'web.settings.processing.profile.hint':
-    'Un identifiant fourni (plex) ou le chemin d’un fichier YAML.',
+    'La façon de nommer fichiers et dossiers. Choisissez un profil fourni avec Kinoshelf, ou indiquez votre propre fichier YAML.',
   'web.settings.processing.mode': 'Mode de fichier',
-  'web.settings.processing.mode.default': 'Par défaut (déplacer sur place, copier sinon)',
+  'web.settings.processing.mode.default': 'Automatique',
   'web.settings.processing.mode.copy': 'Copie',
   'web.settings.processing.mode.hardlink': 'Lien dur',
   'web.settings.processing.mode.move': 'Déplacement',
@@ -339,9 +339,9 @@ export const fr: Record<keyof typeof en, string> = {
   'web.settings.servers.title': 'Serveurs multimédia',
   'web.settings.plex.title': 'Serveur Plex',
   'web.settings.jellyfin.title': 'Serveur Jellyfin',
-  'web.settings.server.enabled': 'Lui demander de se rafraîchir après un transfert',
+  'web.settings.server.enabled': 'Prévenir {server} après chaque transfert',
   'web.settings.server.url': 'Adresse',
-  'web.settings.server.section': 'Section de bibliothèque (numéro)',
+  'web.settings.server.section': 'Numéro de bibliothèque (facultatif)',
   'web.settings.server.token': 'Jeton',
   'web.settings.server.token.set': 'Défini. Laissez vide pour le garder.',
   'web.settings.server.paths': 'Correspondance des chemins',
@@ -373,13 +373,43 @@ export const fr: Record<keyof typeof en, string> = {
   'web.settings.access.env':
     'La clé vient de KINOSHELF_API_KEY : changez la variable pour la remplacer.',
   'web.settings.access.hint':
-    'Les scripts qui utilisent la clé actuelle cessent de fonctionner aussitôt. Ce navigateur reste connecté.',
+    'C’est la clé que vous avez saisie pour vous connecter ici, et celle que les scripts utilisent pour appeler Kinoshelf, par exemple un hook après téléchargement qui lui soumet un fichier. Remplacez-la si elle a fuité ou si vous l’avez perdue.',
   'web.settings.access.replace': 'Remplacer la clé d’API',
   'web.settings.access.confirm': 'Oui, la remplacer',
   'web.settings.access.cancel': 'Garder l’actuelle',
   'web.settings.access.new': 'Votre nouvelle clé. Elle n’est affichée qu’une fois.',
   'web.settings.access.copy': 'Copier',
   'web.settings.access.copied': 'Copié',
+  'web.settings.processing.profile.default': 'Par défaut (Plex)',
+  'web.settings.processing.profile.custom': 'Mon propre fichier…',
+  'web.settings.processing.profile.path': 'Chemin du fichier YAML',
+  'web.settings.processing.profile.path.hint':
+    'Sur la machine qui exécute Kinoshelf (avec Docker : dans le conteneur), par exemple /config/mon-profil.yaml.',
+  'web.settings.processing.mode.default.help':
+    'Déplace les fichiers quand vous rangez un dossier sur place (la destination est le dossier source), et les copie quand la destination est un autre dossier. Exemple : /downloads rangé dans /downloads déplace ; rangé dans /media copie.',
+  'web.settings.processing.mode.copy.help':
+    'Duplique le fichier à son nouvel emplacement et laisse l’original où il est. Sûr, mais prend deux fois la place tant que vous ne supprimez pas l’original. Exemple : /downloads/Dune.mkv reste, et /media/Films/Dune (2021)/Dune (2021).mkv est une nouvelle copie.',
+  'web.settings.processing.mode.hardlink.help':
+    'Donne au même fichier un second nom à son nouvel emplacement, sans le dupliquer : les deux chemins montrent le fichier mais il n’occupe la place qu’une fois, et supprimer un nom laisse l’autre. Pratique pour continuer à partager un torrent depuis l’original. Les deux dossiers doivent être sur le même disque ou volume : sinon le transfert échoue, Kinoshelf ne bascule jamais sur une copie.',
+  'web.settings.processing.mode.move.help':
+    'Déplace le fichier : l’original disparaît de son ancien emplacement et aucune place n’est utilisée. Annuler le lot le remet. Exemple : /downloads/Dune.mkv devient /media/Films/Dune (2021)/Dune (2021).mkv.',
+  'web.settings.processing.mode.explain': 'Ce que fait chaque mode',
+  'web.settings.server.enabled.hint':
+    'Les nouveaux fichiers apparaissent aussitôt dans sa bibliothèque, au lieu d’attendre son prochain scan programmé.',
+  'web.settings.plex.section.hint':
+    'Laissez vide : Kinoshelf trouve la bonne bibliothèque Plex d’après le dossier où le fichier est allé. Ne le remplissez que pour en imposer une. Son numéro est la valeur « source= » dans l’adresse de la page de la bibliothèque dans Plex Web (par exemple source=2).',
+  'web.settings.webhooks.format.generic.help':
+    'Le message JSON propre à Kinoshelf (événement, titre, message et détails), pour un script ou un outil comme n8n ou Home Assistant qui le lit.',
+  'web.settings.webhooks.format.gotify.help':
+    'Une notification push sur votre téléphone via votre serveur Gotify. Collez l’URL des messages avec votre jeton, du type https://gotify.example/message?token=…',
+  'web.settings.webhooks.format.ntfy.help':
+    'Une notification push via ntfy (ntfy.sh ou votre propre serveur). La fin de l’URL est le sujet, du type https://ntfy.sh/mon-kinoshelf.',
+  'web.settings.webhooks.format.discord.help':
+    'Un message dans un salon Discord. Collez l’URL du webhook créé dans les paramètres du salon (Intégrations, puis Webhooks).',
+  'web.settings.access.warning':
+    'Les scripts qui utilisent la clé actuelle cessent de fonctionner aussitôt. Ce navigateur reste connecté.',
+  'web.settings.invalid.profile':
+    'Indiquez le chemin de votre fichier de profil, ou choisissez-en un dans la liste.',
   'web.not-found.title': 'Page introuvable',
   'web.not-found.back': 'Retour à la file',
 };

@@ -91,6 +91,7 @@
             <option value={format}>{format}</option>
           {/each}
         </select>
+        <span class="muted hint">{t(`web.settings.webhooks.format.${row.format}.help`)}</span>
       </div>
 
       <div class="events" role="group" aria-label={t('web.settings.webhooks.on')}>

@@ -62,6 +62,7 @@
         </button>
       </div>
     {:else if confirming}
+      <p class="alert">{t('web.settings.access.warning')}</p>
       <div class="buttons">
         <button
           type="button"

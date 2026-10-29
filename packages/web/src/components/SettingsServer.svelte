@@ -58,8 +58,9 @@
 <SettingsSection title={t(`web.settings.${kind}.title`)} onsubmit={submit}>
   <label class="check">
     <input type="checkbox" bind:checked={enabled} />
-    {t('web.settings.server.enabled')}
+    {t('web.settings.server.enabled', { server: isPlex ? 'Plex' : 'Jellyfin' })}
   </label>
+  <p class="muted hint">{t('web.settings.server.enabled.hint')}</p>
 
   {#if enabled}
     <div class="field">
@@ -83,7 +84,9 @@
           inputmode="numeric"
           pattern="[0-9]+"
           bind:value={section}
+          aria-describedby="plex-section-hint"
         />
+        <span id="plex-section-hint" class="muted hint">{t('web.settings.plex.section.hint')}</span>
       </div>
     {/if}
 

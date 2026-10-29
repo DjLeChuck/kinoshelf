@@ -45,6 +45,8 @@ export interface Settings {
     readonly destination: string | Destination | null;
   };
   readonly apiKey: { readonly source: 'env' | 'database' | null };
+  /** The profiles shipped with Kinoshelf. */
+  readonly profiles: readonly { readonly id: string; readonly name: string }[];
 }
 
 export interface TestResult {
@@ -158,4 +160,34 @@ export function isHttpUrl(text: string): boolean {
 /** A mistake in the form itself, caught before the server is asked; its message is already text. */
 export class FormError extends Error {
   override name = 'FormError';
+}
+
+/** The select's value for "my own file": no bundled profile has this id. */
+export const CUSTOM_PROFILE = '__custom__';
+
+export interface ProfileForm {
+  /** `''` (the default), a bundled id, or `CUSTOM_PROFILE`. */
+  choice: string;
+  path: string;
+}
+
+/** A configured value that is not a bundled id is a path to the user's own file. */
+export function profileForm(
+  profile: string | null,
+  bundled: readonly { readonly id: string }[],
+): ProfileForm {
+  if (profile === null) {
+    return { choice: '', path: '' };
+  }
+  return bundled.some(({ id }) => id === profile)
+    ? { choice: profile, path: '' }
+    : { choice: CUSTOM_PROFILE, path: profile };
+}
+
+/** What to save; `undefined` when "my own file" is chosen but no path is given. */
+export function profileOf(form: ProfileForm): string | null | undefined {
+  if (form.choice === CUSTOM_PROFILE) {
+    return nullIfBlank(form.path) ?? undefined;
+  }
+  return nullIfBlank(form.choice);
 }

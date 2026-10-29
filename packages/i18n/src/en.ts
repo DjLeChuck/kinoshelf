@@ -313,9 +313,10 @@ export const en = {
   'web.settings.general.locale.hint': 'The language of notifications.',
   'web.settings.processing.title': 'Processing',
   'web.settings.processing.profile': 'Output profile',
-  'web.settings.processing.profile.hint': 'A bundled id (plex) or the path of a YAML file.',
+  'web.settings.processing.profile.hint':
+    'How files and folders are named. Pick one shipped with Kinoshelf, or point to your own YAML file.',
   'web.settings.processing.mode': 'File mode',
-  'web.settings.processing.mode.default': 'Default (move in place, copy elsewhere)',
+  'web.settings.processing.mode.default': 'Automatic',
   'web.settings.processing.mode.copy': 'Copy',
   'web.settings.processing.mode.hardlink': 'Hardlink',
   'web.settings.processing.mode.move': 'Move',
@@ -333,9 +334,9 @@ export const en = {
   'web.settings.servers.title': 'Media servers',
   'web.settings.plex.title': 'Plex server',
   'web.settings.jellyfin.title': 'Jellyfin server',
-  'web.settings.server.enabled': 'Ask it to refresh after a transfer',
+  'web.settings.server.enabled': 'Tell {server} about each transfer',
   'web.settings.server.url': 'Address',
-  'web.settings.server.section': 'Library section (number)',
+  'web.settings.server.section': 'Library number (optional)',
   'web.settings.server.token': 'Token',
   'web.settings.server.token.set': 'Set. Leave empty to keep it.',
   'web.settings.server.paths': 'Path mapping',
@@ -366,13 +367,42 @@ export const en = {
   'web.settings.access.env':
     'The key comes from KINOSHELF_API_KEY: change the variable to replace it.',
   'web.settings.access.hint':
-    'Scripts using the current key stop working at once. This browser stays signed in.',
+    'This is the key you typed to sign in here, and the one scripts use to call Kinoshelf, for example a post-download hook that submits a file. Replace it if it leaked or if you lost it.',
   'web.settings.access.replace': 'Replace the API key',
   'web.settings.access.confirm': 'Yes, replace it',
   'web.settings.access.cancel': 'Keep the current one',
   'web.settings.access.new': 'Your new key. It is shown once.',
   'web.settings.access.copy': 'Copy',
   'web.settings.access.copied': 'Copied',
+  'web.settings.processing.profile.default': 'Default (Plex)',
+  'web.settings.processing.profile.custom': 'My own file…',
+  'web.settings.processing.profile.path': 'Path of the YAML file',
+  'web.settings.processing.profile.path.hint':
+    'On the machine running Kinoshelf (in Docker: inside the container), e.g. /config/my-profile.yaml.',
+  'web.settings.processing.mode.default.help':
+    'Moves the files when you organize a folder where it is (the destination is the source folder), and copies them when the destination is another folder. Example: scanning /downloads into /downloads moves; into /media copies.',
+  'web.settings.processing.mode.copy.help':
+    'Duplicates the file at its new place and leaves the original where it is. Safe, but it takes twice the disk space until you delete the original. Example: /downloads/Dune.mkv stays, and /media/Movies/Dune (2021)/Dune (2021).mkv is a new copy.',
+  'web.settings.processing.mode.hardlink.help':
+    'Gives the same file a second name at its new place, without duplicating it: both paths show the file but it takes the disk space once, and deleting one name leaves the other. Handy to keep seeding a torrent from the original. Both folders must be on the same disk or volume: otherwise the transfer fails, Kinoshelf never falls back to a copy.',
+  'web.settings.processing.mode.move.help':
+    'Relocates the file: the original disappears from its old place and no space is used. Undoing the batch puts it back. Example: /downloads/Dune.mkv becomes /media/Movies/Dune (2021)/Dune (2021).mkv.',
+  'web.settings.processing.mode.explain': 'What each mode does',
+  'web.settings.server.enabled.hint':
+    'The new files appear in its library right away, instead of at its next scheduled scan.',
+  'web.settings.plex.section.hint':
+    'Leave empty: Kinoshelf finds the right Plex library from the folder the file went to. Fill it only to force one library. Its number is the “source=” value in the address of the library page in Plex Web (for example source=2).',
+  'web.settings.webhooks.format.generic.help':
+    'Kinoshelf’s own JSON message (event, title, message and details), for a script or a tool such as n8n or Home Assistant that reads it.',
+  'web.settings.webhooks.format.gotify.help':
+    'A push notification on your phone through your Gotify server. Paste the message URL with your token, like https://gotify.example/message?token=…',
+  'web.settings.webhooks.format.ntfy.help':
+    'A push notification through ntfy (ntfy.sh or your own server). The last part of the URL is the topic, like https://ntfy.sh/my-kinoshelf.',
+  'web.settings.webhooks.format.discord.help':
+    'A message in a Discord channel. Paste the webhook URL made in the channel’s settings (Integrations, then Webhooks).',
+  'web.settings.access.warning':
+    'Scripts using the current key stop working at once. This browser stays signed in.',
+  'web.settings.invalid.profile': 'Give the path of your profile file, or pick one from the list.',
   'web.not-found.title': 'Page not found',
   'web.not-found.back': 'Back to the queue',
 } as const;
