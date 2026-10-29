@@ -14,8 +14,9 @@ function initial(): Locale {
   return navigator.language.toLowerCase().startsWith('fr') ? 'fr' : 'en';
 }
 
-let current = $state<Locale>(initial());
-document.documentElement.lang = current;
+const start = initial();
+let current = $state<Locale>(start);
+document.documentElement.lang = start;
 
 /** Reads `current`, so whatever calls it in a template re-renders when the language changes. */
 export const t: Translate = (key, params) => createTranslator(current)(key, params);
