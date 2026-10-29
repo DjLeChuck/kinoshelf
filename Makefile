@@ -6,7 +6,7 @@ IMAGE ?= kinoshelf:dev
 
 .DEFAULT_GOAL := help
 
-.PHONY: help install build build-web dev-server dev-web typecheck lint format format-check test test-corpus \
+.PHONY: help hooks install build build-web dev-server dev-web typecheck lint format format-check test test-corpus \
         test-e2e test-live corpus-report corpus-record check docker-build flake-check clean
 
 help: ## List the targets
@@ -58,6 +58,9 @@ corpus-record: ## Re-record the TMDB responses (needs TMDB_API_KEY in .env)
 	$(PNPM) corpus:record
 
 check: typecheck lint format-check test ## Everything required before considering work done
+
+hooks: ## Use the versioned git hooks (.githooks): pre-push runs every test
+	git config core.hooksPath .githooks
 
 docker-build: ## Build the Docker image (IMAGE=kinoshelf:dev)
 	docker build -t $(IMAGE) .
