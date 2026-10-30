@@ -1,14 +1,18 @@
-import { link } from 'node:fs/promises';
+import { link, readdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
   createPlan,
-  KinoshelfError,
+  executePlan,
   loadBundledProfile,
+  MemoryJournal,
   parseProfile,
   type PlanInput,
   type PlanItem,
+  type MovieDetails,
   type Profile,
+  type SeriesDetails,
+  undoLastBatch,
 } from '../src/index.js';
 import { movie, series } from './fake-provider.js';
 import {
@@ -339,25 +343,359 @@ filesystem: { forbidden: posix, replacement: '', maxSegmentBytes: 255 }
     ).items;
     expect(item?.conflicts[0]?.detail?.code).toBe('plan.unsafe-segment');
   });
+});
 
-  it('rejects, for now, a profile that writes NFO or artwork', async () => {
-    const lib = await makeDir();
-    const withNfo = parseProfile(`
+const kodi = (extra = '') =>
+  parseProfile(`
 id: kodi
 name: Kodi
 episodeRangeSeparator: '-e'
 templates:
-  movieFolder: '{title}'
-  movieFile: '{title}'
+  movieFolder: '{title} ({year})'
+  movieFile: '{title} ({year})'
+  seriesFolder: '{title} ({year})'
+  seasonFolder: 'Season {season:02}'
+  episodeFile: '{title} - s{season:02}e{episode:02}'
+nfo: { format: kodi, movie: movie.nfo, episode: '{file}.nfo', series: tvshow.nfo }
+artwork:
+  - { kind: poster, name: poster.jpg }
+  - { kind: fanart, name: fanart.jpg }
+  - { kind: season-poster, name: 'season{season:02}-poster.jpg' }
+filesystem: { forbidden: posix, replacement: '', maxSegmentBytes: 255 }
+${extra}`);
+
+const duneDetails: MovieDetails = {
+  kind: 'movie',
+  id: { provider: 'tmdb', id: 438631 },
+  title: 'Dune',
+  originalTitle: 'Dune',
+  genres: ['Science Fiction'],
+  studios: [],
+  countries: [],
+  cast: [],
+  directors: [],
+  writers: [],
+  posterPath: '/poster.jpg',
+  backdropPath: '/backdrop.jpg',
+};
+
+const bearDetails: SeriesDetails = {
+  kind: 'series',
+  id: { provider: 'tmdb', id: 136315 },
+  title: 'The Bear',
+  originalTitle: 'The Bear',
+  genres: [],
+  studios: [],
+  countries: [],
+  cast: [],
+  posterPath: '/show.jpg',
+  backdropPath: '/show-bg.jpg',
+  seasons: [
+    { season: 1, posterPath: '/s1.jpg' },
+    { season: 2, posterPath: '/s2.jpg' },
+  ],
+};
+
+const imageUrl = (path: string, size: string): string => `https://img.test/${size}${path}`;
+
+const companions = (item: PlanItem | undefined) =>
+  (item?.operations ?? []).filter((operation) => operation.type !== 'transfer');
+
+describe('createPlan: NFO and artwork', () => {
+  const planWith = (inputs: PlanInput[], lib: string, profile = kodi()) =>
+    createPlan(inputs, {
+      profile,
+      destinationRoot: lib,
+      mode: 'copy',
+      imageUrl,
+      newId: counter(),
+    });
+
+  it('plans a movie NFO and its images next to the video', async () => {
+    const [src, lib] = [await makeDir(), await makeDir()];
+    const source = await put(join(src, 'Dune.2021.mkv'));
+
+    const { items } = await planWith(
+      [{ parsed: parsedMovie(source), candidate: dune, details: duneDetails }],
+      lib,
+    );
+
+    const folder = join(lib, 'Dune (2021)');
+    expect(items[0]?.status).toBe('ready');
+    expect(companions(items[0]).map((op) => [op.type, op.destination])).toEqual([
+      ['write-file', join(folder, 'movie.nfo')],
+      ['download', join(folder, 'poster.jpg')],
+      ['download', join(folder, 'fanart.jpg')],
+    ]);
+    // The backdrop is worth its full size, the poster is not.
+    expect(companions(items[0]).flatMap((op) => (op.type === 'download' ? [op.url] : []))).toEqual([
+      'https://img.test/standard/poster.jpg',
+      'https://img.test/original/backdrop.jpg',
+    ]);
+    // The transfer stays first: the duplicate check and the executor read it there.
+    expect(items[0]?.operations[0]?.type).toBe('transfer');
+  });
+
+  it('plans nothing beside a file whose details are unknown, or without an image resolver', async () => {
+    const [src, lib] = [await makeDir(), await makeDir()];
+    const source = await put(join(src, 'Dune.2021.mkv'));
+    const input = { parsed: parsedMovie(source), candidate: dune };
+
+    const unknown = await planWith([input], lib);
+    expect(companions(unknown.items[0])).toEqual([]);
+    expect(unknown.items[0]?.status).toBe('ready');
+
+    const noImages = await createPlan([{ ...input, details: duneDetails }], {
+      profile: kodi(),
+      destinationRoot: lib,
+      mode: 'copy',
+    });
+    expect(companions(noImages.items[0]).map((op) => op.type)).toEqual(['write-file']);
+  });
+
+  it('writes the show files once for a batch of episodes, and a season poster once per season', async () => {
+    const [src, lib] = [await makeDir(), await makeDir()];
+    const files = await Promise.all(['a', 'b', 'c'].map((name) => put(join(src, `${name}.mkv`))));
+    const inputs: PlanInput[] = [
+      { parsed: parsedEpisode(files[0] ?? '', 1, [1]), candidate: bear, details: bearDetails },
+      { parsed: parsedEpisode(files[1] ?? '', 1, [2]), candidate: bear, details: bearDetails },
+      { parsed: parsedEpisode(files[2] ?? '', 2, [1]), candidate: bear, details: bearDetails },
+    ];
+
+    const { items } = await planWith(inputs, lib);
+
+    const show = join(lib, 'The Bear (2022)');
+    const destinations = items.flatMap((item) => companions(item).map((op) => op.destination));
+    expect(destinations.filter((d) => d === join(show, 'tvshow.nfo'))).toHaveLength(1);
+    expect(destinations.filter((d) => d === join(show, 'poster.jpg'))).toHaveLength(1);
+    expect(destinations.filter((d) => d === join(show, 'fanart.jpg'))).toHaveLength(1);
+    expect(destinations).toContain(join(show, 'Season 01', 'season01-poster.jpg'));
+    expect(destinations).toContain(join(show, 'Season 02', 'season02-poster.jpg'));
+    expect(destinations.filter((d) => d.endsWith('season01-poster.jpg'))).toHaveLength(1);
+    // Each episode has its own NFO, named after its video.
+    expect(destinations.filter((d) => d.endsWith('.nfo') && !d.endsWith('tvshow.nfo'))).toEqual([
+      join(show, 'Season 01', 'The Bear - s01e01.nfo'),
+      join(show, 'Season 01', 'The Bear - s01e02.nfo'),
+      join(show, 'Season 02', 'The Bear - s02e01.nfo'),
+    ]);
+    // The first episode carries the show files, the others only their own.
+    expect(companions(items[1]).map((op) => op.destination)).toEqual([
+      join(show, 'Season 01', 'The Bear - s01e02.nfo'),
+    ]);
+  });
+
+  it('puts every episode of a double file in its NFO', async () => {
+    const [src, lib] = [await makeDir(), await makeDir()];
+    const source = await put(join(src, 'a.mkv'));
+
+    const { items } = await planWith(
+      [{ parsed: parsedEpisode(source, 1, [1, 2]), candidate: bear, details: bearDetails }],
+      lib,
+    );
+
+    const nfo = companions(items[0]).find(
+      (op) => op.type === 'write-file' && op.destination.endsWith('e02.nfo'),
+    );
+    expect(nfo?.type === 'write-file' && nfo.content.match(/<episodedetails>/g)).toHaveLength(2);
+  });
+
+  it('lets an NFO the user already had win over the generated one', async () => {
+    const [src, lib] = [await makeDir(), await makeDir()];
+    const source = await put(join(src, 'Dune.2021.mkv'));
+    await put(join(src, 'Dune.2021.nfo'));
+    const profile = {
+      ...kodi(),
+      nfo: { format: 'kodi' as const, movie: '{file}.nfo', episode: '{file}.nfo' },
+    };
+
+    const { items } = await planWith(
+      [{ parsed: parsedMovie(source), candidate: dune, details: duneDetails }],
+      lib,
+      profile,
+    );
+
+    const nfos = (items[0]?.operations ?? []).filter((op) => op.destination.endsWith('.nfo'));
+    expect(nfos.map((op) => op.type)).toEqual(['transfer']);
+  });
+
+  it('keeps a movie written flat from sharing a fixed file name', async () => {
+    const [src, lib] = [await makeDir(), await makeDir()];
+    const source = await put(join(src, 'Dune.2021.mkv'));
+    const flat = (nfoName: string) =>
+      parseProfile(`
+id: flat
+name: Flat
+episodeRangeSeparator: '-e'
+templates:
+  movieFolder: ''
+  movieFile: '{title} ({year})'
   seriesFolder: '{title}'
   seasonFolder: 'S{season:02}'
   episodeFile: '{title}'
-nfo: { format: kodi, movie: movie.nfo, episode: '{file}.nfo' }
+nfo: { format: kodi, movie: '${nfoName}', episode: '{file}.nfo' }
+artwork:
+  - { kind: poster, name: poster.jpg }
 filesystem: { forbidden: posix, replacement: '', maxSegmentBytes: 255 }
 `);
-    await expect(plan([], lib, { profile: withNfo })).rejects.toSatisfy(
-      (error: unknown) =>
-        error instanceof KinoshelfError && error.info.code === 'plan.profile-feature-unsupported',
+    const input = { parsed: parsedMovie(source), candidate: dune, details: duneDetails };
+
+    expect(companions((await planWith([input], lib, flat('movie.nfo'))).items[0])).toEqual([]);
+    expect(
+      companions((await planWith([input], lib, flat('{file}.nfo'))).items[0]).map(
+        (op) => op.destination,
+      ),
+    ).toEqual([join(lib, 'Dune (2021).nfo')]);
+  });
+
+  it('plans nothing beside an item that is held back', async () => {
+    const [src, lib] = [await makeDir(), await makeDir()];
+    const source = await put(join(src, 'Dune.2021.mkv'));
+    await put(join(lib, 'Dune (2021)', 'Dune (2021).mkv'));
+
+    const { items } = await planWith(
+      [{ parsed: parsedMovie(source), candidate: dune, details: duneDetails }],
+      lib,
     );
+
+    expect(items[0]?.status).toBe('conflict');
+    expect(items[0]?.operations).toEqual([]);
+  });
+});
+
+describe('createPlan: an organized library that lacks its NFO and images', () => {
+  const planIn = (inputs: PlanInput[], lib: string) =>
+    createPlan(inputs, {
+      profile: kodi(),
+      destinationRoot: lib,
+      mode: 'move',
+      imageUrl,
+      newId: counter(),
+    });
+
+  const organizedDune = async (lib: string) => {
+    const source = await put(join(lib, 'Dune (2021)', 'Dune (2021).mkv'));
+    return { parsed: parsedMovie(source), candidate: dune, details: duneDetails };
+  };
+
+  it('plans only the missing files, with no transfer', async () => {
+    const lib = await makeDir();
+    const input = await organizedDune(lib);
+    await put(join(lib, 'Dune (2021)', 'poster.jpg'));
+
+    const { items } = await planIn([input], lib);
+
+    expect(items[0]?.status).toBe('ready');
+    // What is already there is left out, not reported as skipped on every rescan.
+    expect(items[0]?.operations.map((op) => [op.type, op.destination])).toEqual([
+      ['write-file', join(lib, 'Dune (2021)', 'movie.nfo')],
+      ['download', join(lib, 'Dune (2021)', 'fanart.jpg')],
+    ]);
+  });
+
+  it('stays in place once nothing is missing', async () => {
+    const lib = await makeDir();
+    const input = await organizedDune(lib);
+    await Promise.all(
+      ['movie.nfo', 'poster.jpg', 'fanart.jpg'].map((name) => put(join(lib, 'Dune (2021)', name))),
+    );
+
+    const { items } = await planIn([input], lib);
+
+    expect(items[0]?.status).toBe('in-place');
+    expect(items[0]?.operations).toEqual([]);
+  });
+
+  it('stays in place when nothing is known about the work', async () => {
+    const lib = await makeDir();
+    const { parsed, candidate } = await organizedDune(lib);
+    const input = { parsed, candidate };
+
+    expect((await planIn([input], lib)).items[0]?.status).toBe('in-place');
+  });
+
+  it('is not mistaken for a duplicate when episodes of a show all ask for the show files', async () => {
+    const lib = await makeDir();
+    const show = join(lib, 'The Bear (2022)');
+    const files = await Promise.all(
+      [1, 2].map((n) => put(join(show, 'Season 01', `The Bear - s01e0${n}.mkv`))),
+    );
+    // The first episode already has its NFO; the show files are missing for both.
+    await put(join(show, 'Season 01', 'The Bear - s01e01.nfo'));
+    await Promise.all(
+      ['poster.jpg', 'fanart.jpg', 'season01-poster.jpg'].map((name) =>
+        put(join(show, name === 'season01-poster.jpg' ? 'Season 01' : '', name)),
+      ),
+    );
+
+    const { items } = await planIn(
+      files.map((file, index) => ({
+        parsed: parsedEpisode(file, 1, [index + 1]),
+        candidate: bear,
+        details: bearDetails,
+      })),
+      lib,
+    );
+
+    expect(items.map((item) => item.status)).toEqual(['ready', 'ready']);
+    expect(items[0]?.operations.map((op) => op.destination)).toEqual([join(show, 'tvshow.nfo')]);
+    expect(items[1]?.operations.map((op) => op.destination)).toEqual([
+      join(show, 'Season 01', 'The Bear - s01e02.nfo'),
+    ]);
+  });
+
+  it('leaves in place an episode whose only missing file was claimed by an earlier one', async () => {
+    const lib = await makeDir();
+    const show = join(lib, 'The Bear (2022)');
+    const files = await Promise.all(
+      [1, 2].map((n) => put(join(show, 'Season 01', `The Bear - s01e0${n}.mkv`))),
+    );
+    await Promise.all([1, 2].map((n) => put(join(show, 'Season 01', `The Bear - s01e0${n}.nfo`))));
+    await Promise.all(['poster.jpg', 'fanart.jpg'].map((name) => put(join(show, name))));
+    await put(join(show, 'Season 01', 'poster.jpg'));
+    await put(join(show, 'Season 01', 'season01-poster.jpg'));
+
+    const { items } = await planIn(
+      files.map((file, index) => ({
+        parsed: parsedEpisode(file, 1, [index + 1]),
+        candidate: bear,
+        details: bearDetails,
+      })),
+      lib,
+    );
+
+    expect(items.map((item) => item.status)).toEqual(['ready', 'in-place']);
+    expect(items[1]?.operations).toEqual([]);
+  });
+
+  it('runs and undoes with the video untouched', async () => {
+    const lib = await makeDir();
+    const input = await organizedDune(lib);
+    const { items, ...rest } = await planIn([input], lib);
+    const journal = new MemoryJournal();
+
+    const batch = await executePlan(
+      { ...rest, items },
+      {
+        journal,
+        newId: counter('x'),
+        fetchImage: () => Promise.resolve(new Uint8Array([1, 2, 3])),
+      },
+    );
+
+    const folder = join(lib, 'Dune (2021)');
+    expect(batch.items[0]?.results.map((result) => result.status)).toEqual([
+      'done',
+      'done',
+      'done',
+    ]);
+    expect((await readdir(folder)).sort()).toEqual([
+      'Dune (2021).mkv',
+      'fanart.jpg',
+      'movie.nfo',
+      'poster.jpg',
+    ]);
+
+    await undoLastBatch(journal);
+    expect(await readdir(folder)).toEqual(['Dune (2021).mkv']);
   });
 });

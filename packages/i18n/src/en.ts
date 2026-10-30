@@ -25,8 +25,6 @@ export const en = {
     'The moved copy of {source} does not match the original; the source was kept.',
   'error.plan.episode-numbers-missing': 'The season or episode number could not be determined.',
   'error.plan.outside-root': 'The target path would leave the destination folder.',
-  'error.plan.profile-feature-unsupported':
-    'This profile uses {feature}, which is not supported yet.',
   'error.plan.unsafe-segment': 'The title would produce an unsafe folder or file name.',
   'error.profile.double-quoted-escape':
     'Invalid profile: templates containing \\{ or \\} must use single quotes. ({detail})',
@@ -86,6 +84,7 @@ export const en = {
   'section.ambiguous': 'Ambiguous (needs validation)',
   'section.unrecognized': 'Unrecognized (needs validation)',
   'entry.score': 'score {score}',
+  'entry.in-place': 'already named as the profile wants',
   'entry.sidecars': '+ {count, plural, one {# companion file} other {# companion files}}',
   'entry.candidate': '{title} ({year}) · score {score} · tmdb {id}',
   'entry.candidate-no-year': '{title} · score {score} · tmdb {id}',
@@ -274,7 +273,8 @@ export const en = {
   'web.job.class.ambiguous': 'Ambiguous',
   'web.job.class.unrecognized': 'Not recognised',
   'web.job.class.compliant': 'Already in order',
-  'web.job.class.to-rename.detail': 'Matched with confidence, ready to be put away.',
+  'web.job.class.to-rename.detail':
+    'Matched with confidence, ready to be put away, or to get the NFO and images it lacks.',
   'web.job.class.conflict.detail': 'The destination is taken: they wait in the queue.',
   'web.job.class.ambiguous.detail': 'Several close candidates: they wait for your choice.',
   'web.job.class.unrecognized.detail': 'Nothing found on TMDB: left where they are.',

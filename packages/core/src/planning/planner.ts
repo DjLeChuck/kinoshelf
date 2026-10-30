@@ -4,12 +4,14 @@ import { dirname, join, resolve, sep } from 'node:path';
 import { KinoshelfError } from '../errors.js';
 import { nearestExistingDevice } from '../execution/fs-ops.js';
 import { parseTemplate, renderTemplate, type TemplateVariables } from '../profiles/template.js';
+import type { Details, ImageSize } from '../types/details.js';
 import type { ErrorInfo } from '../types/errors.js';
 import type { ParsedMedia } from '../types/media.js';
 import type { Operation, TransferMode } from '../types/operation.js';
 import type { Conflict, DestinationRoots, Plan, PlanItem } from '../types/plan.js';
 import type { Profile } from '../types/profile.js';
-import type { Candidate } from '../types/provider.js';
+import type { Candidate, EpisodeInfo } from '../types/provider.js';
+import { companionOperations } from './companions.js';
 import { DEFAULT_SIDECAR_EXTENSIONS, findSidecars } from './sidecars.js';
 
 /** A matched file, ready to be planned. `parsed.path` is the source file. */
@@ -17,6 +19,13 @@ export interface PlanInput {
   readonly parsed: ParsedMedia;
   readonly candidate: Candidate;
   readonly episodeTitle?: string;
+  /**
+   * What an NFO and the images are made of. Only read when the profile writes any; without it
+   * the file is still renamed, just with nothing beside it.
+   */
+  readonly details?: Details;
+  /** The provider's record of the file's episodes. */
+  readonly episodes?: readonly EpisodeInfo[];
 }
 
 export interface PlannerOptions {
@@ -24,6 +33,8 @@ export interface PlannerOptions {
   readonly destinationRoot: DestinationRoots;
   readonly mode: TransferMode;
   readonly sidecarExtensions?: readonly string[];
+  /** Turns an image path into a URL (`MetadataProvider.imageUrl`); no image is planned without. */
+  readonly imageUrl?: (path: string, size: ImageSize) => string;
   readonly newId?: () => string;
   readonly now?: () => Date;
 }
@@ -39,7 +50,7 @@ function targetSegments(
   input: PlanInput,
   profile: Profile,
   extensionBytes: number,
-): { folders: string[]; stem: string } {
+): { folders: string[]; stem: string; workDepth: number } {
   const { parsed, candidate } = input;
   const variables: TemplateVariables = {
     title: candidate.title,
@@ -58,17 +69,21 @@ function targetSegments(
   const { templates } = profile;
 
   if (candidate.kind === 'movie') {
+    const folders = render(templates.movieFolder);
     return {
-      folders: render(templates.movieFolder),
+      folders,
       stem: render(templates.movieFile, extensionBytes).join(''),
+      workDepth: folders.length,
     };
   }
   if (parsed.season === undefined || parsed.episodes.length === 0) {
     throw new KinoshelfError('plan.episode-numbers-missing');
   }
+  const seriesFolders = render(templates.seriesFolder);
   return {
-    folders: [...render(templates.seriesFolder), ...render(templates.seasonFolder)],
+    folders: [...seriesFolders, ...render(templates.seasonFolder)],
     stem: render(templates.episodeFile, extensionBytes).join(''),
+    workDepth: seriesFolders.length,
   };
 }
 
@@ -114,7 +129,7 @@ async function planItem(input: PlanInput, options: PlannerOptions, id: string): 
     blocked({ reason: 'unresolvable-name', path: source, detail }, base);
 
   const extension = input.parsed.extension ? `.${input.parsed.extension}` : '';
-  let target: { folders: string[]; stem: string };
+  let target: { folders: string[]; stem: string; workDepth: number };
   try {
     target = targetSegments(input, profile, Buffer.byteLength(extension));
   } catch (error) {
@@ -143,8 +158,28 @@ async function planItem(input: PlanInput, options: PlannerOptions, id: string): 
   if ('conflict' in state) {
     return blocked(state.conflict, base);
   }
+  const place = {
+    root,
+    workFolders: target.folders.slice(0, target.workDepth),
+    seasonFolders: target.folders.slice(target.workDepth),
+    stem: target.stem,
+  };
+  const companionOptions = { profile, ...(options.imageUrl && { imageUrl: options.imageUrl }) };
+
   if (state.status === 'in-place') {
-    return { ...base, status: 'in-place', conflicts: [] };
+    // The video is where the profile wants it: all that can be missing is what goes beside it
+    // (a library organized before the profile wrote NFO and images, or by another profile).
+    // Whatever is already there is left out rather than reported as skipped, or every rescan of
+    // an organized library would be full of it.
+    const missing = await Promise.all(
+      companionOperations(input, place, companionOptions).map(async (operation) =>
+        (await lstat(operation.destination).catch(() => null)) ? null : operation,
+      ),
+    );
+    const operations = missing.filter((operation) => operation !== null);
+    return operations.length > 0
+      ? { ...base, operations, status: 'ready', conflicts: [] }
+      : { ...base, status: 'in-place', conflicts: [] };
   }
 
   const sidecars = await findSidecars(
@@ -161,7 +196,41 @@ async function planItem(input: PlanInput, options: PlannerOptions, id: string): 
       destination: join(root, ...target.folders, `${target.stem}${sidecar.suffix}`),
     })),
   ];
+  // A `.nfo` the user already had follows the video as a sidecar: it wins over a generated one
+  // (the destination is the same, and nothing is overwritten).
+  const taken = new Set(operations.map((operation) => operation.destination.toLowerCase()));
+  operations.push(
+    ...companionOperations(input, place, companionOptions).filter(
+      (operation) => !taken.has(operation.destination.toLowerCase()),
+    ),
+  );
   return { ...base, operations, status: 'ready', conflicts: [] };
+}
+
+/**
+ * Files about a whole show (`tvshow.nfo`, its poster) come with each of its episodes: only the
+ * first item to ask for one keeps it. Case-insensitive, like the destination check.
+ */
+function shareCompanions(items: readonly PlanItem[]): PlanItem[] {
+  const claimed = new Set<string>();
+  return items.map((item) => {
+    if (item.status !== 'ready') {
+      return item;
+    }
+    const operations = item.operations.filter((operation) => {
+      if (operation.type === 'transfer') {
+        return true;
+      }
+      const key = operation.destination.toLowerCase();
+      return !claimed.has(key) && !!claimed.add(key);
+    });
+    if (operations.length === 0) {
+      // Everything it wanted was already claimed by an earlier episode of the show: only an item
+      // that never had a transfer gets here, and it has nothing left to do.
+      return { ...item, status: 'in-place', operations };
+    }
+    return operations.length === item.operations.length ? item : { ...item, operations };
+  });
 }
 
 /**
@@ -173,12 +242,6 @@ export async function createPlan(
   options: PlannerOptions,
 ): Promise<Plan> {
   const { profile } = options;
-  if (profile.nfo) {
-    throw new KinoshelfError('plan.profile-feature-unsupported', { feature: 'nfo' });
-  }
-  if (profile.artwork.length > 0) {
-    throw new KinoshelfError('plan.profile-feature-unsupported', { feature: 'artwork' });
-  }
 
   const newId = options.newId ?? randomUUID;
   const items = await Promise.all(inputs.map((input) => planItem(input, options, newId())));
@@ -187,7 +250,8 @@ export async function createPlan(
   const byDestination = new Map<string, PlanItem[]>();
   for (const item of items) {
     const main = item.operations[0];
-    if (item.status === 'ready' && main && 'destination' in main) {
+    // An item with only companion files has no main transfer: nothing to collide on.
+    if (item.status === 'ready' && main?.type === 'transfer') {
       const key = main.destination.toLowerCase();
       byDestination.set(key, [...(byDestination.get(key) ?? []), item]);
     }
@@ -208,15 +272,17 @@ export async function createPlan(
             series: resolve(options.destinationRoot.series),
           },
     mode: options.mode,
-    items: items.map((item): PlanItem => {
-      const main = item.operations[0];
-      return duplicated.has(item) && main && 'destination' in main
-        ? {
-            ...item,
-            status: 'conflict',
-            conflicts: [{ reason: 'duplicate-destination', path: main.destination }],
-          }
-        : item;
-    }),
+    items: shareCompanions(
+      items.map((item): PlanItem => {
+        const main = item.operations[0];
+        return duplicated.has(item) && main && 'destination' in main
+          ? {
+              ...item,
+              status: 'conflict',
+              conflicts: [{ reason: 'duplicate-destination', path: main.destination }],
+            }
+          : item;
+      }),
+    ),
   };
 }

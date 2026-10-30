@@ -113,7 +113,11 @@ export function parseProfile(yamlText: string): Profile {
       episode: file.nfo.episode,
       ...(file.nfo.series !== undefined && { series: file.nfo.series }),
     },
-    artwork: file.artwork,
+    artwork: file.artwork.map((image) => ({
+      kind: image.kind,
+      name: image.name,
+      size: image.size ?? (image.kind === 'fanart' ? 'original' : 'standard'),
+    })),
     filesystem: file.filesystem,
   };
 }

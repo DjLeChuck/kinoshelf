@@ -24,7 +24,13 @@ export const profileSchema = z.strictObject({
     .nullable()
     .default(null),
   artwork: z
-    .array(z.strictObject({ kind: z.enum(['poster', 'fanart', 'season-poster']), name: text }))
+    .array(
+      z.strictObject({
+        kind: z.enum(['poster', 'fanart', 'season-poster']),
+        name: text,
+        size: z.enum(['preview', 'standard', 'original']).optional(),
+      }),
+    )
     .default([]),
   filesystem: z.strictObject({
     forbidden: z.enum(['windows', 'posix']),

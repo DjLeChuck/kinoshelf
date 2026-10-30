@@ -1,3 +1,5 @@
+import type { ImageSize } from './details.js';
+
 /**
  * Output profile, loaded from a YAML file. The core embeds no player-specific rule:
  * everything lives here.
@@ -42,7 +44,10 @@ export type ArtworkKind = 'poster' | 'fanart' | 'season-poster';
 
 export interface ArtworkSpec {
   readonly kind: ArtworkKind;
+  /** File name; a season poster may use `{season}`. */
   readonly name: string;
+  /** What the provider serves: a backdrop is worth its full size, a poster rarely is. */
+  readonly size: ImageSize;
 }
 
 export interface FilesystemRules {

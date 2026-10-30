@@ -43,7 +43,10 @@ function describeEntry(entry: AnalysisEntry, analysis: Analysis, t: Translate): 
   switch (entry.classification) {
     case 'to-rename': {
       const main = item?.operations[0];
-      if (outcome.status === 'matched' && main && 'destination' in main) {
+      if (!item || outcome.status !== 'matched') {
+        break;
+      }
+      if (main?.type === 'transfer') {
         const root = rootOf(analysis.plan.destinationRoot, outcome.best.candidate.kind);
         const sidecars = item.operations.length - 1;
         lines.push(
@@ -52,6 +55,12 @@ function describeEntry(entry: AnalysisEntry, analysis: Analysis, t: Translate): 
         if (sidecars > 0) {
           lines.push(`      ${t('entry.sidecars', { count: sidecars })}`);
         }
+      } else {
+        // Already where the profile wants it: only what goes beside it is missing.
+        lines.push(
+          `    = ${t('entry.in-place')}  (${t('entry.score', { score: outcome.best.score })})`,
+          `      ${t('entry.sidecars', { count: item.operations.length })}`,
+        );
       }
       break;
     }
@@ -205,7 +214,7 @@ export function analysisToJson(analysis: Analysis, batch?: BatchResult) {
           year: best.candidate.year,
           score: best.score,
         },
-        target: main && 'destination' in main ? main.destination : undefined,
+        target: main?.type === 'transfer' ? main.destination : undefined,
         candidates:
           entry.outcome.status === 'ambiguous'
             ? entry.outcome.candidates.map((c) => ({

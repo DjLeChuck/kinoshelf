@@ -20,8 +20,6 @@ export const fr: Record<keyof typeof en, string> = {
     'La copie déplacée de {source} ne correspond pas à l’original ; la source a été conservée.',
   'error.plan.episode-numbers-missing': 'Le numéro de saison ou d’épisode est introuvable.',
   'error.plan.outside-root': 'Le chemin cible sortirait du dossier de destination.',
-  'error.plan.profile-feature-unsupported':
-    'Ce profil utilise {feature}, pas encore pris en charge.',
   'error.plan.unsafe-segment': 'Le titre produirait un nom de dossier ou de fichier dangereux.',
   'error.profile.double-quoted-escape':
     'Profil invalide : les templates contenant \\{ ou \\} doivent utiliser des guillemets simples. ({detail})',
@@ -86,6 +84,7 @@ export const fr: Record<keyof typeof en, string> = {
   'section.ambiguous': 'Ambigus (validation requise)',
   'section.unrecognized': 'Non reconnus (validation requise)',
   'entry.score': 'score {score}',
+  'entry.in-place': 'déjà nommé comme le profil le veut',
   'entry.sidecars': '+ {count, plural, one {# fichier associé} other {# fichiers associés}}',
   'entry.candidate': '{title} ({year}) · score {score} · tmdb {id}',
   'entry.candidate-no-year': '{title} · score {score} · tmdb {id}',
@@ -281,7 +280,8 @@ export const fr: Record<keyof typeof en, string> = {
   'web.job.class.ambiguous': 'Ambigus',
   'web.job.class.unrecognized': 'Non reconnus',
   'web.job.class.compliant': 'Déjà conformes',
-  'web.job.class.to-rename.detail': 'Reconnus avec confiance, prêts à être rangés.',
+  'web.job.class.to-rename.detail':
+    'Reconnus avec confiance, prêts à être rangés, ou à recevoir le NFO et les images qui leur manquent.',
   'web.job.class.conflict.detail': 'La destination est prise : ils attendent dans la file.',
   'web.job.class.ambiguous.detail': 'Plusieurs candidats proches : ils attendent votre choix.',
   'web.job.class.unrecognized.detail': 'Rien trouvé sur TMDB : laissés en place.',

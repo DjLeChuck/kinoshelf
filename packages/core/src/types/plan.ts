@@ -25,9 +25,10 @@ export interface Conflict {
 }
 
 /**
- * - `ready`: operations will be executed.
- * - `in-place`: source already is at the target location (already compliant): nothing to do,
- *   not a conflict.
+ * - `ready`: operations will be executed. Without a transfer among them, the video is already
+ *   where the profile wants it and only the NFO and images beside it are missing.
+ * - `in-place`: source already is at the target location (already compliant) and nothing is
+ *   missing beside it: nothing to do, not a conflict.
  * - `conflict`: not executed, goes to the validation queue; `conflicts` is non-empty.
  */
 export type PlanItemStatus = 'ready' | 'in-place' | 'conflict';

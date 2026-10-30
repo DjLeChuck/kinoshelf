@@ -23,7 +23,6 @@ export const ERROR_CODES = [
   'move.verification-failed',
   'plan.episode-numbers-missing',
   'plan.outside-root',
-  'plan.profile-feature-unsupported',
   'plan.unsafe-segment',
   'profile.double-quoted-escape',
   'profile.invalid',
