@@ -297,9 +297,16 @@ export const en = {
   'web.onboarding.form.destination.hint':
     'Movies and series go here. Separate folders for each are in the settings.',
   'web.onboarding.form.source': 'Folder to analyse',
-  'web.onboarding.form.source.hint':
-    'Nothing is changed: you will see what Kinoshelf proposes first. To follow a download folder instead, use the settings.',
+  'web.onboarding.form.source.hint': 'The folder where your videos are right now.',
+  'web.onboarding.form.source.once': 'Analyse it once',
+  'web.onboarding.form.source.once.hint':
+    'Nothing is changed: you will see what Kinoshelf proposes first.',
+  'web.onboarding.form.source.watch': 'Watch this folder',
+  'web.onboarding.form.source.watch.hint':
+    'For a folder that only holds finished downloads: each new release is analysed as it arrives. Not for a library already in place.',
   'web.onboarding.form.source.submit': 'Analyse',
+  'web.onboarding.form.source.submit.watch': 'Watch',
+  'web.onboarding.form.tmdb.checking': 'Checking the key…',
   'web.onboarding.form.more': 'More options in the settings',
   'web.onboarding.mark-done': 'Mark as done',
   'web.onboarding.skip': 'Skip',

@@ -17,6 +17,7 @@
   let folder = $state('');
   let busy = $state(false);
   let failure = $state<unknown>(undefined);
+  let mode = $state<'once' | 'watch'>('once');
 
   const needsAbsolute = (path: string): boolean => path.startsWith('/');
 
@@ -25,6 +26,13 @@
     switch (step) {
       case 'tmdb':
         await api.patch('/api/settings', { tmdb: { apiKey: tmdbKey.trim() } });
+        try {
+          // A key TMDB refuses would only show up later, as a failed analysis.
+          await api.post('/api/settings/tmdb/test');
+        } catch (error) {
+          await api.patch('/api/settings', { tmdb: { apiKey: null } }).catch(() => undefined);
+          throw error;
+        }
         tmdbKey = '';
         break;
       case 'server':
@@ -45,11 +53,24 @@
         if (!needsAbsolute(folder.trim())) {
           throw new FormError(t('web.settings.invalid.watch-folders'));
         }
-        await api.post('/api/jobs', { path: folder.trim() });
+        await submitSource(folder.trim());
         break;
     }
     // The step ticks itself: ask again rather than guess what the server now settles.
     await shell.loadOnboarding();
+  }
+
+  /** A job that fails is shown on the home page, where this step leads: nothing to wait for here. */
+  async function submitSource(path: string): Promise<void> {
+    if (mode === 'once') {
+      await api.post('/api/jobs', { path });
+      return;
+    }
+    const { watch } = await api.get<{ watch: { folders: string[] } | null }>('/api/settings');
+    const folders = [...new Set([...(watch?.folders ?? []), path])];
+    await api.patch('/api/settings', { watch: { folders } });
+    // Watching alone would wait for the next change in the folder: look at what is there now.
+    await api.post('/api/watch/scan');
   }
 
   async function submit(event: SubmitEvent): Promise<void> {
@@ -117,6 +138,20 @@
       <PathField id="ob-folder" bind:value={folder} placeholder="/" />
       <span class="muted hint">{t(`web.onboarding.form.${which}.hint`)}</span>
     </div>
+    {#if step === 'source'}
+      <fieldset class="modes">
+        <legend class="sr-only">{t('web.onboarding.form.source')}</legend>
+        {#each ['once', 'watch'] as const as choice (choice)}
+          <label class="mode">
+            <input type="radio" name="ob-mode" value={choice} bind:group={mode} />
+            <span>
+              {t(`web.onboarding.form.source.${choice}`)}
+              <span class="muted hint">{t(`web.onboarding.form.source.${choice}.hint`)}</span>
+            </span>
+          </label>
+        {/each}
+      </fieldset>
+    {/if}
   {/if}
 
   {#if failure}
@@ -128,9 +163,13 @@
   <div class="actions">
     <button type="submit" class="btn btn-primary" disabled={busy}>
       {busy
-        ? t('web.settings.saving')
+        ? t(step === 'tmdb' ? 'web.onboarding.form.tmdb.checking' : 'web.settings.saving')
         : step === 'source'
-          ? t('web.onboarding.form.source.submit')
+          ? t(
+              mode === 'watch'
+                ? 'web.onboarding.form.source.submit.watch'
+                : 'web.onboarding.form.source.submit',
+            )
           : t('web.settings.save')}
     </button>
     {#if step !== 'source'}
@@ -151,6 +190,27 @@
 
   .hint {
     font-size: 12px;
+  }
+
+  .modes {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  .mode {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .mode > span {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
   }
 
   .actions {

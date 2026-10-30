@@ -302,9 +302,16 @@ export const fr: Record<keyof typeof en, string> = {
   'web.onboarding.form.destination.hint':
     'Films et séries y sont rangés. Des dossiers séparés pour chacun se règlent dans les réglages.',
   'web.onboarding.form.source': 'Dossier à analyser',
-  'web.onboarding.form.source.hint':
-    'Rien n’est modifié : vous verrez d’abord ce que Kinoshelf propose. Pour suivre un dossier de téléchargements, passez par les réglages.',
+  'web.onboarding.form.source.hint': 'Le dossier où se trouvent vos vidéos en ce moment.',
+  'web.onboarding.form.source.once': 'Analyser une fois',
+  'web.onboarding.form.source.once.hint':
+    'Rien n’est modifié : vous verrez d’abord ce que Kinoshelf propose.',
+  'web.onboarding.form.source.watch': 'Surveiller ce dossier',
+  'web.onboarding.form.source.watch.hint':
+    'Pour un dossier qui ne contient que des téléchargements terminés : chaque nouvelle release est analysée à son arrivée. Pas pour une bibliothèque déjà rangée.',
   'web.onboarding.form.source.submit': 'Analyser',
+  'web.onboarding.form.source.submit.watch': 'Surveiller',
+  'web.onboarding.form.tmdb.checking': 'Vérification de la clé…',
   'web.onboarding.form.more': 'Plus d’options dans les réglages',
   'web.onboarding.mark-done': 'Marquer comme fait',
   'web.onboarding.skip': 'Passer',
