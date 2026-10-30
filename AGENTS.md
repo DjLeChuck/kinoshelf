@@ -8,11 +8,11 @@ renames them for a media player (Plex, Jellyfin) and writes their metadata (NFO,
 v0.1 (core, CLI and matching corpus) and v0.2 (REST server, notifications, multi-arch Docker image)
 are done, and so is getting downloads in (see "Getting downloads in" below). The web UI (v0.3) has
 a home (a welcome for the first launch, `GET`/`PATCH /api/onboarding`, server migration 009), its
-validation queue (at `/queue`), history and settings, with a server-side path picker; the "Movies &
-series" and "Libraries & scan" pages are still "coming soon". Validating a file in the queue remembers its
+validation queue (at `/queue`), libraries and their scan result, history and settings, with a
+server-side path picker; the "Movies & series" page is still "coming soon". Validating a file in the queue remembers its
 title (aliases). v1.0 is under way: the NFO and artwork writers and the `jellyfin` and `plex-nfo`
 profiles are built (see "NFO and artwork" below), metadata included for a library that is already
-organized; left are the "Movies & series" and "Libraries & scan" pages.
+organized; left is the "Movies & series" page.
 
 Backlog, not built: skipping samples by size (today only by name: `sample.*`, a `Sample` folder);
 reading completion from a download client's own API (see "Getting downloads in").
@@ -114,8 +114,7 @@ contains no player-specific rule.
   (`settings.tmdb-key-from-env`, `settings.api-key-from-env`): a value saved and never used is worse
   than a refusal. Do the same for any new variable that shadows a setting.
 - **The welcome page** (`/`, until the setup is left): the TMDB key is tested as soon as it is
-  entered and dropped if TMDB refuses it; the last step either analyses a folder once or adds it to
-  `watch.folders`. Any job counts as work, so the setup ends even when that job failed: the home page
+  entered and dropped if TMDB refuses it; the last step creates a library from a folder (watched, or scanned once). Any job counts as work, so the setup ends even when that job failed: the home page
   then lists the analyses in progress and the failed ones with their cause (`GET /api/jobs`), a
   failure staying until the same path is sent again and does not fail. A job must never fail without
   leaving a trace in the UI.
@@ -147,6 +146,27 @@ format follows the Kodi wiki's templates, saved pages are not in the repository)
   CLI says "already named as the profile wants"). Files already there are left out of the plan
   rather than reported as skipped, so a rescan of a complete library stays `in-place`.
 - Not done: no certification (`<mpaa>`), no collection overview, no episode `uniqueid`.
+
+## Libraries and scan
+
+A **library** (`libraries:` in `config.yaml`, edited through `/api/libraries`) is a named `source` with
+an optional `destination`, `profile`, `mode`, `threshold` and `watch`; each unset field follows the
+top-level setting of the same name. `source` equal to the destination is a library organized in place
+(default mode `move`); a different one is a folder of downloads to sort. Ids are generated from the
+name (`libraryId`) and never change; two libraries cannot share a source (`library.source-taken`).
+
+- `libraryOverrides(lib)` feeds `resolveSettings`; a job carries `library_id` (server migration 010)
+  and keeps its `PlanSettings`. Deleting a library only forgets it: its queued jobs fall back to the
+  global settings.
+- **Scan**: `POST /api/libraries/:id/scan` queues a job on the whole source (409
+  `library.scan-in-progress`). `GET /api/jobs/:id/files?tab=rename|ambiguous|unrecognized|compliant|conflict`
+  pages the analysis; counts are what is left to do (a transferred file leaves its tab). A batch runs
+  through `POST /api/plans/:id/execute` with `entries` (also `dryRun`); only the `rename` tab is
+  selectable, the others go through the validation queue.
+- **`watch.folders` is legacy.** At startup `legacyWatchMigration` moves it into watched libraries
+  (no destination, profile or mode set: they keep following the global ones). The folders the watcher
+  uses are `watchedFolders(config)`, read-only in the settings; `watch` keeps only `settleSeconds`,
+  `pollSeconds` and `apply`.
 
 ## Getting downloads in
 

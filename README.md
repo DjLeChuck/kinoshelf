@@ -133,8 +133,12 @@ folder). A download moves to the final folder only once it is complete, and that
 one to watch. Without this, a stalled torrent and a finished one look the same in it.
 
 ```yaml
+libraries:
+  - id: downloads
+    name: Downloads
+    source: /downloads/complete
+    watch: true # also settable from the Libraries page
 watch:
-  folders: [/downloads/complete]
   settleSeconds: 30 # a release is submitted once none of its files changed for this long
   pollSeconds: 0 # 0 listens for changes (no disk reads); 120 scans every 2 minutes
   apply: false # true also transfers what is matched with confidence
