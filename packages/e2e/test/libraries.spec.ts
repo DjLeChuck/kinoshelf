@@ -141,6 +141,14 @@ test('scans a library, picks files, simulates and runs the batch', async ({ page
   await expect(page.getByRole('checkbox', { name: /Select zzqx/ })).toBeDisabled();
   await expect(page.getByRole('button', { name: 'Run the batch' })).toBeDisabled();
 
+  // Leaving the page does not lose the result: the library leads back to it, above its form.
+  await page
+    .getByRole('navigation', { name: 'Breadcrumb' })
+    .getByRole('link', { name: 'Films to sort' })
+    .click();
+  await page.getByRole('link', { name: 'See the last result' }).click();
+  await expect(page.getByRole('heading', { name: 'Scan result' })).toBeVisible();
+
   // The job page leads back to the result.
   const jobId = /scan\/([0-9a-f-]+)$/.exec(page.url())?.[1] ?? '';
   await page.goto(`/jobs/${jobId}`);

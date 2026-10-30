@@ -28,7 +28,7 @@ const library: Library = {
   mode: 'hardlink',
   threshold: 90,
   watch: true,
-  lastScan: { jobId: 'j1', finishedAt: '2026-01-01T00:00:00Z', counts },
+  lastScan: { jobId: 'j1', status: 'done' as const, finishedAt: '2026-01-01T00:00:00Z', counts },
 };
 
 describe('libraryRoute', () => {

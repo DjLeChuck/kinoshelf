@@ -119,11 +119,14 @@ export class JobStore {
     );
   }
 
-  /** The latest scan of the whole library (not a release its folder submitted) that finished. */
+  /**
+   * The latest scan of the whole library (not a release its folder submitted), whatever became of
+   * it: one still running or failed is what a user comes back to find.
+   */
   lastScan(libraryId: string, source: string): Job | undefined {
     const row = this.database
       .prepare<[string, string], JobRow>(
-        `SELECT ${COLUMNS} FROM jobs WHERE library_id = ? AND path = ? AND status = 'done' ORDER BY seq DESC LIMIT 1`,
+        `SELECT ${COLUMNS} FROM jobs WHERE library_id = ? AND path = ? ORDER BY seq DESC LIMIT 1`,
       )
       .get(libraryId, source);
     return row && toJob(row);

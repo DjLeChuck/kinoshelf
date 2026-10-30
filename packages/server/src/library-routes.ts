@@ -127,7 +127,12 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
       threshold: library.threshold ?? null,
       watch: library.watch ?? false,
       lastScan: last
-        ? { jobId: last.id, finishedAt: last.finishedAt, counts: entries.tabCounts(last.id) }
+        ? {
+            jobId: last.id,
+            status: last.status,
+            finishedAt: last.finishedAt,
+            counts: entries.tabCounts(last.id),
+          }
         : null,
       queued: jobs.pendingOf(library.id),
       scanning: jobs.scanPending(library.id, library.source),
@@ -150,8 +155,9 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
         description:
           'A library is a source folder (what a scan reads) and where it goes, with its own ' +
           'profile, mode and threshold; a field that is `null` follows the global setting. ' +
-          '`lastScan` is the latest finished scan of the whole source, its counts being what is ' +
-          'left to do now (see `GET /api/jobs/{id}/files`).',
+          '`lastScan` is the latest scan of the whole source, queued, running, failed or done: its ' +
+          'counts are what is left to do now (see `GET /api/jobs/{id}/files`), all zero until it ' +
+          'is done.',
         response: { 200: { type: 'array', items: librarySchema }, 401: errorSchema },
       },
     },

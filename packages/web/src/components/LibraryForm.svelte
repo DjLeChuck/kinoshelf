@@ -20,6 +20,7 @@
     profileName,
     type ShippedProfile,
   } from '../lib/settings.js';
+  import Link from './Link.svelte';
   import PathField from './PathField.svelte';
 
   let {
@@ -28,6 +29,7 @@
     onsaved,
     ondeleted,
     ondraft,
+    lastScan,
   }: {
     /** `undefined` creates one. */
     library?: Library;
@@ -36,6 +38,8 @@
     ondeleted: () => void;
     /** Told of every change, so the page can show the library as it is being filled in. */
     ondraft?: (form: LibraryForm) => void;
+    /** Where the latest scan of the library can be found again, beside the button that starts one. */
+    lastScan?: { href: string; label: string; summary?: string } | undefined;
   } = $props();
 
   // Read once: the page keys this form by library, and nothing replaces it under an edit.
@@ -128,11 +132,15 @@
     <div>
       <span class="eyebrow muted">{t('web.libraries.eyebrow')}</span>
       <h1>{library ? library.name : t('web.libraries.new.title')}</h1>
+      {#if lastScan?.summary}<span class="muted summary">{lastScan.summary}</span>{/if}
     </div>
     {#if library}
-      <button type="button" class="btn" disabled={scanning} onclick={() => void scan()}>
-        {scanning ? t('web.libraries.scan.starting') : t('web.libraries.scan')}
-      </button>
+      <div class="actions">
+        {#if lastScan}<Link href={lastScan.href} class="btn">{lastScan.label}</Link>{/if}
+        <button type="button" class="btn" disabled={scanning} onclick={() => void scan()}>
+          {scanning ? t('web.libraries.scan.starting') : t('web.libraries.scan')}
+        </button>
+      </div>
     {/if}
   </div>
 
@@ -351,6 +359,18 @@
     align-items: flex-end;
     justify-content: space-between;
     gap: 12px;
+  }
+
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .summary {
+    display: block;
+    margin-top: 2px;
+    font-size: 13px;
   }
 
   .eyebrow {

@@ -815,9 +815,10 @@ export const librarySchema = {
     lastScan: {
       type: 'object',
       nullable: true,
-      required: ['jobId', 'finishedAt', 'counts'],
+      required: ['jobId', 'status', 'finishedAt', 'counts'],
       properties: {
         jobId: { type: 'string', format: 'uuid' },
+        status: { type: 'string', enum: ['queued', 'running', 'done', 'failed'] },
         finishedAt: { type: 'string', format: 'date-time', nullable: true },
         counts: scanCountsSchema,
       },

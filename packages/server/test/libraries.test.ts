@@ -321,7 +321,11 @@ describe('scanning a library', () => {
     // Another library is not blocked, and the pending state is visible.
     expect((await h.request('POST', '/api/libraries/series/scan')).statusCode).toBe(202);
     const [films] = (await h.request('GET', '/api/libraries')).json<LibraryBody[]>();
-    expect(films).toMatchObject({ scanning: true, queued: 1, lastScan: null });
+    expect(films).toMatchObject({
+      scanning: true,
+      queued: 1,
+      lastScan: { status: expect.stringMatching(/^(queued|running)$/) as string, finishedAt: null },
+    });
     // The files of a scan are not there until it is done.
     const early = await h.request(
       'GET',

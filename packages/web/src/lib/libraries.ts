@@ -34,8 +34,10 @@ export interface Library {
   readonly mode: Mode | null;
   readonly threshold: number | null;
   readonly watch: boolean;
+  /** The latest scan of the whole source, whatever became of it. */
   readonly lastScan: {
     readonly jobId: string;
+    readonly status: 'queued' | 'running' | 'done' | 'failed';
     readonly finishedAt: string | null;
     readonly counts: ScanCounts;
   } | null;

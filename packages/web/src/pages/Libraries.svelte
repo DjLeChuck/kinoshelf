@@ -73,7 +73,16 @@
     return bundled ? profileName(bundled, t) : form.profile.choice;
   }
 
+  const scanState = (library: Library): 'running' | 'failed' | 'done' | undefined => {
+    const status = library.lastScan?.status;
+    return status === 'queued' || status === 'running' ? 'running' : status;
+  };
+
   function lastScan(library: Library): string {
+    const state = scanState(library);
+    if (state === 'running' || state === 'failed') {
+      return t(`web.libraries.lastscan.${state}`);
+    }
     if (library.watch) {
       return t('web.libraries.watching');
     }
@@ -185,6 +194,19 @@
             <LibraryForm
               library={current}
               {profiles}
+              lastScan={current.lastScan
+                ? {
+                    href: scanPath(current.id, current.lastScan.jobId),
+                    label: t(`web.libraries.scan.link.${scanState(current) ?? 'done'}`),
+                    ...(scanState(current) === 'done' && {
+                      summary: t('web.libraries.lastscan.counts', {
+                        total: countTotal(current.lastScan.counts),
+                        rename: current.lastScan.counts.rename,
+                        ambiguous: current.lastScan.counts.ambiguous,
+                      }),
+                    }),
+                  }
+                : undefined}
               onsaved={() => void load()}
               ondeleted={() => {
                 router.navigate('/libraries');
@@ -192,18 +214,6 @@
               }}
             />
           {/key}
-          {#if current.lastScan}
-            <p class="muted last">
-              {t('web.libraries.lastscan.counts', {
-                total: countTotal(current.lastScan.counts),
-                rename: current.lastScan.counts.rename,
-                ambiguous: current.lastScan.counts.ambiguous,
-              })}
-              <Link href={scanPath(current.id, current.lastScan.jobId)}
-                >{t('web.libraries.scan.last')}</Link
-              >
-            </p>
-          {/if}
         {:else}
           <p class="muted">{t(missing ? 'web.libraries.missing' : 'web.libraries.select')}</p>
         {/if}
@@ -299,11 +309,6 @@
     flex-direction: column;
     gap: 12px;
     min-width: 0;
-  }
-
-  .last {
-    margin: 0;
-    font-size: 13px;
   }
 
   @media (max-width: 860px) {

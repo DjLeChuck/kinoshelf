@@ -261,7 +261,11 @@ export const en = {
   'web.libraries.create': 'Create the library',
   'web.libraries.scan': 'Start a scan',
   'web.libraries.scan.starting': 'Starting…',
-  'web.libraries.scan.last': 'See the last result',
+  'web.libraries.scan.link.done': 'See the last result',
+  'web.libraries.scan.link.running': 'Follow the scan in progress',
+  'web.libraries.scan.link.failed': 'See why the last scan failed',
+  'web.libraries.lastscan.running': 'scan in progress',
+  'web.libraries.lastscan.failed': 'last scan failed',
   'web.libraries.delete': 'Delete',
   'web.libraries.delete.warning':
     'Delete the library “{name}”? Its files stay where they are: only the library is forgotten.',

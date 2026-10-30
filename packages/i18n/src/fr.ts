@@ -272,7 +272,11 @@ export const fr: Record<keyof typeof en, string> = {
   'web.libraries.create': 'Créer la bibliothèque',
   'web.libraries.scan': 'Lancer un scan',
   'web.libraries.scan.starting': 'Démarrage…',
-  'web.libraries.scan.last': 'Voir le dernier résultat',
+  'web.libraries.scan.link.done': 'Voir le dernier résultat',
+  'web.libraries.scan.link.running': 'Suivre le scan en cours',
+  'web.libraries.scan.link.failed': 'Voir pourquoi le dernier scan a échoué',
+  'web.libraries.lastscan.running': 'scan en cours',
+  'web.libraries.lastscan.failed': 'dernier scan échoué',
   'web.libraries.delete': 'Supprimer',
   'web.libraries.delete.warning':
     'Supprimer la bibliothèque « {name} » ? Ses fichiers restent où ils sont : seule la bibliothèque est oubliée.',
