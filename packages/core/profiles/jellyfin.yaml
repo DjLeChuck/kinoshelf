@@ -1,0 +1,39 @@
+# Jellyfin naming, NFO and images, per https://jellyfin.org/docs/general/server/media/movies/,
+# https://jellyfin.org/docs/general/server/media/shows/ and https://jellyfin.org/docs/general/server/metadata/
+#
+# The video file must start with its folder's name, id tag included.
+id: jellyfin
+name: Jellyfin
+
+# Multi-episode files are named with the first and last episode: S02E18-E19.
+episodeRangeSeparator: '-E'
+
+templates:
+  # Jellyfin reads `[tmdbid-<id>]` (brackets, parentheses and braces all work; brackets are its own).
+  movieFolder: '{title} ({year}) [tmdbid-{tmdb}]'
+  movieFile: '{title} ({year}) [tmdbid-{tmdb}]'
+  seriesFolder: '{title} ({year}) [tmdbid-{tmdb}]'
+  # `Season 01`, never `S01`; specials go in `Season 00`.
+  seasonFolder: 'Season {season:02}'
+  episodeFile: '{title} ({year}) S{season:02}E{episode:02}'
+
+# Kodi-format NFO: `movie.nfo`, `tvshow.nfo`, and `<video>.nfo` for an episode. Local metadata
+# and images win over Jellyfin's providers.
+nfo:
+  format: kodi
+  movie: movie.nfo
+  episode: '{file}.nfo'
+  series: tvshow.nfo
+
+# Jellyfin documents `poster` and `fanart` (among others) for a movie or a show. For a season it
+# only says a season folder may hold the same names, so the season poster is a plain `poster.jpg`
+# there (Kodi's `seasonNN-poster.jpg` is not in Jellyfin's documentation).
+artwork:
+  - { kind: poster, name: poster.jpg }
+  - { kind: fanart, name: fanart.jpg }
+  - { kind: season-poster, name: poster.jpg }
+
+filesystem:
+  forbidden: windows
+  replacement: ''
+  maxSegmentBytes: 255

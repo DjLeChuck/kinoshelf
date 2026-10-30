@@ -652,6 +652,10 @@ export const en = {
   'web.profile.plex-no-id.name': 'Plex (no id)',
   'web.profile.plex-no-id.help':
     'The same layout as Plex, without the TMDB id: cleaner names, but Plex then identifies a work by its title and year alone, which can mix up two works sharing both (a remake released the same year). No NFO file or artwork is written.',
+  'web.profile.jellyfin.help':
+    'Names for Jellyfin: the TMDB id goes in brackets in the movie and series folders (and the movie file), then a Kodi-format NFO file (movie.nfo, tvshow.nfo, one per episode) and the poster and fanart images are written next to the videos. Jellyfin reads them before it asks any online provider.',
+  'web.profile.plex-nfo.help':
+    'For the optional “Plex NFO” agents (Plex Media Server 1.43.1 or later), which read local NFO files and images instead of asking an online source. The same layout as Plex without the id in the names, since the NFO carries it. Plex’s default agents ignore these files: use Plex for them.',
   'web.settings.processing.profile.explain': 'What this profile writes',
   'web.settings.processing.profile.example.movie': 'Movie',
   'web.settings.processing.profile.example.series': 'Episode',

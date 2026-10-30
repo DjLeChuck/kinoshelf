@@ -91,6 +91,54 @@ describe('plex-no-id profile', () => {
   });
 });
 
+describe('jellyfin profile', () => {
+  const load = () => loadProfileFile(new URL('../profiles/jellyfin.yaml', import.meta.url));
+  const vars = { title: 'The Bear', year: 2022, tmdb: 136315, season: 3, episode: 4 };
+
+  it('tags the id in brackets and starts the movie file with its folder name', async () => {
+    const profile = await load();
+    expect(path(profile, 'movieFolder', vars)).toEqual(['The Bear (2022) [tmdbid-136315]']);
+    expect(path(profile, 'movieFile', vars)).toEqual(path(profile, 'movieFolder', vars));
+    expect(path(profile, 'seriesFolder', vars)).toEqual(['The Bear (2022) [tmdbid-136315]']);
+    expect(path(profile, 'seasonFolder', vars)).toEqual(['Season 03']);
+    expect(path(profile, 'episodeFile', vars)).toEqual(['The Bear (2022) S03E04']);
+    expect(path(profile, 'episodeFile', { ...vars, episode: [1, 2] })).toEqual([
+      'The Bear (2022) S03E01-E02',
+    ]);
+  });
+
+  it('writes Kodi NFO, poster and fanart', async () => {
+    const profile = await load();
+    expect(profile.nfo).toEqual({
+      format: 'kodi',
+      movie: 'movie.nfo',
+      episode: '{file}.nfo',
+      series: 'tvshow.nfo',
+    });
+    expect(profile.artwork.map(({ kind, name, size }) => [kind, name, size])).toEqual([
+      ['poster', 'poster.jpg', 'standard'],
+      ['fanart', 'fanart.jpg', 'original'],
+      ['season-poster', 'poster.jpg', 'standard'],
+    ]);
+  });
+});
+
+describe('plex-nfo profile', () => {
+  const load = () => loadProfileFile(new URL('../profiles/plex-nfo.yaml', import.meta.url));
+
+  it('names like plex-no-id and writes what the Plex NFO agents read', async () => {
+    const profile = await load();
+    const vars = { title: 'The Bear', year: 2022, tmdb: 136315, season: 3, episode: 4 };
+    expect(path(profile, 'movieFolder', vars)).toEqual(['The Bear (2022)']);
+    expect(path(profile, 'episodeFile', vars)).toEqual(['The Bear (2022) - s03e04']);
+    expect(profile.nfo?.series).toBe('tvshow.nfo');
+    expect(profile.artwork.map(({ kind, name }) => [kind, name])).toEqual([
+      ['poster', 'poster.jpg'],
+      ['fanart', 'background.jpg'],
+    ]);
+  });
+});
+
 describe('parseProfile', () => {
   it('accepts a minimal valid profile', () => {
     expect(parseProfile(base).nfo).toBeNull();

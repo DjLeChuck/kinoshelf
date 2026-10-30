@@ -1,0 +1,39 @@
+# Plex with the optional "Plex NFO Movie" / "Plex NFO Series" agents (Plex Media Server 1.43.1+),
+# per https://support.plex.tv/articles/using-nfo-metadata-files-with-plex/
+#
+# The agents read Kodi-format NFO and local images, with no online lookup, and take the id from
+# `<uniqueid type="tmdb">`: the names carry none (as in `plex-no-id`). Plex's default agents
+# ignore all of this: use `plex` for them.
+id: plex-nfo
+name: Plex (NFO)
+
+# Multi-episode files are named with the first and last episode: s02e18-e19.
+episodeRangeSeparator: '-e'
+
+templates:
+  movieFolder: '{title} ({year})'
+  movieFile: '{title} ({year})'
+  seriesFolder: '{title} ({year})'
+  # The English word "Season" is mandatory, whatever the content language.
+  seasonFolder: 'Season {season:02}'
+  episodeFile: '{title} ({year}) - s{season:02}e{episode:02}'
+
+# `movie.nfo` or the video's name for a movie, `tvshow.nfo` for a show; the episode NFO is
+# the minimum Plex asks for and carries the video's name. Season NFO is "mostly ignored".
+nfo:
+  format: kodi
+  movie: '{file}.nfo'
+  episode: '{file}.nfo'
+  series: tvshow.nfo
+
+# Plex documents `poster.jpg` and `background.jpg` for a movie or a show; it names nothing for a
+# season, so none is written.
+artwork:
+  - { kind: poster, name: poster.jpg }
+  - { kind: fanart, name: background.jpg }
+
+filesystem:
+  # Libraries are often shared over SMB: avoid characters Windows cannot store.
+  forbidden: windows
+  replacement: ''
+  maxSegmentBytes: 255

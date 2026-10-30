@@ -43,11 +43,27 @@ describe('GET /api/settings', () => {
       (await h.request('GET', '/api/settings')).json<{ profiles: unknown }>().profiles,
     ).toEqual([
       {
+        id: 'jellyfin',
+        name: 'Jellyfin',
+        example: {
+          movie: 'Dune (2021) [tmdbid-438631]/Dune (2021) [tmdbid-438631].mkv',
+          series: 'The Bear (2022) [tmdbid-136315]/Season 03/The Bear (2022) S03E04.mkv',
+        },
+      },
+      {
         id: 'plex',
         name: 'Plex',
         example: {
           movie: 'Dune (2021) {tmdb-438631}/Dune (2021) {tmdb-438631}.mkv',
           series: 'The Bear (2022) {tmdb-136315}/Season 03/The Bear (2022) - s03e04.mkv',
+        },
+      },
+      {
+        id: 'plex-nfo',
+        name: 'Plex (NFO)',
+        example: {
+          movie: 'Dune (2021)/Dune (2021).mkv',
+          series: 'The Bear (2022)/Season 03/The Bear (2022) - s03e04.mkv',
         },
       },
       {
