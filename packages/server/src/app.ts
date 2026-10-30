@@ -23,6 +23,8 @@ import { JobRunner, type JobProcessor } from './runner.js';
 import { healthSchema } from './schemas.js';
 import { Service } from './service.js';
 import { isValidSession } from './sessions.js';
+import { OnboardingStore } from './onboarding.js';
+import { registerOnboardingRoutes } from './onboarding-routes.js';
 import { registerSettingsRoutes } from './settings-routes.js';
 import { ConfigStore } from './settings.js';
 import { registerWatchRoutes } from './watch-routes.js';
@@ -290,6 +292,13 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
       env: options.env,
       events,
       service,
+    });
+    registerOnboardingRoutes(api, {
+      store: new OnboardingStore(options.database),
+      config: configStore,
+      env: options.env,
+      events,
+      hasWork: () => jobs.list(1).length > 0 || history.list({ limit: 1, offset: 0 }).length > 0,
     });
     registerFsRoutes(api);
     registerWatchRoutes(api, watcher);

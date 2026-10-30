@@ -52,4 +52,14 @@ describe('server migrations', () => {
     const database = migrated(new Database(':memory:'));
     expect(() => migrated(database)).not.toThrow();
   });
+
+  it('creates the onboarding table on a database of the previous layout', () => {
+    const database = new Database(':memory:');
+    applyMigrations(database, SERVER_MIGRATIONS.slice(0, 8));
+
+    migrated(database);
+    migrated(database);
+
+    expect(database.prepare('SELECT COUNT(*) AS n FROM onboarding_state').get()).toEqual({ n: 0 });
+  });
 });

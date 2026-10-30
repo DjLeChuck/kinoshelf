@@ -1,6 +1,6 @@
 import type { Database } from 'better-sqlite3';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
-import { hasApiKey, isValidApiKey } from './auth.js';
+import { generateApiKey, hasApiKey, isValidApiKey, setApiKey } from './auth.js';
 import { errorSchema } from './schemas.js';
 import {
   createSession,
@@ -15,7 +15,14 @@ import {
 const sessionSchema = {
   type: 'object',
   required: ['authenticated'],
-  properties: { authenticated: { type: 'boolean' } },
+  properties: {
+    authenticated: { type: 'boolean' },
+    setup: {
+      type: 'boolean',
+      description:
+        'No API key exists yet: the first launch can create one (`POST /api/setup/api-key`).',
+    },
+  },
 } as const;
 
 export const sessionToken = (request: FastifyRequest): string | undefined =>
@@ -53,7 +60,46 @@ export function registerSessionRoutes(app: FastifyInstance, database: Database):
     },
     (request) => {
       const token = sessionToken(request);
-      return { authenticated: token !== undefined && isValidSession(database, token) };
+      return {
+        authenticated: token !== undefined && isValidSession(database, token),
+        setup: !hasApiKey(database),
+      };
+    },
+  );
+
+  // Open to whoever reaches the server first, like the first-run screen of other self-hosted apps,
+  // and only until a key exists. It opens no session: the key has to be used to sign in, which
+  // proves it was written down. The check and the write run in one synchronous step.
+  app.post(
+    '/api/setup/api-key',
+    {
+      schema: {
+        summary: 'Create the first API key',
+        description:
+          'Only while no key exists (409 `setup.already-done` after). The key is returned once ' +
+          'and only its hash is kept.',
+        security: [],
+        response: {
+          200: {
+            type: 'object',
+            required: ['apiKey'],
+            properties: { apiKey: { type: 'string' } },
+          },
+          401: errorSchema,
+          409: errorSchema,
+        },
+      },
+    },
+    (request, reply) => {
+      if (!sameOrigin(request)) {
+        return reply.code(401).send({ error: { code: 'auth.unauthorized' } });
+      }
+      if (hasApiKey(database)) {
+        return reply.code(409).send({ error: { code: 'setup.already-done' } });
+      }
+      const apiKey = generateApiKey();
+      setApiKey(database, apiKey);
+      return reply.header('cache-control', 'no-store').send({ apiKey });
     },
   );
 

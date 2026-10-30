@@ -133,6 +133,16 @@ export const SERVER_MIGRATIONS: readonly { readonly name: string; readonly sql: 
       );
     `,
   },
+  {
+    name: 'server:009-onboarding',
+    sql: `
+      CREATE TABLE onboarding_state (
+        key TEXT PRIMARY KEY,
+        state TEXT NOT NULL CHECK (state IN ('done', 'skipped')),
+        at TEXT NOT NULL
+      );
+    `,
+  },
 ];
 
 /** Opens the single SQLite file of the config directory, shared with the CLI and the cache. */

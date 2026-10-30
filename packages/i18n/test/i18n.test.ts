@@ -26,8 +26,14 @@ describe('catalogs', () => {
       expect(fr[key].trim()).not.toBe('');
     }
     // Technical tokens aside, a French message identical to the English one is a missed one.
+    // Words spelled the same in both languages are listed here, so a real omission still shows.
+    const SAME_IN_BOTH: readonly string[] = [
+      'entry.score',
+      'web.home.suggest.eyebrow',
+      'web.home.services.title',
+    ];
     const identical = (Object.keys(en) as (keyof typeof en)[]).filter(
-      (key) => fr[key] === en[key] && !key.startsWith('entry.') && key !== 'entry.score',
+      (key) => fr[key] === en[key] && !key.startsWith('entry.') && !SAME_IN_BOTH.includes(key),
     );
     expect(identical).toEqual([]);
   });

@@ -162,10 +162,52 @@ describe('GET /api/session', () => {
   it('reports whether the browser is signed in, without needing to be', async () => {
     const h = await harness();
     const anonymous = await h.app.inject({ url: '/api/session' });
-    expect(anonymous.json()).toEqual({ authenticated: false });
+    expect(anonymous.json()).toEqual({ authenticated: false, setup: false });
 
     const { cookie } = await signIn(h);
     const signed = await h.app.inject({ url: '/api/session', headers: { cookie } });
-    expect(signed.json()).toEqual({ authenticated: true });
+    expect(signed.json()).toEqual({ authenticated: true, setup: false });
+  });
+});
+
+describe('first-launch API key', () => {
+  it('says a key is missing, creates one once and opens no session', async () => {
+    const h = await harness();
+    h.database.prepare('DELETE FROM api_keys').run();
+    const state = (await h.app.inject('/api/session')).json<{ setup: boolean }>();
+    expect(state.setup).toBe(true);
+
+    const created = await h.app.inject({ method: 'POST', url: '/api/setup/api-key' });
+    expect(created.statusCode).toBe(200);
+    expect(created.headers['set-cookie']).toBeUndefined();
+    const { apiKey } = created.json<{ apiKey: string }>();
+    const withKey = await h.app.inject({
+      method: 'GET',
+      url: '/api/jobs',
+      headers: { authorization: `Bearer ${apiKey}` },
+    });
+    expect(withKey.statusCode).toBe(200);
+
+    const again = await h.app.inject({ method: 'POST', url: '/api/setup/api-key' });
+    expect(again.statusCode).toBe(409);
+    expect(again.json()).toEqual({ error: { code: 'setup.already-done' } });
+    expect((await h.app.inject('/api/session')).json<{ setup: boolean }>().setup).toBe(false);
+  });
+
+  it('refuses to replace a key that exists', async () => {
+    const h = await harness();
+    const response = await h.app.inject({ method: 'POST', url: '/api/setup/api-key' });
+    expect(response.statusCode).toBe(409);
+  });
+
+  it('refuses a request coming from another origin', async () => {
+    const h = await harness();
+    h.database.prepare('DELETE FROM api_keys').run();
+    const response = await h.app.inject({
+      method: 'POST',
+      url: '/api/setup/api-key',
+      headers: { host: HOST, origin: 'https://evil.example' },
+    });
+    expect(response.statusCode).toBe(401);
   });
 });

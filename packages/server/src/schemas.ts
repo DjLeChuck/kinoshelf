@@ -612,3 +612,42 @@ export const matchResultSchema = {
     rematched: { type: 'integer' },
   },
 } as const;
+
+const onboardingStepId = {
+  type: 'string',
+  enum: ['tmdb', 'server', 'destination', 'source'],
+} as const;
+
+export const onboardingSchema = {
+  type: 'object',
+  required: ['completed', 'steps'],
+  properties: {
+    completed: {
+      type: 'boolean',
+      description: 'The welcome page is over: the user left it, or the install already did work.',
+    },
+    steps: {
+      type: 'array',
+      items: {
+        type: 'object',
+        required: ['id', 'state', 'auto'],
+        properties: {
+          id: onboardingStepId,
+          state: { type: 'string', enum: ['todo', 'done', 'skipped'] },
+          auto: { type: 'boolean', description: 'Done because the configuration says so.' },
+        },
+      },
+    },
+  },
+} as const;
+
+export const onboardingPatchSchema = {
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    step: onboardingStepId,
+    state: nullable({ type: 'string', enum: ['done', 'skipped'] }),
+    finished: { type: 'boolean', enum: [true] },
+  },
+  anyOf: [{ required: ['step', 'state'] }, { required: ['finished'] }],
+} as const;
