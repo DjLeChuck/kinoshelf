@@ -1,0 +1,30 @@
+# Plex naming without the `{tmdb-<id>}` suffix, for people who want clean folder and file names.
+# Plex then matches on title and year alone, which is ambiguous for two works sharing both
+# (a remake released the same year): prefer the `plex` profile when in doubt.
+#
+# Layout otherwise as in `plex`, per https://support.plex.tv/articles/naming-and-organizing-your-movie-media-files/
+# and https://support.plex.tv/articles/naming-and-organizing-your-tv-show-files/
+id: plex-no-id
+name: Plex (no id)
+
+# Multi-episode files are named with the first and last episode: s02e18-e19.
+episodeRangeSeparator: '-e'
+
+templates:
+  movieFolder: '{title} ({year})'
+  movieFile: '{title} ({year})'
+  # The year is recommended for series.
+  seriesFolder: '{title} ({year})'
+  # The English word "Season" is mandatory, whatever the content language.
+  seasonFolder: 'Season {season:02}'
+  episodeFile: '{title} ({year}) - s{season:02}e{episode:02}'
+
+# Targets Plex's default agents, which fetch their own metadata and artwork and ignore NFO files.
+nfo: null
+artwork: []
+
+filesystem:
+  # Libraries are often shared over SMB: avoid characters Windows cannot store.
+  forbidden: windows
+  replacement: ''
+  maxSegmentBytes: 255

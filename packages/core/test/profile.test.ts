@@ -11,6 +11,7 @@ import {
 import type { Profile, TemplateVariables } from '../src/index.js';
 
 const plexUrl = new URL('../profiles/plex.yaml', import.meta.url);
+const plexNoIdUrl = new URL('../profiles/plex-no-id.yaml', import.meta.url);
 
 function codeOf(fn: () => unknown): string | undefined {
   try {
@@ -74,6 +75,19 @@ describe('plex profile', () => {
     expect(path(plex, 'episodeFile', { ...vars, episode: [1, 3] })).toEqual([
       'Grey’s Anatomy (2005) - s02e01-e03',
     ]);
+  });
+});
+
+describe('plex-no-id profile', () => {
+  it('leaves the id out of every name', async () => {
+    const profile = await loadProfileFile(plexNoIdUrl);
+    const vars = { title: 'The Bear', year: 2022, tmdb: 136315, season: 3, episode: 4 };
+    expect(profile.id).toBe('plex-no-id');
+    expect(path(profile, 'movieFolder', vars)).toEqual(['The Bear (2022)']);
+    expect(path(profile, 'movieFile', vars)).toEqual(['The Bear (2022)']);
+    expect(path(profile, 'seriesFolder', vars)).toEqual(['The Bear (2022)']);
+    expect(path(profile, 'seasonFolder', vars)).toEqual(['Season 03']);
+    expect(path(profile, 'episodeFile', vars)).toEqual(['The Bear (2022) - s03e04']);
   });
 });
 

@@ -60,6 +60,10 @@ contains no player-specific rule.
   a backslash must use **single quotes** (a double-quoted `"\{"` is a YAML error); the profile
   loader must reject that case with a clear error. Verify Plex/Jellyfin conventions against their official documentation before changing a
   profile.
+- Profiles shipped: `plex` (id as `{tmdb-<id>}` in movie folder and file, and in the series folder)
+  and `plex-no-id` (same layout, no id anywhere: cleaner names, but Plex then matches on title and
+  year alone, ambiguous for two works sharing both). The id is optional for Plex, so offering it
+  is a second profile rather than a template syntax for optional parts.
 - Plex has two modes: the default agents ignore NFO (profile `plex`), the optional "Plex NFO"
   agent (PMS 1.43.1+) reads Kodi-format NFO, `tvshow.nfo`, per-episode `<file>.nfo`,
   `poster.jpg` and `background.jpg` (profile `plex-nfo`, planned for v1.0 with Jellyfin; needs

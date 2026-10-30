@@ -69,6 +69,10 @@ next start.
 | config directory    | `KINOSHELF_CONFIG_DIR`; holds `config.yaml` and `kinoshelf.sqlite` |
 | `KINOSHELF_WEB_DIR` | built web UI to serve (found by itself in the Docker image)        |
 
+`profile` is a shipped id (`plex`, which writes the TMDB id in names as `{tmdb-<id>}`, or `plex-no-id`,
+same layout without it, which leaves Plex matching on title and year alone) or the path of your own
+YAML file.
+
 `config.yaml` is the one source of the other settings (`destination`, `profile`, `mode`,
 `threshold`, `locale`, `metadataLanguage`, `retentionDays`) and of the notifications:
 
