@@ -99,6 +99,17 @@ contains no player-specific rule.
 - Each user provides their own TMDB key; none is ever embedded. Put it in `.env` (git-ignored) as
   `TMDB_API_KEY`; never read or print it. `pnpm test:live` runs the contract tests against the
   real API.
+- **A variable that overrides a setting is said so in the settings.** `TMDB_API_KEY` and
+  `KINOSHELF_API_KEY` win over what the settings could save, so `GET /api/settings` reports their
+  `source`, the field is disabled with an explanation, and the API refuses the change with a 409
+  (`settings.tmdb-key-from-env`, `settings.api-key-from-env`): a value saved and never used is worse
+  than a refusal. Do the same for any new variable that shadows a setting.
+- **The welcome page** (`/`, until the setup is left): the TMDB key is tested as soon as it is
+  entered and dropped if TMDB refuses it; the last step either analyses a folder once or adds it to
+  `watch.folders`. Any job counts as work, so the setup ends even when that job failed: the home page
+  then lists the analyses in progress and the failed ones with their cause (`GET /api/jobs`), a
+  failure staying until the same path is sent again and does not fail. A job must never fail without
+  leaving a trace in the UI.
 
 ## Getting downloads in
 
