@@ -123,6 +123,7 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
       ...job,
       summary: job.status === 'done' ? entries.summary(job.id) : null,
       execution: latest ?? null,
+      settings: jobs.settings(job.id) ?? null,
     };
   };
   const idParams = { type: 'object', properties: { id: { type: 'string' } } } as const;

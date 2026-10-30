@@ -42,6 +42,10 @@ describe('catalogs', () => {
       'entry.score',
       'web.home.suggest.eyebrow',
       'web.home.services.title',
+      'web.job.title',
+      'web.job.cause',
+      'web.job.col.classification',
+      'web.job.settings.mode',
     ];
     const identical = (Object.keys(en) as (keyof typeof en)[]).filter(
       (key) => fr[key] === en[key] && !key.startsWith('entry.') && !SAME_IN_BOTH.includes(key),

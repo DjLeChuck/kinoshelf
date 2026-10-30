@@ -16,6 +16,7 @@ interface JobBody {
   status: string;
   error: { code: string; params?: Record<string, unknown> } | null;
   summary: Record<string, number> | null;
+  settings: { profile: string; mode: string } | null;
   batchId: string | null;
 }
 
@@ -41,6 +42,8 @@ describe('POST /api/jobs', () => {
     const job = (await h.request('GET', `/api/jobs/${id}`)).json<JobBody>();
     expect(job.status).toBe('done');
     expect(job.summary).toMatchObject({ 'to-rename': 1, unrecognized: 1 });
+    expect(job.settings?.mode).toBeTruthy();
+    expect(job.settings?.profile).toBeTruthy();
 
     const entries = (await h.request('GET', `/api/jobs/${id}/entries`)).json<EntryBody[]>();
     const renamed = entries.find((entry) => entry.path === file);

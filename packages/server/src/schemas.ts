@@ -84,6 +84,7 @@ export const jobSchema = {
     'error',
     'execution',
     'summary',
+    'settings',
   ],
   properties: {
     id: { type: 'string', format: 'uuid' },
@@ -97,6 +98,26 @@ export const jobSchema = {
     /** The latest transfer of this job (an `apply` job queues its own). */
     execution: { ...executionSchema, nullable: true },
     summary: { ...summarySchema, nullable: true },
+    /** What the plan was built with; only an analysis that finished has it. */
+    settings: {
+      type: 'object',
+      nullable: true,
+      required: ['profile', 'mode', 'destinationRoot'],
+      properties: {
+        profile: { type: 'string' },
+        mode: { type: 'string', enum: ['copy', 'hardlink', 'move'] },
+        destinationRoot: {
+          oneOf: [
+            { type: 'string' },
+            {
+              type: 'object',
+              required: ['movie', 'series'],
+              properties: { movie: { type: 'string' }, series: { type: 'string' } },
+            },
+          ],
+        },
+      },
+    },
   },
 } as const;
 
