@@ -146,7 +146,7 @@ export const en = {
   'cleanup.dry-run': 'Dry run: nothing was removed. Add --apply to delete them.',
   'error.cleanup.age-too-short':
     'The minimum age is {min} hour: a younger file may still be being copied.',
-  'error.cleanup.no-folder': 'Give the folder(s) to scan, or set "destination" in {path}.',
+  'error.cleanup.no-folder': 'Give at least one folder to scan, or set "destination" in {path}.',
   'help.submit':
     'Queue a file or folder on a running server (for a download client’s “on completion” hook).',
   'help.opt.url': 'address of the server (default: KINOSHELF_URL, else localhost)',

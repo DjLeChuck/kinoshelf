@@ -104,7 +104,7 @@ describe('cleanup', () => {
     const h = await harness();
     expect(await h.cli('cleanup')).toBe(2);
     expect(h.err[0]).toMatch(
-      /^Give the folder\(s\) to scan, or set "destination" in .*config\.yaml\.$/,
+      /^Give at least one folder to scan, or set "destination" in .*config\.yaml\.$/,
     );
   });
 

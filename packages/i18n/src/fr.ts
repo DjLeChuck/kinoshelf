@@ -152,7 +152,7 @@ export const fr: Record<keyof typeof en, string> = {
   'error.cleanup.age-too-short':
     'L’âge minimum est de {min} heure : un fichier plus récent est peut-être en cours de copie.',
   'error.cleanup.no-folder':
-    'Indiquez le ou les dossiers à parcourir, ou définissez « destination » dans {path}.',
+    'Indiquez au moins un dossier à parcourir, ou définissez « destination » dans {path}.',
   'help.submit':
     'Met un fichier ou un dossier en file d’attente sur un serveur en marche (pour le script de fin de téléchargement d’un client).',
   'help.opt.url': 'adresse du serveur (par défaut : KINOSHELF_URL, sinon localhost)',
