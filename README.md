@@ -69,9 +69,18 @@ next start.
 | config directory    | `KINOSHELF_CONFIG_DIR`; holds `config.yaml` and `kinoshelf.sqlite` |
 | `KINOSHELF_WEB_DIR` | built web UI to serve (found by itself in the Docker image)        |
 
-`profile` is a shipped id (`plex`, which writes the TMDB id in names as `{tmdb-<id>}`, or `plex-no-id`,
-same layout without it, which leaves Plex matching on title and year alone) or the path of your own
-YAML file.
+`profile` is a shipped id or the path of your own YAML file:
+
+- `plex`: names for Plex's default agents, with the TMDB id as `{tmdb-<id>}`; `plex-no-id` is the
+  same layout without it, which leaves Plex matching on title and year alone. Neither writes
+  metadata files: Plex fetches its own.
+- `jellyfin`: names with `[tmdbid-<id>]`, plus a Kodi-format NFO (`movie.nfo`, `tvshow.nfo`, one
+  per episode) and `poster.jpg` / `fanart.jpg` next to the videos.
+- `plex-nfo`: for Plex's optional "Plex NFO" agents (Plex Media Server 1.43.1 or later): the same
+  layout as `plex-no-id`, with NFO, `poster.jpg` and `background.jpg`.
+
+Metadata files are never overwritten (one already there is left as it is and reported), and `undo`
+removes the ones a batch wrote.
 
 `config.yaml` is the one source of the other settings (`destination`, `profile`, `mode`,
 `threshold`, `locale`, `metadataLanguage`, `retentionDays`) and of the notifications:

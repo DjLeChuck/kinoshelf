@@ -10,8 +10,9 @@ are done, and so is getting downloads in (see "Getting downloads in" below). The
 a home (a welcome for the first launch, `GET`/`PATCH /api/onboarding`, server migration 009), its
 validation queue (at `/queue`), history and settings, with a server-side path picker; the "Movies &
 series" and "Libraries & scan" pages are still "coming soon". Validating a file in the queue remembers its
-title (aliases). Next is v1.0: the NFO and artwork writers, and the `jellyfin` and `plex-nfo`
-profiles.
+title (aliases). v1.0 is under way: the NFO and artwork writers and the `jellyfin` and `plex-nfo`
+profiles are built (see "NFO and artwork" below), metadata included for a library that is already
+organized; left are the "Movies & series" and "Libraries & scan" pages.
 
 Backlog, not built: skipping samples by size (today only by name: `sample.*`, a `Sample` folder);
 reading completion from a download client's own API (see "Getting downloads in").
@@ -66,8 +67,12 @@ contains no player-specific rule.
   is a second profile rather than a template syntax for optional parts.
 - Plex has two modes: the default agents ignore NFO (profile `plex`), the optional "Plex NFO"
   agent (PMS 1.43.1+) reads Kodi-format NFO, `tvshow.nfo`, per-episode `<file>.nfo`,
-  `poster.jpg` and `background.jpg` (profile `plex-nfo`, planned for v1.0 with Jellyfin; needs
-  `<uniqueid type="tmdb">` in the NFO).
+  `poster.jpg` and `background.jpg` (profile `plex-nfo`: no id in the names, since the NFO carries
+  `<uniqueid type="tmdb">`; no season poster, Plex documents none).
+- Profile `jellyfin`: `[tmdbid-<id>]` in the movie and series folders and in the movie file (the file
+  must start with its folder's name), `SxxExx` episodes, `movie.nfo`, `tvshow.nfo`, `<file>.nfo`,
+  `poster.jpg` and `fanart.jpg`. A season's poster is a plain `poster.jpg` in its folder: Jellyfin's
+  documentation does not list Kodi's `seasonNN-poster.jpg`.
 - `ParsedMedia.knownIds` (ids found in names) is a hint, not a truth: a candidate whose id matches
   is boosted only if its type, title, season/episode and year agree. If the id designates a
   candidate yet another one scores higher (`Dune (2021) {tmdb-841}`: 841 is the 1984 film), the
@@ -114,6 +119,34 @@ contains no player-specific rule.
   then lists the analyses in progress and the failed ones with their cause (`GET /api/jobs`), a
   failure staying until the same path is sent again and does not fail. A job must never fail without
   leaving a trace in the UI.
+
+## NFO and artwork
+
+A profile with `nfo` or `artwork` makes the planner add `write-file` (NFO, content built in the
+plan) and `download` (image URL) operations after the transfers of an item. Kodi-format NFO is
+written by `core/src/nfo/` (a pure function of `MovieDetails`/`SeriesDetails`/`EpisodeInfo`; the
+format follows the Kodi wiki's templates, saved pages are not in the repository).
+
+- **The planner stays off the network.** `MetadataLoader` (`pipeline/metadata.ts`, used by `analyze`
+  and the server) fetches the details first (one request per work, cached; the season is the
+  provider's cached `getSeason`) and hands them to the planner in `PlanInput.details`/`episodes`.
+  A profile that writes nothing makes no extra call. An item without details is still renamed.
+- **Never overwritten, same as videos.** `write-file` and `download` publish with `link`; an
+  existing file is `skipped` (`destination.exists`) in the item's results and never fails the item,
+  nor sends the video back to the queue. A `.nfo` the user already had travels as a sidecar and
+  wins over the generated one. A movie written flat (no folder) gets no fixed-name file
+  (`movie.nfo`, `poster.jpg`), which every movie would share.
+- **Show-level files** (`tvshow.nfo`, the show's poster and fanart) come with every episode; the
+  planner keeps the first one of the batch (`shareCompanions`).
+- **Journal and undo**: entries have a `kind` (`transfer`, `generated`, `downloaded`;
+  `core:002-journal-kind`). Undo deletes what Kinoshelf made, even if edited, then prunes only the
+  directories it created. Images come with `ImageSize` (`preview`, `standard`, `original`; `size`
+  in the profile, `standard` by default and `original` for a fanart) through `provider.imageUrl`.
+- **An organized library** gets its missing NFO and images too: an item whose video is already
+  where the profile wants it becomes `ready` with only `write-file`/`download` operations (the
+  CLI says "already named as the profile wants"). Files already there are left out of the plan
+  rather than reported as skipped, so a rescan of a complete library stays `in-place`.
+- Not done: no certification (`<mpaa>`), no collection overview, no episode `uniqueid`.
 
 ## Getting downloads in
 
