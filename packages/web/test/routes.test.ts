@@ -4,7 +4,8 @@ import { matchRoute, ROUTES } from '../src/lib/routes.js';
 
 describe('matchRoute', () => {
   it.each([
-    ['/', 'queue'],
+    ['/', 'home'],
+    ['/queue', 'queue'],
     ['/history', 'history'],
     ['/history/', 'history'],
     ['/history/3f2a', 'history'],
@@ -21,6 +22,10 @@ describe('matchRoute', () => {
 
   it('only the root is the root: it does not swallow other paths', () => {
     expect(matchRoute('/anything')).toBeUndefined();
+  });
+
+  it('keeps only the home and the settings while the welcome page is not left', () => {
+    expect(ROUTES.filter((r) => r.firstRun).map((r) => r.id)).toEqual(['home', 'settings']);
   });
 
   it('names every page in both languages, and only the unfinished ones are marked soon', () => {

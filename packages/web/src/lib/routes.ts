@@ -1,6 +1,6 @@
 import type { MessageKey } from '@kinoshelf/i18n';
 
-export type RouteId = 'queue' | 'media' | 'libraries' | 'history' | 'settings';
+export type RouteId = 'home' | 'queue' | 'media' | 'libraries' | 'history' | 'settings';
 
 export interface RouteDefinition {
   readonly id: RouteId;
@@ -8,15 +8,18 @@ export interface RouteDefinition {
   readonly label: MessageKey;
   /** Not built yet: the page says what it will be, and the nav says it is coming. */
   readonly soon: boolean;
+  /** Still in the nav while the welcome page has not been left: the rest has nothing to show yet. */
+  readonly firstRun: boolean;
 }
 
 /** In the order of the navigation. */
 export const ROUTES: readonly RouteDefinition[] = [
-  { id: 'queue', path: '/', label: 'web.nav.queue', soon: false },
-  { id: 'media', path: '/media', label: 'web.nav.media', soon: true },
-  { id: 'libraries', path: '/libraries', label: 'web.nav.libraries', soon: true },
-  { id: 'history', path: '/history', label: 'web.nav.history', soon: false },
-  { id: 'settings', path: '/settings', label: 'web.nav.settings', soon: false },
+  { id: 'home', path: '/', label: 'web.nav.home', soon: false, firstRun: true },
+  { id: 'queue', path: '/queue', label: 'web.nav.queue', soon: false, firstRun: false },
+  { id: 'media', path: '/media', label: 'web.nav.media', soon: true, firstRun: false },
+  { id: 'libraries', path: '/libraries', label: 'web.nav.libraries', soon: true, firstRun: false },
+  { id: 'history', path: '/history', label: 'web.nav.history', soon: false, firstRun: false },
+  { id: 'settings', path: '/settings', label: 'web.nav.settings', soon: false, firstRun: true },
 ];
 
 /** The route a path belongs to; a trailing slash or a sub-path (`/history/abc`) still match. */

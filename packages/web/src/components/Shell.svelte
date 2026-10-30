@@ -1,15 +1,28 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
   import { isLocale } from '@kinoshelf/i18n';
+  import { refetchOn } from '../lib/events.svelte.js';
+  import { queueLabel } from '../lib/home.js';
   import { locale, t } from '../lib/i18n.svelte.js';
   import { router } from '../lib/router.svelte.js';
   import { ROUTES } from '../lib/routes.js';
   import { session } from '../lib/session.svelte.js';
+  import { shell } from '../lib/shell-state.svelte.js';
   import { theme, type ThemePreference } from '../lib/theme.svelte.js';
   import Link from './Link.svelte';
   import Logo from './Logo.svelte';
 
   let { children }: { children: Snippet } = $props();
+
+  // Both feed the nav and the home page, so they are fetched once, here.
+  refetchOn(['settings', 'ready'], () => void shell.loadOnboarding());
+  refetchOn(['queue', 'jobs', 'ready'], () => void shell.loadQueue());
+
+  // Until the welcome page is left only what it needs is shown; unknown, everything is.
+  const routes = $derived(
+    shell.onboarding?.completed === false ? ROUTES.filter((route) => route.firstRun) : ROUTES,
+  );
+  const waiting = $derived(shell.queue?.length ?? 0);
 
   const themes: readonly ThemePreference[] = ['dark', 'light', 'system'];
 
@@ -31,7 +44,7 @@
   <Link href="/" aria-label="Kinoshelf"><Logo /></Link>
 
   <nav aria-label={t('web.nav.label')}>
-    {#each ROUTES as route (route.id)}
+    {#each routes as route (route.id)}
       <Link
         href={route.path}
         class="nav-link"
@@ -39,11 +52,17 @@
       >
         {t(route.label)}
         {#if route.soon}<span class="chip chip-neutral">{t('web.soon.badge')}</span>{/if}
+        {#if route.id === 'queue' && waiting > 0}<span class="chip chip-warn"
+            >{queueLabel(waiting)}</span
+          >{/if}
       </Link>
     {/each}
   </nav>
 
   <div class="tools">
+    {#if shell.onboarding?.completed === false}
+      <span class="chip chip-warn">{t('web.welcome.status')}</span>
+    {/if}
     <label>
       <span class="sr-only">{t('web.theme.label')}</span>
       <select class="input" value={theme.preference} onchange={pickTheme}>

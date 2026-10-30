@@ -1,4 +1,5 @@
 <script lang="ts">
+  import FirstKey from '../components/FirstKey.svelte';
   import Logo from '../components/Logo.svelte';
   import { ApiError } from '../lib/api.js';
   import { messageOf } from '../lib/errors.js';
@@ -24,41 +25,45 @@
 </script>
 
 <main>
-  <form class="card" onsubmit={submit}>
-    <Logo height={32} />
-    <div>
-      <h1>{t('web.login.title')}</h1>
-      <p class="muted">{t('web.login.intro')}</p>
-    </div>
+  {#if session.setup}
+    <FirstKey />
+  {:else}
+    <form class="card" onsubmit={submit}>
+      <Logo height={32} />
+      <div>
+        <h1>{t('web.login.title')}</h1>
+        <p class="muted">{t('web.login.intro')}</p>
+      </div>
 
-    <div class="field">
-      <label for="api-key">{t('web.login.key')}</label>
-      <!-- A password field: the key is a secret, and a password manager can fill it. -->
-      <input
-        id="api-key"
-        class="input mono"
-        type="password"
-        autocomplete="current-password"
-        required
-        bind:value={apiKey}
-        aria-invalid={failure ? 'true' : undefined}
-        aria-describedby={failure ? 'login-error' : undefined}
-      />
-    </div>
+      <div class="field">
+        <label for="api-key">{t('web.login.key')}</label>
+        <!-- A password field: the key is a secret, and a password manager can fill it. -->
+        <input
+          id="api-key"
+          class="input mono"
+          type="password"
+          autocomplete="current-password"
+          required
+          bind:value={apiKey}
+          aria-invalid={failure ? 'true' : undefined}
+          aria-describedby={failure ? 'login-error' : undefined}
+        />
+      </div>
 
-    {#if failure}
-      <p id="login-error" class="alert alert-danger" role="alert">{messageOf(t, failure)}</p>
-    {/if}
+      {#if failure}
+        <p id="login-error" class="alert alert-danger" role="alert">{messageOf(t, failure)}</p>
+      {/if}
 
-    <button type="submit" class="btn btn-primary" disabled={busy || apiKey.trim() === ''}>
-      {t('web.login.submit')}
-    </button>
-    <p class="muted hint">
-      {failure instanceof ApiError && failure.code === 'auth.not-configured'
-        ? ''
-        : t('web.login.hint')}
-    </p>
-  </form>
+      <button type="submit" class="btn btn-primary" disabled={busy || apiKey.trim() === ''}>
+        {t('web.login.submit')}
+      </button>
+      <p class="muted hint">
+        {failure instanceof ApiError && failure.code === 'auth.not-configured'
+          ? ''
+          : t('web.login.hint')}
+      </p>
+    </form>
+  {/if}
 </main>
 
 <style>

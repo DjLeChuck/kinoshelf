@@ -6,6 +6,7 @@
   import { t } from './lib/i18n.svelte.js';
   import { router } from './lib/router.svelte.js';
   import { session } from './lib/session.svelte.js';
+  import Home from './pages/Home.svelte';
   import History from './pages/History.svelte';
   import Login from './pages/Login.svelte';
   import NotFound from './pages/NotFound.svelte';
@@ -40,7 +41,9 @@
 {:else if session.status === 'signed-in'}
   <div class="app">
     <Shell>
-      {#if router.route?.id === 'queue'}
+      {#if router.route?.id === 'home'}
+        <Home />
+      {:else if router.route?.id === 'queue'}
         <Queue />
       {:else if router.route?.id === 'history'}
         <History />
