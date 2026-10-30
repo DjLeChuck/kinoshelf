@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { api } from '../lib/api.js';
+  import { api, ApiError } from '../lib/api.js';
   import { messageOf } from '../lib/errors.js';
   import { t } from '../lib/i18n.svelte.js';
   import type { StepId } from '../lib/onboarding.js';
@@ -31,7 +31,10 @@
           await api.post('/api/settings/tmdb/test');
         } catch (error) {
           await api.patch('/api/settings', { tmdb: { apiKey: null } }).catch(() => undefined);
-          throw error;
+          // The key just typed is the one at fault: the generic message points at the config.
+          throw error instanceof ApiError && error.code === 'tmdb.invalid-key'
+            ? new FormError(t('web.onboarding.form.tmdb.invalid'))
+            : error;
         }
         tmdbKey = '';
         break;

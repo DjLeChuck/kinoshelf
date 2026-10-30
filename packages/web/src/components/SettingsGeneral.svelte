@@ -52,9 +52,12 @@
       type="password"
       autocomplete="off"
       bind:value={key}
+      disabled={source === 'env'}
       aria-describedby="tmdb-key-hint"
     />
-    <span id="tmdb-key-hint" class="muted hint">{t('web.settings.tmdb.key.hint')}</span>
+    <span id="tmdb-key-hint" class="muted hint">
+      {t(source === 'env' ? 'web.settings.tmdb.key.env' : 'web.settings.tmdb.key.hint')}
+    </span>
   </div>
 
   <div class="field">

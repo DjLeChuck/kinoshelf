@@ -313,6 +313,8 @@ export const fr: Record<keyof typeof en, string> = {
     'Pour un dossier qui ne contient que des téléchargements terminés : chaque nouvelle release est analysée à son arrivée. Pas pour une bibliothèque déjà rangée.',
   'web.onboarding.form.source.submit': 'Analyser',
   'web.onboarding.form.source.submit.watch': 'Surveiller',
+  'web.onboarding.form.tmdb.invalid':
+    'TMDB a refusé cette clé. Vérifiez qu’elle est copiée en entier, depuis votre compte TMDB, sous Réglages › API.',
   'web.onboarding.form.tmdb.checking': 'Vérification de la clé…',
   'web.onboarding.form.more': 'Plus d’options dans les réglages',
   'web.onboarding.mark-done': 'Marquer comme fait',
@@ -477,6 +479,8 @@ export const fr: Record<keyof typeof en, string> = {
   'web.settings.tmdb.status.file': 'Clé enregistrée dans config.yaml.',
   'web.settings.tmdb.status.none': 'Pas encore de clé : rien ne peut être identifié.',
   'web.settings.tmdb.key': 'Nouvelle clé TMDB',
+  'web.settings.tmdb.key.env':
+    'Définie par la variable TMDB_API_KEY, qui l’emporte sur cette page. Modifiez ou retirez la variable pour gérer la clé ici.',
   'web.settings.tmdb.key.hint': 'Laissez vide pour garder la clé actuelle.',
   'web.settings.tmdb.test': 'Tester la clé',
   'web.settings.tmdb.testing': 'Test en cours…',

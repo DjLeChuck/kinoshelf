@@ -113,6 +113,12 @@ test('says where the API key comes from, and leaves it alone when a variable set
   await expect(section.getByRole('button', { name: 'Replace the API key' })).toHaveCount(0);
 });
 
+test('leaves the TMDB key alone when a variable sets it', async ({ page }) => {
+  // The stack starts with TMDB_API_KEY, which wins over anything saved here.
+  await expect(page.getByLabel('New TMDB key')).toBeDisabled();
+  await expect(page.getByText('Set by the TMDB_API_KEY variable')).toBeVisible();
+});
+
 test('jumps to a section from the side menu and follows the scroll', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 1000 });
   const menu = page.getByRole('navigation', { name: 'On this page' });

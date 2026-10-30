@@ -308,6 +308,8 @@ export const en = {
     'For a folder that only holds finished downloads: each new release is analysed as it arrives. Not for a library already in place.',
   'web.onboarding.form.source.submit': 'Analyse',
   'web.onboarding.form.source.submit.watch': 'Watch',
+  'web.onboarding.form.tmdb.invalid':
+    'TMDB refused this key. Check that it was copied whole, from your TMDB account under Settings › API.',
   'web.onboarding.form.tmdb.checking': 'Checking the key…',
   'web.onboarding.form.more': 'More options in the settings',
   'web.onboarding.mark-done': 'Mark as done',
@@ -469,6 +471,8 @@ export const en = {
   'web.settings.tmdb.status.file': 'Key stored in config.yaml.',
   'web.settings.tmdb.status.none': 'No key yet: nothing can be identified.',
   'web.settings.tmdb.key': 'New TMDB key',
+  'web.settings.tmdb.key.env':
+    'Set by the TMDB_API_KEY variable, which takes precedence over this page. Change or remove the variable to manage the key here.',
   'web.settings.tmdb.key.hint': 'Leave empty to keep the current one.',
   'web.settings.tmdb.test': 'Test the key',
   'web.settings.tmdb.testing': 'Testing…',
