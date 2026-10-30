@@ -85,3 +85,4 @@ export {
   type StaleFile,
 } from './maintenance/stale-temporary.js';
 export { applyMigrations } from './journal/migrations.js';
+export { renderMovieNfo, renderSeriesNfo, renderEpisodeNfo, type NfoOptions } from './nfo/nfo.js';

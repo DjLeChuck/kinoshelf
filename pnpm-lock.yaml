@@ -91,6 +91,9 @@ importers:
       '@types/better-sqlite3':
         specifier: ^9.6.0
         version: 9.6.0
+      fast-xml-parser:
+        specifier: 5.11.2
+        version: 5.11.2
 
   packages/corpus:
     dependencies:
