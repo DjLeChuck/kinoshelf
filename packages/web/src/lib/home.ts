@@ -52,3 +52,32 @@ export function servicesOf(settings: Settings): { id: ServiceId; on: boolean }[]
 /** Worth suggesting only while neither player is connected. */
 export const suggestsServer = (settings: Settings): boolean =>
   settings.plex === null && settings.jellyfin === null;
+
+/** What the home page needs of a job (`GET /api/jobs`, newest first). */
+export interface JobSummary {
+  readonly id: string;
+  readonly path: string;
+  readonly status: 'queued' | 'running' | 'done' | 'failed';
+  readonly createdAt: string;
+  readonly finishedAt: string | null;
+  readonly error: {
+    readonly code: string;
+    readonly params?: Record<string, string | number>;
+  } | null;
+}
+
+/** Analyses not over yet. */
+export const activeJobs = (jobs: readonly JobSummary[]): JobSummary[] =>
+  jobs.filter((job) => job.status === 'queued' || job.status === 'running');
+
+/**
+ * Failed analyses nobody can have missed, however early they failed (a wrong key, a folder that
+ * is gone): they stay until the same path was sent again and did not fail. `jobs` is newest first.
+ */
+export function unresolvedFailures(jobs: readonly JobSummary[]): JobSummary[] {
+  return jobs.filter(
+    (job, index) =>
+      job.status === 'failed' &&
+      !jobs.slice(0, index).some((later) => later.path === job.path && later.status !== 'failed'),
+  );
+}

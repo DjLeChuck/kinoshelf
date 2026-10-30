@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { describeError } from '@kinoshelf/i18n';
   import { api } from '../lib/api.js';
   import { messageOf } from '../lib/errors.js';
   import { refetchOn } from '../lib/events.svelte.js';
@@ -10,13 +11,16 @@
     type BatchSummary,
   } from '../lib/history.js';
   import {
+    activeJobs,
     activityOf,
     failureCount,
     queueLabel,
     recentFailure,
     servicesOf,
     suggestsServer,
+    unresolvedFailures,
     weekCount,
+    type JobSummary,
   } from '../lib/home.js';
   import { folderOf, releaseName, STATUS_CHIP, STATUS_LABEL, statusOf } from '../lib/queue.js';
   import type { Settings } from '../lib/settings.js';
@@ -25,16 +29,19 @@
 
   const FIRST_FILES = 3;
   const ACTIVITY = 5;
+  const FAILURES = 3;
 
   let batches = $state<readonly BatchSummary[] | undefined>(undefined);
   let settings = $state<Settings | undefined>(undefined);
+  let jobs = $state<readonly JobSummary[]>([]);
   let failure = $state<unknown>(undefined);
 
   async function load(): Promise<void> {
     try {
-      [batches, settings] = await Promise.all([
+      [batches, settings, jobs] = await Promise.all([
         api.get<BatchSummary[]>('/api/batches?limit=50'),
         api.get<Settings>('/api/settings'),
+        api.get<JobSummary[]>('/api/jobs?limit=50'),
       ]);
       failure = undefined;
     } catch (error) {
@@ -42,12 +49,14 @@
     }
   }
 
-  refetchOn(['history', 'settings', 'ready'], () => void load());
+  refetchOn(['history', 'settings', 'jobs', 'ready'], () => void load());
 
   const queue = $derived(shell.queue ?? []);
   // A snapshot per load is enough: "this week" does not need to tick.
   const now = $derived(batches === undefined ? 0 : Date.now());
   const failed = $derived(batches && recentFailure(batches, now));
+  const active = $derived(activeJobs(jobs));
+  const failedJobs = $derived(unresolvedFailures(jobs));
 </script>
 
 <div class="home">
@@ -58,6 +67,41 @@
 
   {#if failure}
     <p class="alert alert-danger" role="alert">{messageOf(t, failure)}</p>
+  {/if}
+
+  {#if active.length > 0 || failedJobs.length > 0}
+    <section class="jobs" aria-label={t('web.home.jobs.label')}>
+      {#each active as job (job.id)}
+        <div class="card job">
+          <span class="mono" title={job.path}>{job.path}</span>
+          <span class="chip chip-neutral">
+            {t(job.status === 'queued' ? 'web.home.jobs.queued' : 'web.home.jobs.running')}
+          </span>
+        </div>
+      {/each}
+      {#each failedJobs.slice(0, FAILURES) as job (job.id)}
+        <div class="card job danger" role="alert">
+          <span class="eyebrow danger-text">{t('web.home.jobs.failed.eyebrow')}</span>
+          <span class="mono" title={job.path}>{job.path}</span>
+          <strong>
+            {describeError(t, {
+              code: job.error?.code ?? 'internal.unexpected',
+              params: job.error?.params,
+            })}
+          </strong>
+          <span class="muted">
+            {formatDate(job.finishedAt ?? job.createdAt, locale.value)} · {t(
+              'web.home.jobs.failed.hint',
+            )}
+          </span>
+        </div>
+      {/each}
+      {#if failedJobs.length > FAILURES}
+        <p class="muted">
+          {t('web.home.jobs.failed.more', { count: failedJobs.length - FAILURES })}
+        </p>
+      {/if}
+    </section>
   {/if}
 
   {#if shell.queue !== undefined}
@@ -276,6 +320,25 @@
     justify-content: center;
     background: none;
     font-size: 13px;
+  }
+
+  .jobs {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .job {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 12px;
+  }
+
+  .job.danger {
+    flex-direction: column;
+    align-items: flex-start;
+    border-color: var(--danger);
   }
 
   .notices {

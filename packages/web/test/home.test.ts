@@ -1,13 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import type { BatchSummary } from '../src/lib/history.js';
 import {
+  activeJobs,
   activityOf,
   failureCount,
   queueLabel,
   recentFailure,
   servicesOf,
   suggestsServer,
+  unresolvedFailures,
   weekCount,
+  type JobSummary,
 } from '../src/lib/home.js';
 import { allSettled, nextStep, settled, type Step } from '../src/lib/onboarding.js';
 import type { Settings } from '../src/lib/settings.js';
@@ -86,5 +89,41 @@ describe('setup steps', () => {
     expect(nextStep(steps)).toBe('destination');
     expect(allSettled(steps)).toBe(false);
     expect(allSettled(steps.map((s) => ({ ...s, state: 'done' as const })))).toBe(true);
+  });
+});
+
+const job = (path: string, status: JobSummary['status'], id = `${path}-${status}`): JobSummary => ({
+  id,
+  path,
+  status,
+  createdAt: '2026-10-30T09:00:00Z',
+  finishedAt: null,
+  error: status === 'failed' ? { code: 'discover.not-found' } : null,
+});
+
+describe('analyses on the home page', () => {
+  it('lists the ones not over yet', () => {
+    const jobs = [
+      job('/a', 'running'),
+      job('/b', 'queued'),
+      job('/c', 'done'),
+      job('/d', 'failed'),
+    ];
+    expect(activeJobs(jobs).map((j) => j.path)).toEqual(['/a', '/b']);
+  });
+
+  it('keeps a failure, however early it failed', () => {
+    expect(unresolvedFailures([job('/gone', 'failed')]).map((j) => j.path)).toEqual(['/gone']);
+  });
+
+  it('drops a failure once the same path was sent again and did not fail', () => {
+    // Newest first: the retry is ahead of the failure it answers.
+    const jobs = [job('/a', 'done'), job('/b', 'failed'), job('/a', 'failed', 'old')];
+    expect(unresolvedFailures(jobs).map((j) => j.path)).toEqual(['/b']);
+  });
+
+  it('keeps a failure when the retry failed too, and the newest says it', () => {
+    const jobs = [job('/a', 'failed', 'new'), job('/a', 'failed', 'old')];
+    expect(unresolvedFailures(jobs).map((j) => j.id)).toEqual(['new', 'old']);
   });
 });
