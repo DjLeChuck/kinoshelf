@@ -58,6 +58,26 @@ const scan = async (h: Harness, id: string): Promise<string> => {
 };
 
 describe('libraries', () => {
+  it('accepts the form of an edit that only turns watching on: every unset field is null', async () => {
+    const h = await served();
+    const source = await makeDir();
+    const created = await h.request('POST', '/api/libraries', { name: 'Films', source });
+    const { id } = created.json<LibraryBody>();
+
+    // What the web form sends for a library that follows the global settings.
+    const patched = await h.request('PATCH', `/api/libraries/${id}`, {
+      name: 'Films',
+      source,
+      destination: null,
+      profile: null,
+      mode: null,
+      threshold: null,
+      watch: true,
+    });
+    expect(patched.statusCode, patched.body).toBe(200);
+    expect(patched.json<LibraryBody>()).toMatchObject({ watch: true, destination: null });
+  });
+
   it('creates, lists, changes and removes a library, in config.yaml', async () => {
     const h = await served();
     const source = await makeDir();

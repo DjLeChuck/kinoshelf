@@ -437,8 +437,10 @@ const pathMappings = {
 } as const;
 const webhookFormats = ['generic', 'gotify', 'ntfy', 'discord'] as const;
 const webhookEvents = ['transferred', 'failed', 'needs-review'] as const;
+// `anyOf`, not `oneOf`: Ajv coerces types, and `oneOf` tries every branch, so a `null` reached the
+// string one and became `""` (a library edited back to the default destination was refused).
 const destination = {
-  oneOf: [
+  anyOf: [
     { type: 'null' },
     { type: 'string', minLength: 1 },
     {
