@@ -99,7 +99,7 @@ describe('after a transfer', () => {
     const message = json(hook.received[0] as Received);
     expect(message).toMatchObject({
       event: 'transferred',
-      title: '1 file(s) transferred',
+      title: '1 file transferred',
       execution: { done: 1, failed: 0 },
       files: [{ status: 'done' }],
     });
@@ -124,7 +124,7 @@ describe('after a transfer', () => {
   it('speaks the language of the configuration', async () => {
     const { h, hook } = await reporting({ locale: 'fr' });
     await apply(h, { 'Dune.2021.1080p.mkv': 'dune' });
-    expect(json(hook.received[0] as Received).title).toBe('1 fichier(s) transféré(s)');
+    expect(json(hook.received[0] as Received).title).toBe('1 fichier transféré');
   });
 
   it('is a failure when a file did not go through, yet still refreshes what did', async () => {
@@ -150,7 +150,7 @@ describe('after a transfer', () => {
     expect(generic).toMatchObject({
       event: 'failed',
       reason: 'files',
-      title: '1 file(s) not transferred',
+      title: '1 file not transferred',
       execution: { done: 1, failed: 1 },
     });
     expect(generic.message).toContain('Alien.1979.1080p.mkv: A file already exists at');
@@ -245,7 +245,7 @@ describe('files that wait for a human', () => {
     expect(hook.received.map((r) => r.url)).toEqual(['/review']);
     expect(json(hook.received[0] as Received)).toMatchObject({
       event: 'needs-review',
-      title: '1 file(s) to review',
+      title: '1 file to review',
       review: { ambiguous: 0, unrecognized: 1, conflict: 0 },
     });
   });

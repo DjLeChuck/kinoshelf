@@ -36,7 +36,7 @@ describe('scan', () => {
     expect(text).toContain(`Destination: ${dest}`);
     expect(text).toContain('To organize (2)');
     expect(text).toContain(`→ ${join(DUNE_DIR, `Dune (2021) {tmdb-438631}.mkv`)}`);
-    expect(text).toContain('+ 1 companion file(s)');
+    expect(text).toContain('+ 1 companion file');
     expect(text).toContain(
       `→ ${join('The Bear (2022) {tmdb-136315}', 'Season 03', 'The Bear (2022) - s03e04.mkv')}`,
     );

@@ -148,7 +148,7 @@ describe('cleanup', () => {
     await put(join(lib, TEMP));
     const h = await harness({}, { now: inDays(3) });
     await h.cli('--lang', 'fr', 'cleanup', lib);
-    expect(h.out.join('\n')).toContain('1 trouvé(s), 0 supprimé(s), 0 en échec.');
+    expect(h.out.join('\n')).toContain('1 trouvé, 0 supprimé, 0 en échec.');
     expect(h.out.join('\n')).toContain('Simulation : rien n’a été supprimé.');
   });
 });

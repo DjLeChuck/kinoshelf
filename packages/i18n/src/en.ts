@@ -84,7 +84,7 @@ export const en = {
   'section.ambiguous': 'Ambiguous (needs validation)',
   'section.unrecognized': 'Unrecognized (needs validation)',
   'entry.score': 'score {score}',
-  'entry.sidecars': '+ {count} companion file(s)',
+  'entry.sidecars': '+ {count, plural, one {# companion file} other {# companion files}}',
   'entry.candidate': '{title} ({year}) · score {score} · tmdb {id}',
   'entry.candidate-no-year': '{title} · score {score} · tmdb {id}',
   'summary.line':
@@ -105,18 +105,20 @@ export const en = {
   'undo.summary': '{undone} reverted, {skipped} skipped, {failed} failed.',
   'undo.dry-run': 'Dry run: nothing was changed. Add --apply to revert.',
 
-  'notify.transferred.title': '{count} file(s) transferred',
-  'notify.transferred.message': '{count} file(s) transferred from {path}.',
+  'notify.transferred.title':
+    '{count, plural, one {# file transferred} other {# files transferred}}',
+  'notify.transferred.message':
+    '{count, plural, one {# file} other {# files}} transferred from {path}.',
   'notify.failed.job.title': 'Analysis failed',
   'notify.failed.job.message': 'The analysis of {path} failed: {reason}',
   'notify.failed.execution.title': 'Transfer failed',
   'notify.failed.execution.message': 'The transfer of {path} failed: {reason}',
-  'notify.failed.files.title': '{failed} file(s) not transferred',
+  'notify.failed.files.title': '{failed, plural, one {# file} other {# files}} not transferred',
   'notify.failed.files.message': '{done} transferred, {failed} not transferred ({path}).',
   'notify.failed.file': '{name}: {reason}',
-  'notify.review.title': '{count} file(s) to review',
+  'notify.review.title': '{count, plural, one {# file} other {# files}} to review',
   'notify.review.message':
-    '{count} file(s) of {path} need a decision: {ambiguous} ambiguous, {unrecognized} unrecognized, {conflict} in conflict.',
+    '{count, plural, one {# file of {path} needs} other {# files of {path} need}} a decision: {ambiguous} ambiguous, {unrecognized} unrecognized, {conflict} in conflict.',
   'notify.test.title': 'Kinoshelf test',
   'notify.test.message': 'This is a test notification.',
 
@@ -218,7 +220,8 @@ export const en = {
   'web.home.greeting': 'Hello',
   'web.home.intro': 'Here is what needs your attention today.',
   'web.home.todo.eyebrow': 'To do now',
-  'web.home.todo.title': '{count} file(s) waiting for your validation',
+  'web.home.todo.title':
+    '{count, plural, one {# file} other {# files}} waiting for your validation',
   'web.home.todo.body':
     'Kinoshelf could not identify them with enough certainty. Pick the right match and they are put away at once.',
   'web.home.todo.cta': 'Open the validation queue',
@@ -233,7 +236,7 @@ export const en = {
   'web.home.jobs.failed.hint': 'Nothing was changed. Fix the cause, then send the folder again.',
   'web.home.jobs.failed.more': '{count} more failed analyses.',
   'web.home.failed.eyebrow': 'Last batch failed',
-  'web.home.failed.title': '{count} operation(s) failed',
+  'web.home.failed.title': '{count, plural, one {# operation} other {# operations}} failed',
   'web.home.failed.body': 'On {date}. Open the batch to see which file and why.',
   'web.home.failed.cta': 'See the details →',
   'web.home.suggest.eyebrow': 'Suggestion',
@@ -244,9 +247,9 @@ export const en = {
   'web.home.activity.title': 'Recent activity',
   'web.home.activity.all': 'Whole history',
   'web.home.activity.empty': 'Nothing has been processed yet.',
-  'web.home.activity.done': '{count} file(s) processed',
-  'web.home.activity.undone': 'Batch of {count} file(s) undone',
-  'web.home.activity.failed': 'Batch of {count} file(s) failed',
+  'web.home.activity.done': '{count, plural, one {# file} other {# files}} processed',
+  'web.home.activity.undone': 'Batch of {count, plural, one {# file} other {# files}} undone',
+  'web.home.activity.failed': 'Batch of {count, plural, one {# file} other {# files}} failed',
   'web.home.stats.label': 'Key figures',
   'web.home.stats.queue': 'waiting in the queue',
   'web.home.stats.week': 'batches this week',
@@ -349,10 +352,12 @@ export const en = {
     'Files Kinoshelf could not place with confidence. Nothing is moved until you validate.',
   'web.queue.list.label': 'Files waiting',
   'web.queue.sources.title': 'Add files',
-  'web.queue.sources.watching': 'Watching {count} folder(s) for finished downloads.',
+  'web.queue.sources.watching':
+    'Watching {count, plural, one {# folder} other {# folders}} for finished downloads.',
   'web.queue.sources.watching.poll':
-    'Scanning {count} folder(s) for finished downloads at a regular interval.',
-  'web.queue.sources.pending': '{count} release(s) still being written or settling.',
+    'Scanning {count, plural, one {# folder} other {# folders}} for finished downloads at a regular interval.',
+  'web.queue.sources.pending':
+    '{count, plural, one {# release} other {# releases}} still being written or settling.',
   'web.queue.sources.unavailable': 'unreachable',
   'web.queue.sources.none':
     'No folder is watched. Choose one in the settings, under “Folders to watch”.',
@@ -360,7 +365,7 @@ export const en = {
   'web.queue.sources.scan.hint':
     'Does not wait for files to settle: use it when you know a download is complete.',
   'web.queue.sources.scanned':
-    '{submitted} release(s) submitted, {pending} still being written, {known} already submitted.',
+    '{submitted, plural, one {# release} other {# releases}} submitted, {pending} still being written, {known} already submitted.',
   'web.settings.watch.title': 'Folders to watch (source)',
   'web.settings.watch.intro':
     'Where Kinoshelf looks for files to identify. What lands here is analyzed by itself, then placed in the destination folders set under Processing. Your download client must keep unfinished downloads in another folder (qBittorrent’s “Keep incomplete torrents in”, Transmission’s incomplete folder, both off by default) and only move them here once complete. Otherwise a finished file cannot be told from a stalled one.',
@@ -418,7 +423,7 @@ export const en = {
     'Remember “{title}” as this work: the next scans match it alone, and the files already waiting under that title are matched now.',
   'web.queue.validated': 'Transfer started for {name}.',
   'web.queue.validated.rematched':
-    'Transfer started for {name}. {count} other file(s) with the same title are now matched.',
+    'Transfer started for {name}. {count, plural, one {# other file with the same title is} other {# other files with the same title are}} now matched.',
   'web.queue.ignored': '{name} set aside.',
   'web.history.title': 'History',
   'web.history.intro':
@@ -428,7 +433,7 @@ export const en = {
   'web.history.status.done': 'Done',
   'web.history.status.undone': 'Undone',
   'web.history.status.failed': 'Failed',
-  'web.history.files': '{count} file(s)',
+  'web.history.files': '{count, plural, one {# file} other {# files}}',
   'web.history.failed-files': '{count} failed',
   'web.history.origin.cli': 'Command line',
   'web.history.mode.copy': 'Copy',

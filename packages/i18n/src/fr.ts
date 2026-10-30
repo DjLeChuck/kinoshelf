@@ -84,7 +84,7 @@ export const fr: Record<keyof typeof en, string> = {
   'section.ambiguous': 'Ambigus (validation requise)',
   'section.unrecognized': 'Non reconnus (validation requise)',
   'entry.score': 'score {score}',
-  'entry.sidecars': '+ {count} fichier(s) associé(s)',
+  'entry.sidecars': '+ {count, plural, one {# fichier associé} other {# fichiers associés}}',
   'entry.candidate': '{title} ({year}) · score {score} · tmdb {id}',
   'entry.candidate-no-year': '{title} · score {score} · tmdb {id}',
   'summary.line':
@@ -105,18 +105,23 @@ export const fr: Record<keyof typeof en, string> = {
   'undo.summary': '{undone} annulés, {skipped} ignorés, {failed} en échec.',
   'undo.dry-run': 'Simulation : rien n’a été modifié. Ajoutez --apply pour annuler.',
 
-  'notify.transferred.title': '{count} fichier(s) transféré(s)',
-  'notify.transferred.message': '{count} fichier(s) transféré(s) depuis {path}.',
+  'notify.transferred.title':
+    '{count, plural, one {# fichier transféré} other {# fichiers transférés}}',
+  'notify.transferred.message':
+    '{count, plural, one {# fichier transféré} other {# fichiers transférés}} depuis {path}.',
   'notify.failed.job.title': 'Analyse échouée',
   'notify.failed.job.message': 'L’analyse de {path} a échoué : {reason}',
   'notify.failed.execution.title': 'Transfert échoué',
   'notify.failed.execution.message': 'Le transfert de {path} a échoué : {reason}',
-  'notify.failed.files.title': '{failed} fichier(s) non transféré(s)',
-  'notify.failed.files.message': '{done} transféré(s), {failed} non transféré(s) ({path}).',
+  'notify.failed.files.title':
+    '{failed, plural, one {# fichier non transféré} other {# fichiers non transférés}}',
+  'notify.failed.files.message':
+    '{done, plural, one {# transféré} other {# transférés}}, {failed, plural, one {# non transféré} other {# non transférés}} ({path}).',
   'notify.failed.file': '{name} : {reason}',
-  'notify.review.title': '{count} fichier(s) à examiner',
+  'notify.review.title':
+    '{count, plural, one {# fichier à examiner} other {# fichiers à examiner}}',
   'notify.review.message':
-    '{count} fichier(s) de {path} attendent une décision : {ambiguous} ambigu(s), {unrecognized} non reconnu(s), {conflict} en conflit.',
+    '{count, plural, one {# fichier de {path} attend} other {# fichiers de {path} attendent}} une décision : {ambiguous, plural, one {# ambigu} other {# ambigus}}, {unrecognized, plural, one {# non reconnu} other {# non reconnus}}, {conflict} en conflit.',
   'notify.test.title': 'Test Kinoshelf',
   'notify.test.message': 'Ceci est une notification de test.',
 
@@ -141,7 +146,8 @@ export const fr: Record<keyof typeof en, string> = {
     'Fichiers temporaires abandonnés (inchangés depuis {hours} h ou plus) dans : {folders}',
   'cleanup.none': 'Aucun fichier temporaire abandonné.',
   'cleanup.file': '{size} · inchangé depuis {age} h',
-  'cleanup.summary': '{found} trouvé(s), {removed} supprimé(s), {failed} en échec.',
+  'cleanup.summary':
+    '{found, plural, one {# trouvé} other {# trouvés}}, {removed, plural, one {# supprimé} other {# supprimés}}, {failed} en échec.',
   'cleanup.dry-run': 'Simulation : rien n’a été supprimé. Ajoutez --apply pour les supprimer.',
   'error.cleanup.age-too-short':
     'L’âge minimum est de {min} heure : un fichier plus récent est peut-être en cours de copie.',
@@ -222,7 +228,8 @@ export const fr: Record<keyof typeof en, string> = {
   'web.home.greeting': 'Bonjour',
   'web.home.intro': 'Voici ce qui demande votre attention aujourd’hui.',
   'web.home.todo.eyebrow': 'À faire maintenant',
-  'web.home.todo.title': '{count} fichier(s) attendent votre validation',
+  'web.home.todo.title':
+    '{count, plural, one {# fichier attend} other {# fichiers attendent}} votre validation',
   'web.home.todo.body':
     'Kinoshelf n’a pas pu les identifier avec assez de certitude. Choisissez la bonne correspondance, et ils seront rangés aussitôt.',
   'web.home.todo.cta': 'Ouvrir la file de validation',
@@ -237,7 +244,8 @@ export const fr: Record<keyof typeof en, string> = {
   'web.home.jobs.failed.hint': 'Rien n’a été modifié. Corrigez la cause, puis renvoyez le dossier.',
   'web.home.jobs.failed.more': '{count} autres analyses en échec.',
   'web.home.failed.eyebrow': 'Dernier lot en échec',
-  'web.home.failed.title': '{count} opération(s) en échec',
+  'web.home.failed.title':
+    '{count, plural, one {# opération en échec} other {# opérations en échec}}',
   'web.home.failed.body': 'Le {date}. Ouvrez le lot pour voir quel fichier et pourquoi.',
   'web.home.failed.cta': 'Voir le détail →',
   'web.home.suggest.eyebrow': 'Suggestion',
@@ -248,9 +256,9 @@ export const fr: Record<keyof typeof en, string> = {
   'web.home.activity.title': 'Activité récente',
   'web.home.activity.all': 'Tout l’historique',
   'web.home.activity.empty': 'Rien n’a encore été traité.',
-  'web.home.activity.done': '{count} fichier(s) traité(s)',
-  'web.home.activity.undone': 'Lot de {count} fichier(s) annulé',
-  'web.home.activity.failed': 'Lot de {count} fichier(s) en échec',
+  'web.home.activity.done': '{count, plural, one {# fichier traité} other {# fichiers traités}}',
+  'web.home.activity.undone': 'Lot de {count, plural, one {# fichier} other {# fichiers}} annulé',
+  'web.home.activity.failed': 'Lot de {count, plural, one {# fichier} other {# fichiers}} en échec',
   'web.home.stats.label': 'Chiffres clés',
   'web.home.stats.queue': 'en attente dans la file',
   'web.home.stats.week': 'lots cette semaine',
@@ -355,10 +363,11 @@ export const fr: Record<keyof typeof en, string> = {
   'web.queue.list.label': 'Fichiers en attente',
   'web.queue.sources.title': 'Ajouter des fichiers',
   'web.queue.sources.watching':
-    'Surveillance de {count} dossier(s) pour les téléchargements terminés.',
+    'Surveillance de {count, plural, one {# dossier} other {# dossiers}} pour les téléchargements terminés.',
   'web.queue.sources.watching.poll':
-    'Parcours régulier de {count} dossier(s) pour les téléchargements terminés.',
-  'web.queue.sources.pending': '{count} release(s) en cours d’écriture ou de stabilisation.',
+    'Parcours régulier de {count, plural, one {# dossier} other {# dossiers}} pour les téléchargements terminés.',
+  'web.queue.sources.pending':
+    '{count, plural, one {# release} other {# releases}} en cours d’écriture ou de stabilisation.',
   'web.queue.sources.unavailable': 'inaccessible',
   'web.queue.sources.none':
     'Aucun dossier n’est surveillé. Choisissez-en un dans les réglages, sous « Dossiers à surveiller ».',
@@ -366,7 +375,7 @@ export const fr: Record<keyof typeof en, string> = {
   'web.queue.sources.scan.hint':
     'N’attend pas que les fichiers se stabilisent : à utiliser quand vous savez qu’un téléchargement est terminé.',
   'web.queue.sources.scanned':
-    '{submitted} release(s) soumise(s), {pending} en cours d’écriture, {known} déjà soumise(s).',
+    '{submitted, plural, one {# release soumise} other {# releases soumises}}, {pending} en cours d’écriture, {known, plural, one {# déjà soumise} other {# déjà soumises}}.',
   'web.settings.watch.title': 'Dossiers à surveiller (source)',
   'web.settings.watch.intro':
     'Là où Kinoshelf cherche les fichiers à identifier. Ce qui arrive ici est analysé automatiquement, puis rangé dans les dossiers de destination définis dans Traitement. Votre client de téléchargement doit garder les téléchargements en cours dans un autre dossier (« Keep incomplete torrents in » de qBittorrent, dossier incomplet de Transmission, désactivés par défaut) et ne les déplacer ici qu’une fois terminés. Sinon, on ne distingue pas un fichier terminé d’un fichier à l’arrêt.',
@@ -426,7 +435,7 @@ export const fr: Record<keyof typeof en, string> = {
     'Mémoriser « {title} » comme cette œuvre : les prochains scans l’apparieront seuls, et les fichiers déjà en attente sous ce titre le sont maintenant.',
   'web.queue.validated': 'Transfert lancé pour {name}.',
   'web.queue.validated.rematched':
-    'Transfert lancé pour {name}. {count} autre(s) fichier(s) de même titre sont maintenant appariés.',
+    'Transfert lancé pour {name}. {count, plural, one {# autre fichier de même titre est maintenant apparié} other {# autres fichiers de même titre sont maintenant appariés}}.',
   'web.queue.ignored': '{name} mis de côté.',
   'web.history.title': 'Historique',
   'web.history.intro':
@@ -436,7 +445,7 @@ export const fr: Record<keyof typeof en, string> = {
   'web.history.status.done': 'Terminé',
   'web.history.status.undone': 'Annulé',
   'web.history.status.failed': 'Échec',
-  'web.history.files': '{count} fichier(s)',
+  'web.history.files': '{count, plural, one {# fichier} other {# fichiers}}',
   'web.history.failed-files': '{count} en échec',
   'web.history.origin.cli': 'Ligne de commande',
   'web.history.mode.copy': 'Copie',
@@ -464,7 +473,7 @@ export const fr: Record<keyof typeof en, string> = {
   'web.history.undo.cancel': 'Renoncer',
   'web.history.undo.running': 'Annulation…',
   'web.history.undo.result':
-    'Lot annulé : {undone} restauré(s), {skipped} laissé(s) en place, {failed} en échec.',
+    'Lot annulé : {undone, plural, one {# restauré} other {# restaurés}}, {skipped, plural, one {# laissé} other {# laissés}} en place, {failed} en échec.',
   'web.settings.title': 'Réglages',
   'web.settings.intro':
     'Enregistrés dans config.yaml et appliqués aussitôt, sans redémarrage. Les secrets ne sont jamais réaffichés.',

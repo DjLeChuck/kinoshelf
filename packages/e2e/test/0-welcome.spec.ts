@@ -63,7 +63,7 @@ test('shows what waits for a decision on the home page', async ({ page, request 
   await signInAt(page, '/');
 
   await expect(
-    page.getByRole('heading', { name: /file\(s\) waiting for your validation/ }),
+    page.getByRole('heading', { name: /files? waiting for your validation/ }),
   ).toBeVisible();
   await expect(page.getByText('Mystery.Home.Footage.mkv')).toBeVisible();
 
