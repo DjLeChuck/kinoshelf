@@ -643,6 +643,14 @@ export const en = {
   'web.settings.access.copied': 'Copied',
   'web.settings.processing.profile.default': 'Default (Plex)',
   'web.settings.processing.profile.custom': 'My own file…',
+  'web.profile.plex.help':
+    'Names for the default Plex agents. The TMDB id goes in braces in the movie folder and file name and in the series folder, so Plex recognizes the right work even when two share a title and year. No NFO file or artwork is written.',
+  'web.profile.plex-no-id.name': 'Plex (no id)',
+  'web.profile.plex-no-id.help':
+    'The same layout as Plex, without the TMDB id: cleaner names, but Plex then identifies a work by its title and year alone, which can mix up two works sharing both (a remake released the same year). No NFO file or artwork is written.',
+  'web.settings.processing.profile.explain': 'What this profile writes',
+  'web.settings.processing.profile.example.movie': 'Movie',
+  'web.settings.processing.profile.example.series': 'Episode',
   'web.settings.processing.profile.path': 'Path of the YAML file',
   'web.settings.processing.profile.path.hint':
     'On the machine running Kinoshelf (in Docker: inside the container), e.g. /config/my-profile.yaml.',

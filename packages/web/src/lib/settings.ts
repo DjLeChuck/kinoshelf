@@ -1,3 +1,5 @@
+import { en, type MessageKey, type Translate } from '@kinoshelf/i18n';
+
 export type Mode = 'copy' | 'hardlink' | 'move';
 export type WebhookFormat = 'generic' | 'gotify' | 'ntfy' | 'discord';
 export type WebhookEvent = 'transferred' | 'failed' | 'needs-review';
@@ -52,7 +54,14 @@ export interface Settings {
   };
   readonly apiKey: { readonly source: 'env' | 'database' | null };
   /** The profiles shipped with Kinoshelf. */
-  readonly profiles: readonly { readonly id: string; readonly name: string }[];
+  readonly profiles: readonly ShippedProfile[];
+}
+
+export interface ShippedProfile {
+  readonly id: string;
+  /** The profile file's own name: what is shown when the catalogs have no translation for it. */
+  readonly name: string;
+  readonly example: { readonly movie: string; readonly series: string };
 }
 
 export interface TestResult {
@@ -166,6 +175,20 @@ export function isHttpUrl(text: string): boolean {
 /** A mistake in the form itself, caught before the server is asked; its message is already text. */
 export class FormError extends Error {
   override name = 'FormError';
+}
+
+const isMessageKey = (key: string): key is MessageKey => key in en;
+
+/** The translated name of a shipped profile, or the one in its file when none is translated. */
+export function profileName(profile: Pick<ShippedProfile, 'id' | 'name'>, t: Translate): string {
+  const key = `web.profile.${profile.id}.name`;
+  return isMessageKey(key) ? t(key) : profile.name;
+}
+
+/** The translated description of a shipped profile, `null` when there is none. */
+export function profileHelp(id: string, t: Translate): string | null {
+  const key = `web.profile.${id}.help`;
+  return isMessageKey(key) ? t(key) : null;
 }
 
 /** The select's value for "my own file": no bundled profile has this id. */

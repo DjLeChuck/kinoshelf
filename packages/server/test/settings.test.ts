@@ -41,7 +41,24 @@ describe('GET /api/settings', () => {
     const h = await withConfig('destination: /media\n');
     expect(
       (await h.request('GET', '/api/settings')).json<{ profiles: unknown }>().profiles,
-    ).toEqual([{ id: 'plex', name: 'Plex' }]);
+    ).toEqual([
+      {
+        id: 'plex',
+        name: 'Plex',
+        example: {
+          movie: 'Dune (2021) {tmdb-438631}/Dune (2021) {tmdb-438631}.mkv',
+          series: 'The Bear (2022) {tmdb-136315}/Season 03/The Bear (2022) - s03e04.mkv',
+        },
+      },
+      {
+        id: 'plex-no-id',
+        name: 'Plex (no id)',
+        example: {
+          movie: 'Dune (2021)/Dune (2021).mkv',
+          series: 'The Bear (2022)/Season 03/The Bear (2022) - s03e04.mkv',
+        },
+      },
+    ]);
   });
 
   it('reports what is set and never the secrets', async () => {

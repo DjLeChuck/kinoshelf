@@ -657,6 +657,14 @@ export const fr: Record<keyof typeof en, string> = {
   'web.settings.access.copied': 'Copié',
   'web.settings.processing.profile.default': 'Par défaut (Plex)',
   'web.settings.processing.profile.custom': 'Mon propre fichier…',
+  'web.profile.plex.help':
+    'Noms pour les agents Plex par défaut. L’id TMDB figure entre accolades dans le dossier et le nom du fichier d’un film, et dans le dossier d’une série : Plex reconnaît ainsi la bonne œuvre même quand deux partagent un titre et une année. Aucun fichier NFO ni aucune image n’est écrit.',
+  'web.profile.plex-no-id.name': 'Plex (sans id)',
+  'web.profile.plex-no-id.help':
+    'Même organisation que Plex, sans l’id TMDB : des noms plus propres, mais Plex identifie alors une œuvre par son seul titre et son année, ce qui peut confondre deux œuvres qui partagent les deux (un remake sorti la même année). Aucun fichier NFO ni aucune image n’est écrit.',
+  'web.settings.processing.profile.explain': 'Ce que ce profil écrit',
+  'web.settings.processing.profile.example.movie': 'Film',
+  'web.settings.processing.profile.example.series': 'Épisode',
   'web.settings.processing.profile.path': 'Chemin du fichier YAML',
   'web.settings.processing.profile.path.hint':
     'Sur la machine qui exécute Kinoshelf (avec Docker : dans le conteneur), par exemple /config/mon-profil.yaml.',

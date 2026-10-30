@@ -1,4 +1,11 @@
-import { listBundledProfiles, loadBundledProfile } from '@kinoshelf/core';
+import {
+  listBundledProfiles,
+  loadBundledProfile,
+  parseTemplate,
+  renderTemplate,
+  type Profile,
+  type TemplateVariables,
+} from '@kinoshelf/core';
 import type { Database } from 'better-sqlite3';
 import type { FastifyInstance } from 'fastify';
 import { ApiError } from './api-error.js';
@@ -18,13 +25,36 @@ export interface SettingsContext {
   readonly service: Service;
 }
 
+/** What a profile writes, rendered from its own templates so the UI never repeats them. */
+function exampleOf(profile: Profile): { movie: string; series: string } {
+  const render = (key: keyof Profile['templates'], variables: TemplateVariables): string[] =>
+    renderTemplate(parseTemplate(profile.templates[key]), variables, {
+      rules: profile.filesystem,
+      rangeSeparator: profile.episodeRangeSeparator,
+    });
+  const movie = { title: 'Dune', year: 2021, tmdb: 438631 };
+  const series = { title: 'The Bear', year: 2022, tmdb: 136315, season: 3, episode: 4 };
+  const [movieFile = ''] = render('movieFile', movie);
+  const [episodeFile = ''] = render('episodeFile', series);
+  return {
+    movie: [...render('movieFolder', movie), `${movieFile}.mkv`].join('/'),
+    series: [
+      ...render('seriesFolder', series),
+      ...render('seasonFolder', series),
+      `${episodeFile}.mkv`,
+    ].join('/'),
+  };
+}
+
 /** The profiles shipped with Kinoshelf, for the UI to offer them instead of asking for a name. */
-async function bundledProfiles(): Promise<{ id: string; name: string }[]> {
+async function bundledProfiles(): Promise<
+  { id: string; name: string; example: { movie: string; series: string } }[]
+> {
   return Promise.all(
-    (await listBundledProfiles()).map(async (id) => ({
-      id,
-      name: (await loadBundledProfile(id)).name,
-    })),
+    (await listBundledProfiles()).map(async (id) => {
+      const profile = await loadBundledProfile(id);
+      return { id, name: profile.name, example: exampleOf(profile) };
+    }),
   );
 }
 

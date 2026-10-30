@@ -38,6 +38,13 @@ test('offers the bundled profiles and asks for a path only for one’s own file'
   await expect(section.getByRole('option', { name: 'Plex', exact: true })).toBeAttached();
   await expect(section.getByLabel('Path of the YAML file')).toHaveCount(0);
 
+  // The default (Plex) is explained with the paths it writes; another profile shows its own.
+  const layout = section.getByRole('group', { name: 'What this profile writes' });
+  await expect(layout).toContainText('Dune (2021) {tmdb-438631}/Dune (2021) {tmdb-438631}.mkv');
+  await section.getByLabel('Output profile').selectOption({ label: 'Plex (no id)' });
+  await expect(layout).toContainText('Dune (2021)/Dune (2021).mkv');
+  await expect(layout).not.toContainText('tmdb');
+
   await section.getByLabel('Output profile').selectOption({ label: 'My own file…' });
   await section.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(section.getByRole('alert')).toContainText('path of your profile file');

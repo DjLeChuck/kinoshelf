@@ -1,3 +1,4 @@
+import { createTranslator } from '@kinoshelf/i18n';
 import { describe, expect, it } from 'vitest';
 import {
   CUSTOM_PROFILE,
@@ -7,6 +8,8 @@ import {
   isHttpUrl,
   nullIfBlank,
   profileForm,
+  profileHelp,
+  profileName,
   profileOf,
   secondsOf,
   thresholdOf,
@@ -212,5 +215,19 @@ describe('the watch form', () => {
       invalid: 'folders',
     });
     expect(watchPatch({ ...form, poll: 'often' })).toEqual({ invalid: 'seconds' });
+  });
+});
+
+describe('profile texts', () => {
+  const t = createTranslator('fr');
+
+  it('translates the name of a shipped profile and falls back to the file’s own name', () => {
+    expect(profileName({ id: 'plex-no-id', name: 'Plex (no id)' }, t)).toBe('Plex (sans id)');
+    expect(profileName({ id: 'mine', name: 'My profile' }, t)).toBe('My profile');
+  });
+
+  it('describes a shipped profile only', () => {
+    expect(profileHelp('plex-no-id', t)).toContain('sans l’id TMDB');
+    expect(profileHelp('mine', t)).toBeNull();
   });
 });

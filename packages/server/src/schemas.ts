@@ -527,8 +527,17 @@ export const settingsSchema = {
       description: 'The profiles shipped with Kinoshelf; `processing.profile` may also be a path.',
       items: {
         type: 'object',
-        required: ['id', 'name'],
-        properties: { id: { type: 'string' }, name: { type: 'string' } },
+        required: ['id', 'name', 'example'],
+        properties: {
+          id: { type: 'string' },
+          name: { type: 'string' },
+          example: {
+            type: 'object',
+            description: 'A movie and an episode path as the profile would write them.',
+            required: ['movie', 'series'],
+            properties: { movie: { type: 'string' }, series: { type: 'string' } },
+          },
+        },
       },
     },
     apiKey: {

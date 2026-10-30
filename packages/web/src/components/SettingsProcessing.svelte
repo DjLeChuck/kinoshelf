@@ -7,6 +7,8 @@
     destinationForm,
     destinationOf,
     profileForm,
+    profileHelp,
+    profileName,
     profileOf,
     thresholdOf,
     type Mode,
@@ -27,6 +29,11 @@
   let mode = $state<Mode | ''>(processing.mode ?? '');
   let threshold = $state(processing.threshold === null ? '' : String(processing.threshold));
   let folders = $state(destinationForm(processing.destination));
+
+  // The default is Plex; "my own file" is the user's to explain.
+  const shown = $derived(
+    settings.profiles.find(({ id }) => id === (profile.choice === '' ? 'plex' : profile.choice)),
+  );
 
   async function submit(): Promise<void> {
     const limit = thresholdOf(threshold);
@@ -58,12 +65,26 @@
     <select id="profile" class="input" bind:value={profile.choice}>
       <option value="">{t('web.settings.processing.profile.default')}</option>
       {#each settings.profiles as option (option.id)}
-        <option value={option.id}>{option.name}</option>
+        <option value={option.id}>{profileName(option, t)}</option>
       {/each}
       <option value={CUSTOM_PROFILE}>{t('web.settings.processing.profile.custom')}</option>
     </select>
     <span class="muted hint">{t('web.settings.processing.profile.hint')}</span>
   </div>
+
+  {#if shown}
+    <div class="profile-box" role="group" aria-label={t('web.settings.processing.profile.explain')}>
+      {#if profileHelp(shown.id, t)}
+        <p class="muted">{profileHelp(shown.id, t)}</p>
+      {/if}
+      <dl class="layout">
+        <dt class="muted">{t('web.settings.processing.profile.example.movie')}</dt>
+        <dd><code>{shown.example.movie}</code></dd>
+        <dt class="muted">{t('web.settings.processing.profile.example.series')}</dt>
+        <dd><code>{shown.example.series}</code></dd>
+      </dl>
+    </div>
+  {/if}
 
   {#if profile.choice === CUSTOM_PROFILE}
     <div class="field sub">
@@ -199,6 +220,29 @@
   .explain > .current {
     border-color: var(--accent);
     background: var(--warn-bg);
+  }
+
+  .profile-box {
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 12.5px;
+  }
+
+  .profile-box p {
+    margin: 0 0 8px;
+  }
+
+  .layout {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 4px 12px;
+    margin: 0;
+  }
+
+  .layout dd {
+    margin: 0;
+    overflow-wrap: anywhere;
   }
 
   dt {
