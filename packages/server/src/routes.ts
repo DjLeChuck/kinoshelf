@@ -105,6 +105,21 @@ function presentEntry(entry: Entry): unknown {
   };
 }
 
+/** The metadata files a plan writes beside the video: an NFO is generated, an image downloaded. */
+interface PlannedExtra {
+  readonly type: 'nfo' | 'image';
+  readonly destination: string;
+}
+
+function plannedExtras(item: PlanItem | null): PlannedExtra[] {
+  return (item?.operations ?? []).flatMap((op): PlannedExtra[] => {
+    if (op.type === 'write-file') {
+      return [{ type: 'nfo', destination: op.destination }];
+    }
+    return op.type === 'download' ? [{ type: 'image', destination: op.destination }] : [];
+  });
+}
+
 /** One row of a scan: what the file is called now, where it goes, how sure the match is. */
 function presentScanRow(entry: Entry): unknown {
   const plan = presentPlan(entry.item);
@@ -120,6 +135,7 @@ function presentScanRow(entry: Entry): unknown {
     reason: entry.reason,
     candidates: entry.candidates,
     conflicts: plan.conflicts,
+    extras: plannedExtras(entry.item),
     error: entry.error,
   };
 }

@@ -145,6 +145,10 @@ format follows the Kodi wiki's templates, saved pages are not in the repository)
   where the profile wants it becomes `ready` with only `write-file`/`download` operations (the
   CLI says "already named as the profile wants"). Files already there are left out of the plan
   rather than reported as skipped, so a rescan of a complete library stays `in-place`.
+- **The web shows them.** A scan row lists what its plan writes (`extras` of `GET /api/jobs/{id}/files`:
+  `nfo` for a `write-file`, `image` for a `download`, shown as "Also writes: movie.nfo, …"), a dry run
+  counts them apart from the ones already there, and a batch's detail lists what was written
+  (`extras` of `GET /api/batches/{id}`, from the journal's `generated` and `downloaded` entries).
 - Not done: no certification (`<mpaa>`), no collection overview, no episode `uniqueid`.
 
 ## Libraries and scan

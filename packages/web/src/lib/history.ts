@@ -24,8 +24,15 @@ export interface BatchItem {
   readonly error: ErrorBody | null;
 }
 
+/** A metadata file written beside a video: an NFO Kinoshelf generated, or an image it downloaded. */
+export interface BatchExtra {
+  readonly kind: 'generated' | 'downloaded';
+  readonly destination: string;
+}
+
 export interface BatchDetail extends BatchSummary {
   readonly items: readonly BatchItem[];
+  readonly extras: readonly BatchExtra[];
 }
 
 export interface UndoReport {

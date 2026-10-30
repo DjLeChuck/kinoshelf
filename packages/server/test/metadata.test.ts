@@ -77,4 +77,29 @@ describe('metadata files in the validation queue', () => {
     const waiting = (await h.request('GET', '/api/queue')).json<{ id: string }[]>();
     expect(waiting.map((e) => e.id)).toEqual([entryId]);
   });
+
+  it('lists the planned NFO beside a file of the scan, then the written one in its batch', async () => {
+    const { h, destination, jobId, entryId } = await setup();
+    await h.request('POST', `/api/queue/${entryId}/match`, DUNE);
+    const nfo = join(destination, 'Dune (2021)', 'movie.nfo');
+
+    const scan = await h.request('GET', `/api/jobs/${jobId}/files?tab=rename`);
+    expect(scan.json<{ files: { extras: unknown[] }[] }>().files[0]?.extras).toEqual([
+      { type: 'nfo', destination: nfo },
+    ]);
+
+    const execution = (await h.request('POST', `/api/plans/${jobId}/execute`)).json<{
+      id: string;
+    }>();
+    await h.app.jobs.idle();
+    const { batchId } = (await h.request('GET', `/api/executions/${execution.id}`)).json<{
+      batchId: string;
+    }>();
+    const batch = (await h.request('GET', `/api/batches/${batchId}`)).json<{
+      items: unknown[];
+      extras: unknown[];
+    }>();
+    expect(batch.items).toHaveLength(1);
+    expect(batch.extras).toEqual([{ kind: 'generated', destination: nfo }]);
+  });
 });

@@ -54,6 +54,12 @@ export interface LibraryBody {
   watch?: boolean;
 }
 
+/** A metadata file the plan writes beside a video: an NFO is generated, an image downloaded. */
+export interface PlannedExtra {
+  readonly type: 'nfo' | 'image';
+  readonly destination: string;
+}
+
 export interface ScanRow {
   readonly id: string;
   /** The file's full path. */
@@ -61,6 +67,7 @@ export interface ScanRow {
   /** Where it goes (or already is); `null` when nothing is decided. */
   readonly to: string | null;
   readonly score: number | null;
+  readonly extras: readonly PlannedExtra[];
 }
 
 export interface ScanPage {
@@ -79,17 +86,29 @@ interface ScanFilesBody {
     readonly path: string;
     readonly destination: string | null;
     readonly score: number | null;
+    readonly extras: readonly PlannedExtra[];
   }[];
 }
 
 /** The dry-run report (`POST /api/plans/{id}/execute`), as far as the page reads it. */
 interface DryRunBody {
-  readonly items: readonly { readonly results: readonly { readonly status: string }[] }[];
+  readonly items: readonly {
+    readonly results: readonly { readonly type: string; readonly status: string }[];
+  }[];
+}
+
+/** NFO and images of a dry run: those it would write, and those already there (left alone). */
+export interface ExtrasTally {
+  readonly nfo: number;
+  readonly images: number;
+  readonly skipped: number;
 }
 
 export interface ExecuteOutcome {
   /** Files the dry run found a problem with; always 0 for a real run, which is only queued. */
   readonly blocked: number;
+  /** What a dry run would write beside the videos; all zero for a real run. */
+  readonly extras: ExtrasTally;
 }
 
 /** Everything the libraries pages ask of the server, in one place so a change of contract is too. */
@@ -126,6 +145,7 @@ export const libraryApi: LibraryApi = {
         from: file.path,
         to: file.destination,
         score: file.score,
+        extras: file.extras,
       })),
     };
   },
@@ -134,15 +154,26 @@ export const libraryApi: LibraryApi = {
       dryRun,
       ...(entries && { entries }),
     });
+    const items = dryRun ? (body?.items ?? []) : [];
     return {
-      blocked: dryRun
-        ? (body?.items ?? []).filter(({ results }) =>
-            results.some(({ status }) => status === 'failed'),
-          ).length
-        : 0,
+      blocked: items.filter(({ results }) => results.some(({ status }) => status === 'failed'))
+        .length,
+      extras: extrasTally(items.flatMap(({ results }) => results)),
     };
   },
 };
+
+export function extrasTally(
+  results: readonly { readonly type: string; readonly status: string }[],
+): ExtrasTally {
+  const extras = results.filter(({ type, status }) => type !== 'transfer' && status !== 'failed');
+  const written = extras.filter(({ status }) => status !== 'skipped');
+  return {
+    nfo: written.filter(({ type }) => type === 'write-file').length,
+    images: written.filter(({ type }) => type === 'download').length,
+    skipped: extras.length - written.length,
+  };
+}
 
 export const THRESHOLD_MIN = 50;
 export const THRESHOLD_MAX = 100;

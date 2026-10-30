@@ -163,3 +163,47 @@ test('deletes a library after a confirmation, and keeps its files', async ({ pag
   await expect(list.getByRole('link', { name: /Films to sort/ })).toHaveCount(0);
   await expect(access(`${source}/Dune.1984.1080p.mkv`)).resolves.toBeUndefined();
 });
+
+test('shows the NFO and images a library of the jellyfin profile writes', async ({ page }) => {
+  const folder = incoming('lib-jellyfin');
+  const target = library('jellyfin-out');
+  await mkdir(folder, { recursive: true });
+  await mkdir(target, { recursive: true });
+  await writeFile(`${folder}/Alien.1979.1080p.mkv`, 'video');
+
+  await signIn(page);
+  await openNew(page);
+  await page.getByLabel('Name', { exact: true }).fill('Jellyfin films');
+  await page.locator('#lib-source').fill(folder);
+  await page.locator('#lib-dest-single').fill(target);
+  await page
+    .getByRole('radio', { name: /^Jellyfin/ })
+    .first()
+    .check();
+  await page.getByRole('button', { name: 'Create the library' }).click();
+  await expect(page).toHaveURL(/\/libraries\/[^/]+$/);
+
+  await page.getByRole('button', { name: 'Start a scan' }).click();
+  await expect(page.getByRole('heading', { name: 'Scan result' })).toBeVisible();
+  await expect(page.getByText('Also writes: movie.nfo, poster.jpg, fanart.jpg')).toBeVisible();
+
+  await page.getByRole('button', { name: 'Simulate (dry run)' }).click();
+  await expect(
+    page.getByRole('status').filter({ hasText: '1 NFO and 2 images would be written' }),
+  ).toBeVisible();
+
+  await page.getByRole('button', { name: 'Run the batch' }).click();
+  await expect
+    .poll(async () =>
+      (await readdir(`${target}/Alien (1979) [tmdbid-348]`).catch(() => [] as string[])).sort(),
+    )
+    .toEqual(expect.arrayContaining(['Alien (1979) [tmdbid-348].mkv', 'movie.nfo']));
+
+  // The batch lists what was written, apart from the video. The images come from the real TMDB
+  // host, out of reach here: only the NFO is generated locally.
+  await page.getByRole('link', { name: 'History' }).click();
+  await page.getByRole('button').filter({ hasText: 'lib-jellyfin' }).first().click();
+  await expect(page.getByRole('heading', { name: 'Metadata written' })).toBeVisible();
+  await expect(page.getByText('movie.nfo', { exact: true })).toBeVisible();
+  await expect(page.getByText('NFO generated')).toBeVisible();
+});

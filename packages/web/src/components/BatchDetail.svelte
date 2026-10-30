@@ -129,6 +129,24 @@
       </ul>
     </section>
 
+    {#if batch.extras.length > 0}
+      <section aria-labelledby="extras-title">
+        <h3 id="extras-title">{t('web.history.extras')}</h3>
+        <p class="muted">{t('web.history.extras.hint')}</p>
+        <ul class="items">
+          {#each batch.extras as extra (extra.destination)}
+            <li>
+              <div class="row">
+                <strong class="mono">{releaseName(extra.destination)}</strong>
+                <span class="chip chip-neutral">{t(`web.history.extra.${extra.kind}`)}</span>
+              </div>
+              <p class="muted mono">{extra.destination}</p>
+            </li>
+          {/each}
+        </ul>
+      </section>
+    {/if}
+
     {#if preview}
       <section aria-labelledby="undo-title" aria-live="polite">
         <h3 id="undo-title">{t('web.history.undo.preview')}</h3>

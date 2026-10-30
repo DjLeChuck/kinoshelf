@@ -293,6 +293,10 @@ export const en = {
   'web.scan.to.unrecognized': 'No TMDB match',
   'web.scan.to.conflict': 'Destination unavailable: see the queue',
   'web.scan.dry.blocked': ' {count, plural, one {# file} other {# files}} would fail.',
+  'web.scan.dry.extras':
+    ' {nfo, plural, one {# NFO} other {# NFOs}} and {images, plural, one {# image} other {# images}} would be written.',
+  'web.scan.dry.extras.skipped': ' {count} already there, left alone.',
+  'web.scan.extras': 'Also writes: {files}',
   'web.scan.select-all': 'Select all',
   'web.scan.col.from': 'Current file',
   'web.scan.col.to': 'After renaming',
@@ -609,6 +613,11 @@ export const en = {
   'web.history.select': 'Select a batch to see its files.',
   'web.history.submitted': 'Submitted',
   'web.history.items': 'Files',
+  'web.history.extras': 'Metadata written',
+  'web.history.extras.hint':
+    'NFO and images placed beside the videos. Undoing the batch removes them too.',
+  'web.history.extra.generated': 'NFO generated',
+  'web.history.extra.downloaded': 'Image downloaded',
   'web.history.from': 'Original path',
   'web.history.to': 'Placed at',
   'web.history.item.done': 'Done',

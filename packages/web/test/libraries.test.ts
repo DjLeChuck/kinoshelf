@@ -3,10 +3,18 @@ import {
   folderName,
   libraryBody,
   libraryForm,
+  extrasTally,
   libraryRoute,
   type Library,
 } from '../src/lib/libraries.js';
-import { isSelected, scoreLabel, selectedIds, toggleAll, toggleRow } from '../src/lib/scan.js';
+import {
+  extrasLabel,
+  isSelected,
+  scoreLabel,
+  selectedIds,
+  toggleAll,
+  toggleRow,
+} from '../src/lib/scan.js';
 
 const bundled = [{ id: 'plex' }, { id: 'jellyfin' }];
 const counts = { rename: 1, conflict: 0, ambiguous: 0, unrecognized: 0, compliant: 0, renamed: 0 };
@@ -98,8 +106,8 @@ describe('the library form', () => {
 
 describe('the scan selection', () => {
   const rows = [
-    { id: 'a', from: 'a.mkv', to: 'A/a.mkv', score: 98 },
-    { id: 'b', from: 'b.mkv', to: 'B/b.mkv', score: 100 },
+    { id: 'a', from: 'a.mkv', to: 'A/a.mkv', score: 98, extras: [] },
+    { id: 'b', from: 'b.mkv', to: 'B/b.mkv', score: 100, extras: [] },
   ];
 
   it('starts with every row selected and keeps what the user took out', () => {
@@ -118,5 +126,29 @@ describe('the scan selection', () => {
     expect(scoreLabel(91.4)).toBe('91 %');
     expect(scoreLabel(100)).toBeUndefined();
     expect(scoreLabel(null)).toBeUndefined();
+  });
+});
+
+describe('the NFO and images of a scan', () => {
+  it('names the files a row writes beside its video', () => {
+    expect(extrasLabel([])).toBe('');
+    expect(
+      extrasLabel([
+        { type: 'nfo', destination: '/lib/Dune (2021)/movie.nfo' },
+        { type: 'image', destination: '/lib/Dune (2021)/poster.jpg' },
+      ]),
+    ).toBe('movie.nfo, poster.jpg');
+  });
+
+  it('counts what a dry run would write, apart from what is already there', () => {
+    expect(
+      extrasTally([
+        { type: 'transfer', status: 'done' },
+        { type: 'write-file', status: 'done' },
+        { type: 'download', status: 'done' },
+        { type: 'download', status: 'skipped' },
+        { type: 'write-file', status: 'failed' },
+      ]),
+    ).toEqual({ nfo: 1, images: 1, skipped: 1 });
   });
 });

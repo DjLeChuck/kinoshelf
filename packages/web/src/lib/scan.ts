@@ -1,4 +1,4 @@
-import type { ScanRow } from './libraries.js';
+import type { PlannedExtra, ScanRow } from './libraries.js';
 
 /** Rows start all selected: the selection is kept as what the user took out. */
 export type Deselected = ReadonlySet<string>;
@@ -29,3 +29,7 @@ export const scoreLabel = (score: number | null): string | undefined =>
 /** Green when automatic, amber when borderline, grey otherwise (the mock-up's thresholds). */
 export const scoreTone = (score: number | null): 'ok' | 'warn' | 'muted' =>
   score !== null && score >= 85 ? 'ok' : score !== null && score >= 40 ? 'warn' : 'muted';
+
+/** The file names a row writes beside its video (`movie.nfo`, `poster.jpg`), in plan order. */
+export const extrasLabel = (extras: readonly PlannedExtra[]): string =>
+  extras.map(({ destination }) => destination.split('/').pop() ?? destination).join(', ');

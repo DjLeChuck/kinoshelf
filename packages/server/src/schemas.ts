@@ -365,9 +365,21 @@ export const batchSummarySchema = {
 
 export const batchDetailSchema = {
   type: 'object',
-  required: [...batchRequired, 'items'],
+  required: [...batchRequired, 'items', 'extras'],
   properties: {
     ...batchProperties,
+    /** What was written beside the videos: generated NFO and downloaded images. */
+    extras: {
+      type: 'array',
+      items: {
+        type: 'object',
+        required: ['kind', 'destination'],
+        properties: {
+          kind: { type: 'string', enum: ['generated', 'downloaded'] },
+          destination: { type: 'string' },
+        },
+      },
+    },
     items: {
       type: 'array',
       items: {
@@ -715,6 +727,7 @@ export const scanFilesSchema = {
           'reason',
           'candidates',
           'conflicts',
+          'extras',
           'error',
         ],
         properties: {
@@ -735,6 +748,18 @@ export const scanFilesSchema = {
           reason: entrySchema.properties.reason,
           candidates: entrySchema.properties.candidates,
           conflicts: entrySchema.properties.conflicts,
+          /** The NFO and images the plan writes beside the video, none when the profile has none. */
+          extras: {
+            type: 'array',
+            items: {
+              type: 'object',
+              required: ['type', 'destination'],
+              properties: {
+                type: { type: 'string', enum: ['nfo', 'image'] },
+                destination: { type: 'string' },
+              },
+            },
+          },
           error: entrySchema.properties.error,
         },
       },

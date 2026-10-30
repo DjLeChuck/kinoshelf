@@ -18,6 +18,7 @@
   } from '../lib/libraries.js';
   import { profileName, type Settings } from '../lib/settings.js';
   import {
+    extrasLabel,
     isSelected,
     scoreLabel,
     scoreTone,
@@ -113,10 +114,14 @@
         await loadRows(true);
       }
       const entries = selectedIds(rows, off);
-      const { blocked } = await libraryApi.execute(jobId, { entries, dryRun });
+      const { blocked, extras } = await libraryApi.execute(jobId, { entries, dryRun });
       notice =
         t(dryRun ? 'web.scan.dry.done' : 'web.scan.run.done', { count: entries.length }) +
-        (blocked > 0 ? t('web.scan.dry.blocked', { count: blocked }) : '');
+        (blocked > 0 ? t('web.scan.dry.blocked', { count: blocked }) : '') +
+        (extras.nfo + extras.images > 0
+          ? t('web.scan.dry.extras', { nfo: extras.nfo, images: extras.images })
+          : '') +
+        (extras.skipped > 0 ? t('web.scan.dry.extras.skipped', { count: extras.skipped }) : '');
       if (!dryRun) {
         off = new Set();
         await load();
@@ -234,7 +239,12 @@
                 </span>
                 <span role="cell" class="mono from">{shown(row.from)}</span>
                 <span role="cell" class="mono to" class:muted={!selectable}
-                  >{row.to ?? t(`web.scan.to.${tab}` as 'web.scan.to.ambiguous')}</span
+                  >{row.to ?? t(`web.scan.to.${tab}` as 'web.scan.to.ambiguous')}
+                  {#if row.extras.length > 0}
+                    <span class="extras muted"
+                      >{t('web.scan.extras', { files: extrasLabel(row.extras) })}</span
+                    >
+                  {/if}</span
                 >
                 <span role="cell" class="mono score tone-{scoreTone(row.score)}"
                   >{scoreLabel(row.score) ?? '—'}</span
@@ -458,6 +468,13 @@
 
   .bad {
     color: var(--danger);
+  }
+
+  .row .extras {
+    display: block;
+    margin-top: 2px;
+    font-size: 11.5px;
+    overflow-wrap: anywhere;
   }
 
   .buttons {

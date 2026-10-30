@@ -38,8 +38,15 @@ export interface BatchOperation {
   readonly error: StoredError | null;
 }
 
+export interface BatchExtra {
+  /** `generated` is an NFO written by Kinoshelf, `downloaded` an image. */
+  readonly kind: 'generated' | 'downloaded';
+  readonly destination: string;
+}
+
 export interface BatchDetail extends BatchSummary {
   readonly items: readonly BatchOperation[];
+  readonly extras: readonly BatchExtra[];
 }
 
 export class History {
@@ -98,6 +105,9 @@ export class History {
         ),
         ...failures,
       ],
+      extras: journaled.flatMap((entry): BatchExtra[] =>
+        entry.kind === 'transfer' ? [] : [{ kind: entry.kind, destination: entry.destination }],
+      ),
     };
   }
 

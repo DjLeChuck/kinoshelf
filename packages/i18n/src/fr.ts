@@ -305,6 +305,10 @@ export const fr: Record<keyof typeof en, string> = {
   'web.scan.to.conflict': 'Destination indisponible : voir la file',
   'web.scan.dry.blocked':
     ' {count, plural, one {# fichier échouerait} other {# fichiers échoueraient}}.',
+  'web.scan.dry.extras':
+    ' {nfo, plural, one {# NFO serait écrit} other {# NFO seraient écrits}} et {images, plural, one {# image serait téléchargée} other {# images seraient téléchargées}}.',
+  'web.scan.dry.extras.skipped': ' {count} déjà en place, laissés tels quels.',
+  'web.scan.extras': 'Écrit aussi : {files}',
   'web.scan.select-all': 'Tout sélectionner',
   'web.scan.col.from': 'Fichier actuel',
   'web.scan.col.to': 'Après renommage',
@@ -625,6 +629,11 @@ export const fr: Record<keyof typeof en, string> = {
   'web.history.select': 'Choisissez un lot pour voir ses fichiers.',
   'web.history.submitted': 'Soumis',
   'web.history.items': 'Fichiers',
+  'web.history.extras': 'Métadonnées écrites',
+  'web.history.extras.hint':
+    'NFO et images placés à côté des vidéos. Annuler le lot les supprime aussi.',
+  'web.history.extra.generated': 'NFO généré',
+  'web.history.extra.downloaded': 'Image téléchargée',
   'web.history.from': 'Chemin d’origine',
   'web.history.to': 'Emplacement final',
   'web.history.item.done': 'Fait',

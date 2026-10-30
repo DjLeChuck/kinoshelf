@@ -48,6 +48,20 @@ createServer((request, response) => {
   } else if (url.pathname === '/3/search/movie') {
     const word = (url.searchParams.get('query') ?? '').toLowerCase().split(' ')[0];
     json({ results: word ? catalog.filter((c) => c.title.toLowerCase().startsWith(word)) : [] });
+  } else if (/^\/3\/movie\/\d+$/.test(url.pathname)) {
+    // The details an NFO is built from: the film itself, with no cast and no genres.
+    const found = catalog.find((c) => `/3/movie/${c.id}` === url.pathname);
+    if (found) {
+      json({
+        ...found,
+        backdrop_path: '/backdrop.jpg',
+        genres: [],
+        credits: { cast: [], crew: [] },
+        external_ids: {},
+      });
+    } else {
+      response.writeHead(404).end();
+    }
   } else if (url.pathname === '/3/search/tv') {
     json({ results: [] });
   } else if (/\/alternative_titles$/.test(url.pathname)) {
