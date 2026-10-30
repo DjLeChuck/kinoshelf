@@ -10,8 +10,6 @@
   /* svelte-ignore state_referenced_locally */
   let form = $state(watchForm(settings.watch));
 
-  const folders = $derived(settings.watch?.folders ?? []);
-
   async function submit(): Promise<void> {
     const patch = watchPatch(form);
     if ('invalid' in patch) {
@@ -24,20 +22,10 @@
 <SettingsSection title={t('web.settings.watch.title')} onsubmit={submit}>
   <p class="muted hint">{t('web.settings.watch.intro')}</p>
 
-  <div class="libraries">
-    <span class="label muted">{t('web.settings.watch.libraries')}</span>
-    {#if folders.length === 0}
-      <span class="muted">{t('web.settings.watch.none')}</span>
-    {:else}
-      <ul>
-        {#each folders as folder (folder)}
-          <li class="mono">{folder}</li>
-        {/each}
-      </ul>
-    {/if}
+  <p class="manage">
     <Link href="/libraries">{t('web.settings.watch.manage')}</Link>
     <span class="muted hint">{t('web.settings.watch.folders.hint')}</span>
-  </div>
+  </p>
 
   <div class="field">
     <label for="watch-settle">{t('web.settings.watch.settle')}</label>
@@ -71,20 +59,12 @@
 </SettingsSection>
 
 <style>
-  .libraries {
+  .manage {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
     gap: 6px;
-  }
-
-  .label {
-    font-size: 13px;
-  }
-
-  ul {
     margin: 0;
-    padding-left: 18px;
   }
 
   .check {

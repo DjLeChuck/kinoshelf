@@ -24,10 +24,11 @@ test('watches a library of finished downloads, and checks it on demand', async (
   // The settings only say how, and point to the libraries for which.
   await page.getByRole('link', { name: 'Settings' }).click();
   const section = page.locator('form', {
-    has: page.getByRole('heading', { name: 'Folders to watch (source)' }),
+    has: page.getByRole('heading', { name: 'Folder watching' }),
   });
-  await expect(section.getByText(folder)).toBeVisible();
-  await expect(section.getByRole('link', { name: 'Choose them in the libraries' })).toBeVisible();
+  await expect(
+    section.getByRole('link', { name: 'Choose the watched folders in the libraries' }),
+  ).toBeVisible();
 
   await page.getByRole('link', { name: 'Queue' }).click();
   await expect(page.getByText('Watching 1 folder for finished downloads.')).toBeVisible();

@@ -535,21 +535,18 @@ export const en = {
   'web.queue.sources.pending':
     '{count, plural, one {# release} other {# releases}} still being written or settling.',
   'web.queue.sources.unavailable': 'unreachable',
-  'web.queue.sources.none':
-    'No folder is watched. Choose one in the settings, under “Folders to watch”.',
+  'web.queue.sources.none': 'No folder is watched. Turn on watching in a library.',
   'web.queue.sources.scan': 'Check now',
   'web.queue.sources.scan.hint':
     'Does not wait for files to settle: use it when you know a download is complete.',
   'web.queue.sources.scanned':
     '{submitted, plural, one {# release} other {# releases}} submitted, {pending} still being written, {known} already submitted.',
-  'web.settings.watch.title': 'Folders to watch (source)',
+  'web.settings.watch.title': 'Folder watching',
   'web.settings.watch.intro':
-    'Where Kinoshelf looks for files to identify. What lands here is analyzed by itself, then placed in the destination folders set under Processing. Your download client must keep unfinished downloads in another folder (qBittorrent’s “Keep incomplete torrents in”, Transmission’s incomplete folder, both off by default) and only move them here once complete. Otherwise a finished file cannot be told from a stalled one. Which folders are watched is set per library.',
+    'How watched folders are read. Which folders are watched is set per library. Your download client must keep unfinished downloads in another folder (qBittorrent’s “Keep incomplete torrents in”, Transmission’s incomplete folder, both off by default) and only move them to a watched folder once complete. Otherwise a finished file cannot be told from a stalled one.',
   'web.settings.watch.folders.hint':
     'What is already there is submitted once, when watching starts. Prefer the hardlink or copy mode: moving a file stops its torrent from seeding.',
-  'web.settings.watch.libraries': 'Watched folders',
-  'web.settings.watch.none': 'No library is watched.',
-  'web.settings.watch.manage': 'Choose them in the libraries',
+  'web.settings.watch.manage': 'Choose the watched folders in the libraries',
   'web.settings.watch.settle': 'Settling time (seconds)',
   'web.settings.watch.settle.hint':
     'A release is submitted once none of its files has changed for this long. Default 30.',
@@ -668,7 +665,9 @@ export const en = {
     'The language of titles fetched from TMDB, e.g. fr or en-US.',
   'web.settings.general.locale': 'Server language',
   'web.settings.general.locale.hint': 'The language of notifications.',
-  'web.settings.processing.title': 'Processing',
+  'web.settings.processing.title': 'Default settings',
+  'web.settings.processing.intro':
+    'Used by libraries that do not set their own, and for a folder outside any library (a path you submit, or the command line).',
   'web.settings.processing.profile': 'Output profile',
   'web.settings.processing.profile.hint':
     'How files and folders are named. Pick one shipped with Kinoshelf, or point to your own YAML file.',
@@ -682,7 +681,7 @@ export const en = {
     'A match scoring below it waits in the queue. Empty: the default.',
   'web.settings.processing.destination': 'Library (destination)',
   'web.settings.processing.destination.hint':
-    'Where identified files are placed, for Plex or Jellyfin to read. They come from the watched folders, or from a path you submit.',
+    'Where identified files are placed, for Plex or Jellyfin to read.',
   'web.settings.processing.destination.single': 'One folder',
   'web.settings.processing.destination.separate': 'Separate libraries',
   'web.settings.processing.destination.movies': 'Movies folder',

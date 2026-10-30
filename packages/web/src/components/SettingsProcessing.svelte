@@ -60,6 +60,8 @@
 </script>
 
 <SettingsSection title={t('web.settings.processing.title')} onsubmit={submit}>
+  <p class="muted hint">{t('web.settings.processing.intro')}</p>
+
   <div class="field">
     <label for="profile">{t('web.settings.processing.profile')}</label>
     <select id="profile" class="input" bind:value={profile.choice}>

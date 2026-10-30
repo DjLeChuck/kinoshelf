@@ -12,20 +12,26 @@ test.beforeEach(async ({ page }) => {
 });
 
 test('saves the processing settings and finds them after a reload', async ({ page }) => {
-  const section = page.locator('form', { has: page.getByRole('heading', { name: 'Processing' }) });
+  const section = page.locator('form', {
+    has: page.getByRole('heading', { name: 'Default settings' }),
+  });
   await section.getByLabel('Automatic threshold (0–100)').fill('90');
   await section.getByRole('radio', { name: /^Hardlink/ }).check({ force: true });
   await section.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(section.getByText('Saved.')).toBeVisible();
 
   await page.reload();
-  const again = page.locator('form', { has: page.getByRole('heading', { name: 'Processing' }) });
+  const again = page.locator('form', {
+    has: page.getByRole('heading', { name: 'Default settings' }),
+  });
   await expect(again.getByLabel('Automatic threshold (0–100)')).toHaveValue('90');
   await expect(again.getByRole('radio', { name: /^Hardlink/ })).toBeChecked();
 });
 
 test('refuses a threshold out of range before asking the server', async ({ page }) => {
-  const section = page.locator('form', { has: page.getByRole('heading', { name: 'Processing' }) });
+  const section = page.locator('form', {
+    has: page.getByRole('heading', { name: 'Default settings' }),
+  });
   await section.getByLabel('Automatic threshold (0–100)').fill('150');
   await section.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(section.getByRole('alert')).toContainText('a number from 0 to 100');
@@ -34,7 +40,9 @@ test('refuses a threshold out of range before asking the server', async ({ page 
 test('offers the bundled profiles and asks for a path only for one’s own file', async ({
   page,
 }) => {
-  const section = page.locator('form', { has: page.getByRole('heading', { name: 'Processing' }) });
+  const section = page.locator('form', {
+    has: page.getByRole('heading', { name: 'Default settings' }),
+  });
   await expect(section.getByRole('option', { name: 'Plex', exact: true })).toBeAttached();
   await expect(section.getByLabel('Path of the YAML file')).toHaveCount(0);
 
@@ -53,7 +61,9 @@ test('offers the bundled profiles and asks for a path only for one’s own file'
 
 test('picks a destination folder on the server’s disk instead of typing it', async ({ page }) => {
   await mkdir(library('Films'), { recursive: true });
-  const section = page.locator('form', { has: page.getByRole('heading', { name: 'Processing' }) });
+  const section = page.locator('form', {
+    has: page.getByRole('heading', { name: 'Default settings' }),
+  });
 
   await section.getByRole('button', { name: 'Browse…' }).first().click();
   const browser = section.getByRole('group', { name: 'Folders of the server' });

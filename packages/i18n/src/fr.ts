@@ -550,20 +550,18 @@ export const fr: Record<keyof typeof en, string> = {
     '{count, plural, one {# release} other {# releases}} en cours d’écriture ou de stabilisation.',
   'web.queue.sources.unavailable': 'inaccessible',
   'web.queue.sources.none':
-    'Aucun dossier n’est surveillé. Choisissez-en un dans les réglages, sous « Dossiers à surveiller ».',
+    'Aucun dossier n’est surveillé. Activez la surveillance dans une bibliothèque.',
   'web.queue.sources.scan': 'Vérifier maintenant',
   'web.queue.sources.scan.hint':
     'N’attend pas que les fichiers se stabilisent : à utiliser quand vous savez qu’un téléchargement est terminé.',
   'web.queue.sources.scanned':
     '{submitted, plural, one {# release soumise} other {# releases soumises}}, {pending} en cours d’écriture, {known, plural, one {# déjà soumise} other {# déjà soumises}}.',
-  'web.settings.watch.title': 'Dossiers à surveiller (source)',
+  'web.settings.watch.title': 'Surveillance des dossiers',
   'web.settings.watch.intro':
-    'Là où Kinoshelf cherche les fichiers à identifier. Ce qui arrive ici est analysé automatiquement, puis rangé dans les dossiers de destination définis dans Traitement. Votre client de téléchargement doit garder les téléchargements en cours dans un autre dossier (« Keep incomplete torrents in » de qBittorrent, dossier incomplet de Transmission, désactivés par défaut) et ne les déplacer ici qu’une fois terminés. Sinon, on ne distingue pas un fichier terminé d’un fichier à l’arrêt. Les dossiers surveillés se choisissent par bibliothèque.',
+    'Comment les dossiers surveillés sont lus. Les dossiers surveillés se choisissent par bibliothèque. Votre client de téléchargement doit garder les téléchargements en cours dans un autre dossier (« Keep incomplete torrents in » de qBittorrent, dossier incomplet de Transmission, désactivés par défaut) et ne les déplacer vers un dossier surveillé qu’une fois terminés. Sinon, on ne distingue pas un fichier terminé d’un fichier à l’arrêt.',
   'web.settings.watch.folders.hint':
     'Ce qui s’y trouve déjà est soumis une fois, au début de la surveillance. Préférez le mode lien dur ou copie : déplacer un fichier empêche son torrent de continuer à être partagé.',
-  'web.settings.watch.libraries': 'Dossiers surveillés',
-  'web.settings.watch.none': 'Aucune bibliothèque n’est surveillée.',
-  'web.settings.watch.manage': 'Les choisir dans les bibliothèques',
+  'web.settings.watch.manage': 'Choisir les dossiers surveillés dans les bibliothèques',
   'web.settings.watch.settle': 'Délai de stabilisation (secondes)',
   'web.settings.watch.settle.hint':
     'Une release est soumise quand aucun de ses fichiers n’a changé depuis ce délai. 30 par défaut.',
@@ -684,7 +682,9 @@ export const fr: Record<keyof typeof en, string> = {
     'La langue des titres récupérés sur TMDB, par exemple fr ou en-US.',
   'web.settings.general.locale': 'Langue du serveur',
   'web.settings.general.locale.hint': 'La langue des notifications.',
-  'web.settings.processing.title': 'Traitement',
+  'web.settings.processing.title': 'Réglages par défaut',
+  'web.settings.processing.intro':
+    'Utilisés par les bibliothèques qui n’ont pas les leurs, et pour un dossier hors bibliothèque (un chemin soumis, ou la ligne de commande).',
   'web.settings.processing.profile': 'Profil de sortie',
   'web.settings.processing.profile.hint':
     'La façon de nommer fichiers et dossiers. Choisissez un profil fourni avec Kinoshelf, ou indiquez votre propre fichier YAML.',
@@ -698,7 +698,7 @@ export const fr: Record<keyof typeof en, string> = {
     'Une correspondance sous ce score attend dans la file. Vide : la valeur par défaut.',
   'web.settings.processing.destination': 'Bibliothèque (destination)',
   'web.settings.processing.destination.hint':
-    'Où les fichiers identifiés sont rangés, pour que Plex ou Jellyfin les lisent. Ils viennent des dossiers surveillés, ou d’un chemin que vous soumettez.',
+    'Où les fichiers identifiés sont rangés, pour que Plex ou Jellyfin les lisent.',
   'web.settings.processing.destination.single': 'Un seul dossier',
   'web.settings.processing.destination.separate': 'Bibliothèques séparées',
   'web.settings.processing.destination.movies': 'Dossier des films',
