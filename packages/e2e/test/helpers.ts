@@ -4,10 +4,16 @@ import { API_KEY, incoming } from '../support.js';
 
 const auth = { authorization: `Bearer ${API_KEY}` };
 
-export async function signIn(page: Page): Promise<void> {
-  await page.goto('/');
+/** Opens `path` and signs in: the page asked for is the one shown afterwards. */
+export async function signInAt(page: Page, path: string): Promise<void> {
+  await page.goto(path);
   await page.getByLabel('API key').fill(API_KEY);
   await page.getByRole('button', { name: 'Sign in' }).click();
+}
+
+/** Signs in and lands on the validation queue, which most tests start from. */
+export async function signIn(page: Page): Promise<void> {
+  await signInAt(page, '/queue');
   await expect(page.getByRole('heading', { name: 'Validation queue' })).toBeVisible();
 }
 

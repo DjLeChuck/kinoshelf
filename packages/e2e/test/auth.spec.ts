@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 import { signIn } from './helpers.js';
 
 test('refuses a wrong key, accepts the right one, and signs out', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/queue');
   await page.getByLabel('API key').fill('not-the-key');
   await page.getByRole('button', { name: 'Sign in' }).click();
   await expect(page.getByRole('alert')).toContainText('Wrong API key');
