@@ -197,6 +197,10 @@ export const fr: Record<keyof typeof en, string> = {
     'Une erreur est survenue sur le serveur. Consultez son journal pour les détails.',
   'error.job.not-done': 'L’analyse de ce travail n’est pas terminée ({status}).',
   'error.job.not-found': 'Ce travail n’existe pas.',
+  'error.library.not-found': 'Cette bibliothèque n’existe plus. Rechargez la page.',
+  'error.library.scan-in-progress':
+    'Une analyse de cette bibliothèque est déjà en attente ou en cours.',
+  'error.library.source-taken': 'La bibliothèque « {name} » lit déjà ce dossier.',
   'error.queue.entry-not-found': 'Ce fichier n’est plus dans la file.',
   'error.queue.entry-resolved': 'Ce fichier a déjà été traité ({resolution}).',
   'error.request.invalid': 'La requête a été refusée : {detail}',
@@ -222,12 +226,101 @@ export const fr: Record<keyof typeof en, string> = {
   'web.soon.media.title': 'Films & séries',
   'web.soon.media.body':
     'Parcourir votre bibliothèque, voir ce qui manque (NFO, affiches, sous-titres) et le réécrire. Il faut pour cela les profils Jellyfin et NFO de la version 1.0.',
-  'web.soon.libraries.title': 'Bibliothèques',
-  'web.soon.libraries.body':
-    'Plusieurs bibliothèques avec leurs dossiers, profil, mode et seuil, et un dossier surveillé. D’ici là, réglez-les dans les réglages ou dans config.yaml.',
-  'web.soon.scan.title': 'Résultat de scan',
-  'web.soon.scan.body':
-    'Classer toute une bibliothèque et la traiter par lot. D’ici là, « kinoshelf scan » et « kinoshelf process » le font en ligne de commande.',
+  'web.libraries.title': 'Bibliothèques',
+  'web.libraries.intro':
+    'Chaque bibliothèque a ses dossiers, son profil, son mode fichier et son seuil. Lancez un scan pour tout classer, ou surveillez son dossier pour les nouveaux téléchargements.',
+  'web.libraries.add': '+ Ajouter',
+  'web.libraries.list.label': 'Bibliothèques',
+  'web.libraries.empty':
+    'Aucune bibliothèque. Ajoutez-en une pour scanner un dossier ou le surveiller.',
+  'web.libraries.chip.watched': 'Surveillé',
+  'web.libraries.chip.manual': 'Manuel',
+  'web.libraries.default': 'par défaut',
+  'web.libraries.summary': 'Profil {profile} · {mode}',
+  'web.libraries.watching': 'surveillé en continu',
+  'web.libraries.lastscan': 'scan du {date}',
+  'web.libraries.lastscan.never': 'jamais scanné',
+  'web.libraries.lastscan.counts':
+    'Dernier scan : {total, plural, one {# fichier} other {# fichiers}} · {rename} à renommer · {ambiguous} ambigus.',
+  'web.libraries.select': 'Choisissez une bibliothèque, ou ajoutez-en une.',
+  'web.libraries.missing': 'Cette bibliothèque n’existe plus.',
+  'web.libraries.eyebrow': 'Bibliothèque',
+  'web.libraries.new.title': 'Nouvelle bibliothèque',
+  'web.libraries.draft': 'pas encore enregistrée',
+  'web.libraries.folders': 'Dossiers',
+  'web.libraries.name': 'Nom',
+  'web.libraries.name.hint': 'Facultatif : sinon, le nom du dossier source est repris.',
+  'web.libraries.source': 'Dossier source',
+  'web.libraries.source.hint': 'Là où se trouvent les vidéos actuellement.',
+  'web.libraries.destination': 'Dossier de destination',
+  'web.libraries.destination.hint': 'Laissez vide pour utiliser la destination des réglages.',
+  'web.libraries.watch':
+    'Surveiller le dossier source et traiter les nouveaux fichiers automatiquement',
+  'web.libraries.watch.hint':
+    'Seulement pour un dossier qui ne contient que des téléchargements terminés, jamais un dossier où l’on écrit encore. Le délai de stabilisation et l’intervalle sont dans les réglages.',
+  'web.libraries.profile': 'Profil de sortie',
+  'web.libraries.profile.default': 'Par défaut',
+  'web.libraries.profile.default.help': 'Le profil défini dans les réglages.',
+  'web.libraries.mode': 'Mode fichier',
+  'web.libraries.mode.hardlink.warning':
+    'Source et destination doivent être sur le même système de fichiers. Sinon, l’opération échoue avec une erreur explicite : aucun repli automatique vers la copie.',
+  'web.libraries.threshold': 'Seuil de traitement automatique',
+  'web.libraries.threshold.default': 'Utiliser le seuil par défaut',
+  'web.libraries.threshold.hint':
+    'Au-dessus de ce score, le fichier est traité sans validation. En dessous, il rejoint la file.',
+  'web.libraries.create': 'Créer la bibliothèque',
+  'web.libraries.scan': 'Lancer un scan',
+  'web.libraries.scan.starting': 'Démarrage…',
+  'web.libraries.scan.last': 'Voir le dernier résultat',
+  'web.libraries.delete': 'Supprimer',
+  'web.libraries.delete.warning':
+    'Supprimer la bibliothèque « {name} » ? Ses fichiers restent où ils sont : seule la bibliothèque est oubliée.',
+  'web.libraries.delete.confirm': 'Oui, supprimer',
+  'web.libraries.delete.cancel': 'Annuler',
+  'web.libraries.invalid.source': 'Indiquez le dossier source, en chemin absolu.',
+  'web.libraries.invalid.destination': 'Indiquez les deux dossiers de destination, ou aucun.',
+  'web.libraries.invalid.profile': 'Indiquez le chemin du fichier de profil.',
+  'web.libraries.invalid.threshold': 'Le seuil est un nombre de 0 à 100.',
+  'web.scan.crumb': 'Fil d’Ariane',
+  'web.scan.title': 'Résultat du scan',
+  'web.scan.meta':
+    '{count, plural, one {# fichier analysé} other {# fichiers analysés}} · profil {profile} · mode {mode}',
+  'web.scan.running': 'Le scan est en cours…',
+  'web.scan.tabs': 'Catégories',
+  'web.scan.tab.rename': 'À renommer',
+  'web.scan.tab.ambiguous': 'Ambigus',
+  'web.scan.tab.unrecognized': 'Non reconnus',
+  'web.scan.tab.compliant': 'Déjà conformes',
+  'web.scan.help.rename':
+    'Correspondance au-dessus du seuil : prêts à être traités par lot. Les sous-titres suivent leur film.',
+  'web.scan.help.ambiguous':
+    'Plusieurs candidats proches : ils partent dans la file de validation au lieu d’être traités ici.',
+  'web.scan.help.unrecognized':
+    'Aucune correspondance : à chercher à la main depuis la file, ou à laisser de côté.',
+  'web.scan.help.compliant': 'Nom et dossier déjà conformes au profil : rien à faire.',
+  'web.scan.tab.conflict': 'En conflit',
+  'web.scan.help.conflict': 'La destination est prise : ils attendent dans la file de validation.',
+  'web.scan.to.ambiguous': 'Plusieurs candidats : à trancher dans la file',
+  'web.scan.to.unrecognized': 'Aucune correspondance TMDB',
+  'web.scan.to.conflict': 'Destination indisponible : voir la file',
+  'web.scan.dry.blocked':
+    ' {count, plural, one {# fichier échouerait} other {# fichiers échoueraient}}.',
+  'web.scan.select-all': 'Tout sélectionner',
+  'web.scan.col.from': 'Fichier actuel',
+  'web.scan.col.to': 'Après renommage',
+  'web.scan.col.score': 'Confiance',
+  'web.scan.row.select': 'Sélectionner {file}',
+  'web.scan.empty': 'Aucun fichier dans cette catégorie.',
+  'web.scan.selected':
+    '{count, plural, one {# fichier sélectionné} other {# fichiers sélectionnés}}',
+  'web.scan.selected.none': 'Rien à traiter dans cette catégorie.',
+  'web.scan.dry': 'Simuler (dry-run)',
+  'web.scan.run': 'Exécuter le lot',
+  'web.scan.dry.done':
+    'Simulation : {count, plural, one {# fichier serait traité} other {# fichiers seraient traités}}. Rien n’a été touché.',
+  'web.scan.run.done':
+    'Lot en file pour {count, plural, one {# fichier} other {# fichiers}} : suivez-le dans l’historique.',
+  'web.job.links.scan': 'Résultat du scan',
   'web.home.greeting': 'Bonjour',
   'web.home.intro': 'Voici ce qui demande votre attention aujourd’hui.',
   'web.home.todo.eyebrow': 'À faire maintenant',
@@ -395,7 +488,8 @@ export const fr: Record<keyof typeof en, string> = {
     'Rien n’est modifié : vous verrez d’abord ce que Kinoshelf propose.',
   'web.onboarding.form.source.watch': 'Surveiller ce dossier',
   'web.onboarding.form.source.watch.hint':
-    'Pour un dossier qui ne contient que des téléchargements terminés : chaque nouvelle release est analysée à son arrivée. Pas pour une bibliothèque déjà rangée.',
+    'Pour un dossier qui ne contient que des téléchargements terminés : chaque nouvelle release est analysée à son arrivée. Pas pour une bibliothèque déjà rangée. Il devient une bibliothèque, modifiable ensuite.',
+  'web.onboarding.form.source.name': 'Nom de la bibliothèque',
   'web.onboarding.form.source.submit': 'Analyser',
   'web.onboarding.form.source.submit.watch': 'Surveiller',
   'web.onboarding.form.tmdb.invalid':
@@ -455,12 +549,12 @@ export const fr: Record<keyof typeof en, string> = {
     '{submitted, plural, one {# release soumise} other {# releases soumises}}, {pending} en cours d’écriture, {known, plural, one {# déjà soumise} other {# déjà soumises}}.',
   'web.settings.watch.title': 'Dossiers à surveiller (source)',
   'web.settings.watch.intro':
-    'Là où Kinoshelf cherche les fichiers à identifier. Ce qui arrive ici est analysé automatiquement, puis rangé dans les dossiers de destination définis dans Traitement. Votre client de téléchargement doit garder les téléchargements en cours dans un autre dossier (« Keep incomplete torrents in » de qBittorrent, dossier incomplet de Transmission, désactivés par défaut) et ne les déplacer ici qu’une fois terminés. Sinon, on ne distingue pas un fichier terminé d’un fichier à l’arrêt.',
-  'web.settings.watch.enabled': 'Surveiller des dossiers',
-  'web.settings.watch.folders': 'Dossiers sources',
+    'Là où Kinoshelf cherche les fichiers à identifier. Ce qui arrive ici est analysé automatiquement, puis rangé dans les dossiers de destination définis dans Traitement. Votre client de téléchargement doit garder les téléchargements en cours dans un autre dossier (« Keep incomplete torrents in » de qBittorrent, dossier incomplet de Transmission, désactivés par défaut) et ne les déplacer ici qu’une fois terminés. Sinon, on ne distingue pas un fichier terminé d’un fichier à l’arrêt. Les dossiers surveillés se choisissent par bibliothèque.',
   'web.settings.watch.folders.hint':
     'Ce qui s’y trouve déjà est soumis une fois, au début de la surveillance. Préférez le mode lien dur ou copie : déplacer un fichier empêche son torrent de continuer à être partagé.',
-  'web.settings.watch.add-folder': 'Ajouter un dossier',
+  'web.settings.watch.libraries': 'Dossiers surveillés',
+  'web.settings.watch.none': 'Aucune bibliothèque n’est surveillée.',
+  'web.settings.watch.manage': 'Les choisir dans les bibliothèques',
   'web.settings.watch.settle': 'Délai de stabilisation (secondes)',
   'web.settings.watch.settle.hint':
     'Une release est soumise quand aucun de ses fichiers n’a changé depuis ce délai. 30 par défaut.',
@@ -684,7 +778,6 @@ export const fr: Record<keyof typeof en, string> = {
     'Donne au même fichier un second nom à son nouvel emplacement, sans le dupliquer : les deux chemins montrent le fichier mais il n’occupe la place qu’une fois, et supprimer un nom laisse l’autre. Pratique pour continuer à partager un torrent depuis l’original. Les deux dossiers doivent être sur le même disque ou volume : sinon le transfert échoue, Kinoshelf ne bascule jamais sur une copie.',
   'web.settings.processing.mode.move.help':
     'Déplace le fichier : l’original disparaît de son ancien emplacement et aucune place n’est utilisée. Annuler le lot le remet. Exemple : /downloads/Dune.mkv devient /media/Films/Dune (2021)/Dune (2021).mkv.',
-  'web.settings.processing.mode.explain': 'Ce que fait chaque mode',
   'web.settings.server.enabled.hint':
     'Les nouveaux fichiers apparaissent aussitôt dans sa bibliothèque, au lieu d’attendre son prochain scan programmé.',
   'web.settings.plex.section.hint':

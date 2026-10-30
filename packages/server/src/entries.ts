@@ -44,6 +44,22 @@ export interface Entry {
 
 export type JobSummary = Record<Classification, number>;
 
+/**
+ * The views of a scan. A file leaves its tab once it is handled (transferred, set aside), and a
+ * file that failed to transfer is back in `rename`.
+ */
+export const SCAN_TABS = ['rename', 'ambiguous', 'unrecognized', 'compliant', 'conflict'] as const;
+export type ScanTab = (typeof SCAN_TABS)[number];
+export type ScanCounts = Record<ScanTab, number> & { renamed: number };
+
+const TAB_FILTERS: Record<ScanTab, string> = {
+  rename: "classification = 'to-rename' AND (resolution IS NULL OR resolution = 'failed')",
+  ambiguous: "classification = 'ambiguous' AND resolution IS NULL",
+  unrecognized: "classification = 'unrecognized' AND resolution IS NULL",
+  compliant: "classification = 'compliant'",
+  conflict: "classification = 'conflict' AND resolution IS NULL",
+};
+
 interface EntryRow {
   id: string;
   job_id: string;
@@ -147,6 +163,36 @@ export class EntryStore {
       )
       .all(...params, options.limit, options.offset)
       .map(toEntry);
+  }
+
+  /** Files of a scan in one of its tabs, in scan order. */
+  listTab(jobId: string, tab: ScanTab, options: { limit: number; offset: number }): Entry[] {
+    return this.database
+      .prepare<[string, number, number], EntryRow>(
+        `SELECT ${COLUMNS} FROM job_entries WHERE job_id = ? AND ${TAB_FILTERS[tab]} ORDER BY seq LIMIT ? OFFSET ?`,
+      )
+      .all(jobId, options.limit, options.offset)
+      .map(toEntry);
+  }
+
+  /** What each tab of a scan holds, and how many files it already transferred. */
+  tabCounts(jobId: string): ScanCounts {
+    const counts = { renamed: 0 } as ScanCounts;
+    for (const tab of SCAN_TABS) {
+      counts[tab] =
+        this.database
+          .prepare<[string], { total: number }>(
+            `SELECT COUNT(*) AS total FROM job_entries WHERE job_id = ? AND ${TAB_FILTERS[tab]}`,
+          )
+          .get(jobId)?.total ?? 0;
+    }
+    counts.renamed =
+      this.database
+        .prepare<[string], { total: number }>(
+          "SELECT COUNT(*) AS total FROM job_entries WHERE job_id = ? AND resolution = 'done'",
+        )
+        .get(jobId)?.total ?? 0;
+    return counts;
   }
 
   queue(options: { limit: number; offset: number }): Entry[] {

@@ -231,9 +231,8 @@ export function secondsOf(text: string): number | null | undefined {
   return Number.isInteger(value) && value >= 0 ? value : undefined;
 }
 
+/** The folders are the libraries marked as watched; only how they are watched is set here. */
 export interface WatchForm {
-  enabled: boolean;
-  folders: { path: string }[];
   settle: string;
   poll: string;
   apply: boolean;
@@ -241,29 +240,18 @@ export interface WatchForm {
 
 export function watchForm(watch: Settings['watch']): WatchForm {
   return {
-    enabled: watch !== null,
-    folders: (watch ? [...watch.folders] : ['']).map((path) => ({ path })),
     settle: watch?.settleSeconds == null ? '' : String(watch.settleSeconds),
     poll: watch?.pollSeconds == null ? '' : String(watch.pollSeconds),
     apply: watch?.apply ?? false,
   };
 }
 
-/** What `PATCH /api/settings` takes for the form; `undefined` names the first thing refused. */
-export function watchPatch(
-  form: WatchForm,
-): { watch: object | null } | { invalid: 'folders' | 'seconds' } {
-  if (!form.enabled) {
-    return { watch: null };
-  }
-  const folders = form.folders.map(({ path }) => path.trim()).filter((folder) => folder !== '');
-  if (folders.length === 0 || folders.some((folder) => !folder.startsWith('/'))) {
-    return { invalid: 'folders' };
-  }
+/** What `PATCH /api/settings` takes for the form; `invalid` names what is refused. */
+export function watchPatch(form: WatchForm): { watch: object } | { invalid: 'seconds' } {
   const settleSeconds = secondsOf(form.settle);
   const pollSeconds = secondsOf(form.poll);
   if (settleSeconds === undefined || pollSeconds === undefined) {
     return { invalid: 'seconds' };
   }
-  return { watch: { folders, settleSeconds, pollSeconds, apply: form.apply } };
+  return { watch: { settleSeconds, pollSeconds, apply: form.apply } };
 }

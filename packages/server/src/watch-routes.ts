@@ -13,8 +13,12 @@ const statusSchema = {
       type: 'array',
       items: {
         type: 'object',
-        required: ['path', 'available'],
-        properties: { path: { type: 'string' }, available: { type: 'boolean' } },
+        required: ['path', 'libraryId', 'available'],
+        properties: {
+          path: { type: 'string' },
+          libraryId: { type: 'string', nullable: true },
+          available: { type: 'boolean' },
+        },
       },
     },
     pending: { type: 'integer', description: 'Releases still being written or settling.' },

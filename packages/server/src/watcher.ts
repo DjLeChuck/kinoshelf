@@ -1,7 +1,13 @@
 import { watch, type FSWatcher } from 'node:fs';
 import { readdir, stat } from 'node:fs/promises';
 import { extname, join, relative, sep } from 'node:path';
-import { isSample, VIDEO_EXTENSIONS, type WatchConfig } from '@kinoshelf/core';
+import {
+  isSample,
+  VIDEO_EXTENSIONS,
+  watchedFolders,
+  type Config,
+  type WatchConfig,
+} from '@kinoshelf/core';
 import type { Database } from 'better-sqlite3';
 
 /** What download clients append to a file while it is not complete. */
@@ -13,8 +19,37 @@ const SAFETY_SCAN_MS = 600_000;
 /** Used when events cannot be had, and when a scan left files still settling. */
 const FALLBACK_POLL_MS = 60_000;
 
+/**
+ * What the watcher runs with: the timings and `apply` are global (`watch:`), the folders are the
+ * sources of the libraries that ask to be watched, each remembering its library.
+ */
+export interface WatcherSettings extends Omit<WatchConfig, 'folders'> {
+  readonly folders: readonly string[];
+  /** Folder → id of the library it feeds; a folder without one submits plain jobs. */
+  readonly libraryIds?: ReadonlyMap<string, string>;
+}
+
+export function watcherSettings(config: Config): WatcherSettings | undefined {
+  const folders = watchedFolders(config);
+  if (folders.length === 0) {
+    return undefined;
+  }
+  const { settleSeconds, pollSeconds, apply } = config.watch ?? {};
+  return {
+    ...(settleSeconds !== undefined && { settleSeconds }),
+    ...(pollSeconds !== undefined && { pollSeconds }),
+    ...(apply !== undefined && { apply }),
+    folders,
+    libraryIds: new Map(
+      (config.libraries ?? []).filter((l) => l.watch === true).map((l) => [l.source, l.id]),
+    ),
+  };
+}
+
 export interface FolderStatus {
   readonly path: string;
+  /** The library this folder is the source of. */
+  readonly libraryId: string | null;
   /** False when the folder is missing or unreadable (an unmounted share, say). */
   readonly available: boolean;
 }
@@ -39,7 +74,7 @@ export interface ScanResult {
 export interface WatcherDeps {
   readonly database: Database;
   /** Queues the analysis of a path; the watcher never writes to the disk itself. */
-  readonly submit: (path: string, apply: boolean) => void;
+  readonly submit: (path: string, apply: boolean, libraryId?: string) => void;
   readonly log: { warn(message: string): void };
   /** Replaced in tests. */
   readonly now?: () => number;
@@ -69,7 +104,7 @@ interface Release {
  * it cannot tell a stalled torrent from a finished one.
  */
 export class FolderWatcher {
-  private config: WatchConfig | undefined;
+  private config: WatcherSettings | undefined;
   private watchers: FSWatcher[] = [];
   private timer: NodeJS.Timeout | undefined;
   private safetyTimer: NodeJS.Timeout | undefined;
@@ -83,7 +118,7 @@ export class FolderWatcher {
   constructor(private readonly deps: WatcherDeps) {}
 
   /** (Re)starts with the given settings; none (or no folder) stops it. */
-  configure(config: WatchConfig | undefined): void {
+  configure(config: WatcherSettings | undefined): void {
     this.halt();
     this.config = config;
     this.available = new Map();
@@ -109,6 +144,7 @@ export class FolderWatcher {
       mode: this.polling ? 'poll' : 'events',
       folders: (this.config?.folders ?? []).map((path) => ({
         path,
+        libraryId: this.config?.libraryIds?.get(path) ?? null,
         available: this.available.get(path) ?? false,
       })),
       pending: this.pending,
@@ -150,7 +186,7 @@ export class FolderWatcher {
     this.wake = setTimeout(() => void this.scan(), delayMs).unref();
   }
 
-  private listen(config: WatchConfig): void {
+  private listen(config: WatcherSettings): void {
     const quiet = Math.max(1, config.settleSeconds ?? DEFAULT_SETTLE_SECONDS) * 1000;
     for (const folder of config.folders) {
       try {
@@ -204,7 +240,7 @@ export class FolderWatcher {
 
   private async scanFolder(
     folder: string,
-    config: WatchConfig,
+    config: WatcherSettings,
     force: boolean,
   ): Promise<ScanResult> {
     const releases = await collect(folder);
@@ -248,7 +284,7 @@ export class FolderWatcher {
       const paths =
         fresh.length === release.videos.length ? [release.path] : fresh.map((f) => f.path);
       for (const path of paths) {
-        this.deps.submit(path, config.apply ?? false);
+        this.deps.submit(path, config.apply ?? false, config.libraryIds?.get(folder));
         submitted++;
       }
       this.remember(fresh);

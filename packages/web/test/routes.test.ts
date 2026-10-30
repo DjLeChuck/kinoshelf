@@ -13,6 +13,8 @@ describe('matchRoute', () => {
     ['/settings', 'settings'],
     ['/media', 'media'],
     ['/libraries', 'libraries'],
+    ['/libraries/new', 'libraries'],
+    ['/libraries/ab12/scan/cd34', 'libraries'],
   ])('%s is %s', (path, id) => {
     expect(matchRoute(path)?.id).toBe(id);
   });
@@ -34,7 +36,7 @@ describe('matchRoute', () => {
       expect(en[route.label]).toBeTruthy();
       expect(fr[route.label]).toBeTruthy();
     }
-    expect(ROUTES.filter((r) => r.soon).map((r) => r.id)).toEqual(['media', 'libraries']);
+    expect(ROUTES.filter((r) => r.soon).map((r) => r.id)).toEqual(['media']);
   });
 });
 

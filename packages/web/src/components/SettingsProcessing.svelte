@@ -99,24 +99,23 @@
     </div>
   {/if}
 
-  <div class="field">
-    <label for="mode">{t('web.settings.processing.mode')}</label>
-    <select id="mode" class="input" bind:value={mode}>
-      <option value="">{t('web.settings.processing.mode.default')}</option>
-      {#each MODES as option (option)}
-        <option value={option}>{t(`web.settings.processing.mode.${option}`)}</option>
+  <fieldset>
+    <legend id="mode-legend">{t('web.settings.processing.mode')}</legend>
+    <div class="cards" role="radiogroup" aria-labelledby="mode-legend">
+      {#each EXPLAINED as option (option)}
+        <label class="option" class:on={option === (mode === '' ? 'default' : mode)}>
+          <input
+            type="radio"
+            name="mode"
+            value={option === 'default' ? '' : option}
+            bind:group={mode}
+          />
+          <span class="option-name">{t(`web.settings.processing.mode.${option}`)}</span>
+          <span class="muted hint">{t(`web.settings.processing.mode.${option}.help`)}</span>
+        </label>
       {/each}
-    </select>
-  </div>
-
-  <dl class="explain" aria-label={t('web.settings.processing.mode.explain')}>
-    {#each EXPLAINED as option (option)}
-      <div class:current={option === (mode === '' ? 'default' : mode)}>
-        <dt>{t(`web.settings.processing.mode.${option}`)}</dt>
-        <dd class="muted">{t(`web.settings.processing.mode.${option}.help`)}</dd>
-      </div>
-    {/each}
-  </dl>
+    </div>
+  </fieldset>
 
   <div class="field">
     <label for="threshold">{t('web.settings.processing.threshold')}</label>
@@ -203,23 +202,56 @@
     border-left: 2px solid var(--border);
   }
 
-  .explain {
+  /* Four cards: two by two rather than three and one. */
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  @media (max-width: 560px) {
+    .cards {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .option {
+    position: relative;
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    margin: 0;
-    font-size: 12.5px;
-  }
-
-  .explain > div {
-    padding: 8px 12px;
+    gap: 4px;
+    min-height: 44px;
+    padding: 12px;
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
+    cursor: pointer;
   }
 
-  .explain > .current {
+  .option:hover {
+    background: var(--surface-2);
+  }
+
+  .option.on {
     border-color: var(--accent);
     background: var(--warn-bg);
+  }
+
+  /* The radio stays in the page for the keyboard and screen readers; the card is what is seen. */
+  .option input {
+    position: absolute;
+    opacity: 0;
+    inset: 0;
+    margin: 0;
+    cursor: pointer;
+  }
+
+  .option:has(input:focus-visible) {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  .option-name {
+    font-weight: 600;
   }
 
   .profile-box {

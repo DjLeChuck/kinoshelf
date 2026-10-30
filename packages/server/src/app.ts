@@ -1,6 +1,6 @@
 import { join } from 'node:path';
 import swagger from '@fastify/swagger';
-import { KinoshelfError, SqliteJournal, type Journal } from '@kinoshelf/core';
+import { KinoshelfError, legacyWatchMigration, SqliteJournal, type Journal } from '@kinoshelf/core';
 import type { Database } from 'better-sqlite3';
 import Fastify, { type FastifyInstance } from 'fastify';
 import { ApiError } from './api-error.js';
@@ -18,7 +18,8 @@ import { Notifier } from './notify/notifier.js';
 import { createProcessor, type ProcessorDeps } from './processor.js';
 import { purgeHistory } from './purge.js';
 import { registerFsRoutes } from './fs-routes.js';
-import { registerRoutes } from './routes.js';
+import { registerLibraryRoutes } from './library-routes.js';
+import { jobPresenter, registerRoutes } from './routes.js';
 import { JobRunner, type JobProcessor } from './runner.js';
 import { healthSchema } from './schemas.js';
 import { Service } from './service.js';
@@ -28,7 +29,7 @@ import { registerOnboardingRoutes } from './onboarding-routes.js';
 import { registerSettingsRoutes } from './settings-routes.js';
 import { ConfigStore } from './settings.js';
 import { registerWatchRoutes } from './watch-routes.js';
-import { FolderWatcher } from './watcher.js';
+import { FolderWatcher, watcherSettings } from './watcher.js';
 import { registerWeb } from './web.js';
 import { registerSessionRoutes, sameOrigin, sessionToken } from './session-routes.js';
 
@@ -114,7 +115,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     ...(options.delivery && { delivery: options.delivery }),
   });
   const configStore = new ConfigStore(options.configDir, options.config, (config) => {
-    watcher.configure(config.watch);
+    watcher.configure(watcherSettings(config));
     notifier.configure(
       config,
       createTranslator(detectLocale(undefined, config.locale, options.env)),
@@ -149,8 +150,8 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
   // The same queue as `POST /api/jobs`, fed by a folder instead of a client.
   const watcher = new FolderWatcher({
     database: options.database,
-    submit: (path, apply) => {
-      jobs.create(path, apply);
+    submit: (path, apply, libraryId) => {
+      jobs.create(path, apply, libraryId);
       events.emit('jobs');
       runner.kick();
     },
@@ -172,9 +173,18 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
       app.log.info(purged, 'Forgot the history of finished jobs');
     }
   };
-  app.addHook('onReady', () => {
+  app.addHook('onReady', async () => {
     runner.start();
-    watcher.configure(options.config.watch);
+    // `watch.folders` of an older version become libraries before anything reads the config.
+    if (options.config.watch?.folders !== undefined) {
+      try {
+        await configStore.update(legacyWatchMigration);
+        app.log.info('Moved the folders of `watch` into libraries (config.yaml)');
+      } catch (error) {
+        app.log.error(error, 'Could not move `watch.folders` into libraries');
+      }
+    }
+    watcher.configure(watcherSettings(options.config));
     if (options.retentionDays) {
       purge();
       // Not kept alive by the timer: the process leaves when the server closes.
@@ -301,6 +311,14 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
       hasWork: () => jobs.list(1).length > 0 || history.list({ limit: 1, offset: 0 }).length > 0,
     });
     registerFsRoutes(api);
+    registerLibraryRoutes(api, {
+      config: configStore,
+      jobs,
+      entries,
+      events,
+      runner,
+      presentJob: jobPresenter({ jobs, entries, executions }),
+    });
     registerWatchRoutes(api, watcher);
     registerImageRoutes(api, {
       cacheDir: join(options.configDir, 'images'),

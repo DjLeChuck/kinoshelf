@@ -3,6 +3,7 @@
   import { messageOf } from '../lib/errors.js';
   import { t } from '../lib/i18n.svelte.js';
   import type { StepId } from '../lib/onboarding.js';
+  import { folderName, libraryApi } from '../lib/libraries.js';
   import { FormError, isHttpUrl, nullIfBlank } from '../lib/settings.js';
   import { shell } from '../lib/shell-state.svelte.js';
   import Link from './Link.svelte';
@@ -15,6 +16,7 @@
   let url = $state('');
   let token = $state('');
   let folder = $state('');
+  let libraryName = $state('');
   let busy = $state(false);
   let failure = $state<unknown>(undefined);
   let mode = $state<'once' | 'watch'>('once');
@@ -63,15 +65,18 @@
     await shell.loadOnboarding();
   }
 
-  /** A job that fails is shown on the home page, where this step leads: nothing to wait for here. */
+  /** The source is a library either way: watched, or scanned once. A failed scan shows on the home page. */
   async function submitSource(path: string): Promise<void> {
-    if (mode === 'once') {
-      await api.post('/api/jobs', { path });
+    const watch = mode === 'watch';
+    const library = await libraryApi.create({
+      name: nullIfBlank(libraryName) ?? folderName(path),
+      source: path,
+      watch,
+    });
+    if (!watch) {
+      await libraryApi.scan(library.id);
       return;
     }
-    const { watch } = await api.get<{ watch: { folders: string[] } | null }>('/api/settings');
-    const folders = [...new Set([...(watch?.folders ?? []), path])];
-    await api.patch('/api/settings', { watch: { folders } });
     // Watching alone would wait for the next change in the folder: look at what is there now.
     await api.post('/api/watch/scan');
   }
@@ -154,6 +159,11 @@
           </label>
         {/each}
       </fieldset>
+      <div class="field">
+        <label for="ob-name">{t('web.onboarding.form.source.name')}</label>
+        <input id="ob-name" class="input" bind:value={libraryName} />
+        <span class="muted hint">{t('web.libraries.name.hint')}</span>
+      </div>
     {/if}
   {/if}
 

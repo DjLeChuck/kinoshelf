@@ -1,5 +1,11 @@
 import { createHash } from 'node:crypto';
-import { editConfig, loadConfig, type Config, type ConfigEdit } from '@kinoshelf/core';
+import {
+  editConfig,
+  loadConfig,
+  watchedFolders,
+  type Config,
+  type ConfigEdit,
+} from '@kinoshelf/core';
 import { ApiError } from './api-error.js';
 import { redactUrl } from './notify/paths.js';
 
@@ -31,9 +37,11 @@ export interface SettingsPatch {
     on?: Nullable<('transferred' | 'failed' | 'needs-review')[]>;
     headers?: Nullable<Record<string, string>>;
   }[];
-  /** Folders of finished downloads to submit as they appear; `null` stops watching. */
+  /**
+   * How watched libraries are scanned (the folders themselves are libraries with `watch: true`,
+   * see `PATCH /api/libraries/{id}`); `null` goes back to the defaults.
+   */
   watch?: Nullable<{
-    folders: string[];
     settleSeconds?: Nullable<number>;
     pollSeconds?: Nullable<number>;
     apply?: Nullable<boolean>;
@@ -89,14 +97,16 @@ export function presentSettings(config: Config, env: Env): unknown {
       on: webhook.on ?? ['transferred', 'failed'],
       headerNames: Object.keys(webhook.headers ?? {}),
     })),
-    watch: config.watch
-      ? {
-          folders: config.watch.folders,
-          settleSeconds: config.watch.settleSeconds ?? null,
-          pollSeconds: config.watch.pollSeconds ?? null,
-          apply: config.watch.apply ?? false,
-        }
-      : null,
+    // `folders` is derived (the sources of the watched libraries) and read-only here.
+    watch:
+      config.watch || watchedFolders(config).length > 0
+        ? {
+            folders: watchedFolders(config),
+            settleSeconds: config.watch?.settleSeconds ?? null,
+            pollSeconds: config.watch?.pollSeconds ?? null,
+            apply: config.watch?.apply ?? false,
+          }
+        : null,
     processing: {
       profile: config.profile ?? null,
       mode: config.mode ?? null,

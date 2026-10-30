@@ -1,7 +1,7 @@
 <script lang="ts">
   import { t } from '../lib/i18n.svelte.js';
 
-  type Kind = 'media' | 'libraries' | 'scan';
+  type Kind = 'media';
   let { kinds }: { kinds: readonly Kind[] } = $props();
 </script>
 

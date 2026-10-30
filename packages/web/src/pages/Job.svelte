@@ -17,6 +17,7 @@
     type Classification,
     type JobDetail,
   } from '../lib/job.js';
+  import { scanPath } from '../lib/libraries.js';
   import { releaseName, type ErrorBody, type QueueEntry } from '../lib/queue.js';
   import type { Settings } from '../lib/settings.js';
 
@@ -408,9 +409,12 @@
           {/if}
         </section>
 
-        {#if batchId || (job.summary && job.summary.conflict + job.summary.ambiguous + job.summary.unrecognized > 0)}
+        {#if job.libraryId || batchId || (job.summary && job.summary.conflict + job.summary.ambiguous + job.summary.unrecognized > 0)}
           <section class="card links" aria-labelledby="links-title">
             <h2 id="links-title">{t('web.job.links.title')}</h2>
+            {#if job.libraryId}
+              <Link href={scanPath(job.libraryId, job.id)}>{t('web.job.links.scan')}</Link>
+            {/if}
             {#if batchId}
               <Link href={`/history/${batchId}`}>{t('web.job.links.batch')}</Link>
             {/if}

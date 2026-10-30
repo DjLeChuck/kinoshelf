@@ -25,6 +25,8 @@ export interface ProcessedJob {
 export interface Job {
   readonly id: string;
   readonly path: string;
+  /** The library this job scans (or a release of its watched folder), if any. */
+  readonly libraryId: string | null;
   readonly status: JobStatus;
   /** Execute the matched files as soon as the analysis is done. */
   readonly apply: boolean;
@@ -37,6 +39,7 @@ export interface Job {
 interface JobRow {
   id: string;
   path: string;
+  library_id: string | null;
   status: JobStatus;
   apply: number;
   created_at: string;
@@ -45,12 +48,13 @@ interface JobRow {
   error: string | null;
 }
 
-const COLUMNS = 'id, path, status, apply, created_at, started_at, finished_at, error';
+const COLUMNS = 'id, path, library_id, status, apply, created_at, started_at, finished_at, error';
 
 function toJob(row: JobRow): Job {
   return {
     id: row.id,
     path: row.path,
+    libraryId: row.library_id,
     status: row.status,
     apply: row.apply === 1,
     createdAt: row.created_at,
@@ -68,13 +72,13 @@ export class JobStore {
     private readonly executions: ExecutionStore,
   ) {}
 
-  create(path: string, apply = false): Job {
+  create(path: string, apply = false, libraryId?: string): Job {
     const id = randomUUID();
     this.database
       .prepare(
-        "INSERT INTO jobs (id, path, status, apply, created_at) VALUES (?, ?, 'queued', ?, ?)",
+        "INSERT INTO jobs (id, path, library_id, status, apply, created_at) VALUES (?, ?, ?, 'queued', ?, ?)",
       )
-      .run(id, path, apply ? 1 : 0, new Date().toISOString());
+      .run(id, path, libraryId ?? null, apply ? 1 : 0, new Date().toISOString());
     return this.require(id);
   }
 
@@ -91,6 +95,38 @@ export class JobStore {
       .prepare<[number], JobRow>(`SELECT ${COLUMNS} FROM jobs ORDER BY seq DESC LIMIT ?`)
       .all(limit)
       .map(toJob);
+  }
+
+  /** Jobs of a library not finished yet (a scan, or releases its folder submitted). */
+  pendingOf(libraryId: string): number {
+    return (
+      this.database
+        .prepare<[string], { total: number }>(
+          "SELECT COUNT(*) AS total FROM jobs WHERE library_id = ? AND status IN ('queued', 'running')",
+        )
+        .get(libraryId)?.total ?? 0
+    );
+  }
+
+  /** Whether a scan of the library's whole source is queued or running. */
+  scanPending(libraryId: string, source: string): boolean {
+    return (
+      this.database
+        .prepare<[string, string], { id: string }>(
+          "SELECT id FROM jobs WHERE library_id = ? AND path = ? AND status IN ('queued', 'running') LIMIT 1",
+        )
+        .get(libraryId, source) !== undefined
+    );
+  }
+
+  /** The latest scan of the whole library (not a release its folder submitted) that finished. */
+  lastScan(libraryId: string, source: string): Job | undefined {
+    const row = this.database
+      .prepare<[string, string], JobRow>(
+        `SELECT ${COLUMNS} FROM jobs WHERE library_id = ? AND path = ? AND status = 'done' ORDER BY seq DESC LIMIT 1`,
+      )
+      .get(libraryId, source);
+    return row && toJob(row);
   }
 
   settings(id: string): PlanSettings | undefined {

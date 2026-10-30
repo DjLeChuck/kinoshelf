@@ -36,7 +36,9 @@ function detected(facts: OnboardingFacts): Record<OnboardingStepId, boolean> {
     tmdb: (env.TMDB_API_KEY ?? '').trim() !== '' || config.apiKey?.tmdb !== undefined,
     server: config.notify?.plex !== undefined || config.notify?.jellyfin !== undefined,
     destination: config.destination !== undefined,
-    source: hasWork || (config.watch?.folders.length ?? 0) > 0,
+    // A library is what the step creates; `watch.folders` is what older versions wrote.
+    source:
+      hasWork || (config.libraries?.length ?? 0) > 0 || (config.watch?.folders?.length ?? 0) > 0,
   };
 }
 

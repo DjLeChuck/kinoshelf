@@ -1,4 +1,5 @@
 import { join } from 'node:path';
+import { loadConfig } from '@kinoshelf/core';
 import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, harness, makeDir, put } from './harness.js';
 
@@ -54,6 +55,21 @@ describe('first-launch setup', () => {
     const body = (await h.request('GET', '/api/onboarding')).json<Body>();
     expect(stateOf(body, 'source')).toBe('done');
     expect(body.completed).toBe(true);
+  });
+
+  it('ticks the source step once a library exists, with no job yet', async () => {
+    const configDir = await makeDir();
+    await put(join(configDir, 'config.yaml'), 'destination: /media\n');
+    const h = await harness({ configDir, config: await loadConfig(configDir) });
+    expect(stateOf((await h.request('GET', '/api/onboarding')).json<Body>(), 'source')).toBe(
+      'todo',
+    );
+    await h.request('POST', '/api/libraries', { name: 'Films', source: await makeDir() });
+    const body = (await h.request('GET', '/api/onboarding')).json<Body>();
+    expect(stateOf(body, 'source')).toBe('done');
+    expect(body.steps.find((s) => s.id === 'source')?.auto).toBe(true);
+    // The welcome page stays until it is left or work is done.
+    expect(body.completed).toBe(false);
   });
 
   it('completes even when the only job failed: the home page shows it', async () => {

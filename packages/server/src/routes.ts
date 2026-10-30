@@ -1,6 +1,6 @@
 import type { Candidate, MovieCandidate, PlanItem, SeriesCandidate } from '@kinoshelf/core';
 import type { FastifyInstance } from 'fastify';
-import type { Entry, EntryStore } from './entries.js';
+import { SCAN_TABS, type Entry, type EntryStore, type ScanTab } from './entries.js';
 import type { EventBus } from './events.js';
 import type { ExecutionStore } from './executions.js';
 import type { History } from './history.js';
@@ -22,6 +22,7 @@ import {
   notificationTestSchema,
   paging,
   previewSchema,
+  scanFilesSchema,
   undoSchema,
 } from './schemas.js';
 import type { AliasStore } from './aliases.js';
@@ -104,6 +105,25 @@ function presentEntry(entry: Entry): unknown {
   };
 }
 
+/** One row of a scan: what the file is called now, where it goes, how sure the match is. */
+function presentScanRow(entry: Entry): unknown {
+  const plan = presentPlan(entry.item);
+  return {
+    id: entry.id,
+    path: entry.path,
+    classification: entry.classification,
+    resolution: entry.resolution,
+    // An organized file is where it should be.
+    destination: entry.classification === 'compliant' ? entry.path : plan.destination,
+    score: entry.candidates[0]?.score ?? null,
+    title: entry.parsed.title ?? null,
+    reason: entry.reason,
+    candidates: entry.candidates,
+    conflicts: plan.conflicts,
+    error: entry.error,
+  };
+}
+
 /** A bare POST (no body, no content type) means "all defaults", not "invalid". */
 const emptyBodyByDefault = (
   request: { body?: unknown },
@@ -114,18 +134,22 @@ const emptyBodyByDefault = (
   done();
 };
 
+/** A job as the API shows it: its row, a count of its files, its latest transfer, its settings. */
+export function jobPresenter(
+  ctx: Pick<RouteContext, 'jobs' | 'entries' | 'executions'>,
+): (job: Job) => unknown {
+  return (job) => ({
+    ...job,
+    summary: job.status === 'done' ? ctx.entries.summary(job.id) : null,
+    execution: ctx.executions.latestOf(job.id) ?? null,
+    settings: ctx.jobs.settings(job.id) ?? null,
+  });
+}
+
 /** Thin HTTP layer: validate, call the store or the service, shape the answer. */
 export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
   const { jobs, entries, executions, aliases, service, runner, notifier, events, history } = ctx;
-  const presentJob = (job: Job): unknown => {
-    const latest = executions.latestOf(job.id);
-    return {
-      ...job,
-      summary: job.status === 'done' ? entries.summary(job.id) : null,
-      execution: latest ?? null,
-      settings: jobs.settings(job.id) ?? null,
-    };
-  };
+  const presentJob = jobPresenter(ctx);
   const idParams = { type: 'object', properties: { id: { type: 'string' } } } as const;
   const dryRunBody = {
     type: 'object',
@@ -224,6 +248,51 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
           offset: offset ?? 0,
         })
         .map(presentEntry);
+    },
+  );
+
+  api.get<{ Params: { id: string }; Querystring: Paging & { tab: ScanTab } }>(
+    '/api/jobs/:id/files',
+    {
+      schema: {
+        summary: 'The files of a scan, by tab',
+        description:
+          'The four views of a finished scan (plus `conflict`, a match whose target cannot be ' +
+          'used): `rename` (matched with confidence, still to transfer), `ambiguous` (candidates ' +
+          'to choose from), `unrecognized`, `compliant` (already named as the profile wants). A ' +
+          'file leaves its tab once handled. `counts` gives every tab, for the tab labels. ' +
+          'Transfer some of the `rename` files with `POST /api/plans/{id}/execute` and their `id`s ' +
+          'in `entries`; ambiguous ones are settled with `POST /api/queue/{id}/match`. 409 ' +
+          '`job.not-done` until the analysis finished.',
+        params: idParams,
+        querystring: {
+          type: 'object',
+          required: ['tab'],
+          properties: { tab: { type: 'string', enum: SCAN_TABS }, ...paging },
+        },
+        response: { 200: scanFilesSchema, 401: errorSchema, 404: errorSchema, 409: errorSchema },
+      },
+    },
+    (request, reply) => {
+      const job = jobs.get(request.params.id);
+      if (!job) {
+        return reply.code(404).send({ error: { code: 'job.not-found' } });
+      }
+      if (job.status !== 'done') {
+        return reply
+          .code(409)
+          .send({ error: { code: 'job.not-done', params: { status: job.status } } });
+      }
+      const { tab, limit, offset } = request.query;
+      const counts = entries.tabCounts(job.id);
+      return {
+        tab,
+        total: counts[tab],
+        counts,
+        files: entries
+          .listTab(job.id, tab, { limit: limit ?? 50, offset: offset ?? 0 })
+          .map(presentScanRow),
+      };
     },
   );
 

@@ -9,19 +9,25 @@ test('greys out the manual check while no folder is watched', async ({ page }) =
   await expect(page.getByText('No folder is watched.')).toBeVisible();
 });
 
-test('watches a folder of finished downloads, and checks it on demand', async ({ page }) => {
+test('watches a library of finished downloads, and checks it on demand', async ({ page }) => {
   const folder = incoming('finished');
   await mkdir(folder, { recursive: true });
   await signIn(page);
 
+  await page.getByRole('link', { name: 'Libraries' }).click();
+  await page.getByRole('link', { name: '+ Add' }).click();
+  await page.locator('#lib-source').fill(folder);
+  await page.getByLabel('Watch the source folder').check();
+  await page.getByRole('button', { name: 'Create the library' }).click();
+  await expect(page.getByRole('region', { name: 'Libraries' })).toContainText('Watched');
+
+  // The settings only say how, and point to the libraries for which.
   await page.getByRole('link', { name: 'Settings' }).click();
   const section = page.locator('form', {
     has: page.getByRole('heading', { name: 'Folders to watch (source)' }),
   });
-  await section.getByRole('checkbox', { name: 'Watch folders' }).check();
-  await section.locator('#watch-folder-0').fill(folder);
-  await section.getByRole('button', { name: 'Save', exact: true }).click();
-  await expect(section.getByText('Saved.')).toBeVisible();
+  await expect(section.getByText(folder)).toBeVisible();
+  await expect(section.getByRole('link', { name: 'Choose them in the libraries' })).toBeVisible();
 
   await page.getByRole('link', { name: 'Queue' }).click();
   await expect(page.getByText('Watching 1 folder for finished downloads.')).toBeVisible();
@@ -36,18 +42,4 @@ test('watches a folder of finished downloads, and checks it on demand', async ({
   await expect(
     page.getByRole('button', { name: /Mystery\.Finished\.Download\.mkv/ }),
   ).toBeVisible();
-});
-
-test('refuses a watched folder that is not an absolute path', async ({ page }) => {
-  await signIn(page);
-  await page.getByRole('link', { name: 'Settings' }).click();
-  const section = page.locator('form', {
-    has: page.getByRole('heading', { name: 'Folders to watch (source)' }),
-  });
-  await section.getByRole('checkbox', { name: 'Watch folders' }).check();
-  await section.locator('#watch-folder-0').fill('downloads');
-  await section.getByRole('button', { name: 'Save', exact: true }).click();
-  await expect(section.getByRole('alert')).toHaveText(
-    'Give at least one folder, as an absolute path.',
-  );
 });

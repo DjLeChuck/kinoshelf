@@ -6,6 +6,7 @@ import {
   discoverVideos,
   GuessitParser,
   KinoshelfError,
+  libraryOverrides,
   resolveSettings,
   type Config,
   type MetadataProvider,
@@ -36,9 +37,14 @@ export function createProcessor(deps: ProcessorDeps): (job: Job) => Promise<Proc
       throw new KinoshelfError('discover.not-found', { path: job.path });
     }
 
-    const settings = await resolveSettings({}, deps.config, {
-      source: job.path,
-      sourceIsFile: isFile,
+    // The library's own profile, mode, threshold and destination over the global ones. A release
+    // its watched folder submitted is read against the library's source: the in-place case
+    // (source = destination) must not depend on which sub-folder arrived. A library removed since
+    // the job was queued leaves the global settings.
+    const library = deps.config.libraries?.find(({ id }) => id === job.libraryId);
+    const settings = await resolveSettings(library ? libraryOverrides(library) : {}, deps.config, {
+      source: library ? library.source : job.path,
+      sourceIsFile: library ? false : isFile,
       defaultToSource: false,
       defaultMetadataLanguage: deps.config.locale === 'fr' ? 'fr' : 'en-US',
     });
@@ -56,7 +62,7 @@ export function createProcessor(deps: ProcessorDeps): (job: Job) => Promise<Proc
     return {
       analysis,
       settings: {
-        profile: deps.config.profile ?? 'plex',
+        profile: library?.profile ?? deps.config.profile ?? 'plex',
         mode: settings.mode,
         destinationRoot: settings.destinations,
       },

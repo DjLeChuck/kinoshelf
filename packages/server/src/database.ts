@@ -143,6 +143,15 @@ export const SERVER_MIGRATIONS: readonly { readonly name: string; readonly sql: 
       );
     `,
   },
+  {
+    // A job started from a library (a scan, or a release its watched folder submitted) says which:
+    // the library's profile, mode and threshold applied, and its last scan is the latest such job.
+    name: 'server:010-job-library',
+    sql: `
+      ALTER TABLE jobs ADD COLUMN library_id TEXT;
+      CREATE INDEX jobs_library ON jobs (library_id, seq);
+    `,
+  },
 ];
 
 /** Opens the single SQLite file of the config directory, shared with the CLI and the cache. */

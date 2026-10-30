@@ -1,6 +1,6 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
-import { incoming } from '../support.js';
+import { API_KEY, incoming } from '../support.js';
 import { signInAt, submit } from './helpers.js';
 
 // The first test runs on an install that has done nothing yet, and the second one on what it
@@ -31,25 +31,41 @@ test('welcomes a new install, remembers a skipped step and ends on a failed firs
   await expect(progress).toHaveAttribute('aria-valuenow', '3');
   await expect(page.getByRole('heading', { name: /put your movies and series/ })).toBeVisible();
 
-  // The last step sends a folder that is not there: the job fails before any search. The setup
-  // ends all the same, and the home page it leads to says what happened.
+  // The last step makes a library of the folder: one that is not there is refused on the spot.
   const missing = incoming('never-created');
   await page.getByLabel('Folder to analyse').fill(missing);
+  await page.getByRole('button', { name: 'Analyse', exact: true }).click();
+  await expect(page.getByRole('alert')).toContainText('No folder at');
+  await expect(progress).toHaveAttribute('aria-valuenow', '3');
+
+  // With the folder there, the library is created, scanned once, and the setup ends.
+  const first = incoming('first-library');
+  await mkdir(first, { recursive: true });
+  await writeFile(`${first}/Alien.1979.1080p.mkv`, 'video');
+  await page.getByLabel('Folder to analyse').fill(first);
+  await page.getByLabel('Library name').fill('First library');
   await page.getByRole('button', { name: 'Analyse', exact: true }).click();
 
   await expect(page.getByRole('heading', { name: 'Hello' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Queue' })).toBeVisible();
-  const failed = page.getByRole('alert').filter({ hasText: 'Analysis failed' });
-  await expect(failed).toContainText(missing);
-  await expect(failed).toContainText('Path not found');
 });
 
 test('keeps a failed analysis on the home page until the folder is sent again', async ({
   page,
+  request,
 }) => {
+  // A folder sent by hand (or a watched one) that vanished before its analysis.
+  const missing = incoming('never-created');
+  const created = await request.post('/api/jobs', {
+    headers: { authorization: `Bearer ${API_KEY}` },
+    data: { path: missing },
+  });
+  expect(created.status()).toBe(202);
+
   await signInAt(page, '/');
   const failed = page.getByRole('alert').filter({ hasText: 'Analysis failed' });
   await expect(failed).toContainText('never-created');
+  await expect(failed).toContainText('Path not found');
 
   // Nothing changed: it fails again, and the path is still listed once.
   await page.getByRole('button', { name: 'Send this folder again' }).click();

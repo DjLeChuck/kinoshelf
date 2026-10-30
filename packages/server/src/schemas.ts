@@ -76,6 +76,7 @@ export const jobSchema = {
   required: [
     'id',
     'path',
+    'libraryId',
     'status',
     'apply',
     'createdAt',
@@ -89,6 +90,8 @@ export const jobSchema = {
   properties: {
     id: { type: 'string', format: 'uuid' },
     path: { type: 'string' },
+    /** The library this job scans, or a release of its watched folder. */
+    libraryId: { type: 'string', nullable: true },
     status: { type: 'string', enum: ['queued', 'running', 'done', 'failed'] },
     apply: { type: 'boolean' },
     createdAt: { type: 'string', format: 'date-time' },
@@ -610,10 +613,8 @@ export const settingsPatchSchema = {
     },
     watch: nullable({
       type: 'object',
-      required: ['folders'],
       additionalProperties: false,
       properties: {
-        folders: { type: 'array', minItems: 1, items: { type: 'string', pattern: '^/' } },
         settleSeconds: nullable({ type: 'integer', minimum: 0 }),
         pollSeconds: nullable({ type: 'integer', minimum: 0 }),
         apply: nullable({ type: 'boolean' }),
@@ -680,4 +681,155 @@ export const onboardingPatchSchema = {
     finished: { type: 'boolean', enum: [true] },
   },
   anyOf: [{ required: ['step', 'state'] }, { required: ['finished'] }],
+} as const;
+
+const scanTabs = ['rename', 'ambiguous', 'unrecognized', 'compliant', 'conflict'] as const;
+export const scanTabValues = scanTabs;
+
+/** Files per tab of a scan: handled files leave their tab (`renamed` counts the transferred). */
+export const scanCountsSchema = {
+  type: 'object',
+  required: [...scanTabs, 'renamed'],
+  properties: Object.fromEntries([...scanTabs, 'renamed'].map((tab) => [tab, { type: 'integer' }])),
+} as const;
+
+export const scanFilesSchema = {
+  type: 'object',
+  required: ['tab', 'total', 'counts', 'files'],
+  properties: {
+    tab: { type: 'string', enum: scanTabs },
+    total: { type: 'integer', description: 'Files in this tab, for paging.' },
+    counts: scanCountsSchema,
+    files: {
+      type: 'array',
+      items: {
+        type: 'object',
+        required: [
+          'id',
+          'path',
+          'classification',
+          'resolution',
+          'destination',
+          'score',
+          'title',
+          'reason',
+          'candidates',
+          'conflicts',
+          'error',
+        ],
+        properties: {
+          id: {
+            type: 'string',
+            format: 'uuid',
+            description: 'Also what `entries` of an execution takes.',
+          },
+          path: { type: 'string' },
+          classification: { type: 'string', enum: CLASSIFICATIONS },
+          resolution: entrySchema.properties.resolution,
+          /** Where the video goes (`rename`); its own path once `compliant`; null otherwise. */
+          destination: { type: 'string', nullable: true },
+          /** Score of the best candidate (0-100), null when there is none. */
+          score: { type: 'number', nullable: true },
+          /** What the file name says, for a row without a candidate. */
+          title: { type: 'string', nullable: true },
+          reason: entrySchema.properties.reason,
+          candidates: entrySchema.properties.candidates,
+          conflicts: entrySchema.properties.conflicts,
+          error: entrySchema.properties.error,
+        },
+      },
+    },
+  },
+} as const;
+
+const libraryDestinationSchema = {
+  oneOf: [
+    { type: 'string', minLength: 1 },
+    {
+      type: 'object',
+      required: ['movies', 'series'],
+      additionalProperties: false,
+      properties: {
+        movies: { type: 'string', minLength: 1 },
+        series: { type: 'string', minLength: 1 },
+      },
+    },
+  ],
+} as const;
+
+const libraryModes = ['copy', 'hardlink', 'move'] as const;
+
+export const librarySchema = {
+  type: 'object',
+  required: [
+    'id',
+    'name',
+    'source',
+    'destination',
+    'profile',
+    'mode',
+    'threshold',
+    'watch',
+    'lastScan',
+    'queued',
+    'scanning',
+  ],
+  properties: {
+    id: { type: 'string' },
+    name: { type: 'string' },
+    source: { type: 'string' },
+    /** Unset: follows the global destination. */
+    destination,
+    /** Unset (null): follows the global profile, mode and threshold. */
+    profile: { type: 'string', nullable: true },
+    mode: { type: 'string', enum: [...libraryModes, null], nullable: true },
+    threshold: { type: 'number', nullable: true },
+    watch: { type: 'boolean' },
+    lastScan: {
+      type: 'object',
+      nullable: true,
+      required: ['jobId', 'finishedAt', 'counts'],
+      properties: {
+        jobId: { type: 'string', format: 'uuid' },
+        finishedAt: { type: 'string', format: 'date-time', nullable: true },
+        counts: scanCountsSchema,
+      },
+    },
+    /** Jobs of this library queued or running (scans, releases of its watched folder). */
+    queued: { type: 'integer' },
+    /** A scan of the whole source is queued or running. */
+    scanning: { type: 'boolean' },
+  },
+} as const;
+
+const libraryFields = {
+  name: { type: 'string', minLength: 1 },
+  source: { type: 'string', pattern: '^/' },
+  destination: libraryDestinationSchema,
+  profile: { type: 'string', minLength: 1 },
+  mode: { type: 'string', enum: libraryModes },
+  threshold: { type: 'number', minimum: 0, maximum: 100 },
+  watch: { type: 'boolean' },
+} as const;
+
+export const libraryCreateSchema = {
+  type: 'object',
+  required: ['name', 'source'],
+  additionalProperties: false,
+  properties: libraryFields,
+} as const;
+
+/** `null` removes an optional field (the library follows the global setting again). */
+export const libraryPatchSchema = {
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    name: libraryFields.name,
+    source: libraryFields.source,
+    destination,
+    profile: nullable(libraryFields.profile),
+    mode: nullable(libraryFields.mode),
+    threshold: nullable(libraryFields.threshold),
+    watch: libraryFields.watch,
+  },
 } as const;

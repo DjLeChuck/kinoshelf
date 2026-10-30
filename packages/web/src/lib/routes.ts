@@ -17,7 +17,7 @@ export const ROUTES: readonly RouteDefinition[] = [
   { id: 'home', path: '/', label: 'web.nav.home', soon: false, firstRun: true },
   { id: 'queue', path: '/queue', label: 'web.nav.queue', soon: false, firstRun: false },
   { id: 'media', path: '/media', label: 'web.nav.media', soon: true, firstRun: false },
-  { id: 'libraries', path: '/libraries', label: 'web.nav.libraries', soon: true, firstRun: false },
+  { id: 'libraries', path: '/libraries', label: 'web.nav.libraries', soon: false, firstRun: false },
   { id: 'history', path: '/history', label: 'web.nav.history', soon: false, firstRun: false },
   { id: 'settings', path: '/settings', label: 'web.nav.settings', soon: false, firstRun: true },
 ];

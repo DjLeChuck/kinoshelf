@@ -1,10 +1,10 @@
 import { readFile, rename, rm, utimes, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import Database from 'better-sqlite3';
-import { loadConfig, type WatchConfig } from '@kinoshelf/core';
+import { loadConfig } from '@kinoshelf/core';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { migrated } from '../src/database.js';
-import { FolderWatcher } from '../src/watcher.js';
+import { FolderWatcher, type WatcherSettings } from '../src/watcher.js';
 import { cleanup, harness, makeDir, put } from './harness.js';
 
 const watchers: FolderWatcher[] = [];
@@ -25,7 +25,7 @@ async function age(path: string, secondsAgo: number): Promise<void> {
 }
 
 /** Polling mode, so no kernel watch is involved: tests call `scan` themselves. */
-async function setup(options: Partial<WatchConfig> = {}) {
+async function setup(options: Partial<WatcherSettings> = {}) {
   const folder = await makeDir();
   const submitted: { path: string; apply: boolean }[] = [];
   const database = migrated(new Database(':memory:'));
@@ -149,7 +149,7 @@ describe('FolderWatcher', () => {
     await watcher.scan();
     await rename(folder, `${folder}-away`);
     await watcher.scan();
-    expect(watcher.status().folders).toEqual([{ path: folder, available: false }]);
+    expect(watcher.status().folders).toEqual([{ path: folder, libraryId: null, available: false }]);
     expect(database.prepare('SELECT 1 FROM watched_files').all()).toHaveLength(1);
     await rename(`${folder}-away`, folder);
     await watcher.scan();
@@ -225,7 +225,8 @@ describe('the watch API', () => {
     const h = await harness({
       config: {
         destination: await makeDir(),
-        watch: { folders: [folder], settleSeconds: 3600, pollSeconds: 3600 },
+        libraries: [{ id: 'downloads', name: 'Downloads', source: folder, watch: true }],
+        watch: { settleSeconds: 3600, pollSeconds: 3600 },
       },
     });
     await h.app.watcher.idle();
@@ -236,10 +237,13 @@ describe('the watch API', () => {
     expect(scan.json()).toEqual({ submitted: 1, pending: 0, known: 0 });
     await h.app.jobs.idle();
     const jobs = (await h.request('GET', '/api/jobs')).json<{ path: string; status: string }[]>();
-    expect(jobs).toMatchObject([{ path: join(folder, 'Dune.2021.mkv'), status: 'done' }]);
+    // The job remembers which library's folder it came from.
+    expect(jobs).toMatchObject([
+      { path: join(folder, 'Dune.2021.mkv'), status: 'done', libraryId: 'downloads' },
+    ]);
   });
 
-  it('is edited from the settings, and applied without a restart', async () => {
+  it('watches the libraries that ask for it, and applies a change without a restart', async () => {
     const configDir = await makeDir();
     const folder = await makeDir();
     await put(join(configDir, 'config.yaml'), 'destination: /media\n');
@@ -252,7 +256,13 @@ describe('the watch API', () => {
         payload,
       });
 
-    const response = await patch({ watch: { folders: [folder], pollSeconds: 3600, apply: true } });
+    // Not watched yet: the library exists, nothing listens.
+    const created = await h.request('POST', '/api/libraries', { name: 'Films', source: folder });
+    expect(created.statusCode).toBe(201);
+    expect((await h.request('GET', '/api/watch')).json()).toMatchObject({ enabled: false });
+
+    await h.request('PATCH', '/api/libraries/films', { watch: true });
+    const response = await patch({ watch: { pollSeconds: 3600, apply: true } });
     expect(response.json<{ watch: unknown }>().watch).toEqual({
       folders: [folder],
       settleSeconds: null,
@@ -263,11 +273,34 @@ describe('the watch API', () => {
     expect((await h.request('GET', '/api/watch')).json()).toMatchObject({
       enabled: true,
       mode: 'poll',
-      folders: [{ path: folder, available: true }],
+      folders: [{ path: folder, libraryId: 'films', available: true }],
     });
 
-    await patch({ watch: null });
+    // `folders` is no longer a setting: libraries own it.
+    expect((await patch({ watch: { folders: [folder] } })).statusCode).toBe(400);
+
+    await h.request('PATCH', '/api/libraries/films', { watch: false });
     expect((await h.request('GET', '/api/watch')).json()).toMatchObject({ enabled: false });
-    expect(await readFile(join(configDir, 'config.yaml'), 'utf8')).not.toContain('watch');
+    await patch({ watch: null });
+    expect(await readFile(join(configDir, 'config.yaml'), 'utf8')).not.toContain('apply');
+  });
+
+  it('turns the `watch.folders` of an older version into libraries at startup', async () => {
+    const configDir = await makeDir();
+    const folder = await makeDir();
+    await put(
+      join(configDir, 'config.yaml'),
+      `destination: /media\nwatch:\n  folders: [${folder}]\n  pollSeconds: 3600\n`,
+    );
+    const h = await harness({ configDir, config: await loadConfig(configDir) });
+    await h.app.watcher.idle();
+
+    const libraries = (await h.request('GET', '/api/libraries')).json<{ id: string }[]>();
+    expect(libraries).toMatchObject([{ source: folder, watch: true, destination: null }]);
+    expect(await readFile(join(configDir, 'config.yaml'), 'utf8')).not.toContain('folders');
+    expect((await h.request('GET', '/api/watch')).json()).toMatchObject({
+      enabled: true,
+      folders: [{ path: folder, libraryId: libraries[0]?.id }],
+    });
   });
 });

@@ -32,6 +32,8 @@ export interface JobDetail extends JobSummary {
   readonly execution: JobExecution | null;
   readonly summary: Readonly<Record<Classification, number>> | null;
   readonly settings: PlanSettings | null;
+  /** The library a scan started this job from; none for a folder sent by hand. */
+  readonly libraryId?: string | null;
 }
 
 /** A UUID is no name for a person; its first block is enough to tell two jobs apart. */

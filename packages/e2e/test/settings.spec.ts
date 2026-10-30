@@ -14,14 +14,14 @@ test.beforeEach(async ({ page }) => {
 test('saves the processing settings and finds them after a reload', async ({ page }) => {
   const section = page.locator('form', { has: page.getByRole('heading', { name: 'Processing' }) });
   await section.getByLabel('Automatic threshold (0–100)').fill('90');
-  await section.getByLabel('File mode').selectOption('hardlink');
+  await section.getByRole('radio', { name: /^Hardlink/ }).check({ force: true });
   await section.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(section.getByText('Saved.')).toBeVisible();
 
   await page.reload();
   const again = page.locator('form', { has: page.getByRole('heading', { name: 'Processing' }) });
   await expect(again.getByLabel('Automatic threshold (0–100)')).toHaveValue('90');
-  await expect(again.getByLabel('File mode')).toHaveValue('hardlink');
+  await expect(again.getByRole('radio', { name: /^Hardlink/ })).toBeChecked();
 });
 
 test('refuses a threshold out of range before asking the server', async ({ page }) => {
