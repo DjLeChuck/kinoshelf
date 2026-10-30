@@ -184,6 +184,19 @@ textarea {
   background: var(--bg);
 }
 
+/* Not just paler: a dashed grey box and the "forbidden" cursor, so it reads as locked at a glance. */
+.input:disabled {
+  border-style: dashed;
+  background: var(--surface-2);
+  color: var(--muted);
+  cursor: not-allowed;
+}
+
+.field:has(.input:disabled) > label {
+  color: var(--muted);
+  cursor: not-allowed;
+}
+
 /* The native arrow sits against the edge of the box: draw ours, a mid grey that reads on both themes. */
 select.input {
   padding-right: 36px;
