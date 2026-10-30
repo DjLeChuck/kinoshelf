@@ -96,6 +96,7 @@ const job = (path: string, status: JobSummary['status'], id = `${path}-${status}
   id,
   path,
   status,
+  apply: false,
   createdAt: '2026-10-30T09:00:00Z',
   finishedAt: null,
   error: status === 'failed' ? { code: 'discover.not-found' } : null,
@@ -122,8 +123,13 @@ describe('analyses on the home page', () => {
     expect(unresolvedFailures(jobs).map((j) => j.path)).toEqual(['/b']);
   });
 
-  it('keeps a failure when the retry failed too, and the newest says it', () => {
+  it('lets a retry still working speak for its path', () => {
+    const jobs = [job('/a', 'running'), job('/a', 'failed')];
+    expect(unresolvedFailures(jobs)).toEqual([]);
+  });
+
+  it('shows a path once when the retry failed too, with the newest failure', () => {
     const jobs = [job('/a', 'failed', 'new'), job('/a', 'failed', 'old')];
-    expect(unresolvedFailures(jobs).map((j) => j.id)).toEqual(['new', 'old']);
+    expect(unresolvedFailures(jobs).map((j) => j.id)).toEqual(['new']);
   });
 });

@@ -34,6 +34,8 @@
   let batches = $state<readonly BatchSummary[] | undefined>(undefined);
   let settings = $state<Settings | undefined>(undefined);
   let jobs = $state<readonly JobSummary[]>([]);
+  let resending = $state<string | undefined>(undefined);
+  let resendFailure = $state<unknown>(undefined);
   let failure = $state<unknown>(undefined);
 
   async function load(): Promise<void> {
@@ -46,6 +48,19 @@
       failure = undefined;
     } catch (error) {
       failure = error;
+    }
+  }
+
+  /** A job is history: sending the folder again makes a new one, which the list then follows. */
+  async function resend(job: JobSummary): Promise<void> {
+    resending = job.id;
+    resendFailure = undefined;
+    try {
+      await api.post('/api/jobs', { path: job.path, apply: job.apply });
+    } catch (error) {
+      resendFailure = error;
+    } finally {
+      resending = undefined;
     }
   }
 
@@ -94,8 +109,24 @@
               'web.home.jobs.failed.hint',
             )}
           </span>
+          <div class="actions">
+            <button
+              type="button"
+              class="btn"
+              disabled={resending === job.id}
+              onclick={() => void resend(job)}
+            >
+              {t('web.home.jobs.resend')}
+            </button>
+            {#if job.error?.code === 'tmdb.invalid-key'}
+              <Link href="/settings">{t('web.home.jobs.failed.settings')}</Link>
+            {/if}
+          </div>
         </div>
       {/each}
+      {#if resendFailure}
+        <p class="alert alert-danger" role="alert">{messageOf(t, resendFailure)}</p>
+      {/if}
       {#if failedJobs.length > FAILURES}
         <p class="muted">
           {t('web.home.jobs.failed.more', { count: failedJobs.length - FAILURES })}
@@ -333,6 +364,13 @@
     flex-wrap: wrap;
     align-items: center;
     gap: 6px 12px;
+  }
+
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 16px;
   }
 
   .job.danger {

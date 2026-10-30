@@ -1,3 +1,4 @@
+import { mkdir, writeFile } from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
 import { incoming } from '../support.js';
 import { signInAt, submit } from './helpers.js';
@@ -45,17 +46,23 @@ test('welcomes a new install, remembers a skipped step and ends on a failed firs
 
 test('keeps a failed analysis on the home page until the folder is sent again', async ({
   page,
-  request,
 }) => {
   await signInAt(page, '/');
   const failed = page.getByRole('alert').filter({ hasText: 'Analysis failed' });
   await expect(failed).toContainText('never-created');
 
-  // Sent again and understood: the failure is not news any more.
-  await submit(request, 'never-created', ['Mystery.Retried.Footage.mkv']);
-  await page.reload();
-  await expect(page.getByRole('heading', { name: 'Hello' })).toBeVisible();
+  // Nothing changed: it fails again, and the path is still listed once.
+  await page.getByRole('button', { name: 'Send this folder again' }).click();
+  await expect(failed).toHaveCount(1);
+  await expect(failed).toContainText('Path not found');
+
+  // The cause is gone (the folder is there now): sending it again clears the failure.
+  const folder = incoming('never-created');
+  await mkdir(folder, { recursive: true });
+  await writeFile(`${folder}/Mystery.Retried.Footage.mkv`, 'video');
+  await page.getByRole('button', { name: 'Send this folder again' }).click();
   await expect(failed).toHaveCount(0);
+  await expect(page.getByText('Mystery.Retried.Footage.mkv').first()).toBeVisible();
 });
 
 test('shows what waits for a decision on the home page', async ({ page, request }) => {

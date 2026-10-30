@@ -58,6 +58,8 @@ export interface JobSummary {
   readonly id: string;
   readonly path: string;
   readonly status: 'queued' | 'running' | 'done' | 'failed';
+  /** Whether the matched files were to be transferred at once: a new submission keeps it. */
+  readonly apply: boolean;
   readonly createdAt: string;
   readonly finishedAt: string | null;
   readonly error: {
@@ -72,12 +74,12 @@ export const activeJobs = (jobs: readonly JobSummary[]): JobSummary[] =>
 
 /**
  * Failed analyses nobody can have missed, however early they failed (a wrong key, a folder that
- * is gone): they stay until the same path was sent again and did not fail. `jobs` is newest first.
+ * is gone): a failure stays until the same path is sent again. The newer job then speaks for the
+ * path, whether it is working, done or failed again. `jobs` is newest first.
  */
 export function unresolvedFailures(jobs: readonly JobSummary[]): JobSummary[] {
   return jobs.filter(
     (job, index) =>
-      job.status === 'failed' &&
-      !jobs.slice(0, index).some((later) => later.path === job.path && later.status !== 'failed'),
+      job.status === 'failed' && !jobs.slice(0, index).some((later) => later.path === job.path),
   );
 }

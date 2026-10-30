@@ -234,6 +234,8 @@ export const en = {
   'web.home.jobs.running': 'Analysing…',
   'web.home.jobs.failed.eyebrow': 'Analysis failed',
   'web.home.jobs.failed.hint': 'Nothing was changed. Fix the cause, then send the folder again.',
+  'web.home.jobs.resend': 'Send this folder again',
+  'web.home.jobs.failed.settings': 'Open the settings',
   'web.home.jobs.failed.more': '{count} more failed analyses.',
   'web.home.failed.eyebrow': 'Last batch failed',
   'web.home.failed.title': '{count, plural, one {# operation} other {# operations}} failed',

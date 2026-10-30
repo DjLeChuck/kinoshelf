@@ -242,6 +242,8 @@ export const fr: Record<keyof typeof en, string> = {
   'web.home.jobs.running': 'Analyse en cours…',
   'web.home.jobs.failed.eyebrow': 'Analyse en échec',
   'web.home.jobs.failed.hint': 'Rien n’a été modifié. Corrigez la cause, puis renvoyez le dossier.',
+  'web.home.jobs.resend': 'Renvoyer ce dossier',
+  'web.home.jobs.failed.settings': 'Ouvrir les réglages',
   'web.home.jobs.failed.more': '{count} autres analyses en échec.',
   'web.home.failed.eyebrow': 'Dernier lot en échec',
   'web.home.failed.title':
