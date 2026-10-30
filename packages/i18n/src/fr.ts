@@ -195,6 +195,8 @@ export const fr: Record<keyof typeof en, string> = {
   'error.request.rejected': 'La requête a été refusée : {detail}',
   'error.settings.api-key-from-env':
     'La clé d’API est définie par KINOSHELF_API_KEY, qui la remettrait au prochain démarrage. Modifiez plutôt la variable.',
+  'error.settings.tmdb-key-from-env':
+    'La clé TMDB est définie par TMDB_API_KEY, qui l’emporte sur config.yaml. Modifiez ou retirez plutôt la variable.',
   'error.settings.webhook-not-found': 'Ce webhook n’existe plus. Rechargez les réglages.',
   'error.settings.webhook-url-required': 'Un nouveau webhook a besoin d’une URL.',
   'error.watch.not-configured':

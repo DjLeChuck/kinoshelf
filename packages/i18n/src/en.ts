@@ -192,6 +192,8 @@ export const en = {
   'error.request.rejected': 'The request was refused: {detail}',
   'error.settings.api-key-from-env':
     'The API key is set by KINOSHELF_API_KEY, which would put it back at the next start. Change the variable instead.',
+  'error.settings.tmdb-key-from-env':
+    'The TMDB key is set by TMDB_API_KEY, which takes precedence over config.yaml. Change or remove the variable instead.',
   'error.settings.webhook-not-found': 'This webhook no longer exists. Reload the settings.',
   'error.settings.webhook-url-required': 'A new webhook needs a URL.',
   'error.watch.not-configured': 'No folder is watched. Set one in the settings first.',

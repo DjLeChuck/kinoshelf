@@ -73,6 +73,10 @@ export function registerSettingsRoutes(api: FastifyInstance, ctx: SettingsContex
       },
     },
     async (request) => {
+      if (request.body.tmdb?.apiKey !== undefined && (ctx.env.TMDB_API_KEY ?? '').trim() !== '') {
+        // The variable wins at every start and at every lookup: a key saved here would be dead.
+        throw new ApiError(409, 'settings.tmdb-key-from-env');
+      }
       if (Object.keys(request.body).length > 0) {
         await ctx.store.update((current) => editsFor(request.body, current));
         ctx.events.emit('settings');

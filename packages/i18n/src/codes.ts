@@ -42,6 +42,7 @@ export const API_ERROR_CODES = [
   'request.not-found',
   'request.rejected',
   'settings.api-key-from-env',
+  'settings.tmdb-key-from-env',
   'setup.already-done',
   'settings.webhook-not-found',
   'settings.webhook-url-required',

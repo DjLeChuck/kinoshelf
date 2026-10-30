@@ -339,6 +339,21 @@ describe('POST /api/settings/api-key', () => {
   });
 });
 
+describe('TMDB key set by the environment', () => {
+  it('refuses a key saved from the settings, which the variable would override', async () => {
+    const h = await withConfig('', { env: { TMDB_API_KEY: 'from-env' } });
+    const response = await h.patch({ tmdb: { apiKey: 'real-key' } });
+    expect(response.statusCode).toBe(409);
+    expect(response.json()).toEqual({ error: { code: 'settings.tmdb-key-from-env' } });
+    expect(await h.file()).toBe('');
+  });
+
+  it('still takes the other TMDB settings', async () => {
+    const h = await withConfig('', { env: { TMDB_API_KEY: 'from-env' } });
+    expect((await h.patch({ tmdb: { language: 'fr' } })).statusCode).toBe(200);
+  });
+});
+
 describe('POST /api/settings/tmdb/test', () => {
   it('searches with the key in use', async () => {
     const h = await harness();
