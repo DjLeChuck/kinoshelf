@@ -1,11 +1,12 @@
 import { expect, test } from '@playwright/test';
+import { incoming } from '../support.js';
 import { signInAt, submit } from './helpers.js';
 
 // The first test runs on an install that has done nothing yet, and the second one on what it
 // leaves behind: the order matters, and so does being the first file of the run.
 test.describe.configure({ mode: 'serial' });
 
-test('welcomes a new install, remembers a skipped step and leaves for the home page', async ({
+test('welcomes a new install, remembers a skipped step and ends on a failed first folder', async ({
   page,
 }) => {
   await signInAt(page, '/');
@@ -29,9 +30,32 @@ test('welcomes a new install, remembers a skipped step and leaves for the home p
   await expect(progress).toHaveAttribute('aria-valuenow', '3');
   await expect(page.getByRole('heading', { name: /put your movies and series/ })).toBeVisible();
 
-  await page.getByRole('button', { name: 'Leave the setup' }).click();
+  // The last step sends a folder that is not there: the job fails before any search. The setup
+  // ends all the same, and the home page it leads to says what happened.
+  const missing = incoming('never-created');
+  await page.getByLabel('Folder to analyse').fill(missing);
+  await page.getByRole('button', { name: 'Analyse', exact: true }).click();
+
   await expect(page.getByRole('heading', { name: 'Hello' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Queue' })).toBeVisible();
+  const failed = page.getByRole('alert').filter({ hasText: 'Analysis failed' });
+  await expect(failed).toContainText(missing);
+  await expect(failed).toContainText('Path not found');
+});
+
+test('keeps a failed analysis on the home page until the folder is sent again', async ({
+  page,
+  request,
+}) => {
+  await signInAt(page, '/');
+  const failed = page.getByRole('alert').filter({ hasText: 'Analysis failed' });
+  await expect(failed).toContainText('never-created');
+
+  // Sent again and understood: the failure is not news any more.
+  await submit(request, 'never-created', ['Mystery.Retried.Footage.mkv']);
+  await page.reload();
+  await expect(page.getByRole('heading', { name: 'Hello' })).toBeVisible();
+  await expect(failed).toHaveCount(0);
 });
 
 test('shows what waits for a decision on the home page', async ({ page, request }) => {
