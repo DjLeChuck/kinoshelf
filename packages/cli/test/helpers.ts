@@ -4,10 +4,13 @@ import { dirname, join } from 'node:path';
 import type {
   Candidate,
   ExternalId,
+  ImageSize,
   MetadataProvider,
   MovieCandidate,
+  MovieDetails,
   SeasonInfo,
   SeriesCandidate,
+  SeriesDetails,
 } from '@kinoshelf/core';
 import { run, type CliDeps } from '../src/cli.js';
 
@@ -86,6 +89,49 @@ export class FakeProvider implements MetadataProvider {
 
   getSeason(id: ExternalId, season: number): Promise<SeasonInfo | null> {
     return Promise.resolve(this.seasons[`${id.id}:${season}`] ?? null);
+  }
+
+  getMovieDetails(id: ExternalId): Promise<MovieDetails | null> {
+    const found = this.catalog.find((c) => c.kind === 'movie' && c.id.id === id.id);
+    return Promise.resolve(
+      found?.kind === 'movie'
+        ? {
+            kind: 'movie',
+            id: found.id,
+            title: found.title,
+            originalTitle: found.originalTitle,
+            genres: [],
+            studios: [],
+            countries: [],
+            cast: [],
+            directors: [],
+            writers: [],
+          }
+        : null,
+    );
+  }
+
+  getSeriesDetails(id: ExternalId): Promise<SeriesDetails | null> {
+    const found = this.catalog.find((c) => c.kind === 'series' && c.id.id === id.id);
+    return Promise.resolve(
+      found?.kind === 'series'
+        ? {
+            kind: 'series',
+            id: found.id,
+            title: found.title,
+            originalTitle: found.originalTitle,
+            genres: [],
+            studios: [],
+            countries: [],
+            cast: [],
+            seasons: [],
+          }
+        : null,
+    );
+  }
+
+  imageUrl(path: string, size: ImageSize): string {
+    return `https://image.test/${size}${path}`;
   }
 }
 

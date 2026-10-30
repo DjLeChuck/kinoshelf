@@ -1,0 +1,69 @@
+{
+  "id": 136315,
+  "name": "The Bear",
+  "original_name": "The Bear",
+  "tagline": "",
+  "overview": "Carmy returns home.",
+  "first_air_date": "2022-06-23",
+  "status": "Returning Series",
+  "vote_average": 8.6,
+  "vote_count": 0,
+  "poster_path": "/sHFlbKS3WLqMnp9t2ghADIJFnuQ.jpg",
+  "backdrop_path": null,
+  "genres": [
+    {
+      "id": 18,
+      "name": "Drama"
+    },
+    {
+      "id": 35,
+      "name": "Comedy"
+    }
+  ],
+  "production_companies": [
+    {
+      "id": 1,
+      "name": "FX Productions"
+    }
+  ],
+  "production_countries": [],
+  "seasons": [
+    {
+      "season_number": 0,
+      "name": "Specials",
+      "poster_path": null
+    },
+    {
+      "season_number": 1,
+      "name": "Season 1",
+      "poster_path": "/s1.jpg"
+    }
+  ],
+  "external_ids": {
+    "imdb_id": "",
+    "tvdb_id": 403539
+  },
+  "credits": {
+    "cast": [
+      {
+        "name": "Actor 0",
+        "character": "Role 0",
+        "order": 0,
+        "profile_path": "/p0.jpg"
+      },
+      {
+        "name": "No Photo",
+        "character": "",
+        "order": 1,
+        "profile_path": null
+      },
+      {
+        "name": "Actor 2",
+        "character": "Role 2",
+        "order": 2,
+        "profile_path": "/p2.jpg"
+      }
+    ],
+    "crew": []
+  }
+}

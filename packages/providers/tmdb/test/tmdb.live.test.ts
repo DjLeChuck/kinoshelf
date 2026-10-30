@@ -29,6 +29,15 @@ describe.skipIf(!live)('TMDB (live)', () => {
     expect(await provider.getSeason(id, 99)).toBeNull();
   });
 
+  it('reads full details, credits and imdb id included', async () => {
+    const movie = await provider.getMovieDetails({ provider: 'tmdb', id: 438631 });
+    expect(movie).toMatchObject({ kind: 'movie', title: 'Dune', imdbId: 'tt1160419' });
+    expect(movie?.directors).toContain('Denis Villeneuve');
+    expect(movie?.cast.length).toBeGreaterThan(0);
+    const series = await provider.getSeriesDetails({ provider: 'tmdb', id: 136315 });
+    expect(series?.seasons.length).toBeGreaterThan(0);
+  });
+
   it('localizes titles when asked', async () => {
     const results = await provider.searchMovies({ title: 'Le Fabuleux Destin', language: 'fr' });
     expect(results.some((r) => r.originalTitle.includes('Amélie'))).toBe(true);

@@ -1,7 +1,7 @@
 import { KinoshelfError } from '@kinoshelf/core';
 import { describe, expect, it } from 'vitest';
 import { MemoryCache, TmdbProvider, type CacheEntry } from '../src/index.js';
-import { at, fakeFetch, fixtureJson, json, tmdbRoutes } from './helpers.js';
+import { at, fakeFetch, fixture, fixtureJson, json, tmdbRoutes } from './helpers.js';
 
 const BEARER = 'eyJhbGciOiJIUzI1NiJ9.payload.signature';
 const V3_KEY = '0123456789abcdef0123456789abcdef';
@@ -237,6 +237,72 @@ describe('getSeason', () => {
     ]);
   });
 
+  it('reads what an episode file needs (synthetic: the recording is trimmed of crew)', async () => {
+    const { provider } = make([
+      at('/3/tv/1/season/1', () =>
+        json(
+          JSON.stringify({
+            season_number: 1,
+            episodes: [
+              {
+                season_number: 1,
+                episode_number: 1,
+                name: 'One',
+                overview: 'It begins.',
+                runtime: 42,
+                still_path: '/still.jpg',
+                vote_average: 7.5,
+                vote_count: 12,
+                crew: [
+                  { name: 'Ann', job: 'Director' },
+                  { name: 'Bob', job: 'Writer' },
+                  { name: 'Bob', job: 'Screenplay' },
+                  { name: 'Cy', job: 'Editor' },
+                ],
+              },
+              {
+                season_number: 1,
+                episode_number: 2,
+                overview: '',
+                runtime: 0,
+                still_path: null,
+                vote_average: 0,
+                vote_count: 0,
+                crew: [],
+              },
+            ],
+          }),
+        ),
+      ),
+    ]);
+    const season = await provider.getSeason({ provider: 'tmdb', id: 1 }, 1);
+    expect(season?.episodes).toEqual([
+      {
+        season: 1,
+        episode: 1,
+        title: 'One',
+        overview: 'It begins.',
+        runtime: 42,
+        directors: ['Ann'],
+        writers: ['Bob'],
+        rating: { value: 7.5, votes: 12 },
+        stillPath: '/still.jpg',
+      },
+      { season: 1, episode: 2 },
+    ]);
+  });
+
+  it('maps the overview, runtime, still and rating of a real season', async () => {
+    const { provider } = make();
+    const season = await provider.getSeason({ provider: 'tmdb', id: 136315 }, 3);
+    expect(season?.episodes[0]).toMatchObject({
+      overview: 'The next day and the days that led to it.',
+      runtime: 37,
+      stillPath: '/ihAiadFBWBY4sewnHrgOQCJ2shk.jpg',
+      rating: { value: 7.6, votes: 78 },
+    });
+  });
+
   it('rejects an id from another provider', async () => {
     const { provider } = make();
     expect(await codeOf(provider.getSeason({ provider: 'tvdb', id: 1 }, 1))).toBe(
@@ -306,6 +372,153 @@ describe('getMovie and getSeries', () => {
     const { provider } = make(routes);
     expect(await codeOf(provider.getSeries({ provider: 'tvdb', id: 1 }))).toBe(
       'provider.foreign-id',
+    );
+  });
+});
+
+describe('getMovieDetails and getSeriesDetails', () => {
+  // Hand-written fixtures, see fixtures/README.md.
+  const movieId = { provider: 'tmdb', id: 438631 };
+  const tvId = { provider: 'tmdb', id: 136315 };
+  const detailRoutes = [
+    at('/3/movie/438631', () => json(fixture('details-movie-438631.json'))),
+    at('/3/tv/136315', () => json(fixture('details-tv-136315.json'))),
+    at('/3/movie/404', () => json('{"success":false,"status_code":34}', 404)),
+    at('/3/tv/404', () => json('{"success":false,"status_code":34}', 404)),
+  ];
+
+  it('maps a movie from a single request', async () => {
+    const { provider, requests } = make(detailRoutes);
+    const movie = await provider.getMovieDetails(movieId, 'fr');
+
+    expect(requests).toHaveLength(1);
+    expect(Object.fromEntries(requests[0]?.url.searchParams ?? [])).toEqual({
+      language: 'fr',
+      append_to_response: 'credits,external_ids',
+    });
+    expect(movie).toMatchObject({
+      kind: 'movie',
+      id: { provider: 'tmdb', id: 438631 },
+      imdbId: 'tt1160419',
+      title: 'Dune',
+      originalTitle: 'Dune',
+      tagline: 'Beyond fear, destiny awaits.',
+      releaseDate: '2021-09-15',
+      runtime: 155,
+      genres: ['Science Fiction', 'Adventure'],
+      studios: ['Legendary Pictures', 'Warner Bros. Pictures'],
+      countries: ['Canada', 'United States of America'],
+      rating: { value: 7.8, votes: 12000 },
+      posterPath: '/d5NXSklXo0qyIYkgV94XAgMIckC.jpg',
+      collection: { name: 'Dune Collection' },
+    });
+    expect(movie?.directors).toEqual(['Denis Villeneuve']);
+    // A person credited twice appears once; a novelist or a composer is no writer.
+    expect(movie?.writers).toEqual(['Denis Villeneuve', 'Jon Spaihts', 'Eric Roth']);
+    expect(movie?.collection).not.toHaveProperty('overview');
+  });
+
+  it('keeps the 20 first cast members, in order, without empty fields', async () => {
+    const { provider } = make(detailRoutes);
+    const movie = await provider.getMovieDetails(movieId);
+
+    expect(movie?.cast).toHaveLength(20);
+    expect(movie?.cast[0]).toEqual({
+      name: 'Actor 0',
+      role: 'Role 0',
+      order: 0,
+      profilePath: '/p0.jpg',
+    });
+    expect(movie?.cast[1]).toEqual({ name: 'No Photo', order: 1 });
+    expect(movie?.cast[19]?.name).toBe('Actor 19');
+  });
+
+  it('maps a series, dropping an empty imdb id and a rating nobody gave', async () => {
+    const { provider } = make(detailRoutes);
+    const series = await provider.getSeriesDetails(tvId);
+
+    expect(series).toMatchObject({
+      kind: 'series',
+      title: 'The Bear',
+      firstAirDate: '2022-06-23',
+      status: 'Returning Series',
+      genres: ['Drama', 'Comedy'],
+      studios: ['FX Productions'],
+      countries: [],
+      posterPath: '/sHFlbKS3WLqMnp9t2ghADIJFnuQ.jpg',
+      seasons: [
+        { season: 0, name: 'Specials' },
+        { season: 1, name: 'Season 1', posterPath: '/s1.jpg' },
+      ],
+    });
+    expect(series).not.toHaveProperty('imdbId'); // `""` in the fixture
+    expect(series).not.toHaveProperty('rating'); // vote_average 8.6 over 0 votes
+    expect(series).not.toHaveProperty('tagline'); // `""`
+    expect(series).not.toHaveProperty('backdropPath'); // null
+    expect(series?.cast).toHaveLength(3);
+  });
+
+  it('reads the imdb id of a series from external_ids', async () => {
+    const body = JSON.parse(fixture('details-tv-136315.json')) as {
+      external_ids: { imdb_id: string };
+    };
+    body.external_ids.imdb_id = 'tt14452776';
+    const { provider } = make([at('/3/tv/136315', () => json(JSON.stringify(body)))]);
+    expect((await provider.getSeriesDetails(tvId))?.imdbId).toBe('tt14452776');
+  });
+
+  it('ignores an empty imdb id on a movie', async () => {
+    const body = { ...(fixtureJson('details-movie-438631.json') as object), imdb_id: '' };
+    const { provider } = make([at('/3/movie/438631', () => json(JSON.stringify(body)))]);
+    expect(await provider.getMovieDetails(movieId)).not.toHaveProperty('imdbId');
+  });
+
+  it('returns null for an unknown work', async () => {
+    const { provider } = make(detailRoutes);
+    expect(await provider.getMovieDetails({ provider: 'tmdb', id: 404 })).toBeNull();
+    expect(await provider.getSeriesDetails({ provider: 'tmdb', id: 404 })).toBeNull();
+  });
+
+  it('rejects an id from another provider', async () => {
+    const { provider } = make(detailRoutes);
+    expect(await codeOf(provider.getMovieDetails({ provider: 'tvdb', id: 1 }))).toBe(
+      'provider.foreign-id',
+    );
+    expect(await codeOf(provider.getSeriesDetails({ provider: 'tvdb', id: 1 }))).toBe(
+      'provider.foreign-id',
+    );
+  });
+
+  it('does not share a cache entry with getMovie, which stays one cheap request', async () => {
+    const { provider, requests } = make([
+      ...detailRoutes,
+      at('/3/movie/438631/alternative_titles', () => json('{"id":438631,"titles":[]}')),
+    ]);
+    await provider.getMovieDetails(movieId);
+    await provider.getMovieDetails(movieId); // cached
+    const plain = await provider.getMovie(movieId);
+
+    expect(plain?.title).toBe('Dune');
+    const movieRequests = requests.filter((r) => r.url.pathname === '/3/movie/438631');
+    expect(movieRequests).toHaveLength(2);
+    expect(movieRequests.map((r) => r.url.searchParams.has('append_to_response'))).toEqual([
+      true,
+      false,
+    ]);
+  });
+});
+
+describe('imageUrl', () => {
+  it('picks the size from what the image is for', () => {
+    const { provider } = make([]);
+    expect(provider.imageUrl('/abc.jpg', 'preview')).toBe(
+      'https://image.tmdb.org/t/p/w185/abc.jpg',
+    );
+    expect(provider.imageUrl('/abc.jpg', 'standard')).toBe(
+      'https://image.tmdb.org/t/p/w780/abc.jpg',
+    );
+    expect(provider.imageUrl('/abc.jpg', 'original')).toBe(
+      'https://image.tmdb.org/t/p/original/abc.jpg',
     );
   });
 });

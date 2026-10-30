@@ -1,3 +1,4 @@
+import type { ImageSize, Rating, MovieDetails, SeriesDetails } from './details.js';
 import type { ExternalId } from './media.js';
 
 export interface SearchQuery {
@@ -42,6 +43,14 @@ export interface EpisodeInfo {
   readonly title?: string;
   /** ISO air date (`YYYY-MM-DD`). */
   readonly airDate?: string;
+  /** The rest is what an episode NFO or thumbnail needs; the matcher never reads it. */
+  readonly overview?: string;
+  /** Minutes. */
+  readonly runtime?: number;
+  readonly directors?: readonly string[];
+  readonly writers?: readonly string[];
+  readonly rating?: Rating;
+  readonly stillPath?: string;
 }
 
 /** Episodes of a season, in the provider's broadcast order. */
@@ -64,4 +73,9 @@ export interface MetadataProvider {
   /** Looks a work up by id; `null` if the provider does not know it (any other failure throws). */
   getMovie(id: ExternalId, language?: string): Promise<MovieCandidate | null>;
   getSeries(id: ExternalId, language?: string): Promise<SeriesCandidate | null>;
+  /** Full record for a metadata file; `null` if unknown (any other failure throws). */
+  getMovieDetails(id: ExternalId, language?: string): Promise<MovieDetails | null>;
+  getSeriesDetails(id: ExternalId, language?: string): Promise<SeriesDetails | null>;
+  /** URL of an image given its provider path. Pure: no request is made. */
+  imageUrl(path: string, size: ImageSize): string;
 }

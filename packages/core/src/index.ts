@@ -1,6 +1,7 @@
 export type * from './types/media.js';
 export type * from './types/parser.js';
 export type * from './types/provider.js';
+export type * from './types/details.js';
 export type * from './types/matching.js';
 export type * from './types/profile.js';
 export type * from './types/operation.js';

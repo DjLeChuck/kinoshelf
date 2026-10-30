@@ -1,11 +1,14 @@
 import type {
   Candidate,
   ExternalId,
+  ImageSize,
   MetadataProvider,
   MovieCandidate,
+  MovieDetails,
   SearchQuery,
   SeasonInfo,
   SeriesCandidate,
+  SeriesDetails,
 } from '../src/index.js';
 
 export const movie = (
@@ -90,5 +93,60 @@ export class FakeProvider implements MetadataProvider {
   getSeason(seriesId: ExternalId, seasonNumber: number): Promise<SeasonInfo | null> {
     this.calls.push({ method: 'getSeason', id: seriesId, season: seasonNumber });
     return Promise.resolve(this.seasons[`${seriesId.id}:${seasonNumber}`] ?? null);
+  }
+
+  getMovieDetails(id: ExternalId): Promise<MovieDetails | null> {
+    this.calls.push({ method: 'getMovieDetails', id });
+    const found = this.catalog.find(
+      (c): c is MovieCandidate => c.kind === 'movie' && c.id.id === id.id,
+    );
+    return Promise.resolve(
+      found
+        ? {
+            kind: 'movie',
+            id: found.id,
+            title: found.title,
+            originalTitle: found.originalTitle,
+            genres: [],
+            studios: [],
+            countries: [],
+            cast: [],
+            posterPath: '/poster.jpg',
+            backdropPath: '/backdrop.jpg',
+            directors: [],
+            writers: [],
+            ...(found.year !== undefined && { releaseDate: `${found.year}-01-01` }),
+          }
+        : null,
+    );
+  }
+
+  getSeriesDetails(id: ExternalId): Promise<SeriesDetails | null> {
+    this.calls.push({ method: 'getSeriesDetails', id });
+    const found = this.catalog.find(
+      (c): c is SeriesCandidate => c.kind === 'series' && c.id.id === id.id,
+    );
+    return Promise.resolve(
+      found
+        ? {
+            kind: 'series',
+            id: found.id,
+            title: found.title,
+            originalTitle: found.originalTitle,
+            genres: [],
+            studios: [],
+            countries: [],
+            cast: [],
+            posterPath: '/poster.jpg',
+            backdropPath: '/backdrop.jpg',
+            seasons: [],
+            ...(found.year !== undefined && { firstAirDate: `${found.year}-01-01` }),
+          }
+        : null,
+    );
+  }
+
+  imageUrl(path: string, size: ImageSize): string {
+    return `https://image.test/${size}${path}`;
   }
 }

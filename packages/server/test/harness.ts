@@ -57,6 +57,27 @@ export const fakeProvider: MetadataProvider = {
   getMovie: ({ id }) => Promise.resolve(catalog.find((c) => c.id.id === id) ?? null),
   getSeries: () => Promise.resolve(null),
   getSeason: () => Promise.resolve(null),
+  getMovieDetails: ({ id }) => {
+    const found = catalog.find((c) => c.id.id === id);
+    return Promise.resolve(
+      found
+        ? {
+            kind: 'movie',
+            id: found.id,
+            title: found.title,
+            originalTitle: found.originalTitle,
+            genres: [],
+            studios: [],
+            countries: [],
+            cast: [],
+            directors: [],
+            writers: [],
+          }
+        : null,
+    );
+  },
+  getSeriesDetails: () => Promise.resolve(null),
+  imageUrl: (path, size) => `https://image.test/${size}${path}`,
 };
 
 export interface Harness {
