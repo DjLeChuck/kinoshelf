@@ -3,6 +3,7 @@
   import { messageOf } from '../lib/errors.js';
   import { refetchOn } from '../lib/events.svelte.js';
   import { locale, t } from '../lib/i18n.svelte.js';
+  import Link from './Link.svelte';
   import {
     STATUS_CHIP,
     canUndo,
@@ -12,6 +13,7 @@
     type BatchDetail,
     type UndoReport,
   } from '../lib/history.js';
+  import { shortId } from '../lib/job.js';
   import { releaseName } from '../lib/queue.js';
   import type { ErrorBody } from '../lib/queue.js';
 
@@ -82,6 +84,10 @@
         {#if originOf(batch)}
           <p class="muted">
             {t('web.history.submitted')}: <span class="mono">{originOf(batch)}</span>
+            {#if batch.origin}·
+              <Link href={`/jobs/${batch.origin.jobId}`}
+                >{t('web.history.from-job', { id: shortId(batch.origin.jobId) })}</Link
+              >{/if}
           </p>
         {:else}
           <p class="muted">{t('web.history.origin.cli')}</p>

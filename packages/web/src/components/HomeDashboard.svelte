@@ -118,6 +118,7 @@
             >
               {t('web.home.jobs.resend')}
             </button>
+            <Link href={`/jobs/${job.id}`}>{t('web.history.failed.job')}</Link>
             {#if job.error?.code === 'tmdb.invalid-key'}
               <Link href="/settings">{t('web.home.jobs.failed.settings')}</Link>
             {/if}

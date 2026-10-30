@@ -41,6 +41,8 @@ export interface QueueEntry {
   readonly destination: string | null;
   readonly conflicts: readonly ConflictBody[];
   readonly error: ErrorBody | null;
+  /** The batch that transferred the file, once it has been. */
+  readonly batchId?: string | null;
 }
 
 export interface Preview {

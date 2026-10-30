@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { en, fr } from '@kinoshelf/i18n';
-import { matchRoute, ROUTES } from '../src/lib/routes.js';
+import { idOf, matchRoute, ROUTES } from '../src/lib/routes.js';
 
 describe('matchRoute', () => {
   it.each([
@@ -9,6 +9,7 @@ describe('matchRoute', () => {
     ['/history', 'history'],
     ['/history/', 'history'],
     ['/history/3f2a', 'history'],
+    ['/jobs/3f2a', 'history'],
     ['/settings', 'settings'],
     ['/media', 'media'],
     ['/libraries', 'libraries'],
@@ -34,5 +35,20 @@ describe('matchRoute', () => {
       expect(fr[route.label]).toBeTruthy();
     }
     expect(ROUTES.filter((r) => r.soon).map((r) => r.id)).toEqual(['media', 'libraries']);
+  });
+});
+
+describe('idOf', () => {
+  it('reads the id of a job or a batch page', () => {
+    expect(idOf('jobs', '/jobs/3f2a')).toBe('3f2a');
+    expect(idOf('jobs', '/jobs/3f2a/')).toBe('3f2a');
+    expect(idOf('history', '/history/9b1c')).toBe('9b1c');
+  });
+
+  it('is empty for the list pages and for another section', () => {
+    expect(idOf('jobs', '/jobs')).toBeUndefined();
+    expect(idOf('history', '/history')).toBeUndefined();
+    expect(idOf('jobs', '/history/9b1c')).toBeUndefined();
+    expect(idOf('jobs', '/jobs/a/b')).toBeUndefined();
   });
 });
