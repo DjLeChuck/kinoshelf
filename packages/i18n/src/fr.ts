@@ -253,7 +253,8 @@ export const fr: Record<keyof typeof en, string> = {
   'web.libraries.source': 'Dossier source',
   'web.libraries.source.hint': 'Là où se trouvent les vidéos actuellement.',
   'web.libraries.destination': 'Dossier de destination',
-  'web.libraries.destination.hint': 'Laissez vide pour utiliser la destination des réglages.',
+  'web.libraries.destination.default': 'Par défaut',
+  'web.libraries.destination.hint': 'Suit la destination définie dans les réglages.',
   'web.libraries.watch':
     'Surveiller le dossier source et traiter les nouveaux fichiers automatiquement',
   'web.libraries.watch.hint':

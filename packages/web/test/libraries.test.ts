@@ -60,13 +60,27 @@ describe('the library form', () => {
       threshold: 90,
       watch: true,
       destination: { separate: true, movies: '/m' },
+      defaultDestination: false,
     });
     expect(libraryForm(undefined, bundled)).toMatchObject({
       profile: { choice: '' },
       mode: '',
       defaultThreshold: true,
+      defaultDestination: true,
       watch: false,
     });
+  });
+
+  it('ignores a typed destination while the default is chosen', () => {
+    const form = {
+      ...libraryForm(undefined, bundled),
+      source: '/in',
+      destination: { separate: false, single: '/typed', movies: '', series: '' },
+    };
+    expect(libraryBody({ ...form, defaultDestination: false }, true)).toMatchObject({
+      destination: '/typed',
+    });
+    expect(libraryBody(form, false)).toMatchObject({ destination: null });
   });
 
   it('names a library after its folder when no name is given', () => {

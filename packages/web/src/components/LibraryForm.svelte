@@ -156,8 +156,20 @@
           <input
             type="radio"
             name="lib-destination"
-            value={false}
-            bind:group={form.destination.separate}
+            checked={form.defaultDestination}
+            onchange={() => (form.defaultDestination = true)}
+          />
+          {t('web.libraries.destination.default')}
+        </label>
+        <label class="check">
+          <input
+            type="radio"
+            name="lib-destination"
+            checked={!form.defaultDestination && !form.destination.separate}
+            onchange={() => {
+              form.defaultDestination = false;
+              form.destination.separate = false;
+            }}
           />
           {t('web.settings.processing.destination.single')}
         </label>
@@ -165,13 +177,18 @@
           <input
             type="radio"
             name="lib-destination"
-            value={true}
-            bind:group={form.destination.separate}
+            checked={!form.defaultDestination && form.destination.separate}
+            onchange={() => {
+              form.defaultDestination = false;
+              form.destination.separate = true;
+            }}
           />
           {t('web.settings.processing.destination.separate')}
         </label>
       </div>
-      {#if form.destination.separate}
+      {#if form.defaultDestination}
+        <span class="muted hint">{t('web.libraries.destination.hint')}</span>
+      {:else if form.destination.separate}
         <div class="field">
           <label for="lib-dest-movies">{t('web.settings.processing.destination.movies')}</label>
           <PathField id="lib-dest-movies" bind:value={form.destination.movies} />
@@ -186,7 +203,6 @@
           <PathField id="lib-dest-single" bind:value={form.destination.single} />
         </div>
       {/if}
-      <span class="muted hint">{t('web.libraries.destination.hint')}</span>
     </fieldset>
 
     <label class="check">

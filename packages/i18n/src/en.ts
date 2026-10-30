@@ -243,7 +243,8 @@ export const en = {
   'web.libraries.source': 'Source folder',
   'web.libraries.source.hint': 'Where the videos are now.',
   'web.libraries.destination': 'Destination folder',
-  'web.libraries.destination.hint': 'Leave empty to use the destination set in the settings.',
+  'web.libraries.destination.default': 'Default',
+  'web.libraries.destination.hint': 'Follows the destination set in the settings.',
   'web.libraries.watch': 'Watch the source folder and process new files automatically',
   'web.libraries.watch.hint':
     'Only for a folder that holds finished downloads, never one that is still being written to. The settling time and the interval are in the settings.',

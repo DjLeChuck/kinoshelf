@@ -59,6 +59,7 @@ test('creates a library, changes it, and warns about the hardlink mode', async (
   await openNew(page);
   await page.getByLabel('Name', { exact: true }).fill('Films');
   await page.locator('#lib-source').fill(source);
+  await page.getByRole('radio', { name: 'One folder' }).check();
   await page.locator('#lib-dest-single').fill(destination);
   await page.getByRole('radio', { name: /^Plex/ }).first().check();
 
@@ -175,6 +176,7 @@ test('shows the NFO and images a library of the jellyfin profile writes', async 
   await openNew(page);
   await page.getByLabel('Name', { exact: true }).fill('Jellyfin films');
   await page.locator('#lib-source').fill(folder);
+  await page.getByRole('radio', { name: 'One folder' }).check();
   await page.locator('#lib-dest-single').fill(target);
   await page
     .getByRole('radio', { name: /^Jellyfin/ })

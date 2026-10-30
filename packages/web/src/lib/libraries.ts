@@ -183,6 +183,8 @@ export interface LibraryForm {
   name: string;
   source: string;
   destination: DestinationForm;
+  /** Follow the global destination instead of `destination`. */
+  defaultDestination: boolean;
   profile: ProfileForm;
   /** `''` follows the global mode. */
   mode: Mode | '';
@@ -200,6 +202,7 @@ export function libraryForm(
     name: library?.name ?? '',
     source: library?.source ?? '',
     destination: destinationForm(library?.destination ?? null),
+    defaultDestination: library?.destination == null,
     profile: profileForm(library?.profile ?? null, bundled),
     mode: library?.mode ?? '',
     defaultThreshold: library?.threshold == null,
@@ -223,7 +226,7 @@ export function libraryBody(
   if (!source.startsWith('/')) {
     return { invalid: 'source' };
   }
-  const destination = destinationOf(form.destination);
+  const destination = form.defaultDestination ? null : destinationOf(form.destination);
   const profile = profileOf(form.profile);
   const threshold = form.defaultThreshold ? null : thresholdOf(String(form.threshold));
   if (destination === undefined) {
