@@ -366,7 +366,8 @@ export class Service {
       entries: result.entries.map((e) => ({
         source: e.entry.source,
         destination: e.entry.destination,
-        mode: e.entry.mode,
+        // A generated or downloaded file has no transfer mode: its kind says what it was.
+        mode: e.entry.mode ?? e.entry.kind,
         status: e.status,
         error: e.error ?? null,
       })),

@@ -12,7 +12,9 @@ const journalEntries = sqliteTable('journal_entries', {
   batchId: text('batch_id').notNull(),
   source: text('source').notNull(),
   destination: text('destination').notNull(),
-  mode: text('mode').$type<TransferMode>().notNull(),
+  // `''` for a file made or downloaded: the column predates them and stays NOT NULL.
+  mode: text('mode').$type<TransferMode | ''>().notNull(),
+  kind: text('kind').$type<JournalEntry['kind']>().notNull().default('transfer'),
   at: text('at').notNull(),
   createdDirectories: text('created_directories').notNull(),
   undoneAt: text('undone_at'),
@@ -30,7 +32,11 @@ export class SqliteJournal implements Journal {
   record(entry: JournalEntry): void {
     this.db
       .insert(journalEntries)
-      .values({ ...entry, createdDirectories: JSON.stringify(entry.createdDirectories) })
+      .values({
+        ...entry,
+        mode: entry.kind === 'transfer' ? entry.mode : '',
+        createdDirectories: JSON.stringify(entry.createdDirectories),
+      })
       .run();
   }
 
@@ -62,15 +68,19 @@ export class SqliteJournal implements Journal {
       .where(eq(journalEntries.batchId, batchId))
       .orderBy(asc(journalEntries.seq))
       .all()
-      .map((row) => ({
-        id: row.id,
-        batchId: row.batchId,
-        source: row.source,
-        destination: row.destination,
-        mode: row.mode,
-        at: row.at,
-        createdDirectories: JSON.parse(row.createdDirectories) as string[],
-      }));
+      .map((row): JournalEntry => {
+        const common = {
+          id: row.id,
+          batchId: row.batchId,
+          source: row.source,
+          destination: row.destination,
+          at: row.at,
+          createdDirectories: JSON.parse(row.createdDirectories) as string[],
+        };
+        return row.kind === 'transfer' && row.mode !== ''
+          ? { ...common, kind: 'transfer', mode: row.mode }
+          : { ...common, kind: row.kind === 'downloaded' ? 'downloaded' : 'generated' };
+      });
   }
 
   markUndone(batchId: string): void {
@@ -87,7 +97,9 @@ export class SqliteJournal implements Journal {
         batchId: journalEntries.batchId,
         at: sql<string>`min(${journalEntries.at})`,
         operations: sql<number>`count(*)`,
-        modes: sql<string>`group_concat(${journalEntries.mode}, ',')`,
+        modes: sql<
+          string | null
+        >`group_concat(case when ${journalEntries.kind} = 'transfer' then ${journalEntries.mode} end, ',')`,
         pending: sql<number>`sum(${journalEntries.undoneAt} is null)`,
       })
       .from(journalEntries)
@@ -98,7 +110,7 @@ export class SqliteJournal implements Journal {
         batchId: row.batchId,
         at: row.at,
         operations: row.operations,
-        modes: [...new Set(row.modes.split(','))] as TransferMode[],
+        modes: row.modes ? ([...new Set(row.modes.split(','))] as TransferMode[]) : [],
         undone: row.pending === 0,
       }));
   }

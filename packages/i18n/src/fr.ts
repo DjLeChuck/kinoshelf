@@ -4,6 +4,9 @@ import type { en } from './en.js';
 export const fr: Record<keyof typeof en, string> = {
   'error.destination.exists': 'Un fichier existe déjà à {path} ; il n’a pas été touché.',
   'error.discover.not-found': 'Chemin introuvable : {path}',
+  'error.execute.download-failed': 'Impossible de télécharger {url} ({status}).',
+  'error.execute.download-not-image': '{url} n’est pas une image ({type}).',
+  'error.execute.download-too-large': '{url} dépasse les {max} octets autorisés pour une image.',
   'error.fs.error': 'Erreur du système de fichiers ({code}) sur {path}',
   'error.fs.no-space': 'Plus d’espace disponible sur le volume pour {path}',
   'error.fs.permission-denied': 'Permission refusée pour {path}',
@@ -15,7 +18,6 @@ export const fr: Record<keyof typeof en, string> = {
   'error.main-not-done': 'Ignoré car le fichier vidéo lui-même n’a pas été transféré.',
   'error.move.verification-failed':
     'La copie déplacée de {source} ne correspond pas à l’original ; la source a été conservée.',
-  'error.operation.unsupported': 'Opération pas encore prise en charge : {type}',
   'error.plan.episode-numbers-missing': 'Le numéro de saison ou d’épisode est introuvable.',
   'error.plan.outside-root': 'Le chemin cible sortirait du dossier de destination.',
   'error.plan.profile-feature-unsupported':

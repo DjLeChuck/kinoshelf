@@ -1,6 +1,16 @@
 import { randomUUID } from 'node:crypto';
 import { constants } from 'node:fs';
-import { copyFile, link, lstat, mkdir, rename, stat, unlink, utimes } from 'node:fs/promises';
+import {
+  copyFile,
+  link,
+  lstat,
+  mkdir,
+  rename,
+  stat,
+  unlink,
+  utimes,
+  writeFile,
+} from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
 import { KinoshelfError } from '../errors.js';
 
@@ -118,6 +128,23 @@ export async function copyAtomic(source: string, destination: string): Promise<v
     await copyFile(source, temporary, constants.COPYFILE_EXCL);
     const { atime, mtime } = await stat(source);
     await utimes(temporary, atime, mtime);
+    if ((await publish(temporary, destination)) === 'linked') {
+      await unlink(temporary);
+    }
+  } catch (error) {
+    await unlink(temporary).catch(() => undefined);
+    throw error;
+  }
+}
+
+/**
+ * Writes `data` to a hidden temporary file in the destination directory, then publishes it
+ * under its final name without ever replacing an existing file (`destination.exists` instead).
+ */
+export async function writeAtomic(destination: string, data: string | Uint8Array): Promise<void> {
+  const temporary = temporaryPathFor(destination);
+  try {
+    await writeFile(temporary, data, { flag: 'wx' });
     if ((await publish(temporary, destination)) === 'linked') {
       await unlink(temporary);
     }

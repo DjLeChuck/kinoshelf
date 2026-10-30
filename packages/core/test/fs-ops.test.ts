@@ -1,7 +1,13 @@
 import { readdir, readFile, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { copyAtomic, ensureDirectory, hardlinkFile, moveFile } from '../src/execution/fs-ops.js';
+import {
+  copyAtomic,
+  ensureDirectory,
+  hardlinkFile,
+  moveFile,
+  writeAtomic,
+} from '../src/execution/fs-ops.js';
 import { KinoshelfError } from '../src/index.js';
 import { cleanup, crossDeviceAvailable, makeDir, put, SHM } from './workspace.js';
 
@@ -98,5 +104,24 @@ describe('ensureDirectory', () => {
       join(root, 'a', 'b', 'c'),
     ]);
     expect(await ensureDirectory(join(root, 'a', 'b'))).toEqual([]);
+  });
+});
+
+describe('writeAtomic', () => {
+  it('writes the data and leaves no temporary file', async () => {
+    const dir = await makeDir();
+    await writeAtomic(join(dir, 'a.nfo'), 'hello');
+    expect(await readFile(join(dir, 'a.nfo'), 'utf8')).toBe('hello');
+    expect(await readdir(dir)).toEqual(['a.nfo']);
+  });
+
+  it('refuses to replace an existing file and cleans up', async () => {
+    const dir = await makeDir();
+    await put(join(dir, 'a.nfo'), 'mine');
+    await expect(writeAtomic(join(dir, 'a.nfo'), 'new')).rejects.toMatchObject({
+      info: { code: 'destination.exists' },
+    });
+    expect(await readFile(join(dir, 'a.nfo'), 'utf8')).toBe('mine');
+    expect(await readdir(dir)).toEqual(['a.nfo']);
   });
 });

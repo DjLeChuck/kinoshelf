@@ -103,6 +103,7 @@ describe('GET /api/batches', () => {
   it('lists a batch made outside the server, without an origin', async () => {
     const h = await harness();
     new SqliteJournal(h.database).record({
+      kind: 'transfer',
       id: 'x1',
       batchId: 'from-cli',
       source: '/a.mkv',

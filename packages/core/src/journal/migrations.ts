@@ -24,6 +24,11 @@ export const CORE_MIGRATIONS: readonly { readonly name: string; readonly sql: st
       CREATE INDEX journal_entries_batch ON journal_entries (batch_id);
     `,
   },
+  {
+    // Rows written before this read as transfers: the column default is what they all were.
+    name: 'core:002-journal-kind',
+    sql: `ALTER TABLE journal_entries ADD COLUMN kind TEXT NOT NULL DEFAULT 'transfer';`,
+  },
 ];
 
 export function applyMigrations(

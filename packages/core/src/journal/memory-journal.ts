@@ -43,7 +43,9 @@ export class MemoryJournal implements Journal {
         batchId,
         at: stored[0]?.entry.at ?? '',
         operations: stored.length,
-        modes: [...new Set(stored.map((s) => s.entry.mode))],
+        modes: [
+          ...new Set(stored.flatMap((s) => (s.entry.kind === 'transfer' ? [s.entry.mode] : []))),
+        ],
         undone: stored.every((s) => s.undone),
       }));
   }

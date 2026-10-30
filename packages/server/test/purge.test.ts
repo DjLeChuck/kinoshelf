@@ -135,6 +135,7 @@ describe('purgeHistory', () => {
     job('old', 'done', 90);
     entry('old', 'to-rename', 'done');
     journal.record({
+      kind: 'transfer',
       id: 'j1',
       batchId: 'b1',
       source: '/s',

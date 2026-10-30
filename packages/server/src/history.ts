@@ -82,13 +82,20 @@ export class History {
     return {
       ...summary,
       items: [
-        ...journaled.map((entry): BatchOperation => ({
-          source: entry.source,
-          destination: entry.destination,
-          mode: entry.mode,
-          status: summary.status === 'undone' ? 'undone' : 'done',
-          error: null,
-        })),
+        // Only the transfers: an NFO or an image is not a file the user sent and has no mode.
+        ...journaled.flatMap((entry): BatchOperation[] =>
+          entry.kind === 'transfer'
+            ? [
+                {
+                  source: entry.source,
+                  destination: entry.destination,
+                  mode: entry.mode,
+                  status: summary.status === 'undone' ? 'undone' : 'done',
+                  error: null,
+                },
+              ]
+            : [],
+        ),
         ...failures,
       ],
     };

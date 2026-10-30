@@ -214,3 +214,95 @@ describe('undoLastBatch', () => {
     expect(journal.lastBatchId()).toBeNull();
   });
 });
+
+describe('undoBatch: generated and downloaded files', () => {
+  /** A copied movie with an NFO and a poster, all in directories the batch created. */
+  async function importWithCompanions() {
+    const src = await makeDir();
+    const lib = await makeDir();
+    const source = await put(join(src, 'Dune.2021.mkv'), 'video');
+    const plan = await createPlan(
+      [{ parsed: parsedMovie(source), candidate: movie(438631, 'Dune', 2021) }],
+      {
+        profile: plex,
+        destinationRoot: lib,
+        mode: 'move',
+      },
+    );
+    const item = plan.items[0];
+    if (!item) {
+      throw new Error('no item');
+    }
+    const folder = join(lib, FOLDER);
+    const withCompanions = {
+      ...plan,
+      items: [
+        {
+          ...item,
+          operations: [
+            ...item.operations,
+            {
+              type: 'write-file' as const,
+              destination: join(folder, 'movie.nfo'),
+              content: '<movie/>',
+            },
+            {
+              type: 'download' as const,
+              url: 'https://img.example/p.jpg',
+              destination: join(folder, 'art', 'poster.jpg'),
+            },
+          ],
+        },
+      ],
+    };
+    const journal = new MemoryJournal();
+    await executePlan(withCompanions, {
+      journal,
+      fetchImage: () => Promise.resolve(new Uint8Array([1])),
+    });
+    return { src, lib, folder, source, journal };
+  }
+
+  it('removes them with the video put back, and prunes the directories it created', async () => {
+    const { lib, source, journal } = await importWithCompanions();
+    const result = await undoLastBatch(journal);
+
+    expect(result?.entries.map((e) => [e.entry.kind, e.status])).toEqual([
+      ['downloaded', 'undone'],
+      ['generated', 'undone'],
+      ['transfer', 'undone'],
+    ]);
+    expect(await readFile(source, 'utf8')).toBe('video');
+    expect(await readdir(lib)).toEqual([]);
+    expect(journal.lastBatchId()).toBeNull();
+  });
+
+  it('removes a generated file the user edited, and reports a missing one as already gone', async () => {
+    const { folder, journal } = await importWithCompanions();
+    await writeFile(join(folder, 'movie.nfo'), 'edited by hand');
+    await rm(join(folder, 'art', 'poster.jpg'));
+    const result = await undoLastBatch(journal);
+
+    expect(result?.entries.map((e) => [e.status, e.error?.code])).toEqual([
+      ['skipped', 'undo.destination-missing'],
+      ['undone', undefined],
+      ['undone', undefined],
+    ]);
+    expect(await exists(join(folder, 'movie.nfo'))).toBe(false);
+  });
+
+  it('keeps a directory the user put something in, and one that already existed', async () => {
+    const { folder, journal } = await importWithCompanions();
+    await put(join(folder, 'art', 'mine.jpg'), 'mine');
+    await undoLastBatch(journal);
+    expect(await readdir(join(folder, 'art'))).toEqual(['mine.jpg']);
+  });
+
+  it('touches nothing in a dry run', async () => {
+    const { folder, journal } = await importWithCompanions();
+    const result = await undoLastBatch(journal, { dryRun: true });
+    expect(result?.entries.map((e) => e.status)).toEqual(['undone', 'undone', 'undone']);
+    expect(await exists(join(folder, 'movie.nfo'))).toBe(true);
+    expect(journal.lastBatchId()).not.toBeNull();
+  });
+});

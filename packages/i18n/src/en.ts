@@ -9,6 +9,9 @@ import type { CliErrorCode, ServerErrorCode } from './codes.js';
 export const en = {
   'error.destination.exists': 'A file already exists at {path}; it was left untouched.',
   'error.discover.not-found': 'Path not found: {path}',
+  'error.execute.download-failed': 'Could not download {url} ({status}).',
+  'error.execute.download-not-image': '{url} is not an image ({type}).',
+  'error.execute.download-too-large': '{url} is larger than the {max} bytes allowed for an image.',
   'error.fs.error': 'File system error ({code}) on {path}',
   'error.fs.no-space': 'No space left on the device for {path}',
   'error.fs.permission-denied': 'Permission denied for {path}',
@@ -20,7 +23,6 @@ export const en = {
   'error.main-not-done': 'Skipped because the video file itself was not transferred.',
   'error.move.verification-failed':
     'The moved copy of {source} does not match the original; the source was kept.',
-  'error.operation.unsupported': 'Operation not supported yet: {type}',
   'error.plan.episode-numbers-missing': 'The season or episode number could not be determined.',
   'error.plan.outside-root': 'The target path would leave the destination folder.',
   'error.plan.profile-feature-unsupported':

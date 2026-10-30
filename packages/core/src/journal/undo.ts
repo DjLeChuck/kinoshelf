@@ -28,6 +28,18 @@ async function revert(entry: JournalEntry, dryRun: boolean): Promise<UndoEntryRe
   if (!(await exists(entry.destination))) {
     return skipped('undo.destination-missing', entry.destination);
   }
+  if (entry.kind !== 'transfer') {
+    // Ours, whether or not the user edited it since: there is no original to put back.
+    if (dryRun) {
+      return { entry, status: 'undone' };
+    }
+    try {
+      await unlink(entry.destination);
+      return { entry, status: 'undone' };
+    } catch (error) {
+      return { entry, status: 'failed', error: describeFsError(error, entry.destination).info };
+    }
+  }
   if (entry.mode === 'move' && (await exists(entry.source))) {
     // Something took the original place since: moving back would overwrite it.
     return skipped('undo.source-exists', entry.source);
@@ -60,7 +72,9 @@ async function pruneDirectories(entries: readonly JournalEntry[]): Promise<void>
 
 /**
  * Reverts a batch that was not undone yet, whether or not it is the last one. A move goes back
- * to where it came from; a copy or hardlink loses its new name. Each entry is checked against
+ * to where it came from; a copy or hardlink loses its new name; a generated or downloaded file
+ * is deleted. They are reverted most recent first, so a video's companions go before the video
+ * and the directory pruning, which comes last, finds them empty. Each entry is checked against
  * the disk as it is now, so a later batch cannot be damaged: a destination that was moved on or
  * removed since is skipped, an original place taken since is skipped, and directories a later
  * batch also filled are left (only empty ones go). Nothing is forced. The batch is marked undone

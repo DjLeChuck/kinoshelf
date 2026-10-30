@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
   createPlan,
+  KinoshelfError,
   executePlan,
   loadBundledProfile,
   MemoryJournal,
@@ -77,6 +78,7 @@ describe('executePlan: copy', () => {
     expect(journal.lastBatchId()).toBe(batch.batchId);
     expect(journal.entriesOf(batch.batchId)).toEqual([
       {
+        kind: 'transfer',
         id: 'x-2',
         batchId: 'x-1',
         source,
@@ -334,30 +336,6 @@ describe('executePlan: failures and dry run', () => {
     expect(journal.entriesOf(batch.batchId)).toHaveLength(1);
   });
 
-  it('reports operations other than transfers as unsupported, without running them', async () => {
-    const { root, plan } = await setup('copy');
-    const [item] = plan.items;
-    const forged: Plan = {
-      ...plan,
-      items: item
-        ? [
-            {
-              ...item,
-              operations: [
-                { type: 'write-file', destination: join(root, 'x.nfo'), content: '<movie/>' },
-              ],
-            },
-          ]
-        : [],
-    };
-    const batch = await run(forged, new MemoryJournal());
-    expect(batch.items[0]?.results[0]).toMatchObject({
-      status: 'failed',
-      error: { code: 'operation.unsupported' },
-    });
-    expect(await exists(join(root, 'x.nfo'))).toBe(false);
-  });
-
   it('writes nothing in a dry run, yet reports what would happen', async () => {
     const { root, source, plan, journal } = await setup('move');
     const batch = await run(plan, journal, true);
@@ -412,5 +390,214 @@ describe('executePlan: failures and dry run', () => {
     const batch = await run(forged, new MemoryJournal(), true);
     expect(batch.items[0]?.results[0]?.error?.code).toBe('hardlink.cross-device');
     expect(await readdir(root)).toEqual([]);
+  });
+});
+
+describe('executePlan: generated and downloaded files', () => {
+  const POSTER = 'poster.jpg';
+
+  /** The plan of `setup` with companion operations added after its video transfer. */
+  async function withCompanions(
+    mode: TransferMode,
+    extra: (root: string) => Plan['items'][number]['operations'],
+    lib?: string,
+  ) {
+    const base = await setup(mode, lib);
+    const item = base.plan.items[0];
+    if (!item) {
+      throw new Error('no item');
+    }
+    const plan: Plan = {
+      ...base.plan,
+      items: [{ ...item, operations: [...item.operations, ...extra(base.root)] }],
+    };
+    return { ...base, plan };
+  }
+  const nfo = (root: string, content = '<movie/>') => ({
+    type: 'write-file' as const,
+    destination: join(root, FOLDER, 'movie.nfo'),
+    content,
+  });
+  const poster = (root: string, url = 'https://img.example/p.jpg') => ({
+    type: 'download' as const,
+    url,
+    destination: join(root, FOLDER, POSTER),
+  });
+  const bytes = new Uint8Array([1, 2, 3]);
+  const okFetch = (url: string): Promise<Uint8Array> => {
+    expect(url).toBeTypeOf('string');
+    return Promise.resolve(bytes);
+  };
+
+  it('writes the content atomically, journals it as generated and leaves no temporary file', async () => {
+    const { root, plan, journal } = await withCompanions('copy', (r) => [nfo(r)]);
+    const batch = await run(plan, journal);
+
+    expect(statuses(batch)).toEqual(['done', 'done']);
+    expect(await readFile(join(root, FOLDER, 'movie.nfo'), 'utf8')).toBe('<movie/>');
+    expect((await readdir(join(root, FOLDER))).sort()).toEqual([`${STEM}.mkv`, 'movie.nfo']);
+    expect(journal.entriesOf(batch.batchId)[1]).toMatchObject({
+      kind: 'generated',
+      source: '',
+      destination: join(root, FOLDER, 'movie.nfo'),
+      createdDirectories: [],
+    });
+  });
+
+  it('never overwrites a file already there, the video still arrives', async () => {
+    const lib = await makeDir();
+    await put(join(lib, FOLDER, 'movie.nfo'), 'mine');
+    const { root, plan, journal } = await withCompanions('copy', (r) => [nfo(r)], lib);
+    const batch = await run(plan, journal);
+
+    expect(statuses(batch)).toEqual(['done', 'skipped']);
+    expect(batch.items[0]?.results[1]?.error).toEqual({
+      code: 'destination.exists',
+      params: { path: join(root, FOLDER, 'movie.nfo') },
+    });
+    expect(await readFile(join(root, FOLDER, 'movie.nfo'), 'utf8')).toBe('mine');
+    expect(journal.entriesOf(batch.batchId)).toHaveLength(1);
+  });
+
+  it('does not even fetch an image whose destination already exists', async () => {
+    const lib = await makeDir();
+    await put(join(lib, FOLDER, POSTER), 'mine');
+    const { root, plan, journal } = await withCompanions('copy', (r) => [poster(r)], lib);
+    let fetched = false;
+    const batch = await executePlan(plan, {
+      journal,
+      fetchImage: () => {
+        fetched = true;
+        return okFetch('');
+      },
+    });
+    expect(statuses(batch)).toEqual(['done', 'skipped']);
+    expect(fetched).toBe(false);
+    expect(await readFile(join(root, FOLDER, POSTER), 'utf8')).toBe('mine');
+  });
+
+  it('never overwrites a file that appears while the image is being fetched', async () => {
+    const { root, plan, journal } = await withCompanions('copy', (r) => [poster(r)]);
+    const batch = await executePlan(plan, {
+      journal,
+      newId: counter('x'),
+      fetchImage: async () => {
+        await put(join(root, FOLDER, POSTER), 'mine');
+        return bytes;
+      },
+    });
+
+    expect(statuses(batch)).toEqual(['done', 'skipped']);
+    expect(await readFile(join(root, FOLDER, POSTER), 'utf8')).toBe('mine');
+    expect((await readdir(join(root, FOLDER))).sort()).toEqual([`${STEM}.mkv`, POSTER]);
+  });
+
+  it('downloads through the injected fetcher and journals the url as the source', async () => {
+    const urls: string[] = [];
+    const { root, plan, journal } = await withCompanions('copy', (r) => [poster(r)]);
+    const batch = await executePlan(plan, {
+      journal,
+      newId: counter('x'),
+      fetchImage: (url) => {
+        urls.push(url);
+        return okFetch(url);
+      },
+    });
+
+    expect(statuses(batch)).toEqual(['done', 'done']);
+    expect(urls).toEqual(['https://img.example/p.jpg']);
+    expect([...(await readFile(join(root, FOLDER, POSTER)))]).toEqual([1, 2, 3]);
+    expect(journal.entriesOf(batch.batchId)[1]).toMatchObject({
+      kind: 'downloaded',
+      source: 'https://img.example/p.jpg',
+    });
+  });
+
+  it('keeps the video and the item when a download fails, reporting the cause', async () => {
+    const { root, plan, journal } = await withCompanions('move', (r) => [poster(r), nfo(r)]);
+    const batch = await executePlan(plan, {
+      journal,
+      newId: counter('x'),
+      fetchImage: () =>
+        Promise.reject(new KinoshelfError('execute.download-failed', { url: 'u', status: 404 })),
+    });
+
+    expect(statuses(batch)).toEqual(['done', 'failed', 'done']);
+    expect(batch.items[0]?.results[1]?.error).toEqual({
+      code: 'execute.download-failed',
+      params: { url: 'u', status: 404 },
+    });
+    expect(await exists(join(root, FOLDER, `${STEM}.mkv`))).toBe(true);
+    expect(await exists(join(root, FOLDER, POSTER))).toBe(false);
+    expect(journal.entriesOf(batch.batchId).map((e) => e.kind)).toEqual(['transfer', 'generated']);
+  });
+
+  it('reports an unexpected fetch error as a failed download', async () => {
+    const { root, plan, journal } = await withCompanions('copy', (r) => [poster(r)]);
+    const batch = await executePlan(plan, {
+      journal,
+      fetchImage: () => Promise.reject(new Error('boom')),
+    });
+    expect(batch.items[0]?.results[1]).toMatchObject({
+      status: 'failed',
+      error: { code: 'execute.download-failed', params: { status: 'network' } },
+    });
+    expect(await exists(join(root, FOLDER, POSTER))).toBe(false);
+  });
+
+  it('refuses an image over 20 MB', async () => {
+    const { root, plan, journal } = await withCompanions('copy', (r) => [poster(r)]);
+    const batch = await executePlan(plan, {
+      journal,
+      fetchImage: () => Promise.resolve(new Uint8Array(20 * 1024 * 1024 + 1)),
+    });
+    expect(batch.items[0]?.results[1]?.error?.code).toBe('execute.download-too-large');
+    expect(await exists(join(root, FOLDER, POSTER))).toBe(false);
+  });
+
+  it('writes nothing next to a video that did not arrive', async () => {
+    const { root, plan, journal } = await withCompanions('copy', (r) => [nfo(r), poster(r)]);
+    // Appears after planning, so only the executor's own re-check can see it.
+    await put(join(root, FOLDER, `${STEM}.mkv`), 'mine');
+    let fetched = false;
+    const batch = await executePlan(plan, {
+      journal,
+      fetchImage: () => {
+        fetched = true;
+        return okFetch('');
+      },
+    });
+
+    expect(statuses(batch)).toEqual(['skipped', 'skipped', 'skipped']);
+    expect(batch.items[0]?.results[1]?.error?.code).toBe('main-not-done');
+    expect(fetched).toBe(false);
+    expect(await readdir(join(root, FOLDER))).toEqual([`${STEM}.mkv`]);
+  });
+
+  it('touches nothing and fetches nothing in a dry run', async () => {
+    const { root, plan, journal } = await withCompanions('copy', (r) => [nfo(r), poster(r)]);
+    let fetched = false;
+    const batch = await executePlan(plan, {
+      journal,
+      dryRun: true,
+      fetchImage: () => {
+        fetched = true;
+        return okFetch('');
+      },
+    });
+
+    expect(statuses(batch)).toEqual(['done', 'done', 'done']);
+    expect(fetched).toBe(false);
+    expect(await exists(join(root, FOLDER))).toBe(false);
+    expect(journal.lastBatchId()).toBeNull();
+  });
+
+  it('creates the missing directories and journals them for undo', async () => {
+    const { root, plan, journal } = await withCompanions('copy', (r) => [
+      { ...nfo(r), destination: join(r, FOLDER, 'extras', 'a.nfo') },
+    ]);
+    const batch = await run(plan, journal);
+    const entries = journal.entriesOf(batch.batchId);
+    expect(entries[1]?.createdDirectories).toEqual([join(root, FOLDER, 'extras')]);
   });
 });

@@ -3,9 +3,16 @@ import { stat } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { KinoshelfError } from '../errors.js';
 import type { ErrorInfo } from '../types/errors.js';
-import type { Journal } from '../types/journal.js';
-import type { OperationResult, TransferOperation } from '../types/operation.js';
+import type { Journal, JournalEntry } from '../types/journal.js';
+import type {
+  DownloadOperation,
+  Operation,
+  OperationResult,
+  TransferOperation,
+  WriteFileOperation,
+} from '../types/operation.js';
 import type { BatchResult, ItemResult, Plan, PlanItem } from '../types/plan.js';
+import { fetchImage as defaultFetchImage, MAX_IMAGE_BYTES, type ImageFetcher } from './download.js';
 import {
   copyAtomic,
   describeFsError,
@@ -14,6 +21,7 @@ import {
   hardlinkFile,
   moveFile,
   nearestExistingDevice,
+  writeAtomic,
 } from './fs-ops.js';
 
 export interface ExecuteOptions {
@@ -31,6 +39,8 @@ export interface ExecuteOptions {
    * except for the item in flight.
    */
   readonly onItem?: (result: ItemResult) => void;
+  /** Fetches the bytes of a `download` operation; defaults to the global `fetch` with guards. */
+  readonly fetchImage?: ImageFetcher;
   readonly newId?: () => string;
   readonly now?: () => Date;
 }
@@ -102,6 +112,93 @@ async function transfer(operation: TransferOperation, dryRun: boolean): Promise<
   }
 }
 
+/**
+ * Publishes a file Kinoshelf makes (NFO) or fetches (artwork) next to a video. The destination
+ * is checked before the bytes are produced and again at publication (`link` fails on EEXIST), so
+ * nothing the user has is ever replaced, and a failed fetch creates no directory.
+ */
+async function createFile(
+  operation: WriteFileOperation | DownloadOperation,
+  options: ExecuteOptions,
+): Promise<Outcome> {
+  const { destination } = operation;
+  const taken: Outcome = {
+    status: 'skipped',
+    error: { code: 'destination.exists', params: { path: destination } },
+  };
+  if (await exists(destination)) {
+    return taken;
+  }
+  if (options.dryRun) {
+    return { status: 'done' };
+  }
+
+  let data: string | Uint8Array;
+  if (operation.type === 'write-file') {
+    data = operation.content;
+  } else {
+    try {
+      data = await (options.fetchImage ?? defaultFetchImage)(operation.url);
+    } catch (error) {
+      return {
+        status: 'failed',
+        error:
+          error instanceof KinoshelfError
+            ? error.info
+            : {
+                code: 'execute.download-failed',
+                params: { url: operation.url, status: 'network' },
+              },
+      };
+    }
+    if (data.length > MAX_IMAGE_BYTES) {
+      return {
+        status: 'failed',
+        error: {
+          code: 'execute.download-too-large',
+          params: { url: operation.url, max: MAX_IMAGE_BYTES },
+        },
+      };
+    }
+  }
+
+  try {
+    const createdDirectories = await ensureDirectory(dirname(destination));
+    await writeAtomic(destination, data);
+    return { status: 'done', createdDirectories };
+  } catch (error) {
+    if (error instanceof KinoshelfError && error.info.code === 'destination.exists') {
+      return { status: 'skipped', error: error.info };
+    }
+    return { status: 'failed', error: describeFsError(error, destination).info };
+  }
+}
+
+function journalEntry(
+  operation: Operation,
+  base: { id: string; batchId: string; at: string; createdDirectories: readonly string[] },
+): JournalEntry {
+  switch (operation.type) {
+    case 'transfer':
+      return {
+        ...base,
+        kind: 'transfer',
+        source: operation.source,
+        destination: operation.destination,
+        mode: operation.mode,
+      };
+    case 'write-file':
+      return { ...base, kind: 'generated', source: '', destination: operation.destination };
+    case 'download':
+      return {
+        ...base,
+        kind: 'downloaded',
+        source: operation.url,
+        destination: operation.destination,
+      };
+  }
+}
+
 async function runItem(
   item: PlanItem,
   batchId: string,
@@ -115,32 +212,30 @@ async function runItem(
 
   for (const operation of item.operations) {
     let outcome: Outcome;
-    if (operation.type !== 'transfer') {
-      outcome = {
-        status: 'failed',
-        error: { code: 'operation.unsupported', params: { type: operation.type } },
-      };
-    } else if (operation.role === 'sidecar' && !mainDone) {
-      // A subtitle without its video would be an orphan.
+    const isMain = operation.type === 'transfer' && operation.role === 'main';
+    if (!isMain && !mainDone) {
+      // A subtitle, NFO or poster without its video would be an orphan.
       outcome = { status: 'skipped', error: { code: 'main-not-done' } };
-    } else {
+    } else if (operation.type === 'transfer') {
       outcome = await transfer(operation, dryRun);
+    } else {
+      // Failing or skipping here never touches `mainDone`: the video stays where it arrived.
+      outcome = await createFile(operation, options);
     }
 
-    if (operation.type === 'transfer' && operation.role === 'main' && outcome.status !== 'done') {
+    if (isMain && outcome.status !== 'done') {
       mainDone = false;
     }
     if (outcome.status === 'done') {
-      if (!dryRun && operation.type === 'transfer') {
-        options.journal.record({
-          id: newId(),
-          batchId,
-          source: operation.source,
-          destination: operation.destination,
-          mode: operation.mode,
-          at: now().toISOString(),
-          createdDirectories: outcome.createdDirectories ?? [],
-        });
+      if (!dryRun) {
+        options.journal.record(
+          journalEntry(operation, {
+            id: newId(),
+            batchId,
+            at: now().toISOString(),
+            createdDirectories: outcome.createdDirectories ?? [],
+          }),
+        );
       }
       results.push({ operation, status: 'done' });
     } else {
