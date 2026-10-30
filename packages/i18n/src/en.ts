@@ -96,6 +96,8 @@ export const en = {
   'apply.header': 'Executing batch {batch}',
   'result.skipped': 'skipped: {reason}',
   'result.failed': 'failed: {reason}',
+  'operation.write-file': 'metadata',
+  'operation.download': 'image',
   'batch.summary': 'Batch {batch}: {done} done, {skipped} skipped, {failed} failed.',
   'batch.undo-hint': 'To revert it: kinoshelf undo {batch} --apply',
 

@@ -155,7 +155,10 @@ export function renderBatch(batch: BatchResult, t: Translate): { lines: string[]
   for (const { results } of batch.items) {
     for (const { operation, status, error } of results) {
       totals[status] += 1;
-      const target = 'destination' in operation ? operation.destination : '';
+      const where = 'destination' in operation ? operation.destination : '';
+      // Only what is not the video or its sidecars needs saying: an NFO or an image.
+      const target =
+        operation.type === 'transfer' ? where : `[${t(`operation.${operation.type}`)}] ${where}`;
       if (status === 'done') {
         lines.push(`  ✓ ${target}`);
       } else if (error) {

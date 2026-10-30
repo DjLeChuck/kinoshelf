@@ -54,6 +54,11 @@ export {
   type DiscoveredFile,
 } from './pipeline/discover.js';
 export {
+  MetadataLoader,
+  type LoadedMetadata,
+  type MetadataLoaderOptions,
+} from './pipeline/metadata.js';
+export {
   analyze,
   type Analysis,
   type AnalysisEntry,

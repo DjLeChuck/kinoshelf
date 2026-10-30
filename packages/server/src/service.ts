@@ -3,6 +3,8 @@ import {
   aliasKey,
   createPlan,
   loadProfile,
+  MetadataLoader,
+  type LoadedMetadata,
   Matcher,
   executePlan,
   undoBatch,
@@ -205,12 +207,33 @@ export class Service {
     );
   }
 
-  private async planWith(entry: Entry, candidate: Candidate): Promise<PlanItem> {
+  /**
+   * Plans one file. The NFO and images the profile asks for need the provider's details, fetched
+   * here since the planner stays off the network. A failure surfaces like any provider error,
+   * unless `lenient`: a preview then still shows where the file goes, without its companions.
+   */
+  private async planWith(
+    entry: Entry,
+    candidate: Candidate,
+    options: { lenient?: boolean } = {},
+  ): Promise<PlanItem> {
     const settings = this.settingsOf(entry.jobId);
-    const plan = await createPlan([{ parsed: entry.parsed, candidate }], {
-      profile: await loadProfile(settings.profile),
+    const profile = await loadProfile(settings.profile);
+    const provider = this.provider();
+    const loader = new MetadataLoader({ provider, profile });
+    let metadata: LoadedMetadata = {};
+    try {
+      metadata = await loader.forCandidate(candidate, entry.parsed);
+    } catch (error) {
+      if (!options.lenient) {
+        throw error;
+      }
+    }
+    const plan = await createPlan([{ parsed: entry.parsed, candidate, ...metadata }], {
+      profile,
       destinationRoot: settings.destinationRoot,
       mode: settings.mode,
+      ...(loader.needsMetadata && { imageUrl: provider.imageUrl.bind(provider) }),
     });
     const item = plan.items[0];
     if (!item) {
@@ -222,7 +245,7 @@ export class Service {
   /** Where the file would go with this candidate, without recording anything. */
   async preview(entryId: string, candidate: Candidate): Promise<PlanItem> {
     const entry = this.pendingEntry(entryId);
-    return this.planWith(entry, candidate);
+    return this.planWith(entry, candidate, { lenient: true });
   }
 
   ignore(entryId: string): Entry {

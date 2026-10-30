@@ -8,8 +8,9 @@ import type { TransferMode } from '../types/operation.js';
 import type { Parser } from '../types/parser.js';
 import type { DestinationRoots, Plan, PlanItem } from '../types/plan.js';
 import type { Profile } from '../types/profile.js';
-import type { MetadataProvider } from '../types/provider.js';
+import type { Candidate, MetadataProvider } from '../types/provider.js';
 import type { DiscoveredFile } from './discover.js';
+import { MetadataLoader } from './metadata.js';
 
 /**
  * - `compliant`: already where the profile wants it.
@@ -79,7 +80,15 @@ export async function analyze(
   const matcher = new Matcher(options.provider, options.matching, options.aliases);
   let done = 0;
 
-  const matched = await mapLimited(files, options.concurrency ?? 4, async (file) => {
+  // Same language as matching: the provider's own default when none is given.
+  const loader = new MetadataLoader({
+    provider: options.provider,
+    profile: options.profile,
+    ...(options.matching?.language !== undefined && { language: options.matching.language }),
+  });
+  const concurrency = options.concurrency ?? 4;
+
+  const matched = await mapLimited(files, concurrency, async (file) => {
     // The parser reads context from the relative path; everything after that uses the
     // absolute one.
     const parsed: ParsedMedia = { ...options.parser.parse(file.parserPath), path: file.path };
@@ -88,16 +97,23 @@ export async function analyze(
     return { file, parsed, outcome };
   });
 
-  const inputs: PlanInput[] = [];
+  // Everything is fetched before anything is planned: a provider failure aborts the analysis
+  // instead of leaving a plan whose files lack their NFO.
+  const picks: { parsed: ParsedMedia; candidate: Candidate }[] = [];
   for (const entry of matched) {
     if (entry.outcome.status === 'matched') {
-      inputs.push({ parsed: entry.parsed, candidate: entry.outcome.best.candidate });
+      picks.push({ parsed: entry.parsed, candidate: entry.outcome.best.candidate });
     }
   }
+  const inputs = await mapLimited(picks, concurrency, async (pick): Promise<PlanInput> => ({
+    ...pick,
+    ...(await loader.forCandidate(pick.candidate, pick.parsed)),
+  }));
   const plan = await createPlan(inputs, {
     profile: options.profile,
     destinationRoot: options.destinationRoot,
     mode: options.mode,
+    ...(loader.needsMetadata && { imageUrl: options.provider.imageUrl.bind(options.provider) }),
     ...(options.sidecarExtensions && { sidecarExtensions: options.sidecarExtensions }),
   });
 

@@ -96,6 +96,8 @@ export const fr: Record<keyof typeof en, string> = {
   'apply.header': 'Exécution du lot {batch}',
   'result.skipped': 'ignoré : {reason}',
   'result.failed': 'échec : {reason}',
+  'operation.write-file': 'métadonnées',
+  'operation.download': 'visuel',
   'batch.summary': 'Lot {batch} : {done} faits, {skipped} ignorés, {failed} en échec.',
   'batch.undo-hint': 'Pour l’annuler : kinoshelf undo {batch} --apply',
 
