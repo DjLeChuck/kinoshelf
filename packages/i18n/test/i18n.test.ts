@@ -3,10 +3,8 @@ import { describe, expect, it } from 'vitest';
 import { API_ERROR_CODES, CLI_ERROR_CODES, SERVER_ERROR_CODES } from '../src/codes.js';
 import { en } from '../src/en.js';
 import { fr } from '../src/fr.js';
+import { placeholdersOf as placeholders } from '../src/format.js';
 import { createTranslator, describeError, detectLocale } from '../src/index.js';
-
-const placeholders = (text: string): string[] =>
-  [...text.matchAll(/\{(\w+)\}/g)].map((m) => m[1] ?? '').sort();
 
 describe('catalogs', () => {
   it('have exactly the same keys', () => {
@@ -19,6 +17,19 @@ describe('catalogs', () => {
       expect(placeholders(fr[key])).toEqual(placeholders(en[key]));
     },
   );
+
+  it('write every plural so that it can be read', () => {
+    for (const catalog of [en, fr]) {
+      for (const [key, text] of Object.entries(catalog)) {
+        if (text.includes('plural')) {
+          const names = Object.fromEntries(placeholders(text).map((name) => [name, 2]));
+          expect(
+            createTranslator(catalog === en ? 'en' : 'fr')(key as keyof typeof en, names),
+          ).not.toContain('plural');
+        }
+      }
+    }
+  });
 
   it('never leave a message empty or untranslated', () => {
     for (const key of Object.keys(en) as (keyof typeof en)[]) {

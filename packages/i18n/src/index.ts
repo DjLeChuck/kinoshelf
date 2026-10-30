@@ -1,9 +1,10 @@
 import { en } from './en.js';
+import { formatMessage, type Params } from './format.js';
 import { fr } from './fr.js';
 
 export type Locale = 'en' | 'fr';
 export type MessageKey = keyof typeof en;
-export type Params = Readonly<Record<string, string | number>>;
+export type { Params };
 export type Translate = (key: MessageKey, params?: Params) => string;
 
 const catalogs: Record<Locale, Record<MessageKey, string>> = { en, fr };
@@ -28,10 +29,7 @@ export function detectLocale(
 
 export function createTranslator(locale: Locale): Translate {
   const catalog = catalogs[locale];
-  return (key, params = {}) =>
-    catalog[key].replace(/\{(\w+)\}/g, (placeholder, name: string) =>
-      name in params ? String(params[name]) : placeholder,
-    );
+  return (key, params = {}) => formatMessage(catalog[key], params, locale);
 }
 
 /** Message for an error code and its parameters, from the core or from the CLI. */
