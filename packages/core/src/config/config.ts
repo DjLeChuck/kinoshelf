@@ -33,14 +33,39 @@ const webhookSchema = z.strictObject({
 });
 
 const watchSchema = z.strictObject({
-  /** Folders that only ever hold finished downloads (the client moves them there when done). */
-  folders: z.array(z.string().min(1)).min(1),
+  /**
+   * Legacy: the folders to watch are now the libraries with `watch: true`. Still read, so a file
+   * written by an older version loads; the server moves them into `libraries` at startup.
+   */
+  folders: z.array(z.string().min(1)).min(1).optional(),
   /** Seconds a file must stay unchanged before it is submitted: a copy in progress keeps moving. */
   settleSeconds: z.number().int().min(0).optional(),
   /** 0 (default) listens for changes; above, scans every N seconds (network shares send none). */
   pollSeconds: z.number().int().min(0).optional(),
   /** Transfer what is matched with confidence, instead of leaving everything to validation. */
   apply: z.boolean().optional(),
+});
+
+/** Stable, URL-safe: it names a library in the API and in the jobs it started. */
+export const LIBRARY_ID_PATTERN = /^[a-z0-9][a-z0-9-]*$/;
+
+const destinationSchema = z.union([
+  z.string().min(1),
+  z.strictObject({ movies: z.string().min(1), series: z.string().min(1) }),
+]);
+
+const librarySchema = z.strictObject({
+  id: z.string().regex(LIBRARY_ID_PATTERN),
+  name: z.string().min(1),
+  /** What a scan reads. The destination itself for a library organized in place. */
+  source: z.string().min(1),
+  /** Each of these falls back to the top-level setting of the same name. */
+  destination: destinationSchema.optional(),
+  profile: z.string().min(1).optional(),
+  mode: z.enum(['copy', 'hardlink', 'move']).optional(),
+  threshold: z.number().min(0).max(100).optional(),
+  /** Submit what lands in `source`, once complete (a folder that only holds finished downloads). */
+  watch: z.boolean().optional(),
 });
 
 const configSchema = z.strictObject({
@@ -73,16 +98,19 @@ const configSchema = z.strictObject({
   /** Server: days after which a finished job, all its files settled, is forgotten. 0 keeps all. */
   retentionDays: z.number().int().min(0).optional(),
   /** One root for everything, or one per kind (Plex asks for separate libraries). */
-  destination: z
-    .union([
-      z.string().min(1),
-      z.strictObject({ movies: z.string().min(1), series: z.string().min(1) }),
-    ])
+  destination: destinationSchema.optional(),
+  /** Server: named source/destination pairs, each with its own profile, mode and threshold. */
+  libraries: z
+    .array(librarySchema)
+    .refine((all) => new Set(all.map(({ id }) => id)).size === all.length, {
+      message: 'library ids must be unique',
+    })
     .optional(),
 });
 
 export type Config = z.infer<typeof configSchema>;
 export type WatchConfig = NonNullable<Config['watch']>;
+export type LibraryConfig = NonNullable<Config['libraries']>[number];
 export type NotifyConfig = NonNullable<Config['notify']>;
 
 export const DATABASE_FILE = 'kinoshelf.sqlite';

@@ -74,9 +74,17 @@ export {
   loadConfig,
   type Config,
   type ConfigEdit,
+  type LibraryConfig,
   type NotifyConfig,
   type WatchConfig,
 } from './config/config.js';
+export { LIBRARY_ID_PATTERN } from './config/config.js';
+export {
+  legacyWatchMigration,
+  libraryId,
+  libraryOverrides,
+  watchedFolders,
+} from './config/libraries.js';
 export {
   resolveSettings,
   type Settings,
