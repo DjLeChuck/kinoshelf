@@ -7,8 +7,9 @@ renames them for a media player (Plex, Jellyfin) and writes their metadata (NFO,
 
 v0.1 (core, CLI and matching corpus) and v0.2 (REST server, notifications, multi-arch Docker image)
 are done, and so is getting downloads in (see "Getting downloads in" below). The web UI (v0.3) has
-its validation queue, history and settings, with a server-side path picker; the "Movies & series"
-and "Libraries & scan" pages are still "coming soon". Validating a file in the queue remembers its
+a home (a welcome for the first launch, `GET`/`PATCH /api/onboarding`, server migration 009), its
+validation queue (at `/queue`), history and settings, with a server-side path picker; the "Movies &
+series" and "Libraries & scan" pages are still "coming soon". Validating a file in the queue remembers its
 title (aliases). Next is v1.0: the NFO and artwork writers, and the `jellyfin` and `plex-nfo`
 profiles.
 

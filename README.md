@@ -40,6 +40,8 @@ locale).
 `kinoshelf-server` is a REST API over the same core as the CLI: a post-download script makes one
 HTTP call instead of running a tool. The API is published as OpenAPI at `/api/openapi.json`;
 `GET /health` is public, everything under `/api` needs the API key as `Authorization: Bearer <key>`.
+On a first launch with no key, the web UI's sign-in page can create it for you (shown once, then you
+sign in with it); the commands below do the same without a browser.
 
 ```sh
 kinoshelf-server api-key create        # prints a key once (it replaces the previous one)
@@ -141,7 +143,11 @@ The server also serves a web UI on the same port (`http://localhost:8484`), in F
 (follows your browser, switchable in the header), with a dark and a light theme. Sign in with the
 API key: the browser keeps a session cookie for 7 days, so the key itself is not stored.
 
-- **Queue.** The files Kinoshelf could not place with confidence, with their TMDB candidates and
+- **Home** (`/`). On a new install, a four-step welcome (TMDB key, Plex or Jellyfin, destination
+  folder, first files), each step ticking itself once the configuration says so; the server
+  remembers what you skipped. Afterwards, what needs you (the queue, a failed batch), the latest
+  batches and which services are configured.
+- **Queue** (`/queue`). The files Kinoshelf could not place with confidence, with their TMDB candidates and
   score, a manual search, and the destination path a choice would give. **Validate** transfers the
   file, **Ignore** sets it aside. Nothing is moved until you validate, and an existing file is never
   overwritten.
