@@ -56,6 +56,15 @@ describe('first-launch setup', () => {
     expect(body.completed).toBe(true);
   });
 
+  it('completes even when the only job failed: the home page shows it', async () => {
+    const h = await harness();
+    await h.request('POST', '/api/jobs', { path: '/no/such/path' });
+    await h.app.jobs.idle();
+    const body = (await h.request('GET', '/api/onboarding')).json<Body>();
+    expect(stateOf(body, 'source')).toBe('done');
+    expect(body.completed).toBe(true);
+  });
+
   it('needs a session', async () => {
     const h = await harness();
     const response = await h.app.inject({ method: 'GET', url: '/api/onboarding' });
