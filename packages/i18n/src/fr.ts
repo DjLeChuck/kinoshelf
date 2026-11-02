@@ -201,6 +201,9 @@ export const fr: Record<keyof typeof en, string> = {
   'error.fs.not-a-directory': '{path} est un fichier, pas un dossier.',
   'error.fs.not-absolute': 'Un chemin doit être absolu (il commence par /).',
   'error.fs.not-found': 'Aucun dossier à {path}.',
+  'error.events.too-many':
+    'Trop de pages suivent le serveur en ce moment. Fermez un onglet et réessayez.',
+  'error.fs.system-folder': '{path} est un dossier système : Kinoshelf ne l’analyse pas.',
   'error.fs.unreadable': 'Kinoshelf n’a pas le droit de lire {path}.',
   'error.batch.not-found': 'Ce lot n’existe pas.',
   'error.execution.not-found': 'Ce transfert n’existe pas.',

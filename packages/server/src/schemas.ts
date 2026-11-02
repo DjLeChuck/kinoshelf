@@ -437,6 +437,12 @@ export const activitySchema = {
   },
 } as const;
 
+/**
+ * The most files or items one request may name: well under SQLite's limit on query parameters,
+ * well over what a page offers to pick.
+ */
+export const MAX_SELECTION = 5000;
+
 /** Where a notification goes: plain web addresses only, never `file:`, `ftp:` or the like. */
 const httpUrl = { type: 'string', format: 'uri', pattern: '^https?://' } as const;
 

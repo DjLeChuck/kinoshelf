@@ -13,6 +13,7 @@ import {
 } from '@kinoshelf/core';
 import type { FastifyInstance } from 'fastify';
 import { ApiError } from './api-error.js';
+import { isSystemPath } from './system-paths.js';
 import type { SeriesFilesStore } from './series-files.js';
 import { compare, missingOf, type Completeness, type EpisodeReport } from './completeness.js';
 import type { Execution } from './executions.js';
@@ -46,6 +47,7 @@ import {
   seasonSchema,
   showSchema,
   type Paging,
+  MAX_SELECTION,
 } from './schemas.js';
 import type { ConfigStore } from './settings.js';
 
@@ -104,6 +106,9 @@ interface PatchBody {
 
 /** A path the library names must be a folder that exists now, not a typo found at the first scan. */
 async function requireFolder(path: string): Promise<void> {
+  if (isSystemPath(path)) {
+    throw new ApiError(422, 'fs.system-folder', { path });
+  }
   try {
     if (!(await stat(path)).isDirectory()) {
       throw new ApiError(422, 'fs.not-a-directory', { path });
@@ -772,7 +777,12 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
           required: ['items'],
           additionalProperties: false,
           properties: {
-            items: { type: 'array', minItems: 1, items: { type: 'string' } },
+            items: {
+              type: 'array',
+              minItems: 1,
+              maxItems: MAX_SELECTION,
+              items: { type: 'string', maxLength: 64 },
+            },
             dryRun: { type: 'boolean' },
           },
         },

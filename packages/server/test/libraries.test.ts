@@ -177,6 +177,19 @@ describe('libraries', () => {
     expect(await total()).toBe(0);
   });
 
+  it('refuses a system folder as a source', async () => {
+    const h = await served();
+    const created = await h.request('POST', '/api/libraries', {
+      name: 'Kernel',
+      source: '/sys',
+      type: 'movie',
+    });
+    expect(created.statusCode).toBe(422);
+    expect(created.json()).toEqual({
+      error: { code: 'fs.system-folder', params: { path: '/sys' } },
+    });
+  });
+
   it('refuses what cannot work, with a code, and writes nothing', async () => {
     const h = await served();
     const source = await makeDir();

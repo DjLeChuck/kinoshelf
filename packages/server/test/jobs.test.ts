@@ -27,6 +27,30 @@ interface EntryBody {
 }
 
 describe('POST /api/jobs', () => {
+  it('refuses the root of the disk and the kernel folders', async () => {
+    const h = await harness();
+    for (const path of ['/', '/proc', '/proc/self/fd', '/sys/class', '/dev/zero', '/x/../proc']) {
+      const refused = await h.request('POST', '/api/jobs', { path });
+      expect(refused.statusCode).toBe(422);
+      expect(refused.json()).toEqual({ error: { code: 'fs.system-folder', params: { path } } });
+    }
+    // A folder merely named like one is not one.
+    expect((await h.request('POST', '/api/jobs', { path: '/procedures' })).statusCode).toBe(202);
+  });
+
+  it('refuses a selection longer than any page offers', async () => {
+    const h = await harness();
+    const entries = Array.from({ length: 5001 }, (_, n) => `e${String(n)}`);
+    const refused = await h.request(
+      'POST',
+      '/api/plans/00000000-0000-4000-8000-000000000000/execute',
+      {
+        entries,
+      },
+    );
+    expect(refused.statusCode).toBe(400);
+  });
+
   it('queues a job and analyzes it without touching the disk', async () => {
     const h = await harness();
     const source = await makeDir();

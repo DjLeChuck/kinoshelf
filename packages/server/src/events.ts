@@ -1,4 +1,5 @@
 import type { FastifyInstance } from 'fastify';
+import { ApiError } from './api-error.js';
 
 /**
  * What changed, not how: a client refetches the view it shows. Payloads would duplicate the REST
@@ -32,6 +33,12 @@ export class EventBus {
 const HEARTBEAT_MS = 20_000;
 
 /**
+ * Open streams at most: far more than the tabs of a household, few enough that a script opening
+ * streams in a loop cannot exhaust the server's sockets and memory.
+ */
+const MAX_STREAMS = 64;
+
+/**
  * `GET /api/events`: Server-Sent Events. The browser reconnects by itself, and refetches on each
  * `open`, so nothing missed while disconnected is lost.
  */
@@ -51,10 +58,17 @@ export function registerEventRoutes(
           'and carries no data: refetch the matching list. `progress` is only where a running analysis ' +
           'is (`GET /api/jobs/{id}`), at most twice a second; `jobs` is a job queued, started or ended. ' +
           'A `ready` event opens the stream.',
-        response: { 200: { type: 'string', description: 'text/event-stream' } },
+        response: {
+          200: { type: 'string', description: 'text/event-stream' },
+          503: { description: '`events.too-many` while 64 streams are open' },
+        },
       },
     },
     (request, reply) => {
+      if (open.size >= MAX_STREAMS) {
+        // The web asks again later on its own (see `Stream`).
+        throw new ApiError(503, 'events.too-many');
+      }
       void reply.hijack();
       const { raw } = reply;
       raw.writeHead(200, {

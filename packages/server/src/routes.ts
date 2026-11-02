@@ -2,6 +2,7 @@ import { basename } from 'node:path';
 import type { Candidate, MovieCandidate, PlanItem, SeriesCandidate } from '@kinoshelf/core';
 import type { FastifyInstance } from 'fastify';
 import { ApiError } from './api-error.js';
+import { isSystemPath } from './system-paths.js';
 import { workKindOf, type Entry, type EntryStore } from './entries.js';
 import { resolutionOf } from './library-items.js';
 import type { EventBus } from './events.js';
@@ -28,6 +29,7 @@ import {
   previewSchema,
   undoSchema,
   type Paging,
+  MAX_SELECTION,
 } from './schemas.js';
 import type { Notifier } from './notify/notifier.js';
 import type { Service } from './service.js';
@@ -184,14 +186,28 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
           required: ['path'],
           additionalProperties: false,
           properties: {
-            path: { type: 'string', pattern: '^/', description: 'Absolute path' },
+            path: {
+              type: 'string',
+              pattern: '^/',
+              maxLength: 4096,
+              description: 'Absolute path; not `/`, `/proc`, `/sys` nor `/dev` (422)',
+            },
             apply: { type: 'boolean', default: false },
           },
         },
-        response: { 202: jobSchema, 400: errorSchema, 401: errorSchema, 503: errorSchema },
+        response: {
+          202: jobSchema,
+          400: errorSchema,
+          401: errorSchema,
+          422: errorSchema,
+          503: errorSchema,
+        },
       },
     },
     (request, reply) => {
+      if (isSystemPath(request.body.path)) {
+        throw new ApiError(422, 'fs.system-folder', { path: request.body.path });
+      }
       const job = jobs.create(request.body.path, request.body.apply ?? false);
       events.emit('jobs');
       runner.kick();
@@ -458,7 +474,12 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
           ...dryRunBody,
           properties: {
             ...dryRunBody.properties,
-            entries: { type: 'array', items: { type: 'string' }, description: 'Only these files' },
+            entries: {
+              type: 'array',
+              maxItems: MAX_SELECTION,
+              items: { type: 'string', maxLength: 64 },
+              description: 'Only these files',
+            },
           },
         },
         response: {

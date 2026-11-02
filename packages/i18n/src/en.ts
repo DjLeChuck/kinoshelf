@@ -194,6 +194,8 @@ export const en = {
   'error.fs.not-a-directory': '{path} is a file, not a folder.',
   'error.fs.not-absolute': 'A path must be absolute (it starts with /).',
   'error.fs.not-found': 'No folder at {path}.',
+  'error.events.too-many': 'Too many pages follow the server right now. Close a tab and retry.',
+  'error.fs.system-folder': '{path} is a system folder: Kinoshelf does not analyze it.',
   'error.fs.unreadable': 'Kinoshelf is not allowed to read {path}.',
   'error.batch.not-found': 'This batch does not exist.',
   'error.execution.not-found': 'This transfer does not exist.',

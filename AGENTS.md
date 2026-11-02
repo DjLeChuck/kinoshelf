@@ -200,7 +200,8 @@ one of two kinds, told apart by which of `type` / `into` it has (exactly one):
   the one of its destination (until the per-library destination is built, the global one).
 
 `threshold` and `watch` are allowed on both. Ids are generated from the name (`libraryId`) and never
-change; two libraries cannot share a source (`library.source-taken`); the config refuses an `into`
+change; two libraries cannot share a source (`library.source-taken`); neither a source nor a job
+path may be `/`, `/proc`, `/sys` or `/dev` (`fs.system-folder`); the config refuses an `into`
 that names a missing library or one of the wrong type (`library.invalid` in the API), and the API
 refuses to delete a library an arrival folder points at (`library.in-use`). There is no global
 `destination`: `resolveSettings` sends a kind to the first library of its type unless a flag or

@@ -93,6 +93,29 @@ describe('GET /api/events', () => {
     expect(text.match(/event: jobs\n/g)?.length).toBeLessThanOrEqual(3);
   });
 
+  it('refuses a stream past 64 open ones, and takes one again once one closes', async () => {
+    const { base, auth } = await listening();
+    const open = await Promise.all(
+      Array.from({ length: 64 }, () => fetch(`${base}/api/events`, { headers: auth })),
+    );
+    expect(open.every((response) => response.status === 200)).toBe(true);
+    const refused = await fetch(`${base}/api/events`, { headers: auth });
+    expect(refused.status).toBe(503);
+    expect(await refused.json()).toEqual({ error: { code: 'events.too-many' } });
+
+    await open[0]?.body?.cancel();
+    await expect
+      .poll(async () => {
+        const again = await fetch(`${base}/api/events`, { headers: auth });
+        await again.body?.cancel();
+        return again.status;
+      })
+      .toBe(200);
+    await Promise.all(
+      open.slice(1).map((response) => response.body?.cancel() ?? Promise.resolve()),
+    );
+  });
+
   it('asks proxies not to buffer the stream', async () => {
     const { base, auth } = await listening();
     const response = await fetch(`${base}/api/events`, { headers: auth });
