@@ -103,4 +103,25 @@ describe('validating a release', () => {
     expect(items.find((i) => i.file === 'Quux.S01E01.mkv')).toMatchObject({ detached: true });
     expect(new Set(items.map((i) => i.release)).size).toBe(1);
   });
+
+  it('pages by release: a release is never cut between two pages', async () => {
+    const h = await harness();
+    await scan(h);
+    const loose = await makeDir();
+    await put(join(loose, 'Mystery.Home.Video.mkv'));
+    await h.request('POST', '/api/jobs', { path: join(loose, 'Mystery.Home.Video.mkv') });
+    await h.app.jobs.idle();
+
+    const first = (await h.request('GET', '/api/arrivals?limit=1')).json<{
+      total: number;
+      items: { file: string }[];
+    }>();
+    // The folder of four files fills the first page whole.
+    expect(first.items).toHaveLength(4);
+    expect(first.total).toBe(5);
+    const second = (await h.request('GET', '/api/arrivals?limit=1&offset=1')).json<{
+      items: { file: string }[];
+    }>();
+    expect(second.items.map((i) => i.file)).toEqual(['Mystery.Home.Video.mkv']);
+  });
 });

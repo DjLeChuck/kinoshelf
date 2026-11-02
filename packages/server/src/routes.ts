@@ -292,7 +292,7 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
           'alone: `review` (candidates to choose from, a conflict, a failed transfer) and ' +
           '`unrecognized`. Each file says where it would go (`destination`, a remembered work ' +
           'winning over the default) and the libraries it could go to instead. `total` counts ' +
-          'every file of the filter, for the badge of the navigation.',
+          'every file of the filter, for the badge of the navigation; `limit` and `offset` count releases.',
         querystring: {
           type: 'object',
           properties: { state: { type: 'string', enum: ['review', 'unrecognized'] }, ...paging },

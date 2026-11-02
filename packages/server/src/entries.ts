@@ -227,12 +227,25 @@ export class EntryStore {
           `SELECT COUNT(*) AS total FROM job_entries WHERE ${where}`,
         )
         .get(...options.arrivalIds)?.total ?? 0;
-    const entries = this.database
-      .prepare<(string | number)[], EntryRow>(
-        `SELECT ${COLUMNS} FROM job_entries WHERE ${where} ORDER BY seq LIMIT ? OFFSET ?`,
+    // The page counts releases, not files: a release is never cut between two pages.
+    const group = "job_id || '|' || COALESCE(release, path)";
+    const keys = this.database
+      .prepare<(string | number)[], { key: string }>(
+        `SELECT ${group} AS key FROM job_entries WHERE ${where}
+         GROUP BY key ORDER BY MIN(seq) LIMIT ? OFFSET ?`,
       )
       .all(...options.arrivalIds, options.limit, options.offset)
-      .map(toEntry);
+      .map(({ key }) => key);
+    const entries =
+      keys.length === 0
+        ? []
+        : this.database
+            .prepare<string[], EntryRow>(
+              `SELECT ${COLUMNS} FROM job_entries
+               WHERE ${where} AND ${group} IN (${keys.map(() => '?').join(', ')}) ORDER BY seq`,
+            )
+            .all(...options.arrivalIds, ...keys)
+            .map(toEntry);
     return { total, entries };
   }
 

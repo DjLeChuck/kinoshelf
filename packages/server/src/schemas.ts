@@ -729,7 +729,10 @@ export const arrivalsSchema = {
   type: 'object',
   required: ['total', 'sources', 'items'],
   properties: {
-    total: { type: 'integer', description: 'Files of this filter, for paging and the badge.' },
+    total: {
+      type: 'integer',
+      description: 'Files of this filter, for the badge. Paging counts releases.',
+    },
     sources: {
       type: 'array',
       items: {
