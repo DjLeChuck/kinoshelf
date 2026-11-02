@@ -80,6 +80,13 @@ describe('parseTemplate / renderTemplate', () => {
     expect(render('{title}', { title: 'Mr. Robot.' })).toEqual(['Mr. Robot']);
   });
 
+  it('never starts a segment with a dot, which would hide it', () => {
+    expect(render('{title} ({year})', { title: '...And Justice for All', year: 1979 })).toEqual([
+      'And Justice for All (1979)',
+    ]);
+    expect(render('{title}/x', { title: '.hack//SIGN' })).toEqual(['hackSIGN', 'x']);
+  });
+
   it('truncates on a code point boundary, leaving room for the extension', () => {
     const ctx: RenderContext = {
       ...context,

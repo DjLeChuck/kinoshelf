@@ -1,11 +1,13 @@
 import { chmod, readdir, readFile, stat } from 'node:fs/promises';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
   copyAtomic,
   ensureDirectory,
   hardlinkFile,
+  isTemporaryName,
   moveFile,
+  temporaryPathFor,
   writeAtomic,
 } from '../src/execution/fs-ops.js';
 import { KinoshelfError } from '../src/index.js';
@@ -76,6 +78,25 @@ describe('copyAtomic', () => {
     await copyAtomic(source, join(dir, 'b.mkv'));
     expect((await readdir(dir)).filter((n) => n.startsWith('.'))).toEqual([]);
     expect((await stat(join(dir, 'b.mkv'))).size).toBe(1);
+  });
+});
+
+describe('names near the 255-byte limit', () => {
+  // 83 three-byte characters plus `.mkv`: 253 bytes, legal, but 277 with the temporary suffix.
+  const LONG = `${'日'.repeat(83)}.mkv`;
+
+  it('copies and writes them, through a temporary name that fits', async () => {
+    const dir = await makeDir();
+    const source = await put(join(dir, 'a.mkv'), 'v');
+    await copyAtomic(source, join(dir, LONG));
+    await writeAtomic(join(dir, `${'日'.repeat(83)}.nfo`), '<x/>');
+    expect((await readdir(dir)).sort()).toEqual([`${'日'.repeat(83)}.nfo`, LONG, 'a.mkv'].sort());
+  });
+
+  it('keeps the temporary name recognizable for the cleanup', () => {
+    const name = basename(temporaryPathFor(join('/lib', LONG)));
+    expect(Buffer.byteLength(name)).toBeLessThanOrEqual(255);
+    expect(isTemporaryName(name)).toBe(true);
   });
 });
 

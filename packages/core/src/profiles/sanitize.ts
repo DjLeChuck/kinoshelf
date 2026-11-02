@@ -11,13 +11,14 @@ export function sanitizeValue(value: string, rules: FilesystemRules): string {
 }
 
 /**
- * Final pass on a rendered path segment: Windows-style filesystems reject trailing dots and
- * spaces, and every filesystem limits the segment length in bytes.
- * `reserveBytes` leaves room for what the caller appends afterwards (the extension).
+ * Final pass on a rendered path segment: a leading dot would hide it (`...And Justice for All`
+ * would vanish from the next scan, which skips hidden entries, and from most players), Windows-style
+ * filesystems reject trailing dots and spaces, and every filesystem limits the segment length in
+ * bytes. `reserveBytes` leaves room for what the caller appends afterwards (the extension).
  */
 export function finalizeSegment(segment: string, rules: FilesystemRules, reserveBytes = 0): string {
   const limit = Math.max(1, rules.maxSegmentBytes - reserveBytes);
-  let result = segment;
+  let result = segment.replace(/^[.\s]+/, '');
 
   // Truncate on code point boundaries so multi-byte characters are never cut in half.
   while (Buffer.byteLength(result, 'utf8') > limit) {

@@ -45,6 +45,13 @@ const blocked = (conflict: Conflict, base: Omit<PlanItem, 'status' | 'conflicts'
   conflicts: [conflict],
 });
 
+/**
+ * Room left after the stem for what follows it: the video's extension, and also a sidecar's
+ * suffix (`.en.forced.srt`) or `.nfo`, which share the stem. A stem cut to fit the extension
+ * alone would push those past the filesystem's limit, or cut `.nfo` to `.nf`.
+ */
+const STEM_SUFFIX_RESERVE_BYTES = 32;
+
 /** Target path segments (folders then file stem) for a matched file. */
 function targetSegments(
   input: PlanInput,
@@ -131,7 +138,11 @@ async function planItem(input: PlanInput, options: PlannerOptions, id: string): 
   const extension = input.parsed.extension ? `.${input.parsed.extension}` : '';
   let target: { folders: string[]; stem: string; workDepth: number };
   try {
-    target = targetSegments(input, profile, Buffer.byteLength(extension));
+    target = targetSegments(
+      input,
+      profile,
+      Math.max(Buffer.byteLength(extension), STEM_SUFFIX_RESERVE_BYTES),
+    );
   } catch (error) {
     if (error instanceof KinoshelfError) {
       return unresolvable(error.info);

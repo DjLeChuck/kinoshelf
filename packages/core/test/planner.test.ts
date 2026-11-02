@@ -52,6 +52,28 @@ const destinationOf = (item: PlanItem | undefined): string | undefined => {
 };
 
 describe('createPlan: names', () => {
+  it('leaves room under the byte limit for sidecar suffixes on a very long title', async () => {
+    const [src, lib] = [await makeDir(), await makeDir()];
+    const source = await put(join(src, 'Long.2021.mkv'), 'v');
+    await put(join(src, 'Long.2021.en.forced.srt'), 's');
+    const title = '劇場版'.repeat(30); // 270 bytes, past the limit on its own
+
+    const result = await plan(
+      [{ parsed: parsedMovie(source), candidate: movie(1, title, 2021) }],
+      lib,
+    );
+    const names = (result.items[0]?.operations ?? []).map((o) =>
+      'destination' in o ? (o.destination.split('/').pop() ?? '') : '',
+    );
+    expect(names.some((n) => n.endsWith('.en.forced.srt'))).toBe(true);
+    for (const name of names) {
+      expect(Buffer.byteLength(name)).toBeLessThanOrEqual(255);
+    }
+
+    const batch = await executePlan(result, { journal: new MemoryJournal() });
+    expect(batch.items[0]?.results.map((r) => r.status)).toEqual(['done', 'done']);
+  });
+
   it('plans a movie into its own folder, with sidecars following', async () => {
     const [src, lib] = [await makeDir(), await makeDir()];
     const source = await put(join(src, 'Dune.2021.2160p.mkv'));
@@ -321,7 +343,7 @@ describe('createPlan: names that cannot be built', () => {
     expect(item?.conflicts[0]?.detail?.code).toBe('plan.episode-numbers-missing');
   });
 
-  it('refuses a title that would escape the destination', async () => {
+  it('refuses a title that would escape the destination (dots only: nothing left of it)', async () => {
     const [src, lib] = [await makeDir(), await makeDir()];
     const source = await put(join(src, 'a.mkv'));
     const posix = parseProfile(`
@@ -341,7 +363,8 @@ filesystem: { forbidden: posix, replacement: '', maxSegmentBytes: 255 }
         profile: posix,
       })
     ).items;
-    expect(item?.conflicts[0]?.detail?.code).toBe('plan.unsafe-segment');
+    expect(item?.status).toBe('conflict');
+    expect(item?.conflicts[0]?.detail?.code).toBe('template.empty-segment');
   });
 });
 

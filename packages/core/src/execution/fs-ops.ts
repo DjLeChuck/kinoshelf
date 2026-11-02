@@ -101,16 +101,22 @@ async function publish(from: string, to: string): Promise<'linked' | 'renamed'> 
   return 'renamed';
 }
 
+const MAX_NAME_BYTES = 255;
+const TEMPORARY_OVERHEAD_BYTES = '.'.length + '.12345678'.length + '.kinoshelf-tmp'.length;
+
 /**
  * The hidden sibling a copy is written to before being published. The name is the only thing
  * telling these files from anyone else's, so the cleanup relies on `isTemporaryName` and the two
  * are kept side by side.
  */
 export function temporaryPathFor(destination: string): string {
-  return join(
-    dirname(destination),
-    `.${basename(destination)}.${randomUUID().slice(0, 8)}.kinoshelf-tmp`,
-  );
+  // The name gains 24 bytes: a final name near the 255-byte limit is cut (on a code point) so
+  // the temporary one fits too.
+  let name = basename(destination);
+  while (Buffer.byteLength(name) > MAX_NAME_BYTES - TEMPORARY_OVERHEAD_BYTES) {
+    name = Array.from(name).slice(0, -1).join('');
+  }
+  return join(dirname(destination), `.${name}.${randomUUID().slice(0, 8)}.kinoshelf-tmp`);
 }
 
 /** True for a file name made by `temporaryPathFor`: dot, any name, 8 hex digits, our suffix. */
