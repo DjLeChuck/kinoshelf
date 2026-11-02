@@ -378,6 +378,10 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
       items,
       probes,
       completeness,
+      batch: {
+        dryRun: (jobId, entryIds) => service.dryRun(jobId, entryIds),
+        enqueue: (jobId, entryIds) => service.enqueue(jobId, entryIds),
+      },
       details: (kind, id) => service.details(kind, id),
       events,
       runner,

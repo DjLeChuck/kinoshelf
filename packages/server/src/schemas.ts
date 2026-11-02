@@ -989,3 +989,26 @@ export const libraryPatchSchema = {
     watch: libraryFields.watch,
   },
 } as const;
+
+/** A dry run of a selection: the report of `executionReportSchema`, and what could not be planned. */
+export const selectionReportSchema = {
+  ...executionReportSchema,
+  required: [...executionReportSchema.required, 'skipped'],
+  properties: {
+    ...executionReportSchema.properties,
+    skipped: {
+      type: 'array',
+      items: { type: 'string' },
+      description: 'Items of the selection with nothing to do (already done, or not scanned).',
+    },
+  },
+} as const;
+
+export const selectionRunSchema = {
+  type: 'object',
+  required: ['executions', 'skipped'],
+  properties: {
+    executions: { type: 'array', items: executionSchema },
+    skipped: selectionReportSchema.properties.skipped,
+  },
+} as const;

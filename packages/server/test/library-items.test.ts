@@ -1,7 +1,7 @@
 import { rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { LibraryItemStore } from '../src/library-items.js';
+import { LibraryItemStore, itemId } from '../src/library-items.js';
 import { cleanup, harness, makeDir, put } from './harness.js';
 
 afterEach(cleanup);
@@ -346,5 +346,76 @@ describe('probing after a scan', () => {
     h.app.probes.rebuild(['films']);
     await h.app.probes.idle();
     expect(store.unprobed('films')).toEqual([]);
+  });
+});
+
+describe('POST /api/libraries/:id/execute', () => {
+  const dryRun = (h: Awaited<ReturnType<typeof scanned>>['h'], items: string[]) =>
+    h.request('POST', '/api/libraries/films/execute', { items, dryRun: true });
+
+  it('previews a selection, then renames and completes it under one batch', async () => {
+    const { h, store, root, dune, alien } = await scanned();
+    const moved = join(root, 'Dune (2021)', 'Dune (2021).mkv');
+
+    const preview = await dryRun(h, [itemId(dune), itemId(alien)]);
+    expect(preview.statusCode).toBe(200);
+    const report = preview.json<{
+      items: { entryId: string; results: { type: string; destination: string }[] }[];
+      skipped: string[];
+    }>();
+    expect(report.skipped).toEqual([]);
+    expect(report.items.flatMap((i) => i.results.map((r) => r.type)).sort()).toEqual([
+      'transfer',
+      'write-file',
+      'write-file',
+    ]);
+    // Nothing was written.
+    expect(store.get('films', dune)?.state).toBe('rename');
+
+    const run = await h.request('POST', '/api/libraries/films/execute', {
+      items: [itemId(dune), itemId(alien)],
+    });
+    expect(run.statusCode).toBe(202);
+    expect(run.json<{ executions: unknown[] }>().executions).toHaveLength(1);
+    await h.app.jobs.idle();
+    expect(store.get('films', moved)).toMatchObject({ state: 'ok', nfo: true });
+    expect(store.get('films', alien)).toMatchObject({ state: 'ok', nfo: true });
+
+    // One batch, in the history.
+    const batches = (await h.request('GET', '/api/batches')).json<unknown[]>();
+    expect(batches).toHaveLength(1);
+  });
+
+  it('completes an item alone, and leaves the others as they were', async () => {
+    const { h, store, dune, alien } = await scanned();
+    const run = await h.request('POST', '/api/libraries/films/execute', { items: [itemId(alien)] });
+    expect(run.statusCode).toBe(202);
+    await h.app.jobs.idle();
+    expect(store.get('films', alien)).toMatchObject({ state: 'ok', nfo: true });
+    expect(store.get('films', dune)?.state).toBe('rename');
+  });
+
+  it('skips what has nothing to do, and refuses a selection with nothing left', async () => {
+    const { h, mystery, dune } = await scanned();
+    // A file nobody recognized has no plan.
+    const mixed = await dryRun(h, [itemId(dune), itemId(mystery), 'unknown']);
+    expect(mixed.json<{ skipped: string[] }>().skipped.sort()).toEqual(
+      [itemId(mystery), 'unknown'].sort(),
+    );
+    const none = await dryRun(h, [itemId(mystery)]);
+    expect(none.statusCode).toBe(409);
+    expect(none.json()).toEqual({ error: { code: 'library.nothing-to-do' } });
+
+    // Run once: a second request finds nothing executable.
+    await h.request('POST', '/api/libraries/films/execute', { items: [itemId(dune)] });
+    await h.app.jobs.idle();
+    expect((await dryRun(h, [itemId(dune)])).statusCode).toBe(409);
+  });
+
+  it('refuses an empty selection', async () => {
+    const { h } = await scanned();
+    expect(
+      (await h.request('POST', '/api/libraries/films/execute', { items: [] })).statusCode,
+    ).toBe(400);
   });
 });

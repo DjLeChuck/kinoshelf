@@ -12,7 +12,9 @@ import {
 import type { FastifyInstance } from 'fastify';
 import { ApiError } from './api-error.js';
 import { compare, missingOf, type Completeness, type EpisodeReport } from './completeness.js';
+import type { Execution } from './executions.js';
 import type { ProbeQueue } from './probe.js';
+import type { ExecutionReport } from './service.js';
 import type { EntryStore } from './entries.js';
 import type { EventBus } from './events.js';
 import type { JobStore } from './jobs.js';
@@ -35,6 +37,8 @@ import {
   libraryPatchSchema,
   librarySchema,
   paging,
+  selectionReportSchema,
+  selectionRunSchema,
   progressSchema,
   seasonSchema,
   showSchema,
@@ -49,6 +53,11 @@ export interface LibraryContext {
   readonly probes: ProbeQueue;
   /** The missing episodes of a show, counted on opening it (and in the background otherwise). */
   readonly completeness: Completeness;
+  /** Plans and queues the transfers of a scan's files (see `POST /api/plans/{id}/execute`). */
+  readonly batch: {
+    readonly dryRun: (jobId: string, entryIds: readonly string[]) => Promise<ExecutionReport>;
+    readonly enqueue: (jobId: string, entryIds: readonly string[]) => Execution;
+  };
   /** The provider's details of a work, for the page of one item. */
   readonly details: (
     kind: 'movie' | 'series',
@@ -731,6 +740,92 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
           episodes: season.episodes.map(presentEpisode),
         })),
       };
+    },
+  );
+
+  api.post<{ Params: { id: string }; Body: { items: string[]; dryRun?: boolean } }>(
+    '/api/libraries/:id/execute',
+    {
+      schema: {
+        summary: 'Rename or complete a selection of the items of a library',
+        description:
+          'Runs what the last scan planned for the chosen items (`id` of `GET /api/libraries/{id}/items`): ' +
+          'the videos to rename, and the NFO and images missing beside the ones already in place. ' +
+          'It writes only what is planned and never overwrites a file. One plan per scan job the ' +
+          'items come from, under one batch. With `dryRun` every precondition is checked and nothing ' +
+          'is written (200, the report of `POST /api/plans/{id}/execute`, entries being the items’ ' +
+          '`entryId`); otherwise the transfers are queued (202) and the batch appears in the history. ' +
+          'Items with nothing to do (done, never scanned, unknown) are listed in `skipped`; 409 ' +
+          '`library.nothing-to-do` when none is left.',
+        params: idParams,
+        body: {
+          type: 'object',
+          required: ['items'],
+          additionalProperties: false,
+          properties: {
+            items: { type: 'array', minItems: 1, items: { type: 'string' } },
+            dryRun: { type: 'boolean' },
+          },
+        },
+        response: {
+          200: selectionReportSchema,
+          202: selectionRunSchema,
+          401: errorSchema,
+          404: errorSchema,
+          409: errorSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const library = find(store.config, request.params.id);
+      if (library.type === undefined) {
+        throw new ApiError(409, 'library.not-typed');
+      }
+      const chosen = new Set(request.body.items);
+      const rows = items.all(library.id).filter((row) => chosen.has(itemId(row.path)));
+      const skipped = new Set(request.body.items);
+      // What the scan planned, by the job that scanned it: its entries are what can still run.
+      const byJob = new Map<string, string[]>();
+      const runnable = new Map<string, Set<string>>();
+      for (const row of rows) {
+        const { scanJobId, entryId } = row;
+        if (scanJobId === null || entryId === null) {
+          continue;
+        }
+        if (!runnable.has(scanJobId)) {
+          runnable.set(
+            scanJobId,
+            new Set(
+              entries
+                .executable(scanJobId)
+                .filter((entry) => entry.item)
+                .map((entry) => entry.id),
+            ),
+          );
+        }
+        if (runnable.get(scanJobId)?.has(entryId)) {
+          byJob.set(scanJobId, [...(byJob.get(scanJobId) ?? []), entryId]);
+          skipped.delete(itemId(row.path));
+        }
+      }
+      if (byJob.size === 0) {
+        throw new ApiError(409, 'library.nothing-to-do');
+      }
+      if (request.body.dryRun) {
+        const reports = await Promise.all(
+          [...byJob].map(([jobId, entryIds]) => ctx.batch.dryRun(jobId, entryIds)),
+        );
+        return {
+          batchId: reports[0]?.batchId ?? '',
+          dryRun: true,
+          items: reports.flatMap((report) => report.items),
+          skipped: [...skipped],
+        };
+      }
+      const executions = [...byJob].map(([jobId, entryIds]) => ctx.batch.enqueue(jobId, entryIds));
+      events.emit('jobs');
+      runner.kick();
+      return reply.code(202).send({ executions, skipped: [...skipped] });
     },
   );
 }
