@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import type { FastifyInstance } from 'fastify';
@@ -52,6 +53,27 @@ export function registerImageRoutes(api: FastifyInstance, options: ImageOptions)
     return bytes;
   };
 
+  // One download per image at a time: two pages asking for the same poster share it, rather than
+  // race to the same file.
+  const inFlight = new Map<string, Promise<Uint8Array>>();
+  const fetchOnce = (path: string, size: string, file: string): Promise<Uint8Array> => {
+    const running = inFlight.get(path);
+    if (running) {
+      return running;
+    }
+    const fetching = (async () => {
+      const bytes = await download(size, file);
+      // Written under a temporary name: a reader never sees half an image.
+      const partial = `${path}.${randomUUID()}.tmp`;
+      await mkdir(dirname(path), { recursive: true });
+      await writeFile(partial, bytes);
+      await rename(partial, path);
+      return bytes;
+    })().finally(() => inFlight.delete(path));
+    inFlight.set(path, fetching);
+    return fetching;
+  };
+
   api.get<{ Params: { size: (typeof IMAGE_SIZES)[number]; file: string } }>(
     '/api/images/:size/:file',
     {
@@ -78,15 +100,8 @@ export function registerImageRoutes(api: FastifyInstance, options: ImageOptions)
         throw new ApiError(404, 'image.not-found');
       }
       const path = join(options.cacheDir, size, file);
-      let bytes: Uint8Array | undefined = await readFile(path).catch(() => undefined);
-      if (!bytes) {
-        bytes = await download(size, file);
-        // Written under a temporary name: a reader never sees half an image.
-        const partial = `${path}.${process.pid}.tmp`;
-        await mkdir(dirname(path), { recursive: true });
-        await writeFile(partial, bytes);
-        await rename(partial, path);
-      }
+      const bytes =
+        (await readFile(path).catch(() => undefined)) ?? (await fetchOnce(path, size, file));
       return reply
         .header('content-type', TYPES[extension])
         .header('cache-control', 'private, max-age=604800, immutable')

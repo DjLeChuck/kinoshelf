@@ -32,6 +32,18 @@ describe('GET /api/images', () => {
     await h.drop();
   });
 
+  it('shares one download between two pages asking for the same poster at once', async () => {
+    const h = await withImages(() => new Response(PNG));
+    const [one, two] = await Promise.all([
+      h.request('GET', '/api/images/w92/same.jpg'),
+      h.request('GET', '/api/images/w92/same.jpg'),
+    ]);
+    expect([one.statusCode, two.statusCode]).toEqual([200, 200]);
+    expect(h.fetcher).toHaveBeenCalledTimes(1);
+    expect(await readdir(join(h.configDir, 'images', 'w92'))).toEqual(['same.jpg']);
+    await h.drop();
+  });
+
   it('can fetch from another host than TMDB, for tests or a proxy', async () => {
     const h = await withImages(() => new Response(PNG), {
       KINOSHELF_TMDB_IMAGES_URL: 'http://127.0.0.1:9/t/p/',
