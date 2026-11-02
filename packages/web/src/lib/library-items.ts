@@ -274,18 +274,6 @@ export const STALLED_SECONDS = 60;
 export const isStalled = (progress: ScanProgress | null): boolean =>
   (progress?.idleSeconds ?? 0) >= STALLED_SECONDS;
 
-/** A file size for a person: `1.4 GB`. */
-export function formatSize(bytes: number): string {
-  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-  let value = bytes;
-  let unit = 0;
-  while (value >= 1024 && unit < units.length - 1) {
-    value /= 1024;
-    unit++;
-  }
-  return `${unit === 0 ? value : value.toFixed(1)} ${units[unit]}`;
-}
-
 /** A scan that failed and that nothing newer has replaced. */
 export const lastScanFailed = (library: Pick<Library, 'lastScan' | 'scanning'>): boolean =>
   !library.scanning && library.lastScan?.status === 'failed';

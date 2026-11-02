@@ -1,11 +1,11 @@
 <script lang="ts">
   import { api } from '../lib/api.js';
   import { messageOf } from '../lib/errors.js';
+  import { formatBytes } from '@kinoshelf/i18n';
   import { t } from '../lib/i18n.svelte.js';
   import type { Arrival } from '../lib/arrivals.js';
   import {
     canRun,
-    formatSize,
     isSettling,
     libraryItems,
     type ItemDetail,
@@ -97,7 +97,7 @@
       {#if detail.file}
         <dt class="muted">{t('web.library.file')}</dt>
         <dd>
-          {[detail.resolution, detail.file.video, detail.file.audio, formatSize(detail.file.size)]
+          {[detail.resolution, detail.file.video, detail.file.audio, formatBytes(detail.file.size)]
             .filter(Boolean)
             .join(' · ')}
         </dd>

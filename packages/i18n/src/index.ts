@@ -49,5 +49,6 @@ export {
   type CliErrorCode,
   type ServerErrorCode,
 } from './codes.js';
+export { formatBytes } from './format.js';
 export { en } from './en.js';
 export { fr } from './fr.js';

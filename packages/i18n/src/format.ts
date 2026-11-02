@@ -143,3 +143,15 @@ function collect(text: string, names: Set<string>): void {
     index = argument.end - 1;
   }
 }
+
+/** A size in binary units, which read the same in French and English (KiB, not KB or Ko). */
+export function formatBytes(bytes: number): string {
+  const units = ['B', 'KiB', 'MiB', 'GiB', 'TiB'];
+  let value = bytes;
+  let unit = 0;
+  while (value >= 1024 && unit < units.length - 1) {
+    value /= 1024;
+    unit++;
+  }
+  return `${unit === 0 ? String(value) : value.toFixed(1)} ${units[unit] ?? ''}`;
+}

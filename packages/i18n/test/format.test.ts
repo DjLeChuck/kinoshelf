@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatMessage, placeholdersOf } from '../src/format.js';
+import { formatBytes, formatMessage, placeholdersOf } from '../src/format.js';
 
 const FILES =
   '{count, plural, =0 {Aucun fichier} one {# fichier} other {# fichiers}} dans {folder}';
@@ -76,5 +76,16 @@ describe('placeholdersOf', () => {
     expect(placeholdersOf(FILES)).toEqual(['count', 'folder']);
     expect(placeholdersOf('{b} {a} {b}')).toEqual(['a', 'b']);
     expect(placeholdersOf('{n, plural, one {# {x}} other {# {y}}}')).toEqual(['n', 'x', 'y']);
+  });
+});
+
+describe('formatBytes', () => {
+  it.each([
+    [0, '0 B'],
+    [512, '512 B'],
+    [1536, '1.5 KiB'],
+    [1_500_000_000, '1.4 GiB'],
+  ])('%d is %s', (bytes, expected) => {
+    expect(formatBytes(bytes)).toBe(expected);
   });
 });

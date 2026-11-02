@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
   canRun,
-  formatSize,
   episodeLabel,
   isSettling,
   isStalled,
@@ -48,16 +47,6 @@ describe('isStalled', () => {
     expect(isStalled(progress({ idleSeconds: 59 }))).toBe(false);
     expect(isStalled(progress({ idleSeconds: 60 }))).toBe(true);
     expect(isStalled(null)).toBe(false);
-  });
-});
-
-describe('formatSize', () => {
-  it.each([
-    [512, '512 B'],
-    [1536, '1.5 KB'],
-    [1_500_000_000, '1.4 GB'],
-  ])('%d is %s', (bytes, expected) => {
-    expect(formatSize(bytes)).toBe(expected);
   });
 });
 
