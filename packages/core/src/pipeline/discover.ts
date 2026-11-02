@@ -63,6 +63,8 @@ async function* walk(directory: string): AsyncGenerator<string> {
 export async function discoverVideos(
   input: string,
   extensions: readonly string[] = VIDEO_EXTENSIONS,
+  /** Told how many videos were found so far, while the walk goes on (a big library takes a while). */
+  onFound?: (found: number) => void,
 ): Promise<DiscoveredFile[]> {
   const root = resolve(input);
   let info;
@@ -78,13 +80,17 @@ export async function discoverVideos(
   const paths: string[] = [];
   if (info.isDirectory()) {
     for await (const path of walk(root)) {
-      paths.push(path);
+      if (isVideo(path)) {
+        paths.push(path);
+        onFound?.(paths.length);
+      }
     }
-  } else {
+  } else if (isVideo(root)) {
     paths.push(root);
+    onFound?.(1);
   }
 
-  return paths.filter(isVideo).map((path) => ({
+  return paths.map((path) => ({
     path,
     displayPath: info.isDirectory() ? relative(root, path) : basename(path),
     parserPath: relative(dirname(base), path),

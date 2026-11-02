@@ -47,7 +47,10 @@ export interface AnalyzeOptions {
   readonly sidecarExtensions?: readonly string[];
   /** Files matched at the same time (each may issue several provider requests). */
   readonly concurrency?: number;
-  readonly onProgress?: (done: number, total: number) => void;
+  /** One more file matched; `file` is the one that just was. */
+  readonly onProgress?: (done: number, total: number, file: DiscoveredFile) => void;
+  /** Every file is matched: the details of the works are fetched and the plan is built. */
+  readonly onPlanning?: () => void;
 }
 
 /** Runs `task` over `items` with bounded concurrency, keeping the results in order. */
@@ -93,12 +96,13 @@ export async function analyze(
     // absolute one.
     const parsed: ParsedMedia = { ...options.parser.parse(file.parserPath), path: file.path };
     const outcome = await matcher.match(parsed);
-    options.onProgress?.(++done, files.length);
+    options.onProgress?.(++done, files.length, file);
     return { file, parsed, outcome };
   });
 
   // Everything is fetched before anything is planned: a provider failure aborts the analysis
   // instead of leaving a plan whose files lack their NFO.
+  options.onPlanning?.();
   const picks: { parsed: ParsedMedia; candidate: Candidate }[] = [];
   for (const entry of matched) {
     if (entry.outcome.status === 'matched') {

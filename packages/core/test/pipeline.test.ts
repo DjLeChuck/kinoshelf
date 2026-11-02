@@ -80,6 +80,17 @@ describe('discoverVideos', () => {
     expect(await discoverVideos(await put(join(await makeDir(), 'a.txt')))).toEqual([]);
   });
 
+  it('tells how many videos it found as it walks, and counts nothing else', async () => {
+    const root = await makeDir();
+    await put(join(root, 'A.2020.mkv'));
+    await put(join(root, 'notes.txt'));
+    await put(join(root, 'sub', 'B.2021.mp4'));
+    const seen: number[] = [];
+    const found = await discoverVideos(root, undefined, (count) => seen.push(count));
+    expect(seen).toEqual([1, 2]);
+    expect(found).toHaveLength(2);
+  });
+
   it('reports a path that does not exist', async () => {
     await expect(discoverVideos('/nonexistent/kinoshelf')).rejects.toSatisfy(
       (error: unknown) =>
