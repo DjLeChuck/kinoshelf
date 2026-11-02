@@ -161,7 +161,7 @@ export const fr: Record<keyof typeof en, string> = {
     '{found, plural, one {# trouvé} other {# trouvés}}, {removed, plural, one {# supprimé} other {# supprimés}}, {failed} en échec.',
   'cleanup.dry-run': 'Simulation : rien n’a été supprimé. Ajoutez --apply pour les supprimer.',
   'error.cleanup.age-too-short':
-    'L’âge minimum est de {min} heure : un fichier plus récent est peut-être en cours de copie.',
+    'L’âge minimum est de {min, plural, one {# heure} other {# heures}} : un fichier plus récent est peut-être en cours de copie.',
   'error.cleanup.no-folder':
     'Indiquez au moins un dossier à parcourir, ou ajoutez une bibliothèque avec un « type » dans {path}.',
   'help.submit':
@@ -272,7 +272,6 @@ export const fr: Record<keyof typeof en, string> = {
   'web.library.episode.missing': 'Manquant',
   'web.library.episode.unaired': 'Pas encore diffusé',
   'web.library.episode.extra': 'Inconnu de TMDB',
-  'web.library.episode.aired': 'Diffusé le {date}',
   'web.library.show.status': 'Statut',
   'web.library.show.missing': 'Épisodes manquants',
   'web.library.show.none-missing': 'Aucun',
@@ -397,7 +396,7 @@ export const fr: Record<keyof typeof en, string> = {
   'web.libraries.threshold': 'Seuil de traitement automatique',
   'web.libraries.threshold.default': 'Utiliser le seuil par défaut',
   'web.libraries.threshold.hint':
-    'Au-dessus de ce score, le fichier est traité sans validation. En dessous, il rejoint la file.',
+    'Au-dessus de ce score, le fichier est traité sans validation. En dessous, il vous attend dans les Arrivées.',
   'web.libraries.create': 'Créer la bibliothèque',
   'web.libraries.delete': 'Supprimer',
   'web.libraries.delete.warning':
@@ -425,11 +424,12 @@ export const fr: Record<keyof typeof en, string> = {
     'Il lit le nom de chaque fichier et cherche le film ou la série correspondante sur TMDB.',
   'web.welcome.how.2.title': 'Vous validez les cas douteux',
   'web.welcome.how.2.body':
-    'Ce qui est sûr est traité seul. Le reste attend votre choix dans la file de validation.',
+    'Ce qui est sûr est traité seul. Le reste attend votre choix dans les Arrivées.',
   'web.welcome.how.3.title': 'Tout est rangé',
   'web.welcome.how.3.body': 'Fichiers renommés pour Plex ou Jellyfin, bibliothèque rafraîchie.',
   'web.welcome.how.safe':
     'Rien n’est modifié sur le disque sans aperçu, et chaque lot peut être annulé.',
+  'web.onboarding.invalid.folder': 'Indiquez chaque dossier en chemin absolu, commençant par /.',
   'web.onboarding.step.tmdb.title': 'Ajouter votre clé TMDB',
   'web.onboarding.step.tmdb.body':
     'Kinoshelf s’en sert pour identifier vos films et séries. La clé est gratuite et se crée en deux minutes.',
@@ -512,8 +512,7 @@ export const fr: Record<keyof typeof en, string> = {
     'Vide ou 0 : Kinoshelf écoute les changements, sans aucune lecture du disque. Sur un partage réseau (NFS, SMB), aucun changement n’est signalé : indiquez une valeur comme 120.',
   'web.settings.watch.apply': 'Transférer ce qui est identifié avec confiance',
   'web.settings.watch.apply.hint':
-    'Désactivé, tout attend dans la file de validation jusqu’à ce que vous l’appliquiez.',
-  'web.settings.invalid.watch-folders': 'Indiquez au moins un dossier, en chemin absolu.',
+    'Désactivé, tout attend dans les Arrivées jusqu’à ce que vous l’appliquiez.',
   'web.settings.invalid.watch-seconds':
     'Indiquez un nombre entier de secondes, ou laissez le champ vide.',
   'web.queue.status.to-validate': 'À valider',
@@ -522,7 +521,6 @@ export const fr: Record<keyof typeof en, string> = {
   'web.queue.status.failed': 'Échec',
   'web.queue.detected': 'Lu dans le nom',
   'web.queue.kind.movie': 'Film',
-  'web.queue.kind.episode': 'Série',
   'web.queue.kind.unknown': 'Inconnu',
   'web.queue.failed': 'Le dernier transfert a échoué',
   'web.queue.candidates': 'Candidats TMDB',
@@ -669,10 +667,9 @@ export const fr: Record<keyof typeof en, string> = {
   'web.settings.processing.mode.move': 'Déplacement',
   'web.settings.processing.threshold': 'Seuil automatique (0–100)',
   'web.settings.processing.threshold.hint':
-    'Une correspondance sous ce score attend dans la file. Vide : la valeur par défaut.',
+    'Une correspondance sous ce score vous attend dans les Arrivées. Vide : la valeur par défaut.',
   'web.settings.invalid.threshold': 'Le seuil est un nombre de 0 à 100.',
   'web.settings.invalid.url': 'L’adresse doit commencer par http:// ou https://.',
-  'web.settings.servers.title': 'Serveurs multimédia',
   'web.settings.plex.title': 'Serveur Plex',
   'web.settings.jellyfin.title': 'Serveur Jellyfin',
   'web.settings.server.enabled': 'Prévenir {server} après chaque transfert',
@@ -768,5 +765,5 @@ export const fr: Record<keyof typeof en, string> = {
   'web.settings.invalid.profile':
     'Indiquez le chemin de votre fichier de profil, ou choisissez-en un dans la liste.',
   'web.not-found.title': 'Page introuvable',
-  'web.not-found.back': 'Retour à la file',
+  'web.not-found.back': 'Retour aux bibliothèques',
 };

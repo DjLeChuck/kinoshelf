@@ -51,7 +51,7 @@
         break;
       case 'destination':
         if (!needsAbsolute(folder.trim()) || !needsAbsolute(seriesFolder.trim())) {
-          throw new FormError(t('web.settings.invalid.watch-folders'));
+          throw new FormError(t('web.onboarding.invalid.folder'));
         }
         // The first libraries: the two folders the works end up in, organized in place.
         await libraryApi.create({
@@ -67,7 +67,7 @@
         break;
       case 'source':
         if (!needsAbsolute(folder.trim())) {
-          throw new FormError(t('web.settings.invalid.watch-folders'));
+          throw new FormError(t('web.onboarding.invalid.folder'));
         }
         await submitSource(folder.trim());
         break;

@@ -154,7 +154,7 @@ export const en = {
   'cleanup.summary': '{found} found, {removed} removed, {failed} failed.',
   'cleanup.dry-run': 'Dry run: nothing was removed. Add --apply to delete them.',
   'error.cleanup.age-too-short':
-    'The minimum age is {min} hour: a younger file may still be being copied.',
+    'The minimum age is {min, plural, one {# hour} other {# hours}}: a younger file may still be being copied.',
   'error.cleanup.no-folder':
     'Give at least one folder to scan, or add a library with a "type" in {path}.',
   'help.submit':
@@ -260,7 +260,6 @@ export const en = {
   'web.library.episode.missing': 'Missing',
   'web.library.episode.unaired': 'Not aired',
   'web.library.episode.extra': 'Unknown to TMDB',
-  'web.library.episode.aired': 'Aired on {date}',
   'web.library.show.status': 'Status',
   'web.library.show.missing': 'Missing episodes',
   'web.library.show.none-missing': 'None',
@@ -381,7 +380,7 @@ export const en = {
   'web.libraries.threshold': 'Automatic processing threshold',
   'web.libraries.threshold.default': 'Use the default threshold',
   'web.libraries.threshold.hint':
-    'Above this score, a file is processed without validation. Below, it joins the queue.',
+    'Above this score, a file is processed without validation. Below, it waits for you in Arrivals.',
   'web.libraries.create': 'Create the library',
   'web.libraries.delete': 'Delete',
   'web.libraries.delete.warning':
@@ -409,11 +408,12 @@ export const en = {
     'It reads the name of each file and looks for the matching movie or series on TMDB.',
   'web.welcome.how.2.title': 'You validate the doubtful cases',
   'web.welcome.how.2.body':
-    'What is certain is handled on its own. The rest waits for your choice in the validation queue.',
+    'What is certain is handled on its own. The rest waits for your choice in Arrivals.',
   'web.welcome.how.3.title': 'Everything is put away',
   'web.welcome.how.3.body': 'Files renamed for Plex or Jellyfin, your library refreshed.',
   'web.welcome.how.safe':
     'Nothing is changed on disk without a preview, and every batch can be undone.',
+  'web.onboarding.invalid.folder': 'Give each folder as an absolute path, starting with /.',
   'web.onboarding.step.tmdb.title': 'Add your TMDB key',
   'web.onboarding.step.tmdb.body':
     'Kinoshelf uses it to identify your movies and series. The key is free and takes two minutes to create.',
@@ -494,9 +494,7 @@ export const en = {
   'web.settings.watch.poll.hint':
     'Empty or 0: Kinoshelf listens for changes, which costs no disk reads. On a network share (NFS, SMB) no change is announced: set a value such as 120.',
   'web.settings.watch.apply': 'Transfer what is matched with confidence',
-  'web.settings.watch.apply.hint':
-    'Off, everything waits in the validation queue until you apply it.',
-  'web.settings.invalid.watch-folders': 'Give at least one folder, as an absolute path.',
+  'web.settings.watch.apply.hint': 'Off, everything waits in Arrivals until you apply it.',
   'web.settings.invalid.watch-seconds': 'Give a whole number of seconds, or leave the field empty.',
   'web.queue.status.to-validate': 'To validate',
   'web.queue.status.nothing-found': 'Nothing found',
@@ -504,7 +502,6 @@ export const en = {
   'web.queue.status.failed': 'Failed',
   'web.queue.detected': 'Read from the name',
   'web.queue.kind.movie': 'Movie',
-  'web.queue.kind.episode': 'Series',
   'web.queue.kind.unknown': 'Unknown',
   'web.queue.failed': 'The last transfer failed',
   'web.queue.candidates': 'Candidates on TMDB',
@@ -650,10 +647,9 @@ export const en = {
   'web.settings.processing.mode.move': 'Move',
   'web.settings.processing.threshold': 'Automatic threshold (0–100)',
   'web.settings.processing.threshold.hint':
-    'A match scoring below it waits in the queue. Empty: the default.',
+    'A match scoring below it waits for you in Arrivals. Empty: the default.',
   'web.settings.invalid.threshold': 'The threshold is a number from 0 to 100.',
   'web.settings.invalid.url': 'The address must start with http:// or https://.',
-  'web.settings.servers.title': 'Media servers',
   'web.settings.plex.title': 'Plex server',
   'web.settings.jellyfin.title': 'Jellyfin server',
   'web.settings.server.enabled': 'Tell {server} about each transfer',
@@ -746,7 +742,7 @@ export const en = {
     'Scripts using the current key stop working at once. This browser stays signed in.',
   'web.settings.invalid.profile': 'Give the path of your profile file, or pick one from the list.',
   'web.not-found.title': 'Page not found',
-  'web.not-found.back': 'Back to the queue',
+  'web.not-found.back': 'Back to the libraries',
 } as const;
 
 /** Fails to compile when an error code has no `error.<code>` message. */
