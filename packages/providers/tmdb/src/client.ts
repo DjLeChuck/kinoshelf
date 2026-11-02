@@ -68,15 +68,13 @@ export class TmdbClient {
     // The key never takes part in the cache key nor in error parameters.
     const cacheKey = `${path}?${query.toString()}`;
 
-    let entry = this.cache.get(cacheKey, this.now());
-    if (!entry) {
-      entry = await this.fetchWithRetry(path, query);
-      if (entry.status === 200 || entry.status === 404) {
-        this.cache.set(cacheKey, entry, this.now() + options.ttlMs);
-      }
-    }
+    const cached = this.cache.get(cacheKey, this.now());
+    const entry = cached ?? (await this.fetchWithRetry(path, query));
 
     if (entry.status === 404) {
+      if (!cached) {
+        this.cache.set(cacheKey, entry, this.now() + options.ttlMs);
+      }
       if (options.nullOn404) {
         return null;
       }
@@ -92,6 +90,10 @@ export class TmdbClient {
     const parsed = schema.safeParse(json);
     if (!parsed.success) {
       throw new KinoshelfError('tmdb.invalid-response', { path });
+    }
+    // Kept only once it reads right: a captive portal's page or a cut body is not cached for days.
+    if (!cached) {
+      this.cache.set(cacheKey, entry, this.now() + options.ttlMs);
     }
     return parsed.data;
   }
@@ -112,10 +114,15 @@ export class TmdbClient {
     for (let attempt = 0; ; attempt += 1) {
       const last = attempt >= this.maxRetries;
       let response: Response | undefined;
+      let body: string | undefined;
       try {
         response = await this.limited(() =>
           this.fetchImpl(url, { headers, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) }),
         );
+        // A connection cut while the body arrives is a network failure like any other: retried.
+        if (response.status === 200 || response.status === 404) {
+          body = await response.text();
+        }
       } catch {
         if (last) {
           throw new KinoshelfError('tmdb.network', { path });
@@ -125,8 +132,8 @@ export class TmdbClient {
       }
 
       const { status } = response;
-      if (status === 200 || status === 404) {
-        return { status, body: await response.text() };
+      if (body !== undefined) {
+        return { status, body };
       }
       if (status === 401) {
         throw new KinoshelfError('tmdb.invalid-key');

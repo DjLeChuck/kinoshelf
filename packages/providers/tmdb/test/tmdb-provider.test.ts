@@ -575,6 +575,43 @@ describe('failures and retries', () => {
     expect(calls).toBe(4);
   });
 
+  it('retries a body cut on its way, as a network failure', async () => {
+    let calls = 0;
+    const cut = (): Response =>
+      new Response(
+        new ReadableStream({
+          start(controller) {
+            controller.error(new TypeError('terminated'));
+          },
+        }),
+        { status: 200 },
+      );
+    const { provider } = make([
+      at('/3/search/movie', () => {
+        calls += 1;
+        return calls === 1 ? cut() : json('{"results":[]}');
+      }),
+    ]);
+    expect(await provider.searchMovies({ title: 'x' })).toEqual([]);
+    expect(calls).toBe(2);
+  });
+
+  it('keeps no answer it could not read: the next request asks again', async () => {
+    let calls = 0;
+    const { provider } = make(
+      [
+        at('/3/search/movie', () => {
+          calls += 1;
+          return calls === 1 ? new Response('<html>portal</html>') : json('{"results":[]}');
+        }),
+      ],
+      { cache: new MemoryCache() },
+    );
+    expect(await codeOf(provider.searchMovies({ title: 'x' }))).toBe('tmdb.invalid-response');
+    expect(await provider.searchMovies({ title: 'x' })).toEqual([]);
+    expect(calls).toBe(2);
+  });
+
   it('rejects a response that does not match the expected shape', async () => {
     const { provider } = make([() => json('{"results":[{"id":"nope"}]}')]);
     expect(await codeOf(provider.searchMovies({ title: 'x' }))).toBe('tmdb.invalid-response');
