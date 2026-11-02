@@ -126,7 +126,7 @@ export class JobRunner {
           this.hooks.executionDone?.(job, finished, outcome);
         }
       });
-      this.tell(() => this.hooks.changed?.('jobs', 'queue', 'history'));
+      this.tell(() => this.hooks.changed?.('jobs', 'arrivals', 'history'));
     } catch (error) {
       const info = this.describe(error);
       this.executions.fail(execution.id, info);
@@ -146,7 +146,7 @@ export class JobRunner {
       // A snapshot that fails to follow is a log line, not a failed scan: the files are stored.
       await Promise.resolve(this.hooks.scanned?.(job)).catch(this.onError);
       this.tell(() => this.hooks.jobDone?.(job));
-      this.tell(() => this.hooks.changed?.('jobs', 'queue'));
+      this.tell(() => this.hooks.changed?.('jobs', 'arrivals'));
     } catch (error) {
       const info = this.describe(error);
       this.jobs.fail(job.id, info);

@@ -115,7 +115,7 @@
     });
   });
 
-  refetchOn(['jobs', 'queue', 'history', 'settings', 'ready'], () => void load());
+  refetchOn(['jobs', 'arrivals', 'history', 'settings', 'ready'], () => void load());
 
   async function toggle(show: Show): Promise<void> {
     selection = { kind: 'show', tmdbId: show.tmdbId };

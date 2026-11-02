@@ -61,7 +61,7 @@
     void load();
   }
 
-  refetchOn(['queue', 'jobs', 'settings', 'ready'], () => {
+  refetchOn(['arrivals', 'jobs', 'settings', 'ready'], () => {
     void load();
     void loadWatch();
   });

@@ -87,7 +87,7 @@
     }
   }
 
-  refetchOn(['jobs', 'queue', 'history', 'settings', 'ready'], () => void load());
+  refetchOn(['jobs', 'arrivals', 'history', 'settings', 'ready'], () => void load());
 
   async function scan(): Promise<void> {
     starting = true;

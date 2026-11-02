@@ -36,10 +36,10 @@ describe('EventBus', () => {
     const bus = new EventBus();
     const seen: string[] = [];
     const stop = bus.subscribe((topic) => seen.push(topic));
-    bus.emit('jobs', 'queue');
+    bus.emit('jobs', 'arrivals');
     stop();
     bus.emit('history');
-    expect(seen).toEqual(['jobs', 'queue']);
+    expect(seen).toEqual(['jobs', 'arrivals']);
   });
 });
 
@@ -63,7 +63,7 @@ describe('GET /api/events', () => {
     const directory = await makeDir();
     await put(`${directory}/Dune.2021.mkv`);
     const response = await fetch(`${base}/api/events`, { headers: auth });
-    const reading = collect(response, (t) => t.includes('event: queue'));
+    const reading = collect(response, (t) => t.includes('event: arrivals'));
     await fetch(`${base}/api/jobs`, {
       method: 'POST',
       headers: { ...auth, 'content-type': 'application/json' },
@@ -71,7 +71,7 @@ describe('GET /api/events', () => {
     });
     const text = await reading;
     expect(text).toContain('event: jobs');
-    expect(text).toContain('event: queue');
+    expect(text).toContain('event: arrivals');
   });
 
   it('asks proxies not to buffer the stream', async () => {

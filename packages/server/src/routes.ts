@@ -410,7 +410,7 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
           }),
         },
       );
-      events.emit('queue', 'settings');
+      events.emit('arrivals', 'settings');
       return { ...(presentEntry(entry) as object), rematched };
     },
   );
@@ -453,7 +453,7 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
     },
     (request) => {
       const entry = service.ignore(request.params.id);
-      events.emit('queue');
+      events.emit('arrivals');
       return presentEntry(entry);
     },
   );
@@ -666,7 +666,7 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
       const dryRun = request.body?.dryRun ?? false;
       const report = await service.undo(request.params.id, { dryRun });
       if (!dryRun) {
-        events.emit('history', 'queue');
+        events.emit('history', 'arrivals');
       }
       return report;
     },

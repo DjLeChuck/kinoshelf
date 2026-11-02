@@ -214,6 +214,8 @@ refuses to delete a library an arrival folder points at (`library.in-use`). Ther
   (`work_destinations`, `GET`/`DELETE /api/work-destinations`): `Service.route` then plans each
   later file of the work, matched with confidence, for that library when its job is stored, and a
   file left unmatched keeps waiting. A library deleted since is ignored: the default applies.
+- **Events** (`GET /api/events`): the payload-less topics are `jobs`, `arrivals` (files waiting for a human changed:
+  match, ignore, cancel, a job ending), `history`, `settings`, and `ready` on each (re)connection.
 - **Snapshot** (`library_items`, server migration 012, `library-items.ts`): what a typed library holds,
   as its last scan saw it (title, year, tmdb id, state, presence of NFO / poster / fanart, entry id).
   Replaced as a whole when a scan of the whole source ends, then patched by path after a transfer,

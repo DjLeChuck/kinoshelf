@@ -1,9 +1,9 @@
 import { onDestroy } from 'svelte';
 
 /** What the server says changed; `ready` fires on each (re)connection, when anything may have. */
-export type Topic = 'jobs' | 'queue' | 'history' | 'settings' | 'ready';
+export type Topic = 'jobs' | 'arrivals' | 'history' | 'settings' | 'ready';
 
-const TOPICS: readonly Topic[] = ['jobs', 'queue', 'history', 'settings', 'ready'];
+const TOPICS: readonly Topic[] = ['jobs', 'arrivals', 'history', 'settings', 'ready'];
 const listeners = new Map<Topic, Set<() => void>>();
 let source: EventSource | undefined;
 let connected = $state(false);

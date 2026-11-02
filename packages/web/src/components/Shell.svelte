@@ -15,7 +15,7 @@
 
   // It feeds the nav and the root page, so it is fetched once, here.
   refetchOn(['settings', 'ready'], () => void shell.loadOnboarding());
-  refetchOn(['queue', 'jobs', 'settings', 'ready'], () => void shell.loadArrivals());
+  refetchOn(['arrivals', 'jobs', 'settings', 'ready'], () => void shell.loadArrivals());
 
   // Until the welcome page is left only what it needs is shown; unknown, everything is.
   const routes = $derived(
