@@ -44,6 +44,13 @@ describe('GET /api/images', () => {
     await h.drop();
   });
 
+  it('serves a backdrop in the width the page of a work asks for', async () => {
+    const h = await withImages(() => new Response(PNG));
+    expect((await h.request('GET', '/api/images/w780/back.jpg')).statusCode).toBe(200);
+    expect((await h.request('GET', '/api/images/original/back.jpg')).statusCode).toBe(400);
+    await h.drop();
+  });
+
   it('can fetch from another host than TMDB, for tests or a proxy', async () => {
     const h = await withImages(() => new Response(PNG), {
       KINOSHELF_TMDB_IMAGES_URL: 'http://127.0.0.1:9/t/p/',

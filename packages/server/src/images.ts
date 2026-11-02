@@ -7,8 +7,11 @@ import { errorSchema } from './schemas.js';
 
 const TMDB_IMAGES = 'https://image.tmdb.org/t/p';
 
-/** The widths the UI asks for; anything else would let a client fill the disk with variants. */
-const IMAGE_SIZES = ['w92', 'w154', 'w342'] as const;
+/**
+ * The widths the UI asks for (w780 for the backdrop behind a work's page); anything else would let
+ * a client fill the disk with variants.
+ */
+const IMAGE_SIZES = ['w92', 'w154', 'w342', 'w780'] as const;
 
 /** TMDB's file names are a hash and an extension. Nothing else may reach the path or the URL. */
 const FILE = /^[A-Za-z0-9]{1,64}\.(jpg|png)$/;
