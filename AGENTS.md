@@ -12,9 +12,9 @@ launch (`GET`/`PATCH /api/onboarding`, server migration 009) and the app then op
 libraries (organized in place, arrival folders) are configured in the Settings, with a server-side
 path picker. The Libraries page has a tab per typed library (list read from the snapshot, filters,
 scan progress, the page of an item) and an Arrivals tab (`/arrivals`) where a file is validated:
-candidate, destination library, "remember" boxes. A series library reads as a tree (show, season,
+candidate, destination library, "always send this work there". A series library reads as a tree (show, season,
 episode) with its missing episodes. Items are renamed and refreshed from the page (a preview first). The History merges batches and
-jobs in one list (see "History" below). Validating a file remembers its title (aliases). v1.0 is under way: the NFO and artwork
+jobs in one list (see "History" below). A series is validated as a release, not file by file. v1.0 is under way: the NFO and artwork
 writers and the `jellyfin` and `plex-nfo` profiles are built (see "NFO and artwork" below), metadata
 included for a library that is already organized.
 
@@ -81,16 +81,20 @@ contains no player-specific rule.
   is boosted only if its type, title, season/episode and year agree. If the id designates a
   candidate yet another one scores higher (`Dune (2021) {tmdb-841}`: 841 is the 1984 film), the
   name contradicts itself and nothing is decided automatically. An id absent from the results
-  cannot be verified and is ignored (the provider can look a work up by id, `getMovie`/`getSeries`,
-  but only aliases use it so far).
-- **Aliases** (`title_aliases`, server migration 007): validating a file in the queue ties its title
-  to the chosen work (`Gordon Ramsay Hells Kitchen` → TMDB's `Hell's Kitchen`), unless the user
-  declines (`remember: false`). The `Matcher` takes an optional `AliasLookup`: a title it knows is
-  read as that work, fetched by id with no search, and scored like any candidate, so a season, an
-  episode or a year the work does not have still sends the file to review. A series alias ignores
-  the year, a movie one includes it. Files carrying ids (`knownIds`) skip aliases. A validation
-  also re-matches the undecided files of the same title. Aliases are listed and forgotten in the
-  settings (`GET /api/aliases`, `DELETE /api/aliases/{id}`).
+  cannot be verified and is ignored.
+- **Releases**: a series is matched and validated as the folder it came in, not file by file.
+  `DiscoveredFile.release` is the folder directly under the scanned root when the root holds releases
+  (`discoverVideos(…, { splitReleases })`: a scan of a library's whole source), the scanned folder
+  itself otherwise (a path sent by hand or by the watcher), the file alone when given one. In
+  `analyze`, the episodes of a release vote on the series title (normalized, first seen wins a tie):
+  those that agree go to `Matcher.matchRelease`, which makes **one** search and scores each file on
+  those candidates (its season, episode and year still count), choosing the work once on the average
+  score; a file that does not fit the choice (a season TMDB lacks) goes to review alone. Episodes with
+  another title are **detached** (`AnalysisEntry.detached`, `job_entries.release`/`detached`, migration
+  016): matched on their own, but still of that release, and the UI lists them under it. Movies are
+  never grouped. Validating (`POST /api/entries/:id/match`) a non-detached episode applies the choice
+  to the release's other pending episodes (`followers` in the answer; `onlyThis` limits it to one);
+  `ignore` does the same. There are no aliases and no "remember this title": correct the release once.
 - **Path picker** (`GET /api/fs?path=…[&files=yaml]`): the settings browse the server's disk for the
   destination folders and a custom profile, since a browser cannot see it (and in Docker only
   mounted folders exist). It lists sub-folders (and YAML files when asked), names only, hidden
@@ -204,15 +208,15 @@ refuses to delete a library an arrival folder points at (`library.in-use`). Ther
   selectable, the others go through the arrivals or the review filter.
 - **Arrivals** (`GET /api/arrivals`, `?state=review|unrecognized`): what the arrival folders (and paths
   sent by hand, which belong to none) hold that needs a human; a library organized in place never
-  lands there. `POST /api/entries/:id/{match,preview,ignore}` settle a file. The destination of an
+  lands there. Each item carries its `release` and `detached`; the web groups them (one line per release,
+  the detached listed under it). `POST /api/entries/:id/{match,preview,ignore}` settle a file or its release. The destination of an
   arrival is the library of its kind in the folder's `into` (the first of its type for a path sent
   by hand), unless `libraryId` picks another one of the work's kind (422 `library.wrong-type`): it is
   stored on the file (`job_entries.destination_library_id`, migration 013), not on the job, and the
   file is planned, executed and written to the snapshot with **that library's profile and root**
   (the mode stays the folder's). A job whose files go to several libraries is executed as one plan
   per library under one batch. `rememberDestination` ties the work to the library
-  (`work_destinations`, `GET`/`DELETE /api/work-destinations`, listed and forgotten in the settings next to the
-  aliases; the work's `title`/`year` come from the libraries' snapshot, `null` before any library holds it): `Service.route` then plans each
+  (`work_destinations`, `GET`/`DELETE /api/work-destinations`, listed and forgotten in the settings; the work's `title`/`year` come from the libraries' snapshot, `null` before any library holds it): `Service.route` then plans each
   later file of the work, matched with confidence, for that library when its job is stored, and a
   file left unmatched keeps waiting. A library deleted since is ignored: the default applies.
 - **The router reads the query** (`lib/router.svelte.ts`: `router.path` is the path alone, `router.query` the
