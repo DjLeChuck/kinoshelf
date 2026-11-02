@@ -160,7 +160,7 @@ change, so give them a `pollSeconds`. What is already in the folder when watchin
 submitted too. Prefer the `hardlink` or `copy` mode: `move` takes the file from under its torrent.
 
 **3. Ask by hand.** `POST /api/watch/scan` scans the watched folders without waiting for files to
-settle (`GET /api/watch` says what is watched). The web has no button for it yet.
+settle (`GET /api/watch` says what is watched). The web has the same thing: **Check now**, at the top of the Arrivals tab (disabled when no folder is watched).
 
 ## Web UI
 

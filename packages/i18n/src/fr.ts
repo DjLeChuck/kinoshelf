@@ -333,6 +333,11 @@ export const fr: Record<keyof typeof en, string> = {
   'web.arrivals.empty': 'Rien n’attend votre décision.',
   'web.arrivals.from': 'depuis {source}',
   'web.arrivals.select': 'Choisissez un fichier pour le trancher.',
+  'web.arrivals.check': 'Vérifier maintenant',
+  'web.arrivals.check.done':
+    'Dossiers trouvés : {submitted} envoyé(s), {pending} en cours de stabilisation.',
+  'web.arrivals.check.none':
+    'Aucun dossier n’est surveillé. Activez la surveillance d’un dossier d’arrivée dans les réglages.',
   'web.libraries.title': 'Bibliothèques',
   'web.libraries.new.in-place': 'Nouvelle bibliothèque rangée sur place',
   'web.libraries.new.arrival': 'Nouveau dossier d’arrivée',

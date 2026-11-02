@@ -281,7 +281,7 @@ in the same job queue:
   `watched_files` (migration 008, keyed by path, size and date). `pollSeconds > 0` replaces events
   for network shares; if events cannot be had it falls back to a minute-long poll and logs it.
 - A manual **Check now** (`POST /api/watch/scan`, which skips the settling time but never an
-  incomplete suffix); the web button for it is not rebuilt yet.
+  incomplete suffix); the web button is at the top of the Arrivals tab, disabled when nothing is watched.
 
 Backlog, not built: reading completion from the client's own API (qBittorrent, Transmission), which
 would need one plugin per client. Watching the raw download folder stays out by design.

@@ -10,6 +10,7 @@
     type Arrival,
     type ArrivalPage,
   } from '../lib/arrivals.js';
+  import type { WatchScan, WatchStatus } from '../lib/watch.js';
   import ArrivalDetail from './ArrivalDetail.svelte';
 
   type Filter = 'all' | 'review' | 'unrecognized';
@@ -20,6 +21,8 @@
   let filter = $state<Filter>('all');
   let chosen = $state<string | undefined>(undefined);
   let notice = $state<string | undefined>(undefined);
+  let watch = $state<WatchStatus | undefined>(undefined);
+  let checking = $state(false);
 
   const open = $derived(page?.items.find(({ id }) => id === chosen) ?? page?.items[0]);
 
@@ -34,14 +37,50 @@
     }
   }
 
-  refetchOn(['queue', 'jobs', 'settings', 'ready'], () => void load());
+  async function loadWatch(): Promise<void> {
+    try {
+      watch = await api.get<WatchStatus>('/api/watch');
+    } catch {
+      // The button stays disabled; the list above reports a real outage.
+      watch = undefined;
+    }
+  }
+
+  /** Skips the settling time: whoever clicks knows the downloads are finished. */
+  async function checkNow(): Promise<void> {
+    checking = true;
+    try {
+      const { submitted, pending } = await api.post<WatchScan>('/api/watch/scan');
+      notice = t('web.arrivals.check.done', { submitted, pending });
+      failure = undefined;
+    } catch (error) {
+      failure = error;
+    } finally {
+      checking = false;
+    }
+    void load();
+  }
+
+  refetchOn(['queue', 'jobs', 'settings', 'ready'], () => {
+    void load();
+    void loadWatch();
+  });
 
   const sourceName = (arrival: Arrival): string | undefined =>
     page?.sources.find(({ id }) => id === arrival.sourceId)?.name;
 </script>
 
 <div class="stack">
-  <p class="muted">{t('web.arrivals.intro')}</p>
+  <div class="intro">
+    <p class="muted">{t('web.arrivals.intro')}</p>
+    <button
+      type="button"
+      class="btn"
+      disabled={!watch?.enabled || checking}
+      title={watch?.enabled ? undefined : t('web.arrivals.check.none')}
+      onclick={() => void checkNow()}>{t('web.arrivals.check')}</button
+    >
+  </div>
 
   <div class="filters" role="group" aria-label={t('web.arrivals.filter.label')}>
     {#each FILTERS as option (option)}
@@ -117,6 +156,18 @@
     display: flex;
     flex-direction: column;
     gap: 16px;
+  }
+
+  .intro {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .intro p {
+    margin: 0;
   }
 
   .filters {

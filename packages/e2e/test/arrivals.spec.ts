@@ -43,3 +43,9 @@ test('validates an arrival and finds it in the library it was sent to', async ({
   await page.getByRole('link', { name: 'Films' }).first().click();
   await expect(page.getByRole('button', { name: /Dune/ })).toBeVisible();
 });
+
+test('the Check now button is disabled while no folder is watched', async ({ page }) => {
+  await signIn(page);
+  await page.goto('/arrivals');
+  await expect(page.getByRole('button', { name: 'Check now' })).toBeDisabled();
+});

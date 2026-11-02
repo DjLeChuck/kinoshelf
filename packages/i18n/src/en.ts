@@ -320,6 +320,10 @@ export const en = {
   'web.arrivals.empty': 'Nothing waits for you.',
   'web.arrivals.from': 'from {source}',
   'web.arrivals.select': 'Pick a file to settle it.',
+  'web.arrivals.check': 'Check now',
+  'web.arrivals.check.done': 'Releases found: {submitted} submitted, {pending} still settling.',
+  'web.arrivals.check.none':
+    'No folder is watched. Turn on watching for an arrival folder in the settings.',
   'web.libraries.title': 'Libraries',
   'web.libraries.new.in-place': 'New library organized in place',
   'web.libraries.new.arrival': 'New arrival folder',
