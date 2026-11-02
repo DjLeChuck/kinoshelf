@@ -1,7 +1,7 @@
 import { access } from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
 import { API_KEY, library } from '../support.js';
-import { signIn, submit } from './helpers.js';
+import { signIn, signInAt, submit } from './helpers.js';
 
 const ALIEN = library('films', 'Alien (1979) {tmdb-348}', 'Alien (1979) {tmdb-348}.mkv');
 
@@ -66,4 +66,13 @@ test('keeps the routine analyses out of the list until asked', async ({ page, re
 
   await page.getByLabel('Show every analysis').check();
   await expect(routine.first()).toBeVisible();
+});
+
+test('opens a line linked to even when the list does not show it', async ({ page, request }) => {
+  // A routine analysis is left out of the default list, yet a link may lead to it.
+  const id = await submit(request, 'history-linked', ['Zzzqx.Linked.Title.2002.mkv']);
+
+  await signInAt(page, `/history/${id}`);
+  await expect(page.getByRole('heading', { name: /history-linked/ })).toBeVisible();
+  await expect(page).toHaveURL(new RegExp(`/history/${id}$`));
 });

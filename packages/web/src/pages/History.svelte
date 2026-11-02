@@ -20,35 +20,92 @@
 
   // The line is in the path (`/history/<id>`), so a link, a reload and the back button keep it.
   const selected = $derived(historyIdOf(router.path));
-  const open = $derived(items?.find((line) => line.id === selected) ?? items?.[0]);
+  // A line linked to (a failed scan's banner, a job sent again) may not be on the pages read: it is
+  // looked up on its own rather than replaced by the first line.
+  let outside = $state<Pick<Activity, 'id' | 'kind'> | undefined>(undefined);
+  const listed = $derived(items?.find((line) => line.id === selected));
+  const open = $derived(
+    selected === undefined
+      ? items?.[0]
+      : (listed ?? (outside?.id === selected ? outside : undefined)),
+  );
+  $effect(() => {
+    if (selected !== undefined && items !== undefined && listed === undefined) {
+      void lookUp(selected);
+    }
+  });
 
-  async function page(offset: number, limit: number): Promise<void> {
-    const body = await api.get<{ total: number; items: Activity[] }>(
+  async function lookUp(id: string): Promise<void> {
+    if (outside?.id === id) {
+      return;
+    }
+    try {
+      await api.get(`/api/batches/${id}`);
+      outside = { id, kind: 'batch' };
+    } catch {
+      // Not a batch: a job, whose page says if it is gone.
+      outside = { id, kind: 'job' };
+    }
+  }
+
+  // Each read carries a ticket: an answer to a read that a newer one replaced is dropped, so a
+  // slow page never overwrites a fresher list (or the other filter's).
+  let latest = 0;
+
+  async function page(
+    offset: number,
+    limit: number,
+  ): Promise<{ total: number; items: Activity[] }> {
+    return api.get<{ total: number; items: Activity[] }>(
       `/api/history?limit=${limit}&offset=${offset}&all=${all}`,
     );
-    total = body.total;
-    items = offset === 0 ? body.items : [...(items ?? []), ...body.items];
   }
+
+  /** Lines already shown win: a line that moved down a page as new ones arrived is not listed twice. */
+  const append = (shown: readonly Activity[], next: readonly Activity[]): Activity[] => {
+    const known = new Set(shown.map((line) => line.id));
+    return [...shown, ...next.filter((line) => !known.has(line.id))];
+  };
 
   /** Reads again what is shown, as many lines as were: an event must not fold the list. */
   async function load(): Promise<void> {
+    const ticket = ++latest;
     try {
       const shown = Math.max(items?.length ?? 0, PAGE);
-      await page(0, Math.min(shown, 200));
-      for (let read = items?.length ?? 0; read < shown && read < total; read = items?.length ?? 0) {
-        await page(read, Math.min(shown - read, 200));
+      const first = await page(0, Math.min(shown, 200));
+      let read = first.items;
+      while (read.length < shown && read.length < first.total) {
+        const next = await page(read.length, Math.min(shown - read.length, 200));
+        if (next.items.length === 0) {
+          break;
+        }
+        read = append(read, next.items);
       }
-      failure = undefined;
+      if (ticket === latest) {
+        items = read;
+        total = first.total;
+        failure = undefined;
+      }
     } catch (error) {
-      failure = error;
+      if (ticket === latest) {
+        failure = error;
+      }
     }
   }
 
   async function more(): Promise<void> {
+    const ticket = latest;
+    const shown = items ?? [];
     try {
-      await page(items?.length ?? 0, PAGE);
+      const next = await page(shown.length, PAGE);
+      if (ticket === latest) {
+        items = append(shown, next.items);
+        total = next.total;
+      }
     } catch (error) {
-      failure = error;
+      if (ticket === latest) {
+        failure = error;
+      }
     }
   }
 
