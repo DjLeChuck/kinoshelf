@@ -23,14 +23,13 @@
   let failure = $state<unknown>(undefined);
   // In the URL (`?state=review`), like the libraries' filter.
   const filter = $derived<Filter>(oneOf(router.query.get('state'), FILTERS) ?? 'all');
-  let firstFilter = true;
+  let shown = untrack(() => filter);
   $effect(() => {
-    void filter;
-    if (firstFilter) {
-      firstFilter = false;
-      return;
+    const current = filter;
+    if (current !== shown) {
+      shown = current;
+      untrack(() => void load());
     }
-    untrack(() => void load());
   });
   let chosen = $state<string | undefined>(undefined);
   let notice = $state<string | undefined>(undefined);
@@ -101,8 +100,9 @@
         type="button"
         class="btn"
         aria-pressed={filter === option}
-        onclick={() => router.setQuery({ state: option === 'all' ? undefined : option })}
-        >{t(`web.arrivals.filter.${option}`)}</button
+        onclick={() => {
+          router.setQuery({ state: option === 'all' ? undefined : option });
+        }}>{t(`web.arrivals.filter.${option}`)}</button
       >
     {/each}
   </div>

@@ -63,14 +63,13 @@
   const filters = $derived(isSeries ? SERIES_FILTERS : ITEM_FILTERS);
   // The filter lives in the URL (`?state=review`): a link keeps it, and so does a reload.
   const filter = $derived(oneOf(router.query.get('state'), filters));
-  let firstFilter = true;
+  let shown = untrack(() => filter);
   $effect(() => {
-    void filter;
-    if (firstFilter) {
-      firstFilter = false;
-      return;
+    const current = filter;
+    if (current !== shown) {
+      shown = current;
+      untrack(refilter);
     }
-    untrack(refilter);
   });
   const tree = $derived(isSeries && (filter === undefined || filter === 'missing-episodes'));
 
@@ -178,7 +177,9 @@
           type="button"
           class="btn"
           aria-pressed={filter === option}
-          onclick={() => router.setQuery({ state: option })}
+          onclick={() => {
+            router.setQuery({ state: option });
+          }}
         >
           {t(`web.library.filter.${option ?? 'all'}`)}
           <span class="count">{page.counts[option ?? 'all']}</span>
