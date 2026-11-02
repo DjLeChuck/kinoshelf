@@ -194,6 +194,7 @@ describe('GET /api/libraries/:id/items', () => {
       unrecognized: 1,
       'missing-nfo': 2,
       'missing-artwork': 0,
+      'missing-episodes': 0,
     });
     expect(body.total).toBe(3);
     // Alien, Dune, then the file nobody recognized, which has no title but its name.

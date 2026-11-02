@@ -205,6 +205,7 @@ export const fr: Record<keyof typeof en, string> = {
   'error.library.in-use':
     'Le dossier d’arrivée « {name} » envoie ses fichiers dans cette bibliothèque.',
   'error.library.invalid': 'Cette bibliothèque n’est pas valide : {detail}',
+  'error.library.not-series': 'Cette bibliothèque ne contient pas de séries.',
   'error.library.not-typed': 'C’est un dossier d’arrivée : il ne contient pas de bibliothèque.',
   'error.library.item-not-found':
     'Ce fichier n’est plus dans la bibliothèque. Mettez la source à jour et réessayez.',

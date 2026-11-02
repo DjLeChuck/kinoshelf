@@ -15,6 +15,7 @@ import {
   type LibraryConfig,
   type MetadataProvider,
   type MovieDetails,
+  type SeasonInfo,
   type SeriesDetails,
   type Operation,
   type OperationResult,
@@ -221,6 +222,25 @@ export class Service {
     const provider = this.provider();
     const id = { provider: provider.name, id: tmdbId };
     return kind === 'movie' ? provider.getMovieDetails(id) : provider.getSeriesDetails(id);
+  }
+
+  /**
+   * A show and all its seasons with their episodes (the provider's cache makes each one a single
+   * request); `null` if the provider does not know it.
+   */
+  async seasons(
+    tmdbId: number,
+  ): Promise<{ details: SeriesDetails; seasons: readonly SeasonInfo[] } | null> {
+    const provider = this.provider();
+    const id = { provider: provider.name, id: tmdbId };
+    const details = await provider.getSeriesDetails(id);
+    if (!details) {
+      return null;
+    }
+    const seasons = await Promise.all(
+      details.seasons.map(({ season }) => provider.getSeason(id, season)),
+    );
+    return { details, seasons: seasons.filter((season) => season !== null) };
   }
 
   private provider(): MetadataProvider {

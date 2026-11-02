@@ -36,6 +36,10 @@ export interface LibraryItem {
   readonly tmdbId: number | null;
   readonly title: string | null;
   readonly year: number | null;
+  /** Series only: the episode(s) the file holds. `episodeEnd` is set for a multi-episode file. */
+  readonly season: number | null;
+  readonly episode: number | null;
+  readonly episodeEnd: number | null;
   readonly state: ItemState;
   readonly nfo: Presence;
   readonly poster: Presence;
@@ -53,6 +57,9 @@ interface Row {
   tmdb_id: number | null;
   title: string | null;
   year: number | null;
+  season: number | null;
+  episode: number | null;
+  episode_end: number | null;
   state: ItemState;
   nfo: number | null;
   poster: number | null;
@@ -63,7 +70,7 @@ interface Row {
 }
 
 const COLUMNS =
-  'library_id, path, kind, tmdb_id, title, year, state, nfo, poster, fanart, entry_id, scan_job_id, scanned_at';
+  'library_id, path, kind, tmdb_id, title, year, season, episode, episode_end, state, nfo, poster, fanart, entry_id, scan_job_id, scanned_at';
 
 interface ProbeRow {
   path: string;
@@ -86,6 +93,9 @@ const toItem = (row: Row): LibraryItem => ({
   tmdbId: row.tmdb_id,
   title: row.title,
   year: row.year,
+  season: row.season,
+  episode: row.episode,
+  episodeEnd: row.episode_end,
   state: row.state,
   nfo: flag(row.nfo),
   poster: flag(row.poster),
@@ -196,7 +206,7 @@ export class LibraryItemStore {
       .prepare(
         // An upsert, not a replacement: what ffprobe learned of the file is not the scan's to erase.
         `INSERT INTO library_items (${COLUMNS})
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT (library_id, path) DO UPDATE SET ${COLUMNS.split(', ')
            .slice(2)
            .map((column) => `${column} = excluded.${column}`)
@@ -209,6 +219,9 @@ export class LibraryItemStore {
         item.tmdbId,
         item.title,
         item.year,
+        item.season,
+        item.episode,
+        item.episodeEnd,
         item.state,
         bit(item.nfo),
         bit(item.poster),
@@ -291,7 +304,59 @@ export class LibraryItemStore {
     for (const filter of ITEM_FILTERS) {
       counts[filter] = count(` AND ${FILTER_SQL[filter]}`);
     }
+    // Counted in shows, not files: it is the list of shows that this filter narrows.
+    counts['missing-episodes'] = this.shows(libraryId, {
+      missing: true,
+      limit: 1,
+      offset: 0,
+    }).total;
     return counts;
+  }
+
+  /**
+   * The shows of a series library, one row each, by title. `missing` is what was last counted
+   * (`null`: not yet, see `Completeness`). Files nobody identified (no work id) are not shows.
+   */
+  shows(
+    libraryId: string,
+    options: { query?: string; missing?: boolean; limit: number; offset: number },
+  ): { total: number; items: ShowRow[] } {
+    const where = [
+      "i.library_id = ? AND i.kind = 'series' AND i.tmdb_id IS NOT NULL",
+      ...(options.query ? ["lower(i.title) LIKE ? ESCAPE '\\'"] : []),
+    ].join(' AND ');
+    const having = options.missing ? 'HAVING MAX(c.missing) > 0' : '';
+    const params: (string | number)[] = [
+      libraryId,
+      ...(options.query ? [contains(options.query.toLowerCase())] : []),
+    ];
+    const grouped = `
+      SELECT i.tmdb_id AS tmdb_id, MIN(i.title) AS title, MIN(i.year) AS year,
+        COUNT(DISTINCT i.season) AS seasons,
+        SUM(CASE WHEN i.episode IS NULL THEN 1
+                 ELSE COALESCE(i.episode_end, i.episode) - i.episode + 1 END) AS episodes,
+        MAX(c.missing) AS missing
+      FROM library_items i
+      LEFT JOIN series_completeness c ON c.library_id = i.library_id AND c.tmdb_id = i.tmdb_id
+      WHERE ${where} GROUP BY i.tmdb_id ${having}`;
+    const total =
+      this.database
+        .prepare<unknown[], { total: number }>(`SELECT COUNT(*) AS total FROM (${grouped})`)
+        .get(...params)?.total ?? 0;
+    const rows = this.database
+      .prepare<unknown[], ShowQuery>(`${grouped} ORDER BY lower(title), tmdb_id LIMIT ? OFFSET ?`)
+      .all(...params, options.limit, options.offset);
+    return {
+      total,
+      items: rows.map((row) => ({
+        tmdbId: row.tmdb_id,
+        title: row.title,
+        year: row.year,
+        seasons: row.seasons,
+        episodes: row.episodes,
+        missing: row.missing,
+      })),
+    };
   }
 
   /** When the snapshot was last replaced by a scan; `null` for a library never scanned. */
@@ -329,7 +394,27 @@ const FILTER_SQL: Record<ItemFilter, string> = {
   'missing-artwork': '(poster = 0 OR fanart = 0)',
 };
 
-export type ItemCounts = Record<ItemFilter | 'all', number>;
+export type ItemCounts = Record<ItemFilter | 'all' | 'missing-episodes', number>;
+
+/** A show of a series library, with what its files make of it. */
+export interface ShowRow {
+  readonly tmdbId: number;
+  readonly title: string | null;
+  readonly year: number | null;
+  readonly seasons: number;
+  readonly episodes: number;
+  /** Aired episodes no file holds, as last counted; `null` until it was. */
+  readonly missing: number | null;
+}
+
+interface ShowQuery {
+  tmdb_id: number;
+  title: string | null;
+  year: number | null;
+  seasons: number;
+  episodes: number;
+  missing: number | null;
+}
 
 /** A LIKE pattern that matches the text itself, `%` and `_` included. */
 const contains = (text: string): string => `%${text.replace(/[\\%_]/g, '\\$&')}%`;
@@ -338,12 +423,16 @@ type Writable = 'nfo' | 'poster' | 'fanart';
 
 /**
  * Which files the profile writes for a work of this kind. A movie written flat (no folder) gets no
- * fixed-name file (`poster.jpg` would be every movie's); series are left to their own step.
+ * fixed-name file (`poster.jpg` would be every movie's). For an episode only its own NFO counts.
  */
 export function writes(
   profile: Profile,
   kind: 'movie' | 'series' | null,
 ): Record<Writable, boolean> {
+  if (kind === 'series') {
+    // An episode has its own NFO; the show's and the seasons' files are not a row's to carry.
+    return { nfo: profile.nfo !== null, poster: false, fanart: false };
+  }
   if (kind !== 'movie') {
     return { nfo: false, poster: false, fanart: false };
   }
@@ -359,7 +448,10 @@ export function writes(
 function fileKind(profile: Profile, destination: string): Writable | undefined {
   const name = basename(destination);
   if (profile.nfo !== null && name.endsWith('.nfo')) {
-    return 'nfo';
+    // `tvshow.nfo` is the show's, not the episode's: it must not read as a missing episode NFO.
+    return profile.nfo.series !== undefined && name === basename(profile.nfo.series)
+      ? undefined
+      : 'nfo';
   }
   const spec = profile.artwork.find((candidate) => candidate.name === name);
   return spec?.kind === 'poster' || spec?.kind === 'fanart' ? spec.kind : undefined;
@@ -445,6 +537,7 @@ export function itemOf(
   // The work the file is planned for, among the candidates the entry keeps.
   const best =
     matched ?? entry.candidates.find((candidate) => candidate.id.id === entry.item?.externalId.id);
+  const episodes = kind === 'series' ? entry.parsed.episodes : [];
   return {
     libraryId,
     path: entry.path,
@@ -452,6 +545,10 @@ export function itemOf(
     tmdbId: entry.item?.externalId.id ?? null,
     title: best?.title ?? entry.parsed.title ?? null,
     year: best?.year ?? entry.parsed.year ?? null,
+    season: kind === 'series' ? (entry.parsed.season ?? null) : null,
+    // A range keeps its two ends: what lies between is covered, and counted so.
+    episode: episodes.length > 0 ? Math.min(...episodes) : null,
+    episodeEnd: episodes.length > 1 ? Math.max(...episodes) : null,
     ...describe(entry, profile, kind),
     entryId: entry.id,
     scanJobId: entry.jobId,
@@ -472,6 +569,8 @@ export class LibrarySnapshot {
       readonly jobs: JobStore;
       readonly entries: EntryStore;
       readonly store: LibraryItemStore;
+      /** A library's rows changed (the shows of a series library are to be counted again). */
+      readonly changed?: (libraryId: string) => void;
     },
   ) {}
 
@@ -499,6 +598,7 @@ export class LibrarySnapshot {
       library.id,
       entries.map((entry) => itemOf(entry, profile, library.id, now)),
     );
+    this.deps.changed?.(library.id);
   }
 
   /** A human chose the work of a file: its row follows, with the title they chose. */
@@ -514,6 +614,7 @@ export class LibrarySnapshot {
       ...itemOf(entry, profile, library.id, row.scannedAt, candidate),
       path: row.path,
     });
+    this.deps.changed?.(library.id);
   }
 
   /** Transfers of a job ended: each video that went through is where it was sent, and written. */
@@ -587,6 +688,7 @@ export class LibrarySnapshot {
         entryId: null,
         scanJobId: null,
       });
+      this.deps.changed?.(library.id);
     }
   }
 
@@ -644,5 +746,6 @@ export class LibrarySnapshot {
       this.deps.store.rename(row.libraryId, row.path, path);
     }
     this.deps.store.put({ ...row, ...next, path, state });
+    this.deps.changed?.(row.libraryId);
   }
 }

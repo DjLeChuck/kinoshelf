@@ -1,0 +1,384 @@
+import { join } from 'node:path';
+import { loadConfig } from '@kinoshelf/core';
+import type { MetadataProvider, SeasonInfo, SeriesDetails } from '@kinoshelf/core';
+import { afterEach, describe, expect, it } from 'vitest';
+import { compare, signatureOf } from '../src/completeness.js';
+import { LibraryItemStore, type LibraryItem } from '../src/library-items.js';
+import { cleanup, fakeProvider, harness, makeDir, put } from './harness.js';
+
+afterEach(cleanup);
+
+const SHOW = { provider: 'tmdb', id: 95396 };
+
+const episode = (season: number, number: number, airDate?: string) => ({
+  season,
+  episode: number,
+  title: `Episode ${String(number)}`,
+  ...(airDate !== undefined && { airDate }),
+});
+
+/** Season 1: three aired episodes. Season 2: one aired, one next century, one with no date. */
+const SEASONS: SeasonInfo[] = [
+  {
+    season: 0,
+    episodes: [episode(0, 1, '2021-12-01'), episode(0, 2, '2022-01-01')],
+  },
+  {
+    season: 1,
+    episodes: [
+      episode(1, 1, '2022-02-18'),
+      episode(1, 2, '2022-02-18'),
+      episode(1, 3, '2022-02-25'),
+    ],
+  },
+  {
+    season: 2,
+    episodes: [episode(2, 1, '2023-01-01'), episode(2, 2, '2999-01-01'), episode(2, 3)],
+  },
+];
+
+const DETAILS: SeriesDetails = {
+  kind: 'series',
+  id: SHOW,
+  title: 'Severance',
+  originalTitle: 'Severance',
+  overview: 'Work and life, split.',
+  genres: ['Drama'],
+  studios: [],
+  countries: [],
+  cast: [],
+  firstAirDate: '2022-02-18',
+  status: 'Returning Series',
+  seasons: [{ season: 0 }, { season: 1, name: 'Season 1' }, { season: 2 }],
+};
+
+const provider = (options: { down?: boolean } = {}): MetadataProvider => ({
+  ...fakeProvider,
+  searchSeries: ({ title }) =>
+    Promise.resolve(
+      title.toLowerCase().startsWith('severance')
+        ? [
+            {
+              kind: 'series',
+              id: SHOW,
+              title: 'Severance',
+              originalTitle: 'Severance',
+              alternativeTitles: [],
+              year: 2022,
+            },
+          ]
+        : [],
+    ),
+  getSeries: () =>
+    Promise.resolve({
+      kind: 'series',
+      id: SHOW,
+      title: 'Severance',
+      originalTitle: 'Severance',
+      alternativeTitles: [],
+      year: 2022,
+    }),
+  getSeason: (_id, season) =>
+    Promise.resolve(SEASONS.find((candidate) => candidate.season === season) ?? null),
+  getSeriesDetails: () =>
+    options.down ? Promise.reject(new Error('tmdb is down')) : Promise.resolve(DETAILS),
+});
+
+interface Shows {
+  total: number;
+  items: {
+    tmdbId: number;
+    title: string;
+    seasons: number;
+    episodes: number;
+    missing: number | null;
+  }[];
+}
+
+interface Show {
+  determined: boolean;
+  missing: number | null;
+  seasons: {
+    season: number;
+    missing: number;
+    episodes: { episode: number; state: string; item: { path: string } | null }[];
+  }[];
+}
+
+/** A series library holding S01E01, a S01E02E03 file, S02E01, a special and a file nobody knows. */
+async function scanned(options: { down?: boolean } = {}) {
+  const root = await makeDir();
+  const files = {
+    one: await put(join(root, 'Severance.S01E01.1080p.mkv')),
+    double: await put(join(root, 'Severance.S01E02E03.1080p.mkv')),
+    second: await put(join(root, 'Severance.S02E01.1080p.mkv')),
+    special: await put(join(root, 'Severance.S00E01.1080p.mkv')),
+    stranger: await put(join(root, 'Mystery.Home.Video.S01E01.mkv')),
+  };
+  const h = await harness({
+    config: {
+      libraries: [
+        { id: 'films', name: 'Films', source: await makeDir(), type: 'movie' },
+        { id: 'shows', name: 'Shows', source: root, type: 'series' },
+      ],
+    },
+    createProvider: () => provider(options),
+  });
+  await h.request('POST', '/api/libraries/shows/scan');
+  await h.app.jobs.idle();
+  await h.app.completeness.idle();
+  return { h, files, store: new LibraryItemStore(h.database) };
+}
+
+describe('the snapshot of a series library', () => {
+  it('keeps the season and the episodes of each file', async () => {
+    const { store, files } = await scanned();
+    const rows = new Map(store.all('shows').map((item) => [item.path, item]));
+    expect(rows.get(files.one)).toMatchObject({
+      kind: 'series',
+      tmdbId: 95396,
+      season: 1,
+      episode: 1,
+      episodeEnd: null,
+    });
+    // One row per file: the range stays whole.
+    expect(rows.get(files.double)).toMatchObject({ season: 1, episode: 2, episodeEnd: 3 });
+    expect(rows.get(files.special)).toMatchObject({ season: 0, episode: 1 });
+  });
+
+  it('writes no season or episode for a movie', async () => {
+    const { store } = await scanned();
+    expect(store.all('films')).toEqual([]);
+  });
+
+  it('exposes them in the list, and counts the NFO of an episode only', async () => {
+    const { h, files } = await scanned();
+    const list = await h.request('GET', '/api/libraries/shows/items');
+    const items = list.json<{
+      items: {
+        path: string;
+        season: number | null;
+        episode: number | null;
+        episodeEnd: number | null;
+      }[];
+    }>().items;
+    expect(items.find((item) => item.path === files.double)).toMatchObject({
+      season: 1,
+      episode: 2,
+      episodeEnd: 3,
+    });
+  });
+});
+
+describe('the shows of a series library', () => {
+  it('lists one row per work, with its seasons and episodes, and leaves the unknown out', async () => {
+    const { h } = await scanned();
+    const shows = (await h.request('GET', '/api/libraries/shows/shows')).json<Shows>();
+    expect(shows.total).toBe(1);
+    // Files: S01E01, S01E02-03 (two episodes), S02E01, a special: 5 episodes in 3 seasons.
+    expect(shows.items[0]).toMatchObject({
+      tmdbId: 95396,
+      title: 'Severance',
+      seasons: 3,
+      episodes: 5,
+    });
+  });
+
+  it('counts the missing episodes in the background, once the jobs are done', async () => {
+    const { h } = await scanned();
+    // S01 is whole, S02 lacks nothing aired but one with no date and one in 2999: none missing.
+    const shows = (await h.request('GET', '/api/libraries/shows/shows')).json<Shows>();
+    expect(shows.items[0]?.missing).toBe(0);
+  });
+
+  it('refuses a movie library and an arrival folder', async () => {
+    const { h } = await scanned();
+    const movies = await h.request('GET', '/api/libraries/films/shows');
+    expect(movies.statusCode).toBe(409);
+    expect(movies.json()).toEqual({ error: { code: 'library.not-series' } });
+  });
+
+  it('leaves the count to the page when the provider fails in the background', async () => {
+    const { h } = await scanned({ down: true });
+    const shows = (await h.request('GET', '/api/libraries/shows/shows')).json<Shows>();
+    expect(shows.items[0]?.missing).toBeNull();
+    const counts = (await h.request('GET', '/api/libraries/shows/items')).json<{
+      counts: Record<string, number>;
+    }>().counts;
+    expect(counts['missing-episodes']).toBe(0);
+  });
+});
+
+describe('the page of a show', () => {
+  it('lists the episodes the library lacks, and never counts the unaired or the specials', async () => {
+    const { h, files } = await scanned();
+    // Drop S01E01: it is aired, and nothing holds it any more.
+    const { rm } = await import('node:fs/promises');
+    await rm(files.one);
+    await h.request('POST', '/api/libraries/shows/scan');
+    await h.app.jobs.idle();
+    await h.app.completeness.idle();
+
+    const show = (await h.request('GET', '/api/libraries/shows/shows/95396')).json<Show>();
+    expect(show.determined).toBe(true);
+    expect(show.missing).toBe(1);
+    const [specials, first, second] = show.seasons;
+    expect(specials).toMatchObject({ season: 0, missing: 0 });
+    // Only the special the library holds is listed.
+    expect(specials?.episodes.map((e) => e.episode)).toEqual([1]);
+    expect(first?.missing).toBe(1);
+    expect(first?.episodes.map((e) => [e.episode, e.state])).toEqual([
+      [1, 'missing'],
+      [2, 'present'],
+      [3, 'present'],
+    ]);
+    // The two episodes of the double file share it.
+    expect(first?.episodes[1]?.item?.path).toBe(files.double);
+    expect(first?.episodes[2]?.item?.path).toBe(files.double);
+    expect(second?.episodes.map((e) => [e.episode, e.state])).toEqual([
+      [1, 'present'],
+      [2, 'unaired'],
+      [3, 'unaired'],
+    ]);
+
+    // The list follows, and the filter finds the show.
+    const shows = (await h.request('GET', '/api/libraries/shows/shows?missing=true')).json<Shows>();
+    expect(shows.items.map((item) => [item.title, item.missing])).toEqual([['Severance', 1]]);
+    const counts = (await h.request('GET', '/api/libraries/shows/items')).json<{
+      counts: Record<string, number>;
+    }>().counts;
+    expect(counts['missing-episodes']).toBe(1);
+  });
+
+  it('counts again when a file comes or goes, and leaves an unchanged show alone', async () => {
+    const { h, files } = await scanned();
+    const { rm } = await import('node:fs/promises');
+    await rm(files.double);
+    await h.request('POST', '/api/libraries/shows/scan');
+    await h.app.jobs.idle();
+    await h.app.completeness.idle();
+    const shows = (await h.request('GET', '/api/libraries/shows/shows')).json<Shows>();
+    // E02 and E03 of season 1 are aired and gone.
+    expect(shows.items[0]?.missing).toBe(2);
+  });
+
+  it('still lists the files when the provider cannot be asked', async () => {
+    const { h } = await scanned({ down: true });
+    const show = (await h.request('GET', '/api/libraries/shows/shows/95396')).json<Show>();
+    expect(show.determined).toBe(false);
+    expect(show.missing).toBeNull();
+    expect(show.seasons.map((s) => s.season)).toEqual([0, 1, 2]);
+    expect(show.seasons.every((s) => s.missing === 0)).toBe(true);
+  });
+
+  it('is 404 for a show the library does not hold', async () => {
+    const { h } = await scanned();
+    expect((await h.request('GET', '/api/libraries/shows/shows/1')).statusCode).toBe(404);
+  });
+});
+
+describe('comparing the files with the provider', () => {
+  const row = (season: number, episode: number, episodeEnd: number | null = null): LibraryItem => ({
+    libraryId: 'shows',
+    path: `/s${String(season)}e${String(episode)}.mkv`,
+    kind: 'series',
+    tmdbId: 1,
+    title: 'Show',
+    year: 2020,
+    season,
+    episode,
+    episodeEnd,
+    state: 'ok',
+    nfo: null,
+    poster: null,
+    fanart: null,
+    entryId: null,
+    scanJobId: null,
+    scannedAt: '2026-01-01T00:00:00Z',
+  });
+
+  it('flags an episode a file claims and the provider does not know', () => {
+    const [season] = compare(
+      [row(1, 9)],
+      [{ season: 1, episodes: [episode(1, 1, '2020-01-01')] }],
+      [],
+      '2026-01-01',
+    );
+    expect(season?.episodes.map((e) => [e.episode, e.state])).toEqual([
+      [1, 'missing'],
+      [9, 'extra'],
+    ]);
+    expect(season?.missing).toBe(1);
+  });
+
+  it('is the same signature for the same episodes in any order, another when one changes', () => {
+    expect(signatureOf([row(1, 1), row(1, 2)])).toBe(signatureOf([row(1, 2), row(1, 1)]));
+    expect(signatureOf([row(1, 1), row(1, 2)])).not.toBe(signatureOf([row(1, 1), row(1, 2, 3)]));
+  });
+});
+
+describe('an episode that arrives', () => {
+  it('is validated into the series library chosen, and the show is remembered there', async () => {
+    const configDir = await makeDir();
+    await put(join(configDir, 'config.yaml'), '');
+    const h = await harness({
+      configDir,
+      config: await loadConfig(configDir),
+      createProvider: () => provider(),
+    });
+    const roots = { films: await makeDir(), shows: await makeDir(), anime: await makeDir() };
+    const downloads = await makeDir();
+    const create = (body: object): Promise<unknown> => h.request('POST', '/api/libraries', body);
+    await create({ name: 'Films', source: roots.films, type: 'movie' });
+    await create({ name: 'Shows', source: roots.shows, type: 'series' });
+    await create({ name: 'Anime', source: roots.anime, type: 'series' });
+    await create({
+      name: 'Downloads',
+      source: downloads,
+      into: { movie: 'films', series: 'shows' },
+    });
+    const scan = async (): Promise<string> => {
+      const response = await h.request('POST', '/api/libraries/downloads/scan');
+      await h.app.jobs.idle();
+      return response.json<{ id: string }>().id;
+    };
+
+    // The name says nothing to TMDB: a person picks the show, and the library.
+    await put(join(downloads, 'Mystery.Home.Video.S01E02.mkv'), 'two');
+    const jobId = await scan();
+    const waiting = (await h.request('GET', '/api/arrivals')).json<{
+      items: { id: string; kind: string; destinationOptions: { id: string }[] }[];
+    }>().items;
+    // An episode can only go to a library of series.
+    expect(waiting[0]).toMatchObject({ kind: 'series' });
+    expect(waiting[0]?.destinationOptions.map((option) => option.id)).toEqual(['shows', 'anime']);
+    const matched = await h.request('POST', `/api/entries/${waiting[0]?.id ?? ''}/match`, {
+      kind: 'series',
+      id: SHOW,
+      title: 'Severance',
+      year: 2022,
+      libraryId: 'anime',
+      rememberDestination: true,
+      remember: false,
+    });
+    expect(matched.statusCode).toBe(200);
+    // Remembered for the show, not for the file.
+    expect((await h.request('GET', '/api/work-destinations')).json()).toMatchObject([
+      { kind: 'series', tmdbId: 95396, libraryId: 'anime' },
+    ]);
+
+    expect((await h.request('POST', `/api/plans/${jobId}/execute`)).statusCode).toBe(202);
+    await h.app.jobs.idle();
+    const rows = new LibraryItemStore(h.database).all('anime');
+    expect(rows).toMatchObject([{ tmdbId: 95396, season: 1, episode: 2, state: 'ok' }]);
+    expect(rows[0]?.path.startsWith(roots.anime)).toBe(true);
+
+    // The next episode of the show goes there by itself, and does not wait.
+    await put(join(downloads, 'Severance.S01E03.1080p.mkv'), 'three');
+    const next = await scan();
+    const [episode] = (await h.request('GET', `/api/jobs/${next}/entries`))
+      .json<{ path: string; destination: string }[]>()
+      .filter((entry) => entry.path.endsWith('Severance.S01E03.1080p.mkv'));
+    expect(episode?.destination.startsWith(roots.anime)).toBe(true);
+  });
+});

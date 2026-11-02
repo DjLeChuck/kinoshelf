@@ -811,6 +811,9 @@ export const libraryItemSchema = {
     'title',
     'year',
     'tmdbId',
+    'season',
+    'episode',
+    'episodeEnd',
     'resolution',
     'nfo',
     'poster',
@@ -832,6 +835,13 @@ export const libraryItemSchema = {
     },
     year: { type: 'integer', nullable: true },
     tmdbId: { type: 'integer', nullable: true },
+    season: { type: 'integer', nullable: true, description: 'Series only.' },
+    episode: { type: 'integer', nullable: true, description: 'Series only: the first episode.' },
+    episodeEnd: {
+      type: 'integer',
+      nullable: true,
+      description: 'The last episode of a file holding several; `null` for a single one.',
+    },
     resolution: {
       type: 'string',
       nullable: true,
@@ -845,6 +855,49 @@ export const libraryItemSchema = {
     poster: { type: 'boolean', nullable: true },
     fanart: { type: 'boolean', nullable: true },
     entryId: { type: 'string', nullable: true, description: 'To validate or change the match.' },
+  },
+} as const;
+
+export const showSchema = {
+  type: 'object',
+  required: ['tmdbId', 'title', 'year', 'seasons', 'episodes', 'missing'],
+  properties: {
+    tmdbId: { type: 'integer' },
+    title: { type: 'string', nullable: true },
+    year: { type: 'integer', nullable: true },
+    seasons: { type: 'integer', description: 'Seasons the library holds files of.' },
+    episodes: { type: 'integer', description: 'Episodes the files hold (a range counts each).' },
+    missing: {
+      type: 'integer',
+      nullable: true,
+      description: 'Aired episodes no file holds, as last counted; `null` until it was.',
+    },
+  },
+} as const;
+
+export const seasonSchema = {
+  type: 'object',
+  required: ['season', 'name', 'posterPath', 'missing', 'episodes'],
+  properties: {
+    season: { type: 'integer', description: '0 is the specials.' },
+    name: { type: 'string', nullable: true },
+    posterPath: { type: 'string', nullable: true },
+    missing: { type: 'integer', description: 'Always 0 for the specials.' },
+    episodes: {
+      type: 'array',
+      items: {
+        type: 'object',
+        required: ['season', 'episode', 'title', 'airDate', 'state', 'item'],
+        properties: {
+          season: { type: 'integer' },
+          episode: { type: 'integer' },
+          title: { type: 'string', nullable: true },
+          airDate: { type: 'string', nullable: true },
+          state: { type: 'string', enum: ['present', 'missing', 'unaired', 'extra'] },
+          item: { ...libraryItemSchema, nullable: true },
+        },
+      },
+    },
   },
 } as const;
 

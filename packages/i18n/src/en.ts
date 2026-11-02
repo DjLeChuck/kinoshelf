@@ -196,6 +196,7 @@ export const en = {
   'error.job.not-found': 'This job does not exist.',
   'error.library.in-use': 'The arrival folder “{name}” sends its files to this library.',
   'error.library.invalid': 'This library is not valid: {detail}',
+  'error.library.not-series': 'This library does not hold series.',
   'error.library.not-typed': 'This is an arrival folder: it holds no library of its own.',
   'error.library.item-not-found':
     'This file is no longer in the library. Update the source and try again.',

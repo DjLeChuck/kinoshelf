@@ -22,6 +22,7 @@ import { purgeHistory } from './purge.js';
 import { registerFsRoutes } from './fs-routes.js';
 import { registerLibraryRoutes } from './library-routes.js';
 import { jobPresenter, registerRoutes } from './routes.js';
+import { Completeness, CompletenessStore } from './completeness.js';
 import { ffprobe, ProbeQueue, type Prober } from './probe.js';
 import { LibraryItemStore, LibrarySnapshot } from './library-items.js';
 import { JobRunner, type JobProcessor } from './runner.js';
@@ -45,6 +46,8 @@ declare module 'fastify' {
     notifier: Notifier;
     /** Reads the videos' codecs in the background; tests await `probes.idle()`. */
     probes: ProbeQueue;
+    /** Counts the missing episodes of the shows in the background; tests await `completeness.idle()`. */
+    completeness: Completeness;
     /** The folder watcher; tests await `watcher.idle()`. */
     watcher: FolderWatcher;
   }
@@ -108,6 +111,9 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     jobs,
     entries,
     store: items,
+    changed: (libraryId) => {
+      completeness.touch(libraryId);
+    },
   });
   const service = new Service({
     ...options,
@@ -152,6 +158,16 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
       app.log.warn(error, 'Could not read a video with ffprobe');
     },
   });
+  // Counts the episodes each show lacks, with the same patience: after the jobs, never during.
+  const completeness = new Completeness({
+    items,
+    store: new CompletenessStore(options.database),
+    fetch: (tmdbId) => service.seasons(tmdbId),
+    busy: () => runner.busy,
+    onError: (error) => {
+      app.log.warn(error, 'Could not count the missing episodes of a show');
+    },
+  });
   const runner = new JobRunner(
     jobs,
     executions,
@@ -168,6 +184,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
       },
       idle: () => {
         probes.kick();
+        completeness.kick();
       },
       jobDone: (job) => {
         notifier.jobDone(job, entries.summary(job.id));
@@ -205,6 +222,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
   });
   app.decorate('jobs', runner);
   app.decorate('probes', probes);
+  app.decorate('completeness', completeness);
   app.decorate('watcher', watcher);
   app.decorate('notifier', notifier);
 
@@ -218,9 +236,11 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
   };
   app.addHook('onReady', () => {
     runner.start();
-    probes.rebuild(
-      (options.config.libraries ?? []).flatMap((library) => (library.type ? [library.id] : [])),
+    const typed = (options.config.libraries ?? []).flatMap((library) =>
+      library.type ? [library.id] : [],
     );
+    probes.rebuild(typed);
+    completeness.rebuild(typed);
     watcher.configure(watcherSettings(options.config));
     if (options.retentionDays) {
       purge();
@@ -239,6 +259,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     await watcher.idle();
     await runner.stop();
     await probes.stop();
+    await completeness.stop();
     await notifier.idle();
   });
 
@@ -356,6 +377,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
       entries,
       items,
       probes,
+      completeness,
       details: (kind, id) => service.details(kind, id),
       events,
       runner,

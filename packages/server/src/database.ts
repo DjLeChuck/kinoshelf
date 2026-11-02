@@ -208,6 +208,25 @@ export const SERVER_MIGRATIONS: readonly { readonly name: string; readonly sql: 
     name: 'server:013-entry-destination',
     sql: 'ALTER TABLE job_entries ADD COLUMN destination_library_id TEXT;',
   },
+  {
+    // A file holding several episodes (S01E01E02) is one row: `episode` is its first, `episode_end`
+    // its last (NULL for a single one). `series_completeness` remembers how many aired episodes a
+    // show of a library lacks, so the list and its filter need no TMDB call: `signature` says which
+    // episodes were present when it was counted, a different one means the count is stale.
+    // Disposable: a missing row only means "not counted yet".
+    name: 'server:014-series-completeness',
+    sql: `
+      ALTER TABLE library_items ADD COLUMN episode_end INTEGER;
+      CREATE TABLE series_completeness (
+        library_id TEXT NOT NULL,
+        tmdb_id INTEGER NOT NULL,
+        missing INTEGER NOT NULL,
+        signature TEXT NOT NULL,
+        computed_at TEXT NOT NULL,
+        PRIMARY KEY (library_id, tmdb_id)
+      );
+    `,
+  },
 ];
 
 /** Opens the single SQLite file of the config directory, shared with the CLI and the cache. */

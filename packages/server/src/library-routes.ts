@@ -11,6 +11,7 @@ import {
 } from '@kinoshelf/core';
 import type { FastifyInstance } from 'fastify';
 import { ApiError } from './api-error.js';
+import { compare, missingOf, type Completeness, type EpisodeReport } from './completeness.js';
 import type { ProbeQueue } from './probe.js';
 import type { EntryStore } from './entries.js';
 import type { EventBus } from './events.js';
@@ -35,6 +36,8 @@ import {
   librarySchema,
   paging,
   progressSchema,
+  seasonSchema,
+  showSchema,
 } from './schemas.js';
 import type { ConfigStore } from './settings.js';
 
@@ -44,6 +47,8 @@ export interface LibraryContext {
   readonly entries: EntryStore;
   readonly items: LibraryItemStore;
   readonly probes: ProbeQueue;
+  /** The missing episodes of a show, counted on opening it (and in the background otherwise). */
+  readonly completeness: Completeness;
   /** The provider's details of a work, for the page of one item. */
   readonly details: (
     kind: 'movie' | 'series',
@@ -129,12 +134,19 @@ const presentItem = (item: LibraryItem): unknown => ({
   title: item.title,
   year: item.year,
   tmdbId: item.tmdbId,
+  season: item.season,
+  episode: item.episode,
+  episodeEnd: item.episodeEnd,
   resolution: resolutionOf(item.path),
   nfo: item.nfo,
   poster: item.poster,
   fanart: item.fanart,
   entryId: item.entryId,
 });
+
+/** The year of an ISO date, if there is one. */
+const yearOf = (date: string | undefined): number | null =>
+  date && /^\d{4}/.test(date) ? Number(date.slice(0, 4)) : null;
 
 const find = (config: Config, id: string): LibraryConfig => {
   const library = config.libraries?.find((candidate) => candidate.id === id);
@@ -418,9 +430,14 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
               },
               counts: {
                 type: 'object',
-                required: ['all', ...ITEM_FILTERS],
+                required: ['all', ...ITEM_FILTERS, 'missing-episodes'],
+                description:
+                  '`missing-episodes` counts shows (a series library only), the others files.',
                 properties: Object.fromEntries(
-                  ['all', ...ITEM_FILTERS].map((key) => [key, { type: 'integer' }]),
+                  ['all', ...ITEM_FILTERS, 'missing-episodes'].map((key) => [
+                    key,
+                    { type: 'integer' },
+                  ]),
                 ),
               },
               total: { type: 'integer', description: 'Items matching the filters, for paging.' },
@@ -552,6 +569,167 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
         posterPath: details?.posterPath?.replace(/^\//, '') ?? null,
         backdropPath: details?.backdropPath?.replace(/^\//, '') ?? null,
         file: file ?? null,
+      };
+    },
+  );
+
+  const seriesLibrary = (id: string): LibraryConfig => {
+    const library = find(store.config, id);
+    if (library.type === undefined) {
+      throw new ApiError(409, 'library.not-typed');
+    }
+    if (library.type !== 'series') {
+      throw new ApiError(409, 'library.not-series');
+    }
+    return library;
+  };
+
+  api.get<{
+    Params: { id: string };
+    Querystring: { q?: string; missing?: boolean; limit?: number; offset?: number };
+  }>(
+    '/api/libraries/:id/shows',
+    {
+      schema: {
+        summary: 'The shows of a series library',
+        description:
+          'One row per work (files nobody identified are not shows: they are in `GET ' +
+          '/api/libraries/{id}/items`, filtered by state). `missing` is the number of aired ' +
+          'episodes no file holds, as last counted: `null` until it was (it is counted on ' +
+          'opening a show, and in the background when no job runs), never by this request. ' +
+          '`missing=true` keeps the shows that lack some. 409 `library.not-series` for a movie library.',
+        params: idParams,
+        querystring: {
+          type: 'object',
+          properties: {
+            q: { type: 'string', minLength: 1 },
+            missing: { type: 'boolean' },
+            ...paging,
+          },
+        },
+        response: {
+          200: {
+            type: 'object',
+            required: ['total', 'items'],
+            properties: {
+              total: { type: 'integer' },
+              items: { type: 'array', items: showSchema },
+            },
+          },
+          401: errorSchema,
+          404: errorSchema,
+          409: errorSchema,
+        },
+      },
+    },
+    (request) => {
+      const library = seriesLibrary(request.params.id);
+      const { q, missing, limit, offset } = request.query;
+      return items.shows(library.id, {
+        ...(q && { query: q }),
+        ...(missing && { missing }),
+        limit: limit ?? 50,
+        offset: offset ?? 0,
+      });
+    },
+  );
+
+  const presentEpisode = (episode: EpisodeReport): unknown => ({
+    season: episode.season,
+    episode: episode.episode,
+    title: episode.title,
+    airDate: episode.airDate,
+    state: episode.state,
+    item: episode.item && presentItem(episode.item),
+  });
+
+  api.get<{ Params: { id: string; tmdbId: number } }>(
+    '/api/libraries/:id/shows/:tmdbId',
+    {
+      schema: {
+        summary: 'A show, season by season, with the episodes it lacks',
+        description:
+          'What the library holds of the show against what the provider lists (cached, one request ' +
+          'per season at most). An episode is `present` (`item` is its file; a multi-episode file ' +
+          'serves each of its episodes), `missing` (aired, no file), `unaired` (not out, or no ' +
+          'date: never counted), or `extra` (a file the provider does not know). Season 0 ' +
+          '(specials) lists what is there and is never missing. Counting here refreshes the ' +
+          'number `GET /api/libraries/{id}/shows` gives. When the provider cannot be asked, ' +
+          '`determined` is `false` and the seasons list only the files.',
+        params: {
+          type: 'object',
+          properties: { id: { type: 'string' }, tmdbId: { type: 'integer' } },
+        },
+        response: {
+          200: {
+            type: 'object',
+            required: [
+              'tmdbId',
+              'title',
+              'year',
+              'overview',
+              'genres',
+              'posterPath',
+              'backdropPath',
+              'status',
+              'determined',
+              'missing',
+              'seasons',
+            ],
+            properties: {
+              tmdbId: { type: 'integer' },
+              title: { type: 'string', nullable: true },
+              year: { type: 'integer', nullable: true },
+              overview: { type: 'string', nullable: true },
+              genres: { type: 'array', items: { type: 'string' } },
+              posterPath: { type: 'string', nullable: true },
+              backdropPath: { type: 'string', nullable: true },
+              status: { type: 'string', nullable: true, description: 'The provider’s wording.' },
+              determined: { type: 'boolean' },
+              missing: { type: 'integer', nullable: true },
+              seasons: { type: 'array', items: seasonSchema },
+            },
+          },
+          401: errorSchema,
+          404: errorSchema,
+          409: errorSchema,
+        },
+      },
+    },
+    async (request) => {
+      const library = seriesLibrary(request.params.id);
+      const { tmdbId } = request.params;
+      const files = items
+        .all(library.id)
+        .filter((item) => item.kind === 'series' && item.tmdbId === tmdbId);
+      if (files.length === 0) {
+        throw new ApiError(404, 'library.item-not-found');
+      }
+      const counted = await ctx.completeness.report(library.id, tmdbId).catch(() => null);
+      const details = counted?.details;
+      const seasons =
+        counted?.seasons ??
+        // Without the provider only the files can be told: grouped by season, none missing.
+        compare(files, [], [], '0000-00-00');
+      // The list of shows follows what this page just counted.
+      return {
+        tmdbId,
+        title: details?.title ?? files[0]?.title ?? null,
+        year: yearOf(details?.firstAirDate) ?? files[0]?.year ?? null,
+        overview: details?.overview ?? null,
+        genres: details?.genres ?? [],
+        posterPath: details?.posterPath?.replace(/^\//, '') ?? null,
+        backdropPath: details?.backdropPath?.replace(/^\//, '') ?? null,
+        status: details?.status ?? null,
+        determined: counted !== null,
+        missing: counted ? missingOf(counted.seasons) : null,
+        seasons: seasons.map((season) => ({
+          season: season.season,
+          name: season.name,
+          posterPath: season.posterPath?.replace(/^\//, '') ?? null,
+          missing: season.missing,
+          episodes: season.episodes.map(presentEpisode),
+        })),
       };
     },
   );
