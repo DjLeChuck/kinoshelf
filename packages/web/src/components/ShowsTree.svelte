@@ -3,7 +3,7 @@
   import { messageOf } from '../lib/errors.js';
   import { refetchOn } from '../lib/events.svelte.js';
   import { locale, t } from '../lib/i18n.svelte.js';
-  import { formatDate } from '../lib/history.js';
+  import { formatDay } from '../lib/history.js';
   import { router } from '../lib/router.svelte.js';
   import { listOf, listParam } from '../lib/routes.js';
   import {
@@ -15,6 +15,7 @@
     type Show,
     type ShowDetail,
   } from '../lib/library-items.js';
+  import Chevron from './Chevron.svelte';
   import ItemPanel from './ItemPanel.svelte';
   import ShowPanel from './ShowPanel.svelte';
 
@@ -197,7 +198,7 @@
                   aria-expanded={settleOpen}
                   onclick={() => (settleOpen = !settleOpen)}
                 >
-                  {settleOpen ? '▾' : '▸'}
+                  <Chevron open={settleOpen} />
                   {t('web.library.shows.settle')}
                 </button>
                 <span class="chip chip-warn">{settling.length}</span>
@@ -243,7 +244,7 @@
                   })}
                   onclick={() => void toggle(show)}
                 >
-                  {isOpen ? '▾' : '▸'}
+                  <Chevron open={isOpen} />
                   {show.title ?? ''}
                 </button>
               </td>
@@ -272,7 +273,13 @@
                 {#each detail.seasons as season (season.season)}
                   {@const key = seasonKey(show.tmdbId, season.season)}
                   {@const seasonOpen = seasonsOpen.includes(key)}
-                  <tr class="child season">
+                  <!-- No file at all: TMDB lists episodes, the disk holds none. -->
+                  {@const empty = !season.episodes.some(
+                    ({ state }) => state === 'present' || state === 'extra',
+                  )}
+                  {@const present = season.episodes.filter((e) => e.state === 'present').length}
+                  {@const listed = season.episodes.filter((e) => e.state !== 'extra').length}
+                  <tr class="child season" class:empty>
                     <td colspan="4">
                       <button
                         type="button"
@@ -282,11 +289,20 @@
                           toggleSeason(key);
                         }}
                       >
-                        {seasonOpen ? '▾' : '▸'}
+                        <Chevron open={seasonOpen} />
                         {season.season === 0
                           ? t('web.library.season.specials')
                           : t('web.library.season', { season: season.season })}
                       </button>
+                      {#if listed > 0}
+                        <span
+                          class="chip {present === 0
+                            ? 'chip-neutral'
+                            : present === listed
+                              ? 'chip-ok'
+                              : 'chip-warn'}">{present}/{listed}</span
+                        >
+                      {/if}
                     </td>
                     {#if writes.nfo}<td></td>{/if}
                     {#if writes.artwork}
@@ -326,7 +342,7 @@
                           {/if}
                         </td>
                         <td class="muted">
-                          {episode.airDate ? formatDate(episode.airDate, locale.value) : ''}
+                          {episode.airDate ? formatDay(episode.airDate, locale.value) : ''}
                         </td>
                         <td colspan="2">
                           {#if episode.state !== 'present'}
@@ -364,7 +380,7 @@
       {/if}
     </div>
 
-    <div>
+    <div class="side">
       {#if selection?.kind === 'item'}
         {#key selection.item.id}
           <ItemPanel
@@ -394,6 +410,14 @@
     grid-template-columns: minmax(0, 1.2fr) minmax(280px, 1fr);
     gap: 16px;
     align-items: start;
+  }
+
+  /* Floats beside the tree while it scrolls; a tall panel scrolls on its own rather than past the screen. */
+  .side {
+    position: sticky;
+    top: 16px;
+    max-height: calc(100vh - 32px);
+    overflow-y: auto;
   }
 
   .table-wrap {
@@ -429,6 +453,16 @@
     background: var(--surface-2);
   }
 
+  /* A season with no file reads as absent, not as a season like the others. */
+  .season.empty .link {
+    color: var(--muted);
+    font-weight: 400;
+  }
+
+  .season.empty {
+    opacity: 0.7;
+  }
+
   .indent {
     padding-left: 16px;
   }
@@ -458,6 +492,12 @@
   @media (max-width: 960px) {
     .layout {
       grid-template-columns: 1fr;
+    }
+
+    .side {
+      position: static;
+      max-height: none;
+      overflow-y: visible;
     }
   }
 </style>

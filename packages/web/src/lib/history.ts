@@ -118,6 +118,17 @@ export function formatDate(iso: string, locale: Locale): string {
     : new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short' }).format(date);
 }
 
+/**
+ * A calendar day (an air date such as `2024-03-05`), with no time. Read as UTC and shown as UTC:
+ * the value has no clock, so a local zone behind UTC would otherwise show the day before.
+ */
+export function formatDay(iso: string, locale: Locale): string {
+  const date = new Date(iso);
+  return Number.isNaN(date.getTime())
+    ? iso
+    : new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeZone: 'UTC' }).format(date);
+}
+
 /** What was submitted, or nothing for a batch the command line made. */
 export const originOf = (batch: Pick<BatchSummary, 'origin'>): string | undefined =>
   batch.origin?.path;
