@@ -415,12 +415,12 @@ export const en = {
   'web.onboarding.step.server.title': 'Connect Plex or Jellyfin',
   'web.onboarding.step.server.body':
     'Optional: your library is refreshed automatically after each batch.',
-  'web.onboarding.step.destination.title': 'Choose where to put your files',
+  'web.onboarding.step.destination.title': 'Set your libraries',
   'web.onboarding.step.destination.body':
-    'Give the folder of your movies and the folder of your series. They become your first two libraries, organized in place.',
-  'web.onboarding.step.source.title': 'Send a first folder',
+    'The folder of your movies and the folder of your series. This is where Kinoshelf puts files away, and it also organizes what is already there.',
+  'web.onboarding.step.source.title': 'Add a downloads folder',
   'web.onboarding.step.source.body':
-    'Kinoshelf analyses the files and shows what it proposes, without changing anything.',
+    'Where the files to identify arrive. Kinoshelf analyses them, shows what it proposes, then puts them in your libraries. Nothing changes without your approval.',
   'web.onboarding.form.tmdb.key': 'TMDB API key',
   'web.onboarding.form.tmdb.hint': 'Create a free key in your TMDB account, under Settings › API.',
   'web.onboarding.form.server.kind': 'Server',
@@ -430,15 +430,15 @@ export const en = {
     'Two different folders, as Plex recommends. The output profile and more libraries are in the settings.',
   'web.onboarding.form.source.needs-destination':
     'Give your movies and series folders first (previous step).',
-  'web.onboarding.form.source': 'Folder to analyse',
-  'web.onboarding.form.source.hint': 'The folder where your videos are right now.',
+  'web.onboarding.form.source': 'Downloads folder',
+  'web.onboarding.form.source.hint': 'The folder where your downloaded videos arrive.',
   'web.onboarding.form.source.once': 'Analyse it once',
   'web.onboarding.form.source.once.hint':
     'Nothing is changed: you will see what Kinoshelf proposes first.',
   'web.onboarding.form.source.watch': 'Watch this folder',
   'web.onboarding.form.source.watch.hint':
-    'For a folder that only holds finished downloads: each new release is analysed as it arrives. Not for a library already in place. It becomes a library you can edit later.',
-  'web.onboarding.form.source.name': 'Library name',
+    'For a folder that only holds finished downloads: each new release is analysed as it arrives. Not for a library already in place. You can edit it later in the settings.',
+  'web.onboarding.form.source.name': 'Folder name',
   'web.onboarding.form.source.submit': 'Analyse',
   'web.onboarding.form.source.submit.watch': 'Watch',
   'web.onboarding.form.tmdb.invalid':

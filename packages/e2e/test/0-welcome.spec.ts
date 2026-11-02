@@ -30,7 +30,7 @@ test('welcomes a new install, remembers a skipped step and ends on the libraries
 
   // The last step makes an arrival folder of it: one that is not there is refused on the spot.
   const missing = incoming('never-created');
-  await page.getByLabel('Folder to analyse').fill(missing);
+  await page.getByLabel('Downloads folder').fill(missing);
   await page.getByRole('button', { name: 'Analyse', exact: true }).click();
   await expect(page.getByRole('alert')).toContainText('No folder at');
   await expect(progress).toHaveAttribute('aria-valuenow', '3');
@@ -39,8 +39,8 @@ test('welcomes a new install, remembers a skipped step and ends on the libraries
   const first = incoming('first-library');
   await mkdir(first, { recursive: true });
   await writeFile(`${first}/Alien.1979.1080p.mkv`, 'video');
-  await page.getByLabel('Folder to analyse').fill(first);
-  await page.getByLabel('Library name').fill('First library');
+  await page.getByLabel('Downloads folder').fill(first);
+  await page.getByLabel('Folder name').fill('First library');
   await page.getByRole('button', { name: 'Analyse', exact: true }).click();
 
   await expect(page.getByRole('heading', { name: 'Libraries' })).toBeVisible();

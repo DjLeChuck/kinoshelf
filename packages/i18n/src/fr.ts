@@ -431,12 +431,12 @@ export const fr: Record<keyof typeof en, string> = {
   'web.onboarding.step.server.title': 'Connecter Plex ou Jellyfin',
   'web.onboarding.step.server.body':
     'Facultatif : votre bibliothèque sera rafraîchie automatiquement après chaque rangement.',
-  'web.onboarding.step.destination.title': 'Choisir où ranger vos fichiers',
+  'web.onboarding.step.destination.title': 'Indiquer vos bibliothèques',
   'web.onboarding.step.destination.body':
-    'Indiquez le dossier de vos films et celui de vos séries. Ils deviennent vos deux premières bibliothèques, rangées sur place.',
-  'web.onboarding.step.source.title': 'Envoyer un premier dossier',
+    'Le dossier de vos films et celui de vos séries. C’est là que Kinoshelf range les fichiers, et il organise aussi ceux qui s’y trouvent déjà.',
+  'web.onboarding.step.source.title': 'Ajouter un dossier de téléchargements',
   'web.onboarding.step.source.body':
-    'Kinoshelf analyse les fichiers et vous montre ce qu’il propose, sans rien modifier.',
+    'Là où arrivent les fichiers à identifier. Kinoshelf les analyse, vous montre ce qu’il propose, puis les range dans vos bibliothèques. Rien n’est modifié sans votre validation.',
   'web.onboarding.form.tmdb.key': 'Clé API TMDB',
   'web.onboarding.form.tmdb.hint':
     'Créez une clé gratuite dans votre compte TMDB, sous Réglages › API.',
@@ -447,15 +447,15 @@ export const fr: Record<keyof typeof en, string> = {
     'Deux dossiers différents, comme Plex le recommande. Le profil de sortie et d’autres bibliothèques se règlent dans les réglages.',
   'web.onboarding.form.source.needs-destination':
     'Indiquez d’abord vos dossiers de films et de séries (étape précédente).',
-  'web.onboarding.form.source': 'Dossier à analyser',
-  'web.onboarding.form.source.hint': 'Le dossier où se trouvent vos vidéos en ce moment.',
+  'web.onboarding.form.source': 'Dossier de téléchargements',
+  'web.onboarding.form.source.hint': 'Le dossier où arrivent vos vidéos téléchargées.',
   'web.onboarding.form.source.once': 'Analyser une fois',
   'web.onboarding.form.source.once.hint':
     'Rien n’est modifié : vous verrez d’abord ce que Kinoshelf propose.',
   'web.onboarding.form.source.watch': 'Surveiller ce dossier',
   'web.onboarding.form.source.watch.hint':
-    'Pour un dossier qui ne contient que des téléchargements terminés : chaque nouvelle release est analysée à son arrivée. Pas pour une bibliothèque déjà rangée. Il devient une bibliothèque, modifiable ensuite.',
-  'web.onboarding.form.source.name': 'Nom de la bibliothèque',
+    'Pour un dossier qui ne contient que des téléchargements terminés : chaque nouvelle release est analysée à son arrivée. Pas pour une bibliothèque déjà rangée. Modifiable ensuite dans les réglages.',
+  'web.onboarding.form.source.name': 'Nom du dossier',
   'web.onboarding.form.source.submit': 'Analyser',
   'web.onboarding.form.source.submit.watch': 'Surveiller',
   'web.onboarding.form.tmdb.invalid':
