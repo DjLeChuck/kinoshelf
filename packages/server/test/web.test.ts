@@ -22,6 +22,9 @@ describe('the web UI', () => {
     expect(response.headers['cache-control']).toBe('no-cache');
     expect(response.headers['x-frame-options']).toBe('DENY');
     expect(response.body).toContain('<title>Kinoshelf</title>');
+    // Nothing from elsewhere, nothing inline: text slipped into the page cannot load or run.
+    expect(response.headers['content-security-policy']).toContain("default-src 'self'");
+    expect(response.headers['content-security-policy']).toContain("frame-ancestors 'none'");
   });
 
   it('serves hashed assets as immutable', async () => {
@@ -53,6 +56,7 @@ describe('the web UI', () => {
     const unknown = await request('GET', '/api/nope');
     expect(unknown.statusCode).toBe(404);
     expect(unknown.json()).toEqual({ error: { code: 'request.not-found' } });
+    expect(unknown.headers['x-content-type-options']).toBe('nosniff');
     expect((await app.inject('/health')).json()).toMatchObject({ status: 'ok' });
     expect((await app.inject('/api/jobs')).statusCode).toBe(401);
   });

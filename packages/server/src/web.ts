@@ -28,6 +28,21 @@ export function findWebRoot(env: Readonly<Record<string, string | undefined>>): 
   );
 }
 
+/**
+ * The UI loads nothing from elsewhere and runs no inline script or style: whatever text a file
+ * name or a TMDB answer smuggles into the page cannot load or run anything.
+ */
+const CSP = [
+  "default-src 'self'",
+  "img-src 'self' data:",
+  // The build inlines its small font in the stylesheet.
+  "font-src 'self' data:",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "frame-ancestors 'none'",
+].join('; ');
+
 /** Hashed build output never changes under its name; the page that names it must be refetched. */
 const IMMUTABLE = 'public, max-age=31536000, immutable';
 
@@ -50,6 +65,7 @@ export async function registerWeb(app: FastifyInstance, root: string): Promise<v
 
   const page = async (reply: FastifyReply) =>
     reply
+      .header('content-security-policy', CSP)
       .header('x-frame-options', 'DENY')
       .header('referrer-policy', 'same-origin')
       .sendFile('index.html');

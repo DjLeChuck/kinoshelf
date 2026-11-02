@@ -97,6 +97,11 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     // supported rather than believe it was honored.
     ajv: { customOptions: { removeAdditional: false } },
   });
+  // Every answer is what its type says: a JSON error never gets sniffed into a page.
+  app.addHook('onSend', (_request, reply, payload, done) => {
+    void reply.header('x-content-type-options', 'nosniff');
+    done(null, payload);
+  });
   const events = new EventBus();
   // Where each analysis is, told to the clients at most twice a second (see `ProgressTracker`).
   // A topic of its own: `jobs` makes every list reload, which a scan must not do twice a second.

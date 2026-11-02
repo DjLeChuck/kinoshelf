@@ -59,7 +59,18 @@ export const ffprobe: Prober = async (path) => {
   const output = await new Promise<string>((resolve, reject) => {
     execFile(
       'ffprobe',
-      ['-v', 'error', '-print_format', 'json', '-show_streams', '--', path],
+      // A file name is only ever read as a local file, never as a URL or a playlist to follow.
+      [
+        '-v',
+        'error',
+        '-protocol_whitelist',
+        'file',
+        '-print_format',
+        'json',
+        '-show_streams',
+        '--',
+        path,
+      ],
       { timeout: TIMEOUT_MS, maxBuffer: 4_000_000 },
       (error, stdout) => {
         if (error) {
