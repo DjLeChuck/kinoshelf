@@ -125,6 +125,36 @@ describe('submit', () => {
     expect(odd.err.join('\n')).toBe('The server refused the request (HTTP 502).');
   });
 
+  it('takes a blank KINOSHELF_URL for unset', async () => {
+    const s = server(queued);
+    const h = await harness({ KINOSHELF_API_KEY: KEY, KINOSHELF_URL: ' ' }, { fetch: s.fetch });
+    expect(await h.cli('submit', '/a.mkv')).toBe(0);
+    expect(s.calls[0]?.url).toBe('http://localhost:8484/api/jobs');
+  });
+
+  it('says so when the address answers 200 but is not Kinoshelf', async () => {
+    const h = await harness(
+      { KINOSHELF_API_KEY: KEY },
+      { fetch: server(() => new Response('<html>login</html>')).fetch },
+    );
+    expect(await h.cli('submit', '/a.mkv')).toBe(1);
+    expect(h.err.join('\n')).toBe(
+      'http://localhost:8484 answered, but not as Kinoshelf does. Is KINOSHELF_URL the right address?',
+    );
+  });
+
+  it('prints a failure as a code with --json, not as text', async () => {
+    const h = await harness(
+      { KINOSHELF_API_KEY: KEY },
+      { fetch: () => Promise.reject(new TypeError('fetch failed')) },
+    );
+    expect(await h.cli('submit', '/a.mkv', '--json')).toBe(1);
+    expect(JSON.parse(h.out.join('\n'))).toEqual({
+      error: { code: 'submit.unreachable', params: { url: 'http://localhost:8484' } },
+    });
+    expect(h.err).toEqual([]);
+  });
+
   it('speaks French when asked to', async () => {
     const h = await harness({ KINOSHELF_API_KEY: KEY }, { fetch: server(queued).fetch });
     await h.cli('--lang', 'fr', 'submit', '/a.mkv');

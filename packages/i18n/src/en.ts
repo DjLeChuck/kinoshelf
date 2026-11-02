@@ -165,6 +165,8 @@ export const en = {
   'error.submit.no-api-key': 'Set KINOSHELF_API_KEY to the server’s API key.',
   'error.submit.unreachable': 'Cannot reach the server at {url}. Is it running?',
   'error.submit.rejected': 'The server refused the request (HTTP {status}).',
+  'error.submit.not-kinoshelf':
+    '{url} answered, but not as Kinoshelf does. Is KINOSHELF_URL the right address?',
   'help.arg.source': 'folder or video file to analyze',
   'help.arg.path': 'video file or folder to process',
   'help.opt.library':

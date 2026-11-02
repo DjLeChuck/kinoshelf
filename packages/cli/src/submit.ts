@@ -31,14 +31,26 @@ export async function runSubmit(
   context: { readonly t: Translate; readonly deps: SubmitDeps },
 ): Promise<number> {
   const { t, deps } = context;
+  // With --json a script reads the code and its parameters, never translated text.
+  const fail = (info: { code: string; params?: Record<string, string | number> }): number => {
+    if (options.json) {
+      deps.io.out(JSON.stringify({ error: info }, null, 2));
+    } else {
+      deps.io.err(describeError(t, info));
+    }
+    return 1;
+  };
   const apiKey = (deps.env.KINOSHELF_API_KEY ?? '').trim();
   if (apiKey === '') {
     throw new CliError('submit.no-api-key');
   }
+  // A variable set to blank (`KINOSHELF_URL=`) counts as unset.
+  const set = (value: string | undefined): string | undefined =>
+    value?.trim() === '' ? undefined : value?.trim();
   const base = (
     options.url ??
-    deps.env.KINOSHELF_URL ??
-    `http://localhost:${deps.env.KINOSHELF_PORT ?? '8484'}`
+    set(deps.env.KINOSHELF_URL) ??
+    `http://localhost:${set(deps.env.KINOSHELF_PORT) ?? '8484'}`
   ).replace(/\/+$/, '');
   const target = resolve(path);
 
@@ -51,23 +63,25 @@ export async function runSubmit(
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
   } catch {
-    deps.io.err(describeError(t, { code: 'submit.unreachable', params: { url: base } }));
-    return 1;
+    return fail({ code: 'submit.unreachable', params: { url: base } });
   }
 
   if (!response.ok) {
     const body = (await response.json().catch(() => undefined)) as
       { error?: { code?: string; params?: Record<string, string | number> } } | undefined;
     const code = body?.error?.code;
-    deps.io.err(
+    return fail(
       code
-        ? describeError(t, { code, params: body.error?.params })
-        : describeError(t, { code: 'submit.rejected', params: { status: response.status } }),
+        ? { code, ...(body.error?.params && { params: body.error.params }) }
+        : { code: 'submit.rejected', params: { status: response.status } },
     );
-    return 1;
   }
 
-  const job = (await response.json()) as { id: string };
+  // A proxy or another service at that address may answer 200 with anything.
+  const job = (await response.json().catch(() => undefined)) as { id?: unknown } | undefined;
+  if (typeof job?.id !== 'string') {
+    return fail({ code: 'submit.not-kinoshelf', params: { url: base } });
+  }
   deps.io.out(
     options.json
       ? JSON.stringify(job, null, 2)

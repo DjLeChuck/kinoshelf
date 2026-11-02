@@ -172,6 +172,8 @@ export const fr: Record<keyof typeof en, string> = {
   'error.submit.no-api-key': 'Définissez KINOSHELF_API_KEY avec la clé d’API du serveur.',
   'error.submit.unreachable': 'Impossible de joindre le serveur à {url}. Est-il démarré ?',
   'error.submit.rejected': 'Le serveur a refusé la requête (HTTP {status}).',
+  'error.submit.not-kinoshelf':
+    '{url} a répondu, mais pas comme Kinoshelf. KINOSHELF_URL est-elle la bonne adresse ?',
   'help.arg.source': 'dossier ou fichier vidéo à analyser',
   'help.arg.path': 'fichier vidéo ou dossier à traiter',
   'help.opt.library':

@@ -7,6 +7,7 @@ export const CLI_ERROR_CODES = [
   'config.invalid-value',
   'config.library-unknown',
   'submit.no-api-key',
+  'submit.not-kinoshelf',
   'submit.rejected',
   'submit.unreachable',
   'undo.batch-already-undone',
