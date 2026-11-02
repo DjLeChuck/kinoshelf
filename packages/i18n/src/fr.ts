@@ -541,7 +541,6 @@ export const fr: Record<keyof typeof en, string> = {
   'web.queue.validating': 'Validation…',
   'web.queue.ignore': 'Ignorer',
   'web.queue.library': 'Bibliothèque de destination',
-  'web.queue.remember-destination': 'Toujours envoyer cette œuvre dans cette bibliothèque',
   'web.queue.validated': 'Transfert lancé pour {name}.',
   'web.queue.validated.followed':
     'Transfert lancé pour {name}. {count, plural, one {# autre fichier de la release suit} other {# autres fichiers de la release suivent}}.',
@@ -709,13 +708,6 @@ export const fr: Record<keyof typeof en, string> = {
   'web.path.empty.file': 'Aucun dossier ni fichier YAML ici.',
   'web.path.truncated':
     'Seules les premières entrées sont affichées : saisissez le chemin pour le reste.',
-  'web.settings.destinations.title': 'Destinations retenues',
-  'web.settings.destinations.hint':
-    'Les œuvres que vous avez demandé d’envoyer toujours dans une bibliothèque : leurs prochains fichiers y vont seuls. Si une bibliothèque est supprimée, ses œuvres retombent sur la destination par défaut ; oublier une destination n’agit que sur les prochaines arrivées.',
-  'web.settings.destinations.empty': 'Rien de retenu pour l’instant.',
-  'web.settings.destinations.gone': 'bibliothèque supprimée : destination par défaut',
-  'web.settings.destinations.forget': 'Oublier',
-  'web.settings.destinations.forget.label': 'Oublier la destination de « {title} »',
   'web.settings.access.title': 'Clé d’API',
   'web.settings.access.env':
     'La clé vient de KINOSHELF_API_KEY : changez la variable pour la remplacer.',

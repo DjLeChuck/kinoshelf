@@ -523,7 +523,6 @@ export const en = {
   'web.queue.validating': 'Validating…',
   'web.queue.ignore': 'Ignore',
   'web.queue.library': 'Destination library',
-  'web.queue.remember-destination': 'Always send this work to this library',
   'web.queue.validated': 'Transfer started for {name}.',
   'web.queue.validated.followed':
     'Transfer started for {name}. {count, plural, one {# other file of the release follows} other {# other files of the release follow}}.',
@@ -688,13 +687,6 @@ export const en = {
   'web.path.empty': 'No sub-folder here.',
   'web.path.empty.file': 'No folder or YAML file here.',
   'web.path.truncated': 'Only the first entries are shown: type the path for the rest.',
-  'web.settings.destinations.title': 'Remembered destinations',
-  'web.settings.destinations.hint':
-    'Works you asked to always send to a library. Their next files go there alone. If a library is deleted, its works go back to the default destination; forgetting one only affects the next arrivals.',
-  'web.settings.destinations.empty': 'Nothing remembered yet.',
-  'web.settings.destinations.gone': 'deleted library: default destination',
-  'web.settings.destinations.forget': 'Forget',
-  'web.settings.destinations.forget.label': 'Forget the destination of “{title}”',
   'web.settings.access.title': 'API key',
   'web.settings.access.env':
     'The key comes from KINOSHELF_API_KEY: change the variable to replace it.',

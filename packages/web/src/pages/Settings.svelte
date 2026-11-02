@@ -1,6 +1,5 @@
 <script lang="ts">
   import SettingsNav from '../components/SettingsNav.svelte';
-  import SettingsWorkDestinations from '../components/SettingsWorkDestinations.svelte';
   import SettingsAccess from '../components/SettingsAccess.svelte';
   import SettingsGeneral from '../components/SettingsGeneral.svelte';
   import SettingsLibraries from '../components/SettingsLibraries.svelte';
@@ -22,7 +21,6 @@
     { id: 'plex', label: 'web.settings.plex.title' },
     { id: 'jellyfin', label: 'web.settings.jellyfin.title' },
     { id: 'webhooks', label: 'web.settings.webhooks.title' },
-    { id: 'destinations', label: 'web.settings.destinations.title' },
     { id: 'access', label: 'web.settings.access.title' },
   ] as const;
 
@@ -65,7 +63,6 @@
       <div id="plex"><SettingsServer kind="plex" {settings} {save} /></div>
       <div id="jellyfin"><SettingsServer kind="jellyfin" {settings} {save} /></div>
       <div id="webhooks"><SettingsWebhooks {settings} {save} /></div>
-      <div id="destinations"><SettingsWorkDestinations /></div>
       <div id="access"><SettingsAccess {settings} /></div>
     {:else}
       <p class="muted" role="status">{t('web.loading')}</p>

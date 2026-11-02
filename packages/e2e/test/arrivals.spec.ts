@@ -50,50 +50,6 @@ test('the Check now button is disabled while no folder is watched', async ({ pag
   await expect(page.getByRole('button', { name: 'Check now' })).toBeDisabled();
 });
 
-test('lists a remembered destination in the settings and forgets it', async ({ page, request }) => {
-  const folder = incoming('arrivals-remember');
-  await mkdir(folder, { recursive: true });
-  await writeFile(`${folder}/Dune.480p.mkv`, 'video');
-  const headers = { authorization: `Bearer ${API_KEY}` };
-  const created = await request.post('/api/libraries', {
-    headers,
-    data: { name: 'Remember drop', source: folder, into: { movie: 'films', series: 'series' } },
-  });
-  const { id } = (await created.json()) as { id: string };
-  await request.post(`/api/libraries/${id}/scan`, { headers });
-  await expect
-    .poll(async () => {
-      const page = await request.get('/api/arrivals', { headers });
-      const { items } = (await page.json()) as { items: { id: string; release: string }[] };
-      return items.find(({ release }) => release.includes('Dune.480p'))?.id ?? null;
-    })
-    .not.toBeNull();
-  const { items } = (await (await request.get('/api/arrivals', { headers })).json()) as {
-    items: { id: string; release: string }[];
-  };
-  const entry = items.find(({ release }) => release.includes('Dune.480p'));
-  const matched = await request.post(`/api/entries/${entry?.id ?? ''}/match`, {
-    headers,
-    data: {
-      kind: 'movie',
-      id: { provider: 'tmdb', id: 438631 },
-      title: 'Dune',
-      year: 2021,
-      libraryId: 'films',
-      rememberDestination: true,
-      remember: false,
-    },
-  });
-  expect(matched.status()).toBe(200);
-
-  await signInAt(page, '/settings');
-  const forget = page.getByRole('button', { name: /Forget the destination of/ });
-  await expect(forget).toBeVisible();
-  await forget.click();
-  await expect(forget).toHaveCount(0);
-  expect(await (await request.get('/api/work-destinations', { headers })).json()).toEqual([]);
-});
-
 test('Check now submits what a watched folder holds without waiting for it to settle', async ({
   page,
   request,

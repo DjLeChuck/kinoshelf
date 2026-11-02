@@ -44,7 +44,6 @@
   let busy = $state(false);
   /* svelte-ignore state_referenced_locally */
   let library = $state(entry.destination.libraryId ?? entry.destinationOptions[0]?.id ?? '');
-  let rememberDestination = $state(false);
   let failure = $state<unknown>(undefined);
   let refused = $state<readonly ConflictBody[]>([]);
 
@@ -137,7 +136,6 @@
         {
           candidate: selected,
           libraryId: chosenLibrary,
-          rememberDestination: rememberDestination && library !== '',
         },
         api.post,
       );
@@ -327,12 +325,6 @@
           <option value={option.id}>{option.name}</option>
         {/each}
       </select>
-      {#if selected && library !== ''}
-        <label class="remember">
-          <input type="checkbox" bind:checked={rememberDestination} />
-          <span>{t('web.queue.remember-destination')}</span>
-        </label>
-      {/if}
     </section>
   {/if}
 
@@ -399,19 +391,6 @@
   }
 
   .results {
-    margin-top: 12px;
-  }
-
-  .remember {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 12px;
-    font-size: 13px;
-  }
-
-  /* Under the destination select, which has no margin of its own. */
-  select + .remember {
     margin-top: 12px;
   }
 

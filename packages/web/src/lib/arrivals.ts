@@ -42,7 +42,7 @@ export interface Arrival {
   readonly createdAt: string | null;
   /** The arrival folder it came from; `null` for a path sent by hand or a file of a library. */
   readonly sourceId: string | null;
-  readonly destination: { readonly libraryId: string | null; readonly remembered: boolean };
+  readonly destination: { readonly libraryId: string | null };
   /** The libraries it could go to: its kind's, or all of them when the kind is unknown. */
   readonly destinationOptions: readonly { readonly id: string; readonly name: string }[];
   readonly reason: string | null;
@@ -171,8 +171,6 @@ export interface Choice {
   readonly candidate: Candidate;
   /** Send the file to this library rather than the default one, for this file only. */
   readonly libraryId?: string | undefined;
-  /** Send every later file of the work there too. */
-  readonly rememberDestination?: boolean;
 }
 
 export type ValidateOutcome =
@@ -198,7 +196,6 @@ export async function validate(
   }>(`/api/entries/${arrival.id}/match`, {
     ...toMatchBody(choice.candidate),
     ...(choice.libraryId !== undefined && { libraryId: choice.libraryId }),
-    ...(choice.rememberDestination && { rememberDestination: true }),
   });
   if (matched.classification !== 'to-rename') {
     return { status: 'conflict', conflicts: matched.conflicts };

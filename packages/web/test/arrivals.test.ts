@@ -28,7 +28,7 @@ const arrival = (over: Partial<Arrival> = {}): Arrival => ({
   resolution: '1080p',
   createdAt: null,
   sourceId: 'dl',
-  destination: { libraryId: 'films', remembered: false },
+  destination: { libraryId: 'films' },
   destinationOptions: [{ id: 'films', name: 'Films' }],
   reason: null,
   candidates: [],
@@ -148,18 +148,10 @@ describe('validate', () => {
   it('sends only the choices that differ from the defaults', async () => {
     const { calls, post } = recorder(() => renamed);
     await validate(arrival(), { candidate: dune }, post);
-    await validate(
-      arrival(),
-      { candidate: dune, libraryId: 'uhd', rememberDestination: true },
-      post,
-    );
+    await validate(arrival(), { candidate: dune, libraryId: 'uhd' }, post);
     const bodies = calls.filter((c) => c.url.includes('/match')).map((c) => c.body);
     expect(bodies[0]).not.toHaveProperty('libraryId');
-    expect(bodies[0]).not.toHaveProperty('rememberDestination');
-    expect(bodies[1]).toMatchObject({
-      libraryId: 'uhd',
-      rememberDestination: true,
-    });
+    expect(bodies[1]).toMatchObject({ libraryId: 'uhd' });
   });
 
   it('gives the error back when the transfer cannot be queued', async () => {
