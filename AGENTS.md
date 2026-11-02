@@ -13,7 +13,7 @@ libraries (organized in place, arrival folders) are configured in the Settings, 
 path picker. The Libraries page has a tab per typed library (list read from the snapshot, filters,
 scan progress, the page of an item) and an Arrivals tab (`/arrivals`) where a file is validated:
 candidate, destination library, "remember" boxes. A series library reads as a tree (show, season,
-episode) with its missing episodes. Still to build: "Refresh" and the rename preview, and the merged
+episode) with its missing episodes. Items are renamed and refreshed from the page (a preview first). Still to build: the merged
 History. Validating a file remembers its title (aliases). v1.0 is under way: the NFO and artwork
 writers and the `jellyfin` and `plex-nfo` profiles are built (see "NFO and artwork" below), metadata
 included for a library that is already organized.
@@ -218,6 +218,17 @@ refuses to delete a library an arrival folder points at (`library.in-use`). Ther
   counts shows, not files, and is not a filter of `GET .../items`: it narrows `.../shows?missing=true`.
   The NFO column of a series row is the episode's own `<file>.nfo`; the show's and the seasons'
   files (`tvshow.nfo`, posters) are not tracked per row yet.
+- **Rename and refresh** (`POST /api/libraries/:id/execute`, body `{ items, dryRun? }`): the items are
+  the `id`s of the library's list. The server finds each one's entry and scan job (`entryId`,
+  `scan_job_id` of its row), keeps what is still executable, and runs one plan per job under one batch
+  (the same machinery as `POST /api/plans/:id/execute`; nothing new is planned). "Rename" is the
+  items in state `rename`, "Refresh" those in state `incomplete`: the scan already planned only the
+  missing `write-file`/`download` operations for a video that is in place, so refreshing never
+  overwrites anything and never re-reads TMDB for what is there. A dry run answers 200 with the
+  report (entries are the items' `entryId`) and `skipped` (nothing to do: done, never scanned,
+  unknown); otherwise 202 with the executions, and the batch shows in the history and can be undone.
+  409 `library.nothing-to-do` when nothing is left. The web's "Rename preview" dialog (`RunDialog`)
+  is the dry run, then the run. Rows added by an arrival carry no entry: they have nothing to run.
 - **Scan progress** (`progress.ts`): `GET /api/jobs`, `GET /api/jobs/:id` and the `scan` of
   `GET /api/libraries/:id/items` carry `progress` (`phase` discover|identify|plan, `found`, `done`,
   `total`, `current`, `idleSeconds`) while an analysis runs, `null` otherwise. It lives in the
