@@ -719,9 +719,7 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
     async (request) => {
       const library = seriesLibrary(request.params.id);
       const { tmdbId } = request.params;
-      const files = items
-        .all(library.id)
-        .filter((item) => item.kind === 'series' && item.tmdbId === tmdbId);
+      const files = items.ofShow(library.id, tmdbId);
       if (files.length === 0) {
         throw new ApiError(404, 'library.item-not-found');
       }

@@ -257,6 +257,17 @@ export class LibraryItemStore {
       .map(toItem);
   }
 
+  /** The files of one show of a series library, by path. */
+  ofShow(libraryId: string, tmdbId: number): LibraryItem[] {
+    return this.database
+      .prepare<[string, number], Row>(
+        `SELECT ${COLUMNS} FROM library_items
+         WHERE library_id = ? AND tmdb_id = ? AND kind = 'series' ORDER BY path`,
+      )
+      .all(libraryId, tmdbId)
+      .map(toItem);
+  }
+
   /** One page of a library, by title (a file nobody recognized by its name), optionally filtered. */
   page(
     libraryId: string,
@@ -397,7 +408,16 @@ export class LibraryItemStore {
 
   /** The videos of a folder: where the files an undone batch wrote sat beside. */
   inFolder(libraryId: string, folder: string): LibraryItem[] {
-    return this.all(libraryId).filter((item) => dirname(item.path) === folder);
+    // A range on the primary key: every path under `folder/` sorts between `folder/` and
+    // `folder0` ('0' follows '/'). Sub-folders are in that range too, hence the filter.
+    return this.database
+      .prepare<[string, string, string], Row>(
+        `SELECT ${COLUMNS} FROM library_items
+         WHERE library_id = ? AND path >= ? AND path < ? ORDER BY path`,
+      )
+      .all(libraryId, `${folder}/`, `${folder}0`)
+      .map(toItem)
+      .filter((item) => dirname(item.path) === folder);
   }
 }
 
@@ -597,6 +617,20 @@ export function itemOf(
  * never has to scan again to be right. A library that is an arrival folder has no snapshot (what
  * lands in it is waiting to go elsewhere).
  */
+/**
+ * The profile of each typed library, read once per call rather than once per file: a batch or an
+ * undo of a whole series goes through thousands of them.
+ */
+function profilesOf(config: Config): (library: LibraryConfig) => Promise<Profile> {
+  const profiles = new Map<string, Promise<Profile>>();
+  return (library) => {
+    const profile =
+      profiles.get(library.id) ?? loadProfile(library.profile ?? config.profile ?? 'plex');
+    profiles.set(library.id, profile);
+    return profile;
+  };
+}
+
 export class LibrarySnapshot {
   constructor(
     private readonly deps: {
@@ -690,6 +724,7 @@ export class LibrarySnapshot {
     done: readonly { readonly entry: Entry; readonly results: readonly OperationResult[] }[],
   ): Promise<void> {
     const config = this.deps.config();
+    const profileOf = profilesOf(config);
     const now = new Date().toISOString();
     for (const { entry, results } of done) {
       const main = results.find(
@@ -705,7 +740,7 @@ export class LibrarySnapshot {
       if (path === undefined || !library) {
         continue;
       }
-      const profile = await loadProfile(library.profile ?? config.profile ?? 'plex');
+      const profile = await profileOf(library);
       const row = itemOf(entry, profile, library.id, now);
       const failed = new Set<Writable>(
         results
@@ -733,6 +768,7 @@ export class LibrarySnapshot {
    */
   async undone(entries: readonly JournalEntry[]): Promise<void> {
     const config = this.deps.config();
+    const profileOf = profilesOf(config);
     // The written files first: once a video is moved back, its folder is no longer the one to look in.
     const ordered = [...entries].sort(
       (a, b) => Number(a.kind === 'transfer') - Number(b.kind === 'transfer'),
@@ -751,8 +787,7 @@ export class LibrarySnapshot {
         }
         continue;
       }
-      const profile = await loadProfile(library.profile ?? config.profile ?? 'plex');
-      const kind = fileKind(profile, entry.destination);
+      const kind = fileKind(await profileOf(library), entry.destination);
       if (kind === undefined) {
         continue;
       }

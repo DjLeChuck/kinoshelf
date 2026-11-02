@@ -33,7 +33,7 @@ export interface SeasonReport {
 const last = (item: LibraryItem): number => item.episodeEnd ?? item.episode ?? 0;
 
 /** The episodes of a show that a library holds, from its rows. */
-export const episodesOf = (items: readonly LibraryItem[]): LibraryItem[] =>
+const episodesOf = (items: readonly LibraryItem[]): LibraryItem[] =>
   items.filter((item) => item.season !== null && item.episode !== null);
 
 /** Which episodes were there when a count was made: a different one means it is stale. */
@@ -186,7 +186,12 @@ export class Completeness {
     const byShow = new Map<number, LibraryItem[]>();
     for (const item of this.deps.items.all(libraryId)) {
       if (item.kind === 'series' && item.tmdbId !== null) {
-        byShow.set(item.tmdbId, [...(byShow.get(item.tmdbId) ?? []), item]);
+        const files = byShow.get(item.tmdbId);
+        if (files) {
+          files.push(item);
+        } else {
+          byShow.set(item.tmdbId, [item]);
+        }
       }
     }
     for (const [tmdbId, files] of byShow) {
@@ -239,9 +244,7 @@ export class Completeness {
     if (!known) {
       return null;
     }
-    const files = this.deps.items
-      .all(libraryId)
-      .filter((item) => item.kind === 'series' && item.tmdbId === tmdbId);
+    const files = this.deps.items.ofShow(libraryId, tmdbId);
     const seasons = compare(files, known.seasons, known.details.seasons, this.today());
     this.deps.store.put(libraryId, tmdbId, missingOf(seasons), signatureOf(files));
     return { details: known.details, seasons };

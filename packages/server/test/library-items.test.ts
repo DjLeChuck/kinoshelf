@@ -1,7 +1,9 @@
 import { rm, writeFile } from 'node:fs/promises';
+import Database from 'better-sqlite3';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { LibraryItemStore, itemId } from '../src/library-items.js';
+import { migrated } from '../src/database.js';
+import { LibraryItemStore, itemId, type LibraryItem } from '../src/library-items.js';
 import { cleanup, harness, makeDir, put } from './harness.js';
 
 afterEach(cleanup);
@@ -419,5 +421,61 @@ describe('POST /api/libraries/:id/execute', () => {
     expect(
       (await h.request('POST', '/api/libraries/films/execute', { items: [] })).statusCode,
     ).toBe(400);
+  });
+});
+
+describe('the lookups of the item store', () => {
+  const row = (path: string, extra: Partial<LibraryItem> = {}): LibraryItem => ({
+    libraryId: 'shows',
+    path,
+    kind: 'series',
+    tmdbId: 1,
+    title: 'Show',
+    year: null,
+    season: 1,
+    episode: 1,
+    episodeEnd: null,
+    state: 'ok',
+    nfo: true,
+    poster: null,
+    fanart: null,
+    entryId: null,
+    scanJobId: null,
+    scannedAt: '2026-11-02T00:00:00.000Z',
+    ...extra,
+  });
+
+  it('finds the videos of one folder, not of its sub-folders nor of a folder named alike', () => {
+    const store = new LibraryItemStore(migrated(new Database(':memory:')));
+    for (const path of [
+      '/lib/Show/Season 01/a.mkv',
+      '/lib/Show/Season 01/b.mkv',
+      '/lib/Show/Season 01/Extras/c.mkv',
+      '/lib/Show/Season 010/d.mkv',
+      '/lib/Show/Season 01 (copy)/e.mkv',
+      '/lib/Show/Season 01-old/f.mkv',
+    ]) {
+      store.put(row(path));
+    }
+    store.put(row('/lib/Show/Season 01/a.mkv', { libraryId: 'other' }));
+
+    expect(store.inFolder('shows', '/lib/Show/Season 01').map(({ path }) => path)).toEqual([
+      '/lib/Show/Season 01/a.mkv',
+      '/lib/Show/Season 01/b.mkv',
+    ]);
+  });
+
+  it('finds the files of one show of a library', () => {
+    const store = new LibraryItemStore(migrated(new Database(':memory:')));
+    store.put(row('/lib/A/1.mkv', { tmdbId: 1 }));
+    store.put(row('/lib/A/2.mkv', { tmdbId: 1 }));
+    store.put(row('/lib/B/1.mkv', { tmdbId: 2 }));
+    store.put(row('/lib/A/3.mkv', { tmdbId: 1, libraryId: 'other' }));
+    store.put(row('/lib/A (1999).mkv', { tmdbId: 1, kind: 'movie' }));
+
+    expect(store.ofShow('shows', 1).map(({ path }) => path)).toEqual([
+      '/lib/A/1.mkv',
+      '/lib/A/2.mkv',
+    ]);
   });
 });
