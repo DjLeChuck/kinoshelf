@@ -227,7 +227,6 @@ export const fr: Record<keyof typeof en, string> = {
   'error.settings.webhook-url-required': 'Un nouveau webhook a besoin d’une URL.',
   'error.watch.not-configured':
     'Aucun dossier n’est surveillé. Configurez-en un dans les réglages.',
-  'error.work-destination.not-found': 'Cette destination mémorisée n’existe pas.',
   'web.skip-to-content': 'Aller au contenu',
   'web.nav.label': 'Navigation principale',
   'web.nav.libraries': 'Bibliothèques',

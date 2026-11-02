@@ -319,7 +319,7 @@ describe('comparing the files with the provider', () => {
 });
 
 describe('an episode that arrives', () => {
-  it('is validated into the series library chosen, and the show is remembered there', async () => {
+  it('is validated into the series library chosen', async () => {
     const configDir = await makeDir();
     await put(join(configDir, 'config.yaml'), '');
     const h = await harness({
@@ -359,28 +359,14 @@ describe('an episode that arrives', () => {
       title: 'Severance',
       year: 2022,
       libraryId: 'anime',
-      rememberDestination: true,
       remember: false,
     });
     expect(matched.statusCode).toBe(200);
-    // Remembered for the show, not for the file.
-    expect((await h.request('GET', '/api/work-destinations')).json()).toMatchObject([
-      { kind: 'series', tmdbId: 95396, libraryId: 'anime' },
-    ]);
-
     expect((await h.request('POST', `/api/plans/${jobId}/execute`)).statusCode).toBe(202);
     await h.app.jobs.idle();
     const rows = new LibraryItemStore(h.database).all('anime');
     expect(rows).toMatchObject([{ tmdbId: 95396, season: 1, episode: 2, state: 'ok' }]);
     expect(rows[0]?.path.startsWith(roots.anime)).toBe(true);
-
-    // The next episode of the show goes there by itself, and does not wait.
-    await put(join(downloads, 'Severance.S01E03.1080p.mkv'), 'three');
-    const next = await scan();
-    const [episode] = (await h.request('GET', `/api/jobs/${next}/entries`))
-      .json<{ path: string; destination: string }[]>()
-      .filter((entry) => entry.path.endsWith('Severance.S01E03.1080p.mkv'));
-    expect(episode?.destination.startsWith(roots.anime)).toBe(true);
   });
 });
 

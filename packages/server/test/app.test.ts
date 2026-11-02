@@ -59,8 +59,6 @@ describe('GET /api/openapi.json', () => {
       '/api/setup/api-key',
       '/api/watch',
       '/api/watch/scan',
-      '/api/work-destinations',
-      '/api/work-destinations/{kind}/{tmdbId}',
       '/health',
     ]);
     expect(spec.paths['/health']?.get?.security).toEqual([]);

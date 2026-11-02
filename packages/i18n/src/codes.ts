@@ -57,7 +57,6 @@ export const API_ERROR_CODES = [
   'settings.webhook-not-found',
   'settings.webhook-url-required',
   'watch.not-configured',
-  'work-destination.not-found',
 ] as const;
 
 export type ApiErrorCode = (typeof API_ERROR_CODES)[number];

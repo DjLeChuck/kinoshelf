@@ -216,7 +216,6 @@ export const en = {
   'error.settings.webhook-not-found': 'This webhook no longer exists. Reload the settings.',
   'error.settings.webhook-url-required': 'A new webhook needs a URL.',
   'error.watch.not-configured': 'No folder is watched. Set one in the settings first.',
-  'error.work-destination.not-found': 'This remembered destination does not exist.',
   'web.skip-to-content': 'Skip to content',
   'web.nav.label': 'Main navigation',
   'web.nav.libraries': 'Libraries',

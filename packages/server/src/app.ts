@@ -6,7 +6,6 @@ import Fastify, { type FastifyInstance } from 'fastify';
 import { ApiError } from './api-error.js';
 import { hasApiKey, isValidApiKey } from './auth.js';
 import { ProgressTracker } from './progress.js';
-import { WorkDestinationStore } from './work-destinations.js';
 import { EntryStore } from './entries.js';
 import { EventBus, registerEventRoutes } from './events.js';
 import { ExecutionStore } from './executions.js';
@@ -104,7 +103,6 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
   const entries = new EntryStore(options.database);
   const executions = new ExecutionStore(options.database);
   const jobs = new JobStore(options.database, entries, executions);
-  const workDestinations = new WorkDestinationStore(options.database);
   const journal = options.journal?.(options.database) ?? new SqliteJournal(options.database);
   const items = new LibraryItemStore(options.database);
   const snapshot = new LibrarySnapshot({
@@ -123,7 +121,6 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     entries,
     executions,
     journal,
-    workDestinations,
     snapshot,
   });
   const history = new History(journal, executions, jobs);
@@ -189,8 +186,8 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     (execution) => service.run(execution),
     {
       scanned: async (job) => {
-        // Before the snapshot and the notification: a file goes to the library its work is tied to.
-        await service.route(job);
+        // Before the snapshot and the notification: a file is planned for the library it goes to.
+        await service.planArrivals(job);
         await snapshot.scanned(job);
         if (job.libraryId) {
           probes.enqueue(job.libraryId);
@@ -420,8 +417,6 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
       jobs,
       entries,
       executions,
-      workDestinations,
-      items,
       service,
       runner,
       notifier,

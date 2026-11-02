@@ -797,11 +797,9 @@ export const arrivalsSchema = {
           sourceId: { type: 'string', nullable: true },
           destination: {
             type: 'object',
-            required: ['libraryId', 'remembered'],
+            required: ['libraryId'],
             properties: {
               libraryId: { type: 'string', nullable: true },
-              /** The work was tied to this library by "Remember for this work". */
-              remembered: { type: 'boolean' },
             },
           },
           /** The libraries it could go to: its kind's, or all of them when the kind is unknown. */
@@ -823,22 +821,6 @@ export const arrivalsSchema = {
         },
       },
     },
-  },
-} as const;
-
-export const workDestinationSchema = {
-  type: 'object',
-  required: ['kind', 'tmdbId', 'title', 'year', 'libraryId', 'library', 'createdAt'],
-  properties: {
-    kind: { type: 'string', enum: ['movie', 'series'] },
-    tmdbId: { type: 'integer' },
-    /** As a library holds it (its last scan); null when no library has the work yet. */
-    title: { type: 'string', nullable: true },
-    year: { type: 'integer', nullable: true },
-    libraryId: { type: 'string' },
-    /** The library's name; null if it no longer exists. */
-    library: { type: 'string', nullable: true },
-    createdAt: { type: 'string', format: 'date-time' },
   },
 } as const;
 

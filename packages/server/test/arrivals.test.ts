@@ -18,7 +18,7 @@ interface Arrival {
   kind: string | null;
   resolution: string | null;
   sourceId: string | null;
-  destination: { libraryId: string | null; remembered: boolean };
+  destination: { libraryId: string | null };
   destinationOptions: { id: string; name: string }[];
   plannedPath: string | null;
 }
@@ -95,7 +95,7 @@ describe('GET /api/arrivals', () => {
       sourceId: 'downloads',
       plannedPath: null,
       kind: 'movie',
-      destination: { libraryId: 'films', remembered: false },
+      destination: { libraryId: 'films' },
     });
     // Only the libraries of its kind are offered.
     expect(found.items[0]?.destinationOptions.map((o) => o.id)).toEqual(['films', 'films-4k']);
@@ -114,7 +114,7 @@ describe('GET /api/arrivals', () => {
     expect(unknown).toMatchObject({
       kind: null,
       state: 'unrecognized',
-      destination: { libraryId: null, remembered: false },
+      destination: { libraryId: null },
     });
     expect(unknown?.destinationOptions.map((o) => o.id)).toEqual(['films', 'films-4k', 'series']);
   });
@@ -196,8 +196,8 @@ describe('choosing where an arrival goes', () => {
   });
 });
 
-describe('remembering where a work goes', () => {
-  it('sends the next files of the work to its library alone, until it is forgotten', async () => {
+describe('choosing where a file goes', () => {
+  it('sends only that file to the library picked, the next ones keep the default', async () => {
     const { h, roots, downloads } = await setup();
     await put(join(downloads, 'Mystery.Home.Video.mkv'));
     await scanDownloads(h);
@@ -205,62 +205,17 @@ describe('remembering where a work goes', () => {
     const matched = await h.request('POST', `/api/entries/${id}/match`, {
       ...DUNE,
       libraryId: 'films-4k',
-      rememberDestination: true,
       remember: false,
     });
     expect(matched.statusCode).toBe(200);
+    // Nothing is learned about the work: the route is gone with its table.
+    expect((await h.request('GET', '/api/work-destinations')).statusCode).toBe(404);
 
-    expect((await h.request('GET', '/api/work-destinations')).json()).toMatchObject([
-      {
-        kind: 'movie',
-        tmdbId: 438631,
-        title: null,
-        libraryId: 'films-4k',
-        library: 'Films 4K',
-      },
-    ]);
-
-    // A later arrival of the same work is matched, planned for that library, and not waiting.
     await put(join(downloads, 'Dune.2021.1080p.mkv'));
     const jobId = await scanDownloads(h);
     const [dune] = (await h.request('GET', `/api/jobs/${jobId}/entries`))
-      .json<{ path: string; classification: string; destination: string }[]>()
+      .json<{ path: string; destination: string }[]>()
       .filter((entry) => entry.path.endsWith('Dune.2021.1080p.mkv'));
-    expect(dune).toMatchObject({
-      classification: 'to-rename',
-      destination: DUNE_NAME(roots.uhd),
-    });
-    expect((await arrivals(h)).items.map((a) => a.file)).not.toContain('Dune.2021.1080p.mkv');
-
-    // Forgotten: the default destination again.
-    const gone = await h.request('DELETE', '/api/work-destinations/movie/438631');
-    expect(gone.statusCode).toBe(204);
-    expect((await h.request('GET', '/api/work-destinations')).json()).toEqual([]);
-    expect((await h.request('DELETE', '/api/work-destinations/movie/438631')).statusCode).toBe(404);
-  });
-
-  it('shows the remembered library as the destination of a file that waits on a conflict', async () => {
-    const { h, roots, downloads } = await setup();
-    await put(join(downloads, 'Mystery.Home.Video.mkv'));
-    await scanDownloads(h);
-    const id = (await arrivals(h)).items[0]?.id ?? '';
-    await h.request('POST', `/api/entries/${id}/match`, {
-      ...DUNE,
-      libraryId: 'films-4k',
-      rememberDestination: true,
-      remember: false,
-    });
-
-    // The target is taken by the time the next one arrives: it waits, and says where it would go.
-    await put(DUNE_NAME(roots.uhd), 'already here');
-    await put(join(downloads, 'Dune.2021.1080p.mkv'));
-    await scanDownloads(h);
-    const waiting = (await arrivals(h, '?state=review')).items;
-    expect(waiting).toMatchObject([
-      {
-        file: 'Dune.2021.1080p.mkv',
-        destination: { libraryId: 'films-4k', remembered: true },
-      },
-    ]);
+    expect(dune?.destination.startsWith(roots.uhd)).toBe(false);
   });
 });

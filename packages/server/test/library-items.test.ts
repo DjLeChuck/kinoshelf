@@ -72,13 +72,6 @@ describe('the snapshot of a library', () => {
     expect(byPath.get(dune)?.entryId).toEqual(expect.any(String));
   });
 
-  it('names a work for the settings, whichever library holds it', async () => {
-    const { store } = await scanned();
-    expect(store.workTitle('movie', 438631)).toEqual({ title: 'Dune', year: 2021 });
-    expect(store.workTitle('series', 438631)).toBeUndefined();
-    expect(store.workTitle('movie', 1)).toBeUndefined();
-  });
-
   it('is replaced as a whole by the next scan', async () => {
     const { h, store, dune, alien } = await scanned();
     // A file that disappeared leaves the snapshot at the next scan; nothing else is kept.

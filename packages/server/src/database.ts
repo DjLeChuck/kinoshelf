@@ -202,7 +202,7 @@ export const SERVER_MIGRATIONS: readonly { readonly name: string; readonly sql: 
     `,
   },
   {
-    // Where an arrival goes when the user (or a remembered work) picked a library for it: NULL is
+    // Where an arrival goes when the user picked a library for it: NULL is
     // the default destination of the job. It belongs to the file, not to the job, whose settings
     // stay what the analysis used.
     name: 'server:013-entry-destination',
@@ -264,6 +264,12 @@ export const SERVER_MIGRATIONS: readonly { readonly name: string; readonly sql: 
       ALTER TABLE job_entries ADD COLUMN cluster INTEGER NOT NULL DEFAULT 0;
       ALTER TABLE job_entries DROP COLUMN detached;
     `,
+  },
+  {
+    // "Remember for this work" is gone: a destination is the folder's `into` or a choice made
+    // when a file is validated, never something learned.
+    name: 'server:018-drop-work-destinations',
+    sql: 'DROP TABLE work_destinations;',
   },
 ];
 

@@ -40,7 +40,7 @@ export interface Entry {
   readonly item: PlanItem | null;
   readonly error: StoredError | null;
   readonly batchId: string | null;
-  /** The library an arrival was sent to by hand or by a remembered work; null: the default one. */
+  /** The library an arrival was sent to by hand; null: the default one. */
   readonly destinationLibraryId: string | null;
   /** The folder (or file) it came in; episodes of one release are validated together. */
   readonly release: string | null;
@@ -272,7 +272,7 @@ export class EntryStore {
       .filter((other) => other.parsed.kind === 'episode');
   }
 
-  /** Where a file goes once transferred, chosen by hand or remembered; null: the default. */
+  /** Where a file goes once transferred, chosen by hand; null: the default. */
   setDestination(id: string, libraryId: string | null): void {
     this.database
       .prepare('UPDATE job_entries SET destination_library_id = ? WHERE id = ?')

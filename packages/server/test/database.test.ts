@@ -65,7 +65,7 @@ describe('server migrations', () => {
 });
 
 describe('library migrations', () => {
-  it('add the remembered destinations and the library snapshot to a database of the previous layout', () => {
+  it('add the library snapshot to a database of the previous layout', () => {
     const database = new Database(':memory:');
     applyMigrations(database, SERVER_MIGRATIONS.slice(0, 10));
     database
@@ -78,19 +78,21 @@ describe('library migrations', () => {
     migrated(database);
 
     expect(database.prepare('SELECT library_id FROM jobs').get()).toEqual({ library_id: 'films' });
-    expect(database.prepare('SELECT COUNT(*) AS n FROM work_destinations').get()).toEqual({ n: 0 });
     expect(database.prepare('SELECT COUNT(*) AS n FROM library_items').get()).toEqual({ n: 0 });
   });
 
-  it('remember one library per work, and one row per file of a library', () => {
-    const database = migrated(new Database(':memory:'));
-    const remember = database.prepare(
-      "INSERT INTO work_destinations (kind, tmdb_id, library_id, created_at) VALUES (?, ?, ?, 'now')",
+  it('drop the remembered destinations, and keep one row per file of a library', () => {
+    const database = new Database(':memory:');
+    applyMigrations(database, SERVER_MIGRATIONS.slice(0, 17));
+    database
+      .prepare(
+        "INSERT INTO work_destinations (kind, tmdb_id, library_id, created_at) VALUES ('movie', 603, 'films', 'now')",
+      )
+      .run();
+    migrated(database);
+    expect(() => database.prepare('SELECT * FROM work_destinations').all()).toThrow(
+      /no such table/,
     );
-    remember.run('movie', 603, 'films');
-    // The same id can be a movie and a series; the same work cannot have two destinations.
-    expect(() => remember.run('series', 603, 'shows')).not.toThrow();
-    expect(() => remember.run('movie', 603, 'other')).toThrow(/UNIQUE/);
 
     const item = database.prepare(
       "INSERT INTO library_items (library_id, path, state, scanned_at) VALUES (?, ?, 'ok', 'now')",

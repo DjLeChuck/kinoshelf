@@ -3,7 +3,7 @@ import type { Candidate, MovieCandidate, PlanItem, SeriesCandidate } from '@kino
 import type { FastifyInstance } from 'fastify';
 import { ApiError } from './api-error.js';
 import type { Entry, EntryStore } from './entries.js';
-import { resolutionOf, type LibraryItemStore } from './library-items.js';
+import { resolutionOf } from './library-items.js';
 import type { EventBus } from './events.js';
 import type { ExecutionStore } from './executions.js';
 import type { History } from './history.js';
@@ -16,7 +16,6 @@ import {
   candidateSchema,
   classificationValues,
   arrivalsSchema,
-  workDestinationSchema,
   entrySchema,
   matchResultSchema,
   errorSchema,
@@ -29,7 +28,6 @@ import {
   previewSchema,
   undoSchema,
 } from './schemas.js';
-import type { WorkDestinationStore } from './work-destinations.js';
 import type { Notifier } from './notify/notifier.js';
 import type { Service } from './service.js';
 
@@ -37,8 +35,6 @@ export interface RouteContext {
   readonly jobs: JobStore;
   readonly entries: EntryStore;
   readonly executions: ExecutionStore;
-  readonly workDestinations: WorkDestinationStore;
-  readonly items: LibraryItemStore;
   readonly service: Service;
   readonly runner: JobRunner;
   readonly notifier: Notifier;
@@ -170,18 +166,7 @@ export function jobPresenter(
 
 /** Thin HTTP layer: validate, call the store or the service, shape the answer. */
 export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
-  const {
-    jobs,
-    entries,
-    executions,
-    workDestinations,
-    items,
-    service,
-    runner,
-    notifier,
-    events,
-    history,
-  } = ctx;
+  const { jobs, entries, executions, service, runner, notifier, events, history } = ctx;
   const presentJob = jobPresenter(ctx);
   const idParams = { type: 'object', properties: { id: { type: 'string' } } } as const;
   const dryRunBody = {
@@ -292,8 +277,7 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
         description:
           'What the arrival folders (and paths sent by hand) hold that Kinoshelf could not settle ' +
           'alone: `review` (candidates to choose from, a conflict, a failed transfer) and ' +
-          '`unrecognized`. Each file says where it would go (`destination`, a remembered work ' +
-          'winning over the default) and the libraries it could go to instead. `total` counts ' +
+          '`unrecognized`. Each file says where it would go (`destination`) and the libraries it could go to instead. `total` counts ' +
           'every file of the filter, for the badge of the navigation; `limit` and `offset` count releases.',
         querystring: {
           type: 'object',
@@ -374,7 +358,7 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
 
   api.post<{
     Params: { id: string };
-    Body: CandidateBody & { onlyThis?: boolean; libraryId?: string; rememberDestination?: boolean };
+    Body: CandidateBody & { onlyThis?: boolean; libraryId?: string };
   }>(
     '/api/entries/:id/match',
     {
@@ -386,8 +370,7 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
           'a series, the other episodes of the same release follow the choice (the ones of ' +
           'the same `cluster`, not with `onlyThis`); `followers` lists them. ' +
           "`libraryId` sends the file to that library (of the work's kind) rather than to the " +
-          'default one, for this file only; with `rememberDestination`, every later file of the ' +
-          'work goes there alone. Without `libraryId`, a destination remembered for the work wins.',
+          'default one, for this file only.',
         params: idParams,
         body: {
           ...matchBodySchema,
@@ -395,7 +378,6 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
             ...matchBodySchema.properties,
             onlyThis: { type: 'boolean', description: 'Do not apply to the rest of the release' },
             libraryId: { type: 'string' },
-            rememberDestination: { type: 'boolean', description: 'Defaults to false' },
           },
         },
         response: { 200: matchResultSchema, 401: errorSchema, 404: errorSchema, 409: errorSchema },
@@ -408,9 +390,6 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
         {
           ...(request.body.onlyThis !== undefined && { onlyThis: request.body.onlyThis }),
           ...(request.body.libraryId !== undefined && { libraryId: request.body.libraryId }),
-          ...(request.body.rememberDestination !== undefined && {
-            rememberDestination: request.body.rememberDestination,
-          }),
         },
       );
       events.emit('arrivals', 'settings');
@@ -570,56 +549,6 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
     (request, reply) =>
       history.get(request.params.id) ??
       reply.code(404).send({ error: { code: 'batch.not-found' } }),
-  );
-
-  api.get(
-    '/api/work-destinations',
-    {
-      schema: {
-        summary: 'The works Kinoshelf sends to a library alone',
-        description:
-          'What "Remember for this work" taught: a work tied to the library its files go to. ' +
-          'A library that no longer exists is listed as such (`library` is null): its works go ' +
-          'back to the default destination.',
-        response: { 200: { type: 'array', items: workDestinationSchema }, 401: errorSchema },
-      },
-    },
-    () =>
-      workDestinations.list().map((stored) => {
-        const work = items.workTitle(stored.kind, stored.tmdbId);
-        return {
-          ...stored,
-          title: work?.title ?? null,
-          year: work?.year ?? null,
-          library: service.libraryName(stored.libraryId) ?? null,
-        };
-      }),
-  );
-
-  api.delete<{ Params: { kind: 'movie' | 'series'; tmdbId: number } }>(
-    '/api/work-destinations/:kind/:tmdbId',
-    {
-      schema: {
-        summary: 'Forget where a work goes',
-        description: 'Its next files follow the default destination again.',
-        params: {
-          type: 'object',
-          required: ['kind', 'tmdbId'],
-          properties: {
-            kind: { type: 'string', enum: ['movie', 'series'] },
-            tmdbId: { type: 'integer' },
-          },
-        },
-        response: { 204: { type: 'null' }, 401: errorSchema, 404: errorSchema },
-      },
-    },
-    (request, reply) => {
-      if (!workDestinations.remove(request.params.kind, request.params.tmdbId)) {
-        return reply.code(404).send({ error: { code: 'work-destination.not-found' } });
-      }
-      events.emit('settings');
-      return reply.code(204).send();
-    },
   );
 
   api.post<{ Params: { id: string }; Body?: { dryRun?: boolean } }>(

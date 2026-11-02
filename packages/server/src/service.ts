@@ -26,7 +26,6 @@ import type { EntryStore, Entry, StoredCandidate, StoredError } from './entries.
 import type { Execution, ExecutionStore } from './executions.js';
 import type { Job, JobStore, PlanSettings } from './jobs.js';
 import type { LibrarySnapshot } from './library-items.js';
-import type { WorkDestinationStore } from './work-destinations.js';
 import type { ExecutionOutcome, OutcomeFile } from './notify/message.js';
 import { makeProvider, type ProcessorDeps } from './processor.js';
 
@@ -79,7 +78,6 @@ export interface ServiceDeps extends ProcessorDeps {
   readonly entries: EntryStore;
   readonly executions: ExecutionStore;
   readonly journal: Journal;
-  readonly workDestinations: WorkDestinationStore;
   /** What each library holds, kept in step with what is matched, transferred and undone. */
   readonly snapshot: LibrarySnapshot;
 }
@@ -121,15 +119,12 @@ export class Service {
   async match(
     entryId: string,
     candidate: Candidate,
-    options: { onlyThis?: boolean; libraryId?: string; rememberDestination?: boolean } = {},
+    options: { onlyThis?: boolean; libraryId?: string } = {},
   ): Promise<MatchResult> {
     const entry = this.pendingEntry(entryId);
     const asked = options.libraryId;
     const libraryId = this.chosenLibrary(entry, candidate, asked);
     await this.applyChoice(entry, candidate, libraryId);
-    if (options.rememberDestination && libraryId !== null) {
-      this.deps.workDestinations.remember(candidate.kind, candidate.id.id, libraryId);
-    }
     // The choice is about the series, so the rest of the release follows; one that cannot (the
     // provider is down, say) stays as it was and can be settled on its own.
     const followers: string[] = [];
@@ -244,26 +239,14 @@ export class Service {
   }
 
   /**
-   * Where a file of an arrival goes by default, and whether a remembered work decided it. An
+   * Where a file of an arrival goes by default. An
    * arrival is told by its job: one of an arrival folder (its `into`), or sent by hand, which
    * goes to the first library of its kind. `null` for a file of a library organized in place
    * (it stays where it is) or one whose kind is unknown.
    */
-  destinationOf(entry: Entry): { libraryId: string | null; remembered: boolean } {
+  destinationOf(entry: Entry): { libraryId: string | null } {
     const chosen = this.typedLibrary(entry.destinationLibraryId);
-    const work = entry.item?.externalId;
-    const kind = kindOf(entry);
-    const remembered =
-      chosen !== undefined &&
-      work !== undefined &&
-      kind !== null &&
-      this.deps.workDestinations.find(kind, work.id) === chosen.id;
-    return { libraryId: (chosen ?? this.defaultLibrary(entry))?.id ?? null, remembered };
-  }
-
-  /** A library's name by id; `undefined` once it is gone. */
-  libraryName(id: string): string | undefined {
-    return this.deps.config.libraries?.find((library) => library.id === id)?.name;
+    return { libraryId: (chosen ?? this.defaultLibrary(entry))?.id ?? null };
   }
 
   /** The arrival folders: where files wait for a destination. */
@@ -280,12 +263,12 @@ export class Service {
   }
 
   /**
-   * Arrivals whose work the user asked to remember go to its library alone: a job of an arrival
-   * folder (or sent by hand) is looked at once stored, and each file already matched with
-   * confidence is planned again for that library (its profile, its root). Files that are not
-   * matched keep waiting: their choice is for a human.
+   * The analysis of an arrival folder (or of a path sent by hand) used the global profile; once
+   * stored, each file already matched with confidence is planned again for the library it goes
+   * to (its profile, its root), so the names follow where they end up. Files that are not matched
+   * keep waiting: their choice is for a human.
    */
-  async route(job: Job): Promise<void> {
+  async planArrivals(job: Job): Promise<void> {
     const library = this.deps.config.libraries?.find(({ id }) => id === job.libraryId);
     if (library?.type !== undefined) {
       return;
@@ -297,20 +280,15 @@ export class Service {
       if (kind === null || id === undefined || best?.id.id !== id) {
         continue;
       }
-      const target = this.typedLibrary(this.deps.workDestinations.find(kind, id));
-      const planned = target ?? this.defaultLibrary(entry);
+      const planned = this.defaultLibrary(entry);
       if (!planned || planned.type !== kind) {
         continue;
       }
-      // Planned again also when the default library has a profile of its own: the analysis used
-      // the global one, and the names must follow the library they end up in. A file that cannot
-      // be (the provider is down) keeps its plan: the default destination is still a good one.
+      // A file that cannot be planned (the provider is down) keeps its plan: the global profile's
+      // one is still a good one.
       try {
         const item = await this.planWith(entry, toCandidate(best), { libraryId: planned.id });
         this.deps.entries.setMatch(entry.id, classify(item), item);
-        if (target) {
-          this.deps.entries.setDestination(entry.id, target.id);
-        }
       } catch {
         continue;
       }
@@ -341,7 +319,7 @@ export class Service {
       : libraries.find((library) => library.id === id);
   }
 
-  /** The library a human or a remembered work picks for a candidate, checked against its kind. */
+  /** The library a human picks for a candidate, checked against its kind. */
   private chosenLibrary(entry: Entry, candidate: Candidate, asked?: string): string | null {
     if (asked !== undefined) {
       const library = this.deps.config.libraries?.find(({ id }) => id === asked);
@@ -353,11 +331,8 @@ export class Service {
       }
       return library.id;
     }
-    const remembered = this.typedLibrary(
-      this.deps.workDestinations.find(candidate.kind, candidate.id.id),
-    );
     const current = this.typedLibrary(entry.destinationLibraryId);
-    const chosen = [remembered, current].find((library) => library?.type === candidate.kind);
+    const chosen = current?.type === candidate.kind ? current : undefined;
     return chosen?.id ?? null;
   }
 
@@ -593,7 +568,7 @@ export class Service {
 
   /**
    * How a file is planned and transferred: what its job used, except where it goes. A file sent
-   * to a library (by hand, by a remembered work, or by default for an arrival) takes that
+   * to a library (by hand, or by default for an arrival) takes that
    * library's profile and root; the mode stays the one of its source.
    */
   private settingsFor(entry: Entry, libraryId?: string | null): PlanSettings {
