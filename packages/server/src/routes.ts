@@ -1,6 +1,7 @@
 import { basename } from 'node:path';
 import type { Candidate, MovieCandidate, PlanItem, SeriesCandidate } from '@kinoshelf/core';
 import type { FastifyInstance } from 'fastify';
+import { ApiError } from './api-error.js';
 import type { Entry, EntryStore } from './entries.js';
 import { resolutionOf } from './library-items.js';
 import type { EventBus } from './events.js';
@@ -311,6 +312,31 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
         sources: sources.map(({ id, name, source }) => ({ id, name, path: source })),
         items: page.entries.map((entry) => presentArrival(entry, service, jobs)),
       };
+    },
+  );
+
+  api.get<{ Params: { id: string } }>(
+    '/api/entries/:id',
+    {
+      schema: {
+        summary: 'One file, as `GET /api/arrivals` shows it',
+        description:
+          'For a file that is not in an arrival folder (a library organized in place, a path sent ' +
+          'by hand), whose candidates and destinations are needed to settle it.',
+        params: idParams,
+        response: {
+          200: arrivalsSchema.properties.items.items,
+          401: errorSchema,
+          404: errorSchema,
+        },
+      },
+    },
+    (request) => {
+      const entry = entries.get(request.params.id);
+      if (!entry) {
+        throw new ApiError(404, 'queue.entry-not-found');
+      }
+      return presentArrival(entry, service, jobs);
     },
   );
 

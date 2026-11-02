@@ -31,6 +31,7 @@ describe('GET /api/openapi.json', () => {
       '/api/batches',
       '/api/batches/{id}',
       '/api/batches/{id}/undo',
+      '/api/entries/{id}',
       '/api/entries/{id}/ignore',
       '/api/entries/{id}/match',
       '/api/entries/{id}/preview',

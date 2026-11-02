@@ -61,6 +61,22 @@ async function scanDownloads(h: Harness): Promise<string> {
 const arrivals = async (h: Harness, query = ''): Promise<Arrivals> =>
   (await h.request('GET', `/api/arrivals${query}`)).json<Arrivals>();
 
+describe('GET /api/entries/:id', () => {
+  it('shows one file like the arrivals do, wherever it lives', async () => {
+    const { h, roots } = await setup();
+    await put(join(roots.films, 'Mystery.Home.Video.mkv'));
+    expect((await h.request('POST', '/api/libraries/films/scan')).statusCode).toBe(202);
+    await h.app.jobs.idle();
+    const { items } = (await h.request('GET', '/api/libraries/films/items')).json<{
+      items: { entryId: string }[];
+    }>();
+    const response = await h.request('GET', `/api/entries/${items[0]?.entryId}`);
+    expect(response.statusCode).toBe(200);
+    expect(response.json<Arrival>()).toMatchObject({ release: 'Mystery.Home.Video.mkv' });
+    expect((await h.request('GET', '/api/entries/nope')).statusCode).toBe(404);
+  });
+});
+
 describe('GET /api/arrivals', () => {
   it('lists what an arrival folder holds that needs a human, with where it would go', async () => {
     const { h, roots, downloads } = await setup();
