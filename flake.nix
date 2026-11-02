@@ -24,6 +24,7 @@
             pkgs.gnumake
             pkgs.gcc
             pkgs.ffmpeg-headless # `ffprobe`: codec, audio and size of a video, and a file to probe in tests
+            pkgs.nixfmt # `make flake-check`
           ];
           # Browsers for the end-to-end tests (`pnpm test:e2e`). The npm `@playwright/test`
           # must be the version of this package: bump them together.

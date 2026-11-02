@@ -69,6 +69,5 @@ flake-check: ## Validate the Nix flake (new files must be `git add -N`)
 	nixfmt --check flake.nix
 	nix flake check
 
-clean: ## Remove build output
-	$(PNPM) exec tsc -b --clean
-	rm -rf packages/web/dist
+clean: ## Remove build output, including files whose source is gone (`tsc -b --clean` keeps them)
+	rm -rf packages/*/dist packages/providers/*/dist packages/*/tsconfig.tsbuildinfo packages/providers/*/tsconfig.tsbuildinfo

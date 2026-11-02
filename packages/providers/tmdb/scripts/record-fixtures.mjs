@@ -36,8 +36,9 @@ async function save(name, { status, json }, expected = 200) {
 }
 
 await mkdir(dir, { recursive: true });
+// The `details-*` files are hand-written (see test/fixtures/README.md): this script makes none.
 for (const file of await readdir(dir)) {
-  if (file.endsWith('.json')) {
+  if (file.endsWith('.json') && !file.startsWith('details-')) {
     await rm(new URL(file, dir));
   }
 }
