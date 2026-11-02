@@ -17,8 +17,8 @@ export const ROUTES: readonly RouteDefinition[] = [
   { id: 'settings', path: '/settings', label: 'web.nav.settings', firstRun: true },
 ];
 
-/** `/history/<batch>`: a link to one batch, which no menu entry points at. */
-export function batchIdOf(path: string): string | undefined {
+/** `/history/<id>`: a link to one line of the history (a batch or a job), which no menu entry points at. */
+export function historyIdOf(path: string): string | undefined {
   return /^\/history\/([^/]+)\/?$/.exec(path)?.[1];
 }
 

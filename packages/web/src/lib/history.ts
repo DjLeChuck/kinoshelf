@@ -1,8 +1,51 @@
 import type { Locale } from '@kinoshelf/i18n';
 import type { ErrorBody } from './arrivals.js';
+import type { Library } from './libraries.js';
 
 export type BatchStatus = 'done' | 'undone' | 'failed';
+export type JobStatus = 'queued' | 'running' | 'done' | 'failed';
 export type Mode = 'copy' | 'hardlink' | 'move';
+
+/** One line of `GET /api/history`: a batch, or a job that has none yet. */
+export interface Activity {
+  /** A batch id or a job id, according to `kind`. */
+  readonly id: string;
+  readonly kind: 'batch' | 'job';
+  readonly at: string;
+  readonly status: BatchStatus | JobStatus;
+  readonly path: string | null;
+  readonly libraryId: string | null;
+  readonly operations: number;
+  readonly failed: number;
+  readonly modes: readonly Mode[];
+  readonly error: ErrorBody | null;
+  /** A job that finished and moved nothing: only listed when asked for. */
+  readonly routine: boolean;
+}
+
+/** What `GET /api/jobs/:id` returns, as far as the history reads it. */
+export interface JobDetail {
+  readonly id: string;
+  readonly path: string;
+  readonly libraryId: string | null;
+  readonly status: JobStatus;
+  readonly apply: boolean;
+  readonly createdAt: string;
+  readonly startedAt: string | null;
+  readonly finishedAt: string | null;
+  readonly error: ErrorBody | null;
+  readonly execution: {
+    readonly status: JobStatus;
+    readonly batchId: string | null;
+    readonly error: ErrorBody | null;
+  } | null;
+  readonly summary: Readonly<Record<string, number>> | null;
+  readonly settings: {
+    readonly profile: string;
+    readonly mode: Mode;
+    readonly destinationRoot: string | { readonly movie: string; readonly series: string };
+  } | null;
+}
 
 /** What `GET /api/batches` and `GET /api/batches/:id` return, as far as the screen reads it. */
 export interface BatchSummary {
@@ -47,10 +90,12 @@ export interface UndoReport {
   }[];
 }
 
-export const STATUS_CHIP: Record<BatchStatus, string> = {
+export const STATUS_CHIP: Record<BatchStatus | JobStatus, string> = {
   done: 'chip-ok',
   undone: 'chip-neutral',
   failed: 'chip-danger',
+  queued: 'chip-neutral',
+  running: 'chip-neutral',
 };
 
 /** Only a batch that transferred something and was not reverted has anything to undo. */
@@ -79,3 +124,46 @@ export const originOf = (batch: Pick<BatchSummary, 'origin'>): string | undefine
 
 /** A UUID is no name for a person; its first block is enough to tell two jobs apart. */
 export const shortId = (id: string): string => id.slice(0, 8);
+
+/** `2 s`, `1 min 12 s`; the units read the same in both languages. */
+export function formatDuration(from: string, to: string): string | undefined {
+  const ms = new Date(to).getTime() - new Date(from).getTime();
+  if (!Number.isFinite(ms) || ms < 0) {
+    return undefined;
+  }
+  const seconds = Math.max(1, Math.round(ms / 1000));
+  const minutes = Math.floor(seconds / 60);
+  return minutes === 0 ? `${seconds} s` : `${minutes} min ${seconds % 60} s`;
+}
+
+/** The files of a job's analysis, whatever their classification. */
+export const analysed = (summary: JobDetail['summary']): number =>
+  summary === null ? 0 : Object.values(summary).reduce((sum, count) => sum + count, 0);
+
+/** The roots a job planned for, one per kind of work. */
+export function rootsOf(root: NonNullable<JobDetail['settings']>['destinationRoot']): {
+  readonly movies: string;
+  readonly series: string;
+} {
+  return typeof root === 'string'
+    ? { movies: root, series: root }
+    : { movies: root.movie, series: root.series };
+}
+
+/**
+ * How to send a job again. A scan of a library's whole source goes through the library's own
+ * route, which refuses a second scan at once and refreshes the library's rows; anything else
+ * (a release, a path sent by hand) is submitted as it was. A library deleted since falls back to
+ * the plain submission: its scan job only needs its path.
+ */
+export function resendRequest(
+  job: Pick<JobDetail, 'path' | 'apply' | 'libraryId'>,
+  libraries: readonly Pick<Library, 'id' | 'source'>[],
+): { readonly url: string; readonly body: Record<string, unknown> } {
+  const scanned = libraries.find(
+    (library) => library.id === job.libraryId && library.source === job.path,
+  );
+  return scanned
+    ? { url: `/api/libraries/${scanned.id}/scan`, body: {} }
+    : { url: '/api/jobs', body: { path: job.path, apply: job.apply } };
+}

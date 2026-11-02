@@ -43,6 +43,10 @@ describe('catalogs', () => {
       'web.library.scan.running',
       'web.library.col.fanart',
       'web.library.runtime',
+      'web.history.job.title',
+      'web.history.job.cause',
+      'web.history.job.used.mode',
+      'web.history.job.used.destination',
     ];
     const identical = (Object.keys(en) as (keyof typeof en)[]).filter(
       (key) => fr[key] === en[key] && !key.startsWith('entry.') && !SAME_IN_BOTH.includes(key),

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { en, fr } from '@kinoshelf/i18n';
-import { batchIdOf, matchRoute, ROUTES } from '../src/lib/routes.js';
+import { historyIdOf, matchRoute, ROUTES } from '../src/lib/routes.js';
 
 describe('matchRoute', () => {
   it.each([
@@ -36,15 +36,15 @@ describe('matchRoute', () => {
   });
 });
 
-describe('batchIdOf', () => {
+describe('historyIdOf', () => {
   it('reads the id of a batch page', () => {
-    expect(batchIdOf('/history/9b1c')).toBe('9b1c');
-    expect(batchIdOf('/history/9b1c/')).toBe('9b1c');
+    expect(historyIdOf('/history/9b1c')).toBe('9b1c');
+    expect(historyIdOf('/history/9b1c/')).toBe('9b1c');
   });
 
   it('is empty for the list page and for another section', () => {
-    expect(batchIdOf('/history')).toBeUndefined();
-    expect(batchIdOf('/jobs/9b1c')).toBeUndefined();
-    expect(batchIdOf('/history/a/b')).toBeUndefined();
+    expect(historyIdOf('/history')).toBeUndefined();
+    expect(historyIdOf('/jobs/9b1c')).toBeUndefined();
+    expect(historyIdOf('/history/a/b')).toBeUndefined();
   });
 });

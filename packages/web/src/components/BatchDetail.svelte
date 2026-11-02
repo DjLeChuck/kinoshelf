@@ -13,6 +13,7 @@
     type BatchDetail,
     type UndoReport,
   } from '../lib/history.js';
+  import JobDetail from './JobDetail.svelte';
   import { releaseName } from '../lib/arrivals.js';
   import type { ErrorBody } from '../lib/arrivals.js';
 
@@ -83,8 +84,6 @@
         {#if originOf(batch)}
           <p class="muted">
             {t('web.history.submitted')}: <span class="mono">{originOf(batch)}</span>
-            {#if batch.origin}·
-              {t('web.history.from-job', { id: shortId(batch.origin.jobId) })}{/if}
           </p>
         {:else}
           <p class="muted">{t('web.history.origin.cli')}</p>
@@ -142,6 +141,13 @@
           {/each}
         </ul>
       </section>
+    {/if}
+
+    {#if batch.origin}
+      <details>
+        <summary>{t('web.history.job.title', { id: shortId(batch.origin.jobId) })}</summary>
+        <JobDetail id={batch.origin.jobId} embedded />
+      </details>
     {/if}
 
     {#if preview}
@@ -254,6 +260,16 @@
   .label {
     font-family: var(--font);
     font-weight: 600;
+  }
+
+  summary {
+    cursor: pointer;
+    color: var(--muted);
+    font-weight: 600;
+  }
+
+  details[open] summary {
+    margin-bottom: 8px;
   }
 
   footer {

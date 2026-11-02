@@ -3,8 +3,12 @@ import { en, fr } from '@kinoshelf/i18n';
 import {
   STATUS_CHIP,
   canUndo,
+  analysed,
   formatDate,
+  formatDuration,
   originOf,
+  resendRequest,
+  rootsOf,
   tally,
   type BatchStatus,
   type UndoReport,
@@ -63,5 +67,66 @@ describe('originOf', () => {
   it('is the submitted path, and nothing for the command line', () => {
     expect(originOf({ origin: { jobId: 'j', path: '/downloads' } })).toBe('/downloads');
     expect(originOf({ origin: null })).toBeUndefined();
+  });
+});
+
+describe('resendRequest', () => {
+  const films = { id: 'films', source: '/media/films' };
+
+  it('sends the scan of a library through the library, which refuses a second one', () => {
+    expect(
+      resendRequest({ path: '/media/films', apply: false, libraryId: 'films' }, [films]),
+    ).toEqual({ url: '/api/libraries/films/scan', body: {} });
+  });
+
+  it('submits a release of an arrival folder as it was, with its choice to apply', () => {
+    expect(
+      resendRequest({ path: '/downloads/Dune.2021', apply: true, libraryId: 'films' }, [films]),
+    ).toEqual({ url: '/api/jobs', body: { path: '/downloads/Dune.2021', apply: true } });
+  });
+
+  it('falls back to a plain submission when the library is gone', () => {
+    expect(resendRequest({ path: '/media/films', apply: false, libraryId: 'films' }, [])).toEqual({
+      url: '/api/jobs',
+      body: { path: '/media/films', apply: false },
+    });
+  });
+
+  it('submits a path sent by hand, which belongs to no library', () => {
+    expect(resendRequest({ path: '/x', apply: false, libraryId: null }, [films]).url).toBe(
+      '/api/jobs',
+    );
+  });
+});
+
+describe('formatDuration', () => {
+  it.each([
+    ['2026-10-29T10:00:00Z', '2026-10-29T10:00:02Z', '2 s'],
+    ['2026-10-29T10:00:00Z', '2026-10-29T10:01:12Z', '1 min 12 s'],
+    ['2026-10-29T10:00:00Z', '2026-10-29T10:00:00Z', '1 s'],
+  ])('%s to %s is %s', (from, to, expected) => {
+    expect(formatDuration(from, to)).toBe(expected);
+  });
+
+  it('says nothing when the end is before the start, or not a date', () => {
+    expect(formatDuration('2026-10-29T10:00:02Z', '2026-10-29T10:00:00Z')).toBeUndefined();
+    expect(formatDuration('x', 'y')).toBeUndefined();
+  });
+});
+
+describe('analysed', () => {
+  it('adds up every classification, and is zero before the analysis ends', () => {
+    expect(analysed({ 'to-rename': 2, compliant: 3, conflict: 0 })).toBe(5);
+    expect(analysed(null)).toBe(0);
+  });
+});
+
+describe('rootsOf', () => {
+  it('gives one root for both kinds, or one for each', () => {
+    expect(rootsOf('/media')).toEqual({ movies: '/media', series: '/media' });
+    expect(rootsOf({ movie: '/films', series: '/series' })).toEqual({
+      movies: '/films',
+      series: '/series',
+    });
   });
 });

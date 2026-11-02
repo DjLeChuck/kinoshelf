@@ -140,7 +140,9 @@
   {#if lastScanFailed(library)}
     <p class="alert alert-danger" role="alert">
       {t('web.library.failed', { name: library.name })}
-      <Link href="/history">{t('web.library.failed.link')}</Link>
+      <Link href={library.lastScan ? `/history/${library.lastScan.jobId}` : '/history'}
+        >{t('web.library.failed.link')}</Link
+      >
     </p>
   {/if}
 
