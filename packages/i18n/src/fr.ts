@@ -710,6 +710,13 @@ export const fr: Record<keyof typeof en, string> = {
   'web.settings.aliases.empty': 'Rien n’est mémorisé pour l’instant.',
   'web.settings.aliases.forget': 'Oublier',
   'web.settings.aliases.forget.label': 'Oublier « {title} »',
+  'web.settings.destinations.title': 'Destinations retenues',
+  'web.settings.destinations.hint':
+    'Les œuvres que vous avez demandé d’envoyer toujours dans une bibliothèque : leurs prochains fichiers y vont seuls. Si une bibliothèque est supprimée, ses œuvres retombent sur la destination par défaut ; oublier une destination n’agit que sur les prochaines arrivées.',
+  'web.settings.destinations.empty': 'Rien de retenu pour l’instant.',
+  'web.settings.destinations.gone': 'bibliothèque supprimée : destination par défaut',
+  'web.settings.destinations.forget': 'Oublier',
+  'web.settings.destinations.forget.label': 'Oublier la destination de « {title} »',
   'web.settings.access.title': 'Clé d’API',
   'web.settings.access.env':
     'La clé vient de KINOSHELF_API_KEY : changez la variable pour la remplacer.',

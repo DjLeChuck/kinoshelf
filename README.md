@@ -185,7 +185,7 @@ API key: the browser keeps a session cookie for 7 days, so the key itself is not
   are hidden until you ask for them. **Undo** shows what would be restored, then asks for
   confirmation; a file moved or replaced since is left alone.
 - **Settings.** The TMDB key, languages, output profile, file mode, threshold, your libraries and
-  arrival folders, remembered titles, Plex, Jellyfin, webhooks (with a test) and the API key. They are saved in `config.yaml` and apply
+  arrival folders, remembered titles and destinations, Plex, Jellyfin, webhooks (with a test) and the API key. They are saved in `config.yaml` and apply
   at once, without a restart. Secrets are never shown again.
 
 The screens update by themselves when a job ends or a file is validated elsewhere. Posters come

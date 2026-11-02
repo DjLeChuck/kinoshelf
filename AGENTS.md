@@ -211,7 +211,8 @@ refuses to delete a library an arrival folder points at (`library.in-use`). Ther
   file is planned, executed and written to the snapshot with **that library's profile and root**
   (the mode stays the folder's). A job whose files go to several libraries is executed as one plan
   per library under one batch. `rememberDestination` ties the work to the library
-  (`work_destinations`, `GET`/`DELETE /api/work-destinations`): `Service.route` then plans each
+  (`work_destinations`, `GET`/`DELETE /api/work-destinations`, listed and forgotten in the settings next to the
+  aliases; the work's `title`/`year` come from the libraries' snapshot, `null` before any library holds it): `Service.route` then plans each
   later file of the work, matched with confidence, for that library when its job is stored, and a
   file left unmatched keeps waiting. A library deleted since is ignored: the default applies.
 - **Events** (`GET /api/events`): the payload-less topics are `jobs`, `arrivals` (files waiting for a human changed:
