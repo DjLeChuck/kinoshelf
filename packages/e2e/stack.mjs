@@ -12,10 +12,25 @@ if (!dir || !tmdbPort) {
 
 // A fresh disk every run: the tests count on what is (not) in the library.
 rmSync(dir, { recursive: true, force: true });
-for (const folder of ['config', 'incoming', 'library']) {
+for (const folder of ['config', 'incoming', 'library/films', 'library/series']) {
   mkdirSync(join(dir, folder), { recursive: true });
 }
-writeFileSync(join(dir, 'config', 'config.yaml'), `destination: ${join(dir, 'library')}\n`);
+// One library of each kind: the first of its type is where a job with no library goes.
+writeFileSync(
+  join(dir, 'config', 'config.yaml'),
+  [
+    'libraries:',
+    '  - id: films',
+    '    name: Films',
+    '    type: movie',
+    `    source: ${join(dir, 'library', 'films')}`,
+    '  - id: series',
+    '    name: Series',
+    '    type: series',
+    `    source: ${join(dir, 'library', 'series')}`,
+    '',
+  ].join('\n'),
+);
 
 const film = (id, title, year, poster) => ({
   id,

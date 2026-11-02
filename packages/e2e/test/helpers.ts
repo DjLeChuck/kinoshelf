@@ -11,15 +11,15 @@ export async function signInAt(page: Page, path: string): Promise<void> {
   await page.getByRole('button', { name: 'Sign in' }).click();
 }
 
-/** Signs in and lands on the validation queue, which most tests start from. */
+/** Signs in and lands on the libraries, which most tests start from. */
 export async function signIn(page: Page): Promise<void> {
-  await signInAt(page, '/queue');
-  await expect(page.getByRole('heading', { name: 'Validation queue' })).toBeVisible();
+  await signInAt(page, '/libraries');
+  await expect(page.getByRole('heading', { name: 'Libraries' })).toBeVisible();
 }
 
 /**
  * Drops files in a folder of their own and submits it like a post-download script would. With
- * `apply`, what matches with confidence is transferred at once and the rest waits in the queue.
+ * `apply`, what matches with confidence is transferred at once.
  * Resolves when the analysis is over.
  */
 export async function submit(

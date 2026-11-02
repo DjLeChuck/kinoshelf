@@ -2,7 +2,6 @@
   import type { Snippet } from 'svelte';
   import { isLocale } from '@kinoshelf/i18n';
   import { refetchOn } from '../lib/events.svelte.js';
-  import { queueLabel } from '../lib/home.js';
   import { locale, t } from '../lib/i18n.svelte.js';
   import { router } from '../lib/router.svelte.js';
   import { ROUTES } from '../lib/routes.js';
@@ -14,15 +13,13 @@
 
   let { children }: { children: Snippet } = $props();
 
-  // Both feed the nav and the home page, so they are fetched once, here.
+  // It feeds the nav and the root page, so it is fetched once, here.
   refetchOn(['settings', 'ready'], () => void shell.loadOnboarding());
-  refetchOn(['queue', 'jobs', 'ready'], () => void shell.loadQueue());
 
   // Until the welcome page is left only what it needs is shown; unknown, everything is.
   const routes = $derived(
     shell.onboarding?.completed === false ? ROUTES.filter((route) => route.firstRun) : ROUTES,
   );
-  const waiting = $derived(shell.queue?.length ?? 0);
 
   const themes: readonly ThemePreference[] = ['dark', 'light', 'system'];
 
@@ -51,10 +48,6 @@
         aria-current={router.route?.id === route.id ? 'page' : undefined}
       >
         {t(route.label)}
-        {#if route.soon}<span class="chip chip-neutral">{t('web.soon.badge')}</span>{/if}
-        {#if route.id === 'queue' && waiting > 0}<span class="chip chip-warn"
-            >{queueLabel(waiting)}</span
-          >{/if}
       </Link>
     {/each}
   </nav>

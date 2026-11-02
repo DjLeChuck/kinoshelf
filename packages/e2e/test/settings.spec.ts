@@ -59,30 +59,35 @@ test('offers the bundled profiles and asks for a path only for one’s own file'
   await section.getByLabel('Path of the YAML file').fill('/config/mine.yaml');
 });
 
-test('picks a destination folder on the server’s disk instead of typing it', async ({ page }) => {
-  await mkdir(library('Films'), { recursive: true });
-  const section = page.locator('form', {
-    has: page.getByRole('heading', { name: 'Default settings' }),
+test('picks the source folder of a library on the server’s disk instead of typing it', async ({
+  page,
+}) => {
+  await mkdir(library('Documentaries'), { recursive: true });
+  const section = page.locator('section', {
+    has: page.getByRole('heading', { name: 'Libraries', exact: true }),
   });
 
-  await section.getByRole('button', { name: 'Browse…' }).first().click();
+  await section.getByRole('button', { name: '+ Add' }).first().click();
+  // The picker opens where the typed value is.
+  await section.getByRole('textbox', { name: 'Source folder' }).fill(library());
+  await section.getByRole('button', { name: 'Browse…' }).click();
   const browser = section.getByRole('group', { name: 'Folders of the server' });
   await expect(browser.getByText(library(), { exact: true })).toBeVisible();
 
-  await browser.getByRole('button', { name: 'Films' }).click();
-  await expect(browser.getByText(library('Films'), { exact: true })).toBeVisible();
+  await browser.getByRole('button', { name: 'Documentaries' }).click();
+  await expect(browser.getByText(library('Documentaries'), { exact: true })).toBeVisible();
   await browser.getByRole('button', { name: 'Use this folder' }).click();
 
   await expect(section.getByRole('group', { name: 'Folders of the server' })).toHaveCount(0);
-  await expect(section.getByRole('textbox', { name: 'Library (destination)' })).toHaveValue(
-    library('Films'),
+  await expect(section.getByRole('textbox', { name: 'Source folder' })).toHaveValue(
+    library('Documentaries'),
   );
 });
 
 test('picks the Kinoshelf side of a path mapping, and types the server’s side', async ({
   page,
 }) => {
-  await mkdir(library('Series'), { recursive: true });
+  await mkdir(library('Cartoons'), { recursive: true });
   const section = page.locator('form', {
     has: page.getByRole('heading', { name: 'Plex server' }),
   });
@@ -99,10 +104,10 @@ test('picks the Kinoshelf side of a path mapping, and types the server’s side'
   const other = await section.getByLabel('Path on the server').boundingBox();
   expect(panel?.width).toBeGreaterThan((field?.width ?? 0) + (other?.width ?? 0));
 
-  await section.getByRole('button', { name: 'Series' }).click();
+  await section.getByRole('button', { name: 'Cartoons' }).click();
   await section.getByRole('button', { name: 'Use this folder' }).click();
 
-  await expect(section.getByLabel('Path in Kinoshelf')).toHaveValue(library('Series'));
+  await expect(section.getByLabel('Path in Kinoshelf')).toHaveValue(library('Cartoons'));
   await expect(section.getByLabel('Path on the server')).toHaveValue('');
 });
 

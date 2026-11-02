@@ -1,7 +1,6 @@
 <script lang="ts">
   import { t } from '../lib/i18n.svelte.js';
   import { FormError, watchForm, watchPatch, type Settings } from '../lib/settings.js';
-  import Link from './Link.svelte';
   import SettingsSection from './SettingsSection.svelte';
 
   let { settings, save }: { settings: Settings; save: (patch: object) => Promise<void> } = $props();
@@ -22,10 +21,7 @@
 <SettingsSection title={t('web.settings.watch.title')} onsubmit={submit}>
   <p class="muted hint">{t('web.settings.watch.intro')}</p>
 
-  <p class="manage">
-    <Link href="/libraries">{t('web.settings.watch.manage')}</Link>
-    <span class="muted hint">{t('web.settings.watch.folders.hint')}</span>
-  </p>
+  <p class="muted hint">{t('web.settings.watch.folders.hint')}</p>
 
   <div class="field">
     <label for="watch-settle">{t('web.settings.watch.settle')}</label>
@@ -59,14 +55,6 @@
 </SettingsSection>
 
 <style>
-  .manage {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 6px;
-    margin: 0;
-  }
-
   .check {
     display: flex;
     align-items: center;

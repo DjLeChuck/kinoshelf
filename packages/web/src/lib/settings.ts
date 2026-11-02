@@ -9,11 +9,6 @@ export interface PathMapping {
   to: string;
 }
 
-export interface Destination {
-  readonly movies: string;
-  readonly series: string;
-}
-
 /** What `GET /api/settings` returns. Secrets are only ever reported as set or not. */
 export interface Settings {
   readonly tmdb: {
@@ -50,7 +45,6 @@ export interface Settings {
     readonly profile: string | null;
     readonly mode: Mode | null;
     readonly threshold: number | null;
-    readonly destination: string | Destination | null;
   };
   readonly apiKey: { readonly source: 'env' | 'database' | null };
   /** The profiles shipped with Kinoshelf. */
@@ -93,35 +87,6 @@ export function thresholdOf(text: string): number | null | undefined {
   }
   const value = Number(trimmed.replace(',', '.'));
   return Number.isFinite(value) && value >= 0 && value <= 100 ? value : undefined;
-}
-
-export interface DestinationForm {
-  separate: boolean;
-  single: string;
-  movies: string;
-  series: string;
-}
-
-export function destinationForm(
-  destination: Settings['processing']['destination'],
-): DestinationForm {
-  if (typeof destination === 'object' && destination !== null) {
-    return { separate: true, single: '', movies: destination.movies, series: destination.series };
-  }
-  return { separate: false, single: destination ?? '', movies: '', series: '' };
-}
-
-/** One folder, or one per kind (Plex asks for separate libraries); `undefined` if incomplete. */
-export function destinationOf(form: DestinationForm): string | Destination | null | undefined {
-  if (!form.separate) {
-    return nullIfBlank(form.single);
-  }
-  const movies = form.movies.trim();
-  const series = form.series.trim();
-  if (movies === '' && series === '') {
-    return null;
-  }
-  return movies !== '' && series !== '' ? { movies, series } : undefined;
 }
 
 /** Rows left half empty are dropped: a mapping needs both sides. */

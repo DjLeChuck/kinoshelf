@@ -1,25 +1,18 @@
 <script lang="ts">
-  import ComingSoon from './components/ComingSoon.svelte';
   import Shell from './components/Shell.svelte';
   import { messageOf } from './lib/errors.js';
   import { connectEvents, disconnectEvents } from './lib/events.svelte.js';
   import { t } from './lib/i18n.svelte.js';
   import { router } from './lib/router.svelte.js';
-  import { libraryRoute } from './lib/libraries.js';
-  import { idOf } from './lib/routes.js';
   import { session } from './lib/session.svelte.js';
-  import Home from './pages/Home.svelte';
   import History from './pages/History.svelte';
-  import Job from './pages/Job.svelte';
+  import Home from './pages/Home.svelte';
   import Libraries from './pages/Libraries.svelte';
   import Login from './pages/Login.svelte';
   import NotFound from './pages/NotFound.svelte';
-  import Queue from './pages/Queue.svelte';
-  import Scan from './pages/Scan.svelte';
   import Settings from './pages/Settings.svelte';
 
   let failure = $state<unknown>(undefined);
-  const jobId = $derived(idOf('jobs', router.path));
 
   async function check(): Promise<void> {
     failure = undefined;
@@ -47,27 +40,14 @@
 {:else if session.status === 'signed-in'}
   <div class="app">
     <Shell>
-      {#if jobId}
-        {#key jobId}<Job id={jobId} />{/key}
-      {:else if router.route?.id === 'home'}
+      {#if router.path === '/'}
         <Home />
-      {:else if router.route?.id === 'queue'}
-        <Queue />
+      {:else if router.route?.id === 'libraries'}
+        <Libraries />
       {:else if router.route?.id === 'history'}
         <History />
       {:else if router.route?.id === 'settings'}
         <Settings />
-      {:else if router.route?.id === 'media'}
-        <ComingSoon kinds={['media']} />
-      {:else if router.route?.id === 'libraries'}
-        {@const where = libraryRoute(router.path)}
-        {#if where?.page === 'scan'}
-          {#key where.jobId}<Scan libraryId={where.id} jobId={where.jobId} />{/key}
-        {:else if where}
-          <Libraries route={where} />
-        {:else}
-          <NotFound />
-        {/if}
       {:else}
         <NotFound />
       {/if}

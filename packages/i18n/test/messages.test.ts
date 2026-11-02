@@ -6,16 +6,14 @@ const fr = createTranslator('fr');
 
 describe('counts in the messages', () => {
   it('agree with the number, in both languages', () => {
-    expect(fr('web.home.todo.title', { count: 1 })).toBe('1 fichier attend votre validation');
-    expect(fr('web.home.todo.title', { count: 3 })).toBe('3 fichiers attendent votre validation');
-    expect(en('web.home.todo.title', { count: 1 })).toBe('1 file waiting for your validation');
-    expect(en('web.home.todo.title', { count: 3 })).toBe('3 files waiting for your validation');
+    expect(fr('web.history.files', { count: 1 })).toBe('1 fichier');
+    expect(fr('web.history.files', { count: 3 })).toBe('3 fichiers');
+    expect(en('web.history.files', { count: 1 })).toBe('1 file');
+    expect(en('web.history.files', { count: 3 })).toBe('3 files');
   });
 
-  it('keeps a count that was cut short, as the queue does past its limit', () => {
-    expect(fr('web.home.todo.title', { count: '200+' })).toBe(
-      '200+ fichiers attendent votre validation',
-    );
+  it('keeps a count that was cut short, as a list does past its limit', () => {
+    expect(fr('web.history.files', { count: '200+' })).toBe('200+ fichiers');
   });
 
   it('agrees every count of a sentence on its own', () => {
@@ -32,11 +30,7 @@ describe('counts in the messages', () => {
   });
 
   it('writes a zero in French as the singular, an exact `=0` aside', () => {
-    expect(fr('web.queue.sources.pending', { count: 0 })).toBe(
-      '0 release en cours d’écriture ou de stabilisation.',
-    );
-    expect(en('web.queue.sources.pending', { count: 0 })).toBe(
-      '0 releases still being written or settling.',
-    );
+    expect(fr('web.history.files', { count: 0 })).toBe('0 fichier');
+    expect(en('web.history.files', { count: 0 })).toBe('0 files');
   });
 });

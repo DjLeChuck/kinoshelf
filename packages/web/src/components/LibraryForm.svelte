@@ -7,11 +7,9 @@
     libraryApi,
     libraryBody,
     libraryForm,
-    scanPath,
     type Library,
-    type LibraryForm,
+    type LibraryGroup,
   } from '../lib/libraries.js';
-  import { router } from '../lib/router.svelte.js';
   import {
     CUSTOM_PROFILE,
     FormError,
@@ -20,37 +18,35 @@
     profileName,
     type ShippedProfile,
   } from '../lib/settings.js';
-  import Link from './Link.svelte';
   import PathField from './PathField.svelte';
 
   let {
     library,
+    group,
     profiles,
+    libraries,
     onsaved,
     ondeleted,
-    ondraft,
-    lastScan,
+    oncancel,
   }: {
-    /** `undefined` creates one. */
-    library?: Library;
+    /** `undefined` creates one, of `group`. */
+    library?: Library | undefined;
+    group: LibraryGroup;
     profiles: readonly ShippedProfile[];
+    /** Every library, to choose the destinations of an arrival folder among the typed ones. */
+    libraries: readonly Library[];
     onsaved: (library: Library) => void;
     ondeleted: () => void;
-    /** Told of every change, so the page can show the library as it is being filled in. */
-    ondraft?: (form: LibraryForm) => void;
-    /** Where the latest scan of the library can be found again, beside the button that starts one. */
-    lastScan?: { href: string; label: string; summary?: string } | undefined;
+    oncancel: () => void;
   } = $props();
 
   // Read once: the page keys this form by library, and nothing replaces it under an edit.
   /* svelte-ignore state_referenced_locally */
-  let form = $state(libraryForm(library, profiles));
-  $effect(() => ondraft?.($state.snapshot(form)));
+  let form = $state(libraryForm(library, profiles, group, libraries));
   let busy = $state(false);
   let failure = $state<unknown>(undefined);
   let saved = $state(false);
   let confirming = $state(false);
-  let scanning = $state(false);
 
   async function submit(event: SubmitEvent): Promise<void> {
     event.preventDefault();
@@ -74,22 +70,6 @@
     }
   }
 
-  async function scan(): Promise<void> {
-    if (!library) {
-      return;
-    }
-    scanning = true;
-    failure = undefined;
-    try {
-      const job = await libraryApi.scan(library.id);
-      router.navigate(scanPath(library.id, job.id));
-    } catch (error) {
-      failure = error;
-    } finally {
-      scanning = false;
-    }
-  }
-
   async function remove(): Promise<void> {
     if (!library) {
       return;
@@ -106,6 +86,10 @@
       busy = false;
     }
   }
+
+  const typed = $derived((kind: 'movie' | 'series') =>
+    libraries.filter((one) => one.type === kind),
+  );
 
   const profileChoices = $derived([
     {
@@ -128,24 +112,15 @@
 </script>
 
 <form onsubmit={submit} class="form">
-  <div class="head">
-    <div>
-      <span class="eyebrow muted">{t('web.libraries.eyebrow')}</span>
-      <h1>{library ? library.name : t('web.libraries.new.title')}</h1>
-      {#if lastScan?.summary}<span class="muted summary">{lastScan.summary}</span>{/if}
-    </div>
-    {#if library}
-      <div class="actions">
-        {#if lastScan}<Link href={lastScan.href} class="btn">{lastScan.label}</Link>{/if}
-        <button type="button" class="btn" disabled={scanning} onclick={() => void scan()}>
-          {scanning ? t('web.libraries.scan.starting') : t('web.libraries.scan')}
-        </button>
-      </div>
-    {/if}
-  </div>
-
   <section class="card" aria-labelledby="lib-folders">
-    <h2 id="lib-folders">{t('web.libraries.folders')}</h2>
+    <h2 id="lib-folders">
+      {library
+        ? library.name
+        : t(group === 'arrival' ? 'web.libraries.new.arrival' : 'web.libraries.new.in-place')}
+    </h2>
+    <p class="muted hint">
+      {t(group === 'arrival' ? 'web.libraries.arrival.hint' : 'web.libraries.in-place.hint')}
+    </p>
     <div class="field">
       <label for="lib-name">{t('web.libraries.name')}</label>
       <input id="lib-name" class="input" bind:value={form.name} />
@@ -154,64 +129,47 @@
     <div class="field">
       <label for="lib-source">{t('web.libraries.source')}</label>
       <PathField id="lib-source" placeholder="/" bind:value={form.source} />
-      <span class="muted hint">{t('web.libraries.source.hint')}</span>
+      <span class="muted hint">
+        {t(group === 'arrival' ? 'web.libraries.source.arrival.hint' : 'web.libraries.source.hint')}
+      </span>
     </div>
 
-    <fieldset>
-      <legend>{t('web.libraries.destination')}</legend>
-      <div class="choices">
-        <label class="check">
-          <input
-            type="radio"
-            name="lib-destination"
-            checked={form.defaultDestination}
-            onchange={() => (form.defaultDestination = true)}
-          />
-          {t('web.libraries.destination.default')}
-        </label>
-        <label class="check">
-          <input
-            type="radio"
-            name="lib-destination"
-            checked={!form.defaultDestination && !form.destination.separate}
-            onchange={() => {
-              form.defaultDestination = false;
-              form.destination.separate = false;
-            }}
-          />
-          {t('web.settings.processing.destination.single')}
-        </label>
-        <label class="check">
-          <input
-            type="radio"
-            name="lib-destination"
-            checked={!form.defaultDestination && form.destination.separate}
-            onchange={() => {
-              form.defaultDestination = false;
-              form.destination.separate = true;
-            }}
-          />
-          {t('web.settings.processing.destination.separate')}
-        </label>
-      </div>
-      {#if form.defaultDestination}
-        <span class="muted hint">{t('web.libraries.destination.hint')}</span>
-      {:else if form.destination.separate}
-        <div class="field">
-          <label for="lib-dest-movies">{t('web.settings.processing.destination.movies')}</label>
-          <PathField id="lib-dest-movies" bind:value={form.destination.movies} />
+    {#if group === 'in-place'}
+      <fieldset>
+        <legend>{t('web.libraries.type')}</legend>
+        <div class="choices">
+          {#each ['movie', 'series'] as const as kind (kind)}
+            <label class="check">
+              <input
+                type="radio"
+                name="lib-type"
+                value={kind}
+                disabled={library !== undefined}
+                bind:group={form.type}
+              />
+              {t(`web.libraries.type.${kind}`)}
+            </label>
+          {/each}
         </div>
-        <div class="field">
-          <label for="lib-dest-series">{t('web.settings.processing.destination.series')}</label>
-          <PathField id="lib-dest-series" bind:value={form.destination.series} />
-        </div>
-      {:else}
-        <div class="field">
-          <label class="sr-only" for="lib-dest-single">{t('web.libraries.destination')}</label>
-          <PathField id="lib-dest-single" bind:value={form.destination.single} />
-        </div>
-      {/if}
-    </fieldset>
+        {#if library}<span class="muted hint">{t('web.libraries.type.fixed')}</span>{/if}
+      </fieldset>
+    {:else}
+      <fieldset>
+        <legend>{t('web.libraries.into')}</legend>
+        {#each ['movie', 'series'] as const as kind (kind)}
+          <div class="field">
+            <label for={`lib-into-${kind}`}>{t(`web.libraries.into.${kind}`)}</label>
+            <select id={`lib-into-${kind}`} class="input" bind:value={form.into[kind]}>
+              <option value="" disabled>{t('web.libraries.into.choose')}</option>
+              {#each typed(kind) as option (option.id)}
+                <option value={option.id}>{option.name}</option>
+              {/each}
+            </select>
+          </div>
+        {/each}
+        <span class="muted hint">{t('web.libraries.into.hint')}</span>
+      </fieldset>
+    {/if}
 
     <label class="check">
       <input type="checkbox" bind:checked={form.watch} />
@@ -220,63 +178,66 @@
     <span class="muted hint">{t('web.libraries.watch.hint')}</span>
   </section>
 
-  <section class="card" aria-labelledby="lib-profile">
-    <h2 id="lib-profile">{t('web.libraries.profile')}</h2>
-    <div class="cards" role="radiogroup" aria-labelledby="lib-profile">
-      {#each profileChoices as choice (choice.id)}
-        <label class="option" class:on={form.profile.choice === choice.id}>
-          <input
-            type="radio"
-            name="lib-profile"
-            value={choice.id}
-            bind:group={form.profile.choice}
-          />
-          <span class="option-name">{choice.name}</span>
-          {#if choice.help}<span class="muted hint">{choice.help}</span>{/if}
-          {#if 'example' in choice}<code class="example">{choice.example}</code>{/if}
-        </label>
-      {/each}
-    </div>
-    {#if form.profile.choice === CUSTOM_PROFILE}
-      <div class="field">
-        <label for="lib-profile-path">{t('web.settings.processing.profile.path')}</label>
-        <PathField
-          id="lib-profile-path"
-          kind="file"
-          placeholder="/config/my-profile.yaml"
-          bind:value={form.profile.path}
-        />
+  {#if group === 'in-place'}
+    <section class="card" aria-labelledby="lib-profile">
+      <h2 id="lib-profile">{t('web.libraries.profile')}</h2>
+      <div class="cards" role="radiogroup" aria-labelledby="lib-profile">
+        {#each profileChoices as choice (choice.id)}
+          <label class="option" class:on={form.profile.choice === choice.id}>
+            <input
+              type="radio"
+              name="lib-profile"
+              value={choice.id}
+              bind:group={form.profile.choice}
+            />
+            <span class="option-name">{choice.name}</span>
+            {#if choice.help}<span class="muted hint">{choice.help}</span>{/if}
+            {#if 'example' in choice}<code class="example">{choice.example}</code>{/if}
+          </label>
+        {/each}
       </div>
-    {/if}
-  </section>
+      {#if form.profile.choice === CUSTOM_PROFILE}
+        <div class="field">
+          <label for="lib-profile-path">{t('web.settings.processing.profile.path')}</label>
+          <PathField
+            id="lib-profile-path"
+            kind="file"
+            placeholder="/config/my-profile.yaml"
+            bind:value={form.profile.path}
+          />
+        </div>
+      {/if}
+    </section>
+  {:else}
+    <section class="card" aria-labelledby="lib-mode">
+      <h2 id="lib-mode">{t('web.libraries.mode')}</h2>
+      <div class="cards modes" role="radiogroup" aria-labelledby="lib-mode">
+        {#each ['', ...MODES] as const as choice (choice)}
+          <label class="option" class:on={form.mode === choice}>
+            <input type="radio" name="lib-mode" value={choice} bind:group={form.mode} />
+            <span class="option-name"
+              >{choice === ''
+                ? t('web.settings.processing.mode.default')
+                : t(`web.settings.processing.mode.${choice}`)}</span
+            >
+            <span class="muted hint"
+              >{t(
+                choice === ''
+                  ? 'web.settings.processing.mode.default.help'
+                  : `web.settings.processing.mode.${choice}.help`,
+              )}</span
+            >
+          </label>
+        {/each}
+      </div>
+      {#if form.mode === 'hardlink'}
+        <p class="alert" role="note">{t('web.libraries.mode.hardlink.warning')}</p>
+      {/if}
+    </section>
+  {/if}
 
-  <section class="card" aria-labelledby="lib-mode">
-    <h2 id="lib-mode">{t('web.libraries.mode')}</h2>
-    <div class="cards modes" role="radiogroup" aria-labelledby="lib-mode">
-      {#each ['', ...MODES] as const as choice (choice)}
-        <label class="option" class:on={form.mode === choice}>
-          <input type="radio" name="lib-mode" value={choice} bind:group={form.mode} />
-          <span class="option-name"
-            >{choice === ''
-              ? t('web.settings.processing.mode.default')
-              : t(`web.settings.processing.mode.${choice}`)}</span
-          >
-          <span class="muted hint"
-            >{t(
-              choice === ''
-                ? 'web.settings.processing.mode.default.help'
-                : `web.settings.processing.mode.${choice}.help`,
-            )}</span
-          >
-        </label>
-      {/each}
-    </div>
-    {#if form.mode === 'hardlink'}
-      <p class="alert" role="note">{t('web.libraries.mode.hardlink.warning')}</p>
-    {/if}
-  </section>
-
-  <section class="card" aria-labelledby="lib-threshold-title">
+  <details class="card advanced">
+    <summary>{t('web.libraries.advanced')}</summary>
     <h2 id="lib-threshold-title">{t('web.libraries.threshold')}</h2>
     <label class="check">
       <input type="checkbox" bind:checked={form.defaultThreshold} />
@@ -298,7 +259,7 @@
       >
     </div>
     <span class="muted hint">{t('web.libraries.threshold.hint')}</span>
-  </section>
+  </details>
 
   {#if failure}
     <p class="alert alert-danger" role="alert">
@@ -334,6 +295,9 @@
           ? t('web.settings.save')
           : t('web.libraries.create')}
     </button>
+    <button type="button" class="btn" disabled={busy} onclick={oncancel}>
+      {t('web.libraries.close')}
+    </button>
     {#if library && !confirming}
       <button
         type="button"
@@ -351,36 +315,6 @@
     display: flex;
     flex-direction: column;
     gap: 16px;
-  }
-
-  .head {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: flex-end;
-    justify-content: space-between;
-    gap: 12px;
-  }
-
-  .actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-
-  .summary {
-    display: block;
-    margin-top: 2px;
-    font-size: 13px;
-  }
-
-  .eyebrow {
-    font-size: 12px;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-  }
-
-  h1 {
-    font-size: 22px;
   }
 
   h2 {
@@ -479,6 +413,11 @@
   .example {
     font-size: 11.5px;
     overflow-wrap: anywhere;
+  }
+
+  .advanced summary {
+    min-height: 44px;
+    cursor: pointer;
   }
 
   .slider {

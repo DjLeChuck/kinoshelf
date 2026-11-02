@@ -76,3 +76,6 @@ export function formatDate(iso: string, locale: Locale): string {
 /** What was submitted, or nothing for a batch the command line made. */
 export const originOf = (batch: Pick<BatchSummary, 'origin'>): string | undefined =>
   batch.origin?.path;
+
+/** A UUID is no name for a person; its first block is enough to tell two jobs apart. */
+export const shortId = (id: string): string => id.slice(0, 8);

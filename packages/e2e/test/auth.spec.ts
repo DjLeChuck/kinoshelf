@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 import { signIn } from './helpers.js';
 
 test('refuses a wrong key, accepts the right one, and signs out', async ({ page }) => {
-  await page.goto('/queue');
+  await page.goto('/libraries');
   await page.getByLabel('API key').fill('not-the-key');
   await page.getByRole('button', { name: 'Sign in' }).click();
   await expect(page.getByRole('alert')).toContainText('Wrong API key');
@@ -21,7 +21,7 @@ test('keeps the session across a reload and sends a deep link to its page', asyn
 test('switches the language of the whole UI', async ({ page }) => {
   await signIn(page);
   await page.getByLabel('Language').selectOption('fr');
-  await expect(page.getByRole('heading', { name: 'File de validation' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Bibliothèques' })).toBeVisible();
   await page.getByLabel('Langue').selectOption('en');
-  await expect(page.getByRole('heading', { name: 'Validation queue' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Libraries' })).toBeVisible();
 });

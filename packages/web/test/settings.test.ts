@@ -3,8 +3,6 @@ import { describe, expect, it } from 'vitest';
 import {
   CUSTOM_PROFILE,
   cleanMappings,
-  destinationForm,
-  destinationOf,
   isHttpUrl,
   nullIfBlank,
   profileForm,
@@ -38,33 +36,6 @@ describe('thresholdOf', () => {
     ['abc', undefined],
   ])('%j gives %j', (text, expected) => {
     expect(thresholdOf(text)).toBe(expected);
-  });
-});
-
-describe('destination', () => {
-  it('reads a single folder and separate ones back into the form', () => {
-    expect(destinationForm('/media')).toMatchObject({ separate: false, single: '/media' });
-    expect(destinationForm({ movies: '/m', series: '/s' })).toMatchObject({
-      separate: true,
-      movies: '/m',
-      series: '/s',
-    });
-    expect(destinationForm(null)).toMatchObject({ separate: false, single: '' });
-  });
-
-  it('writes one folder, two, or none', () => {
-    const form = { separate: false, single: ' /media ', movies: '', series: '' };
-    expect(destinationOf(form)).toBe('/media');
-    expect(destinationOf({ ...form, single: '' })).toBeNull();
-    expect(destinationOf({ ...form, separate: true, movies: '/m', series: '/s' })).toEqual({
-      movies: '/m',
-      series: '/s',
-    });
-    expect(destinationOf({ ...form, separate: true })).toBeNull();
-  });
-
-  it('refuses separate folders when only one is given: the other kind would have no home', () => {
-    expect(destinationOf({ separate: true, single: '', movies: '/m', series: '' })).toBeUndefined();
   });
 });
 

@@ -5,7 +5,7 @@
   import { refetchOn } from '../lib/events.svelte.js';
   import { locale, t } from '../lib/i18n.svelte.js';
   import { router } from '../lib/router.svelte.js';
-  import { idOf } from '../lib/routes.js';
+  import { batchIdOf } from '../lib/routes.js';
   import { STATUS_CHIP, formatDate, originOf, type BatchSummary } from '../lib/history.js';
 
   let batches = $state<readonly BatchSummary[] | undefined>(undefined);
@@ -14,7 +14,7 @@
   let notice = $state<string | undefined>(undefined);
 
   // A link from a job (`/history/<batch>`) opens that batch until one is picked in the list.
-  const linked = $derived(idOf('history', router.path));
+  const linked = $derived(batchIdOf(router.path));
   const open = $derived(batches?.find((batch) => batch.id === (chosen ?? linked)) ?? batches?.[0]);
 
   async function load(): Promise<void> {

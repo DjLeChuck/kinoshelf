@@ -4,8 +4,6 @@
     FormError,
     CUSTOM_PROFILE,
     MODES,
-    destinationForm,
-    destinationOf,
     profileForm,
     profileHelp,
     profileName,
@@ -28,7 +26,6 @@
   let profile = $state(profileForm(processing.profile, settings.profiles));
   let mode = $state<Mode | ''>(processing.mode ?? '');
   let threshold = $state(processing.threshold === null ? '' : String(processing.threshold));
-  let folders = $state(destinationForm(processing.destination));
 
   // The default is Plex; "my own file" is the user's to explain.
   const shown = $derived(
@@ -40,10 +37,6 @@
     if (limit === undefined) {
       throw new FormError(t('web.settings.invalid.threshold'));
     }
-    const destination = destinationOf(folders);
-    if (destination === undefined) {
-      throw new FormError(t('web.settings.invalid.destination'));
-    }
     const chosen = profileOf(profile);
     if (chosen === undefined) {
       throw new FormError(t('web.settings.invalid.profile'));
@@ -53,7 +46,6 @@
         profile: chosen,
         mode: mode === '' ? null : mode,
         threshold: limit,
-        destination,
       },
     });
   }
@@ -130,37 +122,6 @@
     />
     <span class="muted hint">{t('web.settings.processing.threshold.hint')}</span>
   </div>
-
-  <fieldset>
-    <legend>{t('web.settings.processing.destination')}</legend>
-    <span class="muted hint">{t('web.settings.processing.destination.hint')}</span>
-    <div class="choices">
-      <label class="check">
-        <input type="radio" name="destination-kind" value={false} bind:group={folders.separate} />
-        {t('web.settings.processing.destination.single')}
-      </label>
-      <label class="check">
-        <input type="radio" name="destination-kind" value={true} bind:group={folders.separate} />
-        {t('web.settings.processing.destination.separate')}
-      </label>
-    </div>
-
-    {#if folders.separate}
-      <div class="field">
-        <label for="dest-movies">{t('web.settings.processing.destination.movies')}</label>
-        <PathField id="dest-movies" bind:value={folders.movies} />
-      </div>
-      <div class="field">
-        <label for="dest-series">{t('web.settings.processing.destination.series')}</label>
-        <PathField id="dest-series" bind:value={folders.series} />
-      </div>
-    {:else}
-      <div class="field">
-        <label class="sr-only" for="dest-single">{t('web.settings.processing.destination')}</label>
-        <PathField id="dest-single" bind:value={folders.single} />
-      </div>
-    {/if}
-  </fieldset>
 </SettingsSection>
 
 <style>
@@ -180,21 +141,8 @@
     font-size: 13px;
   }
 
-  .check {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    min-height: 44px;
-  }
-
   .hint {
     font-size: 12px;
-  }
-
-  .choices {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px 24px;
   }
 
   /* A field that belongs to the one above it. */

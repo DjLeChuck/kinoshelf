@@ -1,26 +1,15 @@
 import { api } from './api.js';
 import {
-  destinationForm,
-  destinationOf,
   nullIfBlank,
   profileForm,
   profileOf,
   thresholdOf,
-  type Destination,
-  type DestinationForm,
   type Mode,
   type ProfileForm,
 } from './settings.js';
 
-/** The four tabs of a scan result, in the order they are shown. */
+/** The tabs of a scan result, as the server counts them. */
 export type ScanTab = 'rename' | 'conflict' | 'ambiguous' | 'unrecognized' | 'compliant';
-export const SCAN_TABS: readonly ScanTab[] = [
-  'rename',
-  'conflict',
-  'ambiguous',
-  'unrecognized',
-  'compliant',
-];
 /** Files per tab; `renamed` counts those already transferred, which no tab lists any more. */
 export type ScanCounts = Readonly<Record<ScanTab, number>> & { readonly renamed: number };
 
@@ -36,7 +25,6 @@ export interface Library {
   readonly id: string;
   readonly name: string;
   readonly source: string;
-  readonly destination: string | Destination | null;
   /** A library organized in place has a type; an arrival folder has `into`. */
   readonly type?: LibraryKind | null;
   readonly into?: LibraryInto | null;
@@ -51,78 +39,25 @@ export interface Library {
     readonly finishedAt: string | null;
     readonly counts: ScanCounts;
   } | null;
+  /** Jobs of this library queued or running. */
+  readonly queued: number;
   /** A scan of the whole source is queued or running. */
   readonly scanning: boolean;
 }
 
-/** What `POST`/`PATCH /api/libraries` take; on a PATCH, `null` unsets a field. */
+/**
+ * What `POST`/`PATCH /api/libraries` take; on a PATCH, `null` unsets a field. A library organized
+ * in place carries `type` and no `mode`, an arrival folder `into` and no `profile`.
+ */
 export interface LibraryBody {
   name: string;
   source: string;
-  destination?: string | Destination | null;
   type?: LibraryKind;
-  into?: LibraryInto | null;
+  into?: LibraryInto;
   profile?: string | null;
   mode?: Mode | null;
   threshold?: number | null;
   watch?: boolean;
-}
-
-/** A metadata file the plan writes beside a video: an NFO is generated, an image downloaded. */
-export interface PlannedExtra {
-  readonly type: 'nfo' | 'image';
-  readonly destination: string;
-}
-
-export interface ScanRow {
-  readonly id: string;
-  /** The file's full path. */
-  readonly from: string;
-  /** Where it goes (or already is); `null` when nothing is decided. */
-  readonly to: string | null;
-  readonly score: number | null;
-  readonly extras: readonly PlannedExtra[];
-}
-
-export interface ScanPage {
-  readonly counts: ScanCounts;
-  readonly rows: readonly ScanRow[];
-  /** Files in the tab, for paging. */
-  readonly total: number;
-}
-
-/** What `GET /api/jobs/{id}/files` returns. */
-interface ScanFilesBody {
-  readonly total: number;
-  readonly counts: ScanCounts;
-  readonly files: readonly {
-    readonly id: string;
-    readonly path: string;
-    readonly destination: string | null;
-    readonly score: number | null;
-    readonly extras: readonly PlannedExtra[];
-  }[];
-}
-
-/** The dry-run report (`POST /api/plans/{id}/execute`), as far as the page reads it. */
-interface DryRunBody {
-  readonly items: readonly {
-    readonly results: readonly { readonly type: string; readonly status: string }[];
-  }[];
-}
-
-/** NFO and images of a dry run: those it would write, and those already there (left alone). */
-export interface ExtrasTally {
-  readonly nfo: number;
-  readonly images: number;
-  readonly skipped: number;
-}
-
-export interface ExecuteOutcome {
-  /** Files the dry run found a problem with; always 0 for a real run, which is only queued. */
-  readonly blocked: number;
-  /** What a dry run would write beside the videos; all zero for a real run. */
-  readonly extras: ExtrasTally;
 }
 
 /** Everything the libraries pages ask of the server, in one place so a change of contract is too. */
@@ -133,12 +68,6 @@ export interface LibraryApi {
   remove(id: string): Promise<void>;
   /** Starts the analysis of the library's source folder; the job id follows it. */
   scan(id: string): Promise<{ readonly id: string }>;
-  files(jobId: string, tab: ScanTab, offset: number, limit: number): Promise<ScanPage>;
-  /** `entries` limits the batch to those files; `dryRun` plans without touching the disk. */
-  execute(
-    jobId: string,
-    options: { entries?: readonly string[]; dryRun: boolean },
-  ): Promise<ExecuteOutcome>;
 }
 
 export const libraryApi: LibraryApi = {
@@ -147,60 +76,29 @@ export const libraryApi: LibraryApi = {
   update: (id, body) => api.patch(`/api/libraries/${id}`, body),
   remove: (id) => api.delete(`/api/libraries/${id}`),
   scan: (id) => api.post(`/api/libraries/${id}/scan`),
-  files: async (jobId, tab, offset, limit) => {
-    const body = await api.get<ScanFilesBody>(
-      `/api/jobs/${jobId}/files?tab=${tab}&offset=${offset}&limit=${limit}`,
-    );
-    return {
-      counts: body.counts,
-      total: body.total,
-      rows: body.files.map((file) => ({
-        id: file.id,
-        from: file.path,
-        to: file.destination,
-        score: file.score,
-        extras: file.extras,
-      })),
-    };
-  },
-  execute: async (jobId, { entries, dryRun }) => {
-    const body = await api.post<DryRunBody | undefined>(`/api/plans/${jobId}/execute`, {
-      dryRun,
-      ...(entries && { entries }),
-    });
-    const items = dryRun ? (body?.items ?? []) : [];
-    return {
-      blocked: items.filter(({ results }) => results.some(({ status }) => status === 'failed'))
-        .length,
-      extras: extrasTally(items.flatMap(({ results }) => results)),
-    };
-  },
 };
-
-export function extrasTally(
-  results: readonly { readonly type: string; readonly status: string }[],
-): ExtrasTally {
-  const extras = results.filter(({ type, status }) => type !== 'transfer' && status !== 'failed');
-  const written = extras.filter(({ status }) => status !== 'skipped');
-  return {
-    nfo: written.filter(({ type }) => type === 'write-file').length,
-    images: written.filter(({ type }) => type === 'download').length,
-    skipped: extras.length - written.length,
-  };
-}
 
 export const THRESHOLD_MIN = 50;
 export const THRESHOLD_MAX = 100;
 export const THRESHOLD_DEFAULT = 85;
 
+/** A library organized in place is its own destination; an arrival folder sends elsewhere. */
+export type LibraryGroup = 'in-place' | 'arrival';
+
+export const groupOf = (library: Pick<Library, 'type'>): LibraryGroup =>
+  library.type ? 'in-place' : 'arrival';
+
 export interface LibraryForm {
+  group: LibraryGroup;
   name: string;
   source: string;
-  destination: DestinationForm;
-  /** Follow the global destination instead of `destination`. */
-  defaultDestination: boolean;
+  /** In place only. */
+  type: LibraryKind;
+  /** Arrival only: the ids of the libraries it sends to. */
+  into: { movie: string; series: string };
+  /** In place only. */
   profile: ProfileForm;
-  /** `''` follows the global mode. */
+  /** Arrival only; `''` follows the global mode. */
   mode: Mode | '';
   /** Follow the global threshold instead of `threshold`. */
   defaultThreshold: boolean;
@@ -211,12 +109,17 @@ export interface LibraryForm {
 export function libraryForm(
   library: Library | undefined,
   bundled: readonly { readonly id: string }[],
+  group: LibraryGroup = library ? groupOf(library) : 'in-place',
+  /** Libraries organized in place, to preselect the destinations of a new arrival folder. */
+  typed: readonly Library[] = [],
 ): LibraryForm {
+  const first = (kind: LibraryKind): string => typed.find((one) => one.type === kind)?.id ?? '';
   return {
+    group,
     name: library?.name ?? '',
     source: library?.source ?? '',
-    destination: destinationForm(library?.destination ?? null),
-    defaultDestination: library?.destination == null,
+    type: library?.type ?? 'movie',
+    into: library?.into ?? { movie: first('movie'), series: first('series') },
     profile: profileForm(library?.profile ?? null, bundled),
     mode: library?.mode ?? '',
     defaultThreshold: library?.threshold == null,
@@ -229,74 +132,47 @@ export function libraryForm(
 export const folderName = (path: string): string => path.split('/').filter(Boolean).pop() ?? path;
 
 /**
- * What to send; `invalid` names the first thing refused. A blank field is `null` on a PATCH (it
- * unsets the value) and left out of a POST, where there is nothing to unset.
+ * What to send; `invalid` names the first thing refused. Only the fields of the library's group
+ * are sent, and its `type` only on creation: a library never changes group. A blank field is
+ * `null` on a PATCH (it unsets the value) and left out of a POST, where there is nothing to unset.
  */
 export function libraryBody(
   form: LibraryForm,
   creating: boolean,
-): LibraryBody | { invalid: 'source' | 'destination' | 'profile' | 'threshold' } {
+): LibraryBody | { invalid: 'source' | 'into' | 'profile' | 'threshold' } {
   const source = form.source.trim();
   if (!source.startsWith('/')) {
     return { invalid: 'source' };
   }
-  const destination = form.defaultDestination ? null : destinationOf(form.destination);
-  const profile = profileOf(form.profile);
   const threshold = form.defaultThreshold ? null : thresholdOf(String(form.threshold));
-  if (destination === undefined) {
-    return { invalid: 'destination' };
-  }
-  if (profile === undefined) {
-    return { invalid: 'profile' };
-  }
   if (threshold === undefined) {
     return { invalid: 'threshold' };
   }
   const body: LibraryBody = {
     name: nullIfBlank(form.name) ?? folderName(source),
     source,
-    destination,
-    profile,
-    mode: form.mode === '' ? null : form.mode,
     threshold,
     watch: form.watch,
   };
-  if (!creating) {
-    return body;
+  if (form.group === 'in-place') {
+    const profile = profileOf(form.profile);
+    if (profile === undefined) {
+      return { invalid: 'profile' };
+    }
+    body.profile = profile;
+    if (creating) {
+      body.type = form.type;
+    }
+  } else {
+    if (form.into.movie === '' || form.into.series === '') {
+      return { invalid: 'into' };
+    }
+    body.into = { ...form.into };
+    body.mode = form.mode === '' ? null : form.mode;
   }
-  return Object.fromEntries(
-    Object.entries(body).filter(([, value]) => value !== null),
-  ) as unknown as LibraryBody;
+  return creating
+    ? (Object.fromEntries(
+        Object.entries(body).filter(([, value]) => value !== null),
+      ) as unknown as LibraryBody)
+    : body;
 }
-
-/** `/libraries`, `/libraries/new`, `/libraries/<id>`, `/libraries/<id>/scan/<jobId>`. */
-export type LibraryRoute =
-  | { readonly page: 'list'; readonly id?: undefined }
-  | { readonly page: 'new'; readonly id?: undefined }
-  | { readonly page: 'edit'; readonly id: string }
-  | { readonly page: 'scan'; readonly id: string; readonly jobId: string };
-
-export function libraryRoute(path: string): LibraryRoute | undefined {
-  const parts = path.replace(/\/+$/, '').split('/').filter(Boolean);
-  if (parts[0] !== 'libraries') {
-    return undefined;
-  }
-  const [, id, scan, jobId, ...rest] = parts;
-  if (id === undefined) {
-    return { page: 'list' };
-  }
-  if (scan === undefined) {
-    return id === 'new' ? { page: 'new' } : { page: 'edit', id };
-  }
-  return scan === 'scan' && jobId !== undefined && rest.length === 0 && id !== 'new'
-    ? { page: 'scan', id, jobId }
-    : undefined;
-}
-
-export const libraryPath = (id?: string): string => (id ? `/libraries/${id}` : '/libraries');
-export const scanPath = (libraryId: string, jobId: string): string =>
-  `/libraries/${libraryId}/scan/${jobId}`;
-
-/** Every file the scan found, handled or not. */
-export const countTotal = (counts: ScanCounts): number =>
-  SCAN_TABS.reduce((sum, tab) => sum + counts[tab], counts.renamed);
