@@ -82,6 +82,25 @@ function behavesLikeAJournal(name: string, make: () => Journal | Promise<Journal
       expect(onlyNfo).toMatchObject({ batchId: 'only-nfo', operations: 1, modes: [] });
     });
 
+    it('sums up one batch alone, as the list does', async () => {
+      const journal = await make();
+      expect(journal.batch('b1')).toBeUndefined();
+      journal.record(entry('a', 'b1', { at: '2026-10-28T09:00:00.000Z' }));
+      journal.record(entry('b', 'b2', { mode: 'move', at: '2026-10-28T10:00:00.000Z' }));
+      journal.record(entry('c', 'b1', { mode: 'hardlink', at: '2026-10-28T09:05:00.000Z' }));
+      journal.markUndone('b2');
+
+      expect(journal.batch('b1')).toEqual({
+        batchId: 'b1',
+        at: '2026-10-28T09:00:00.000Z',
+        operations: 2,
+        modes: ['copy', 'hardlink'],
+        undone: false,
+      });
+      expect(journal.batch('b2')).toEqual(journal.batches().find((b) => b.batchId === 'b2'));
+      expect(journal.batch('nope')).toBeUndefined();
+    });
+
     it('lists batches, the most recent first, with their size, modes and state', async () => {
       const journal = await make();
       expect(journal.batches()).toEqual([]);

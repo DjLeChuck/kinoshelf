@@ -55,4 +55,8 @@ export class MemoryJournal implements Journal {
         undone: stored.every((s) => s.undone),
       }));
   }
+
+  batch(batchId: string): JournalBatch | undefined {
+    return this.batches().find((batch) => batch.batchId === batchId);
+  }
 }

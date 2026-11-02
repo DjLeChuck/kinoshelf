@@ -66,4 +66,6 @@ export interface Journal {
   undoneEntryIds(batchId: string): ReadonlySet<string>;
   /** Every batch, the most recent first. */
   batches(): readonly JournalBatch[];
+  /** One batch, without summing up the others; `undefined` for an unknown id. */
+  batch(batchId: string): JournalBatch | undefined;
 }

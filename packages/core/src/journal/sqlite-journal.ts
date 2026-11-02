@@ -112,6 +112,22 @@ export class SqliteJournal implements Journal {
   }
 
   batches(): readonly JournalBatch[] {
+    return this.summaries()
+      .groupBy(journalEntries.batchId)
+      .orderBy(desc(sql`max(${journalEntries.seq})`))
+      .all()
+      .map(toBatch);
+  }
+
+  batch(batchId: string): JournalBatch | undefined {
+    const row = this.summaries()
+      .where(eq(journalEntries.batchId, batchId))
+      .groupBy(journalEntries.batchId)
+      .get();
+    return row && toBatch(row);
+  }
+
+  private summaries() {
     return this.db
       .select({
         batchId: journalEntries.batchId,
@@ -122,16 +138,22 @@ export class SqliteJournal implements Journal {
         >`group_concat(case when ${journalEntries.kind} = 'transfer' then ${journalEntries.mode} end, ',')`,
         pending: sql<number>`sum(${journalEntries.undoneAt} is null)`,
       })
-      .from(journalEntries)
-      .groupBy(journalEntries.batchId)
-      .orderBy(desc(sql`max(${journalEntries.seq})`))
-      .all()
-      .map((row) => ({
-        batchId: row.batchId,
-        at: row.at,
-        operations: row.operations,
-        modes: row.modes ? ([...new Set(row.modes.split(','))] as TransferMode[]) : [],
-        undone: row.pending === 0,
-      }));
+      .from(journalEntries);
   }
+}
+
+function toBatch(row: {
+  batchId: string;
+  at: string;
+  operations: number;
+  modes: string | null;
+  pending: number;
+}): JournalBatch {
+  return {
+    batchId: row.batchId,
+    at: row.at,
+    operations: row.operations,
+    modes: row.modes ? ([...new Set(row.modes.split(','))] as TransferMode[]) : [],
+    undone: row.pending === 0,
+  };
 }
