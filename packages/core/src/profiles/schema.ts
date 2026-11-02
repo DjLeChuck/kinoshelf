@@ -34,7 +34,12 @@ export const profileSchema = z.strictObject({
     .default([]),
   filesystem: z.strictObject({
     forbidden: z.enum(['windows', 'posix']),
-    replacement: z.string(),
+    // Put inside a file or folder name: never a separator, a control character nor a character
+    // some file system refuses, which would undo what the replacement is for.
+    replacement: z
+      .string()
+      .max(4)
+      .regex(/^[^/\\<>:"|?*\u0000-\u001f]*$/, 'no separator nor forbidden character'),
     maxSegmentBytes: z.number().int().min(16).max(255),
   }),
 });

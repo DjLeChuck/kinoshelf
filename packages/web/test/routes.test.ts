@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { en, fr } from '@kinoshelf/i18n';
 import {
+  isInternal,
   historyIdOf,
   listOf,
   listParam,
@@ -95,5 +96,14 @@ describe('a list in the query', () => {
     expect(listParam([1, 2])).toBe('1,2');
     expect(listParam([])).toBeUndefined();
     expect(withParams('?open=1', { open: listParam([]) })).toBe('');
+  });
+});
+
+describe('isInternal', () => {
+  it('takes a path of the app, never another site', () => {
+    expect(isInternal('/history/abc')).toBe(true);
+    expect(isInternal('//evil.example/x')).toBe(false);
+    expect(isInternal('https://example.org/')).toBe(false);
+    expect(isInternal('history')).toBe(false);
   });
 });

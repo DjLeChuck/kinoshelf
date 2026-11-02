@@ -69,3 +69,6 @@ export function listOf(value: string | null): string[] {
 export function listParam(values: readonly (string | number)[]): string | undefined {
   return values.length === 0 ? undefined : values.join(',');
 }
+
+/** A path of this app, which the router can show: `//host/…` is another site, not a path. */
+export const isInternal = (href: string): boolean => href.startsWith('/') && !href.startsWith('//');

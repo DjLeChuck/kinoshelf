@@ -74,6 +74,8 @@ export function buildRequest(target: WebhookConfig, notification: Notification):
       return request(JSON_HEADERS, {
         content:
           content.length > DISCORD_LIMIT ? `${content.slice(0, DISCORD_LIMIT - 1)}…` : content,
+        // A release named `@everyone` must not ping the whole channel: a file name is not a mention.
+        allowed_mentions: { parse: [] },
       });
     }
     case 'generic':

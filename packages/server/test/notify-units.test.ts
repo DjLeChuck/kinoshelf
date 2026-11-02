@@ -119,7 +119,10 @@ describe('buildRequest', () => {
   });
 
   it('speaks Discord, within its limit', () => {
-    expect(json(buildRequest(target('discord'), ok).body)).toEqual({ content: '**T**\nM' });
+    expect(json(buildRequest(target('discord'), ok).body)).toEqual({
+      content: '**T**\nM',
+      allowed_mentions: { parse: [] },
+    });
     const long = buildRequest(target('discord'), { ...ok, message: 'x'.repeat(5000) });
     expect((json(long.body).content as string).length).toBe(2000);
   });

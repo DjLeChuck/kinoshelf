@@ -182,6 +182,16 @@ describe('parseProfile', () => {
     ).toBe('profile.invalid-path');
   });
 
+  it('takes a replacement that stays inside a name, and nothing else', () => {
+    const withReplacement = (value: string) =>
+      base.replace(`replacement: ''`, `replacement: '${value}'`);
+    expect(parseProfile(withReplacement('_')).filesystem.replacement).toBe('_');
+    expect(parseProfile(withReplacement(' - ')).filesystem.replacement).toBe(' - ');
+    for (const value of ['/', '../', '\\', ':', 'abcde']) {
+      expect(codeOf(() => parseProfile(withReplacement(value)))).toBe('profile.invalid');
+    }
+  });
+
   it('allows an empty movie folder (flat layout) but not an empty series folder', () => {
     expect(
       parseProfile(base.replace(`movieFolder: '{title}'`, `movieFolder: ''`)).templates.movieFolder,
