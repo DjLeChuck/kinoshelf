@@ -294,7 +294,7 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
     },
     async (request) => {
       const { id } = request.params;
-      find(store.config, id);
+      const previous = find(store.config, id);
       await validate(request.body);
       let updated: LibraryConfig | undefined;
       await write((current) => {
@@ -317,6 +317,10 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
           library.id === id ? (updated as LibraryConfig) : library,
         );
       });
+      if (request.body.source !== undefined && request.body.source !== previous.source) {
+        // What the old folder held is not what the new one holds: the next scan tells.
+        items.forget(id);
+      }
       return present(updated as LibraryConfig);
     },
   );
@@ -327,8 +331,9 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
       schema: {
         summary: 'Remove a library',
         description:
-          'Forgets the library only: its files stay where they are, and the jobs it started keep ' +
-          'their history. 409 `library.in-use` while an arrival folder sends its files to it.',
+          'Forgets the library and what its scans saw: its files stay where they are, and the jobs ' +
+          'it started keep their history. 409 `library.in-use` while an arrival folder sends its ' +
+          'files to it.',
         params: idParams,
         response: { 204: { type: 'null' }, 401: errorSchema, 404: errorSchema, 409: errorSchema },
       },
@@ -346,6 +351,8 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
         }
         return (current.libraries ?? []).filter((library) => library.id !== id);
       });
+      // A library made again under the same name gets the same id: it starts empty.
+      items.forget(id);
       return reply.code(204).send();
     },
   );

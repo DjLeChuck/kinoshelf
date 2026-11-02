@@ -246,6 +246,18 @@ export class LibraryItemStore {
     return row && toItem(row);
   }
 
+  /**
+   * Everything known of a library's content (its rows, its shows' counts and files): a library
+   * deleted or pointed at another folder must not find them again under the same id.
+   */
+  forget(libraryId: string): void {
+    this.database.transaction(() => {
+      for (const table of ['library_items', 'series_completeness', 'series_files']) {
+        this.database.prepare(`DELETE FROM ${table} WHERE library_id = ?`).run(libraryId);
+      }
+    })();
+  }
+
   remove(libraryId: string, path: string): void {
     this.database
       .prepare('DELETE FROM library_items WHERE library_id = ? AND path = ?')

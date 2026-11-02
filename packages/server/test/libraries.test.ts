@@ -154,6 +154,29 @@ describe('libraries', () => {
     expect((await h.request('DELETE', '/api/libraries/films-4k')).statusCode).toBe(404);
   });
 
+  it('starts empty when made again under the same name, or pointed at another folder', async () => {
+    const h = await served();
+    const first = await makeDir();
+    await put(join(first, 'Dune.2021.mkv'));
+    const create = () =>
+      h.request('POST', '/api/libraries', { name: 'Films', source: first, type: 'movie' });
+    const total = async (): Promise<number> =>
+      (await h.request('GET', '/api/libraries/films/items')).json<{ total: number }>().total;
+
+    await create();
+    await scan(h, 'films');
+    expect(await total()).toBe(1);
+    expect((await h.request('DELETE', '/api/libraries/films')).statusCode).toBe(204);
+    await create();
+    expect(await total()).toBe(0);
+
+    await scan(h, 'films');
+    expect(await total()).toBe(1);
+    const moved = await h.request('PATCH', '/api/libraries/films', { source: await makeDir() });
+    expect(moved.statusCode).toBe(200);
+    expect(await total()).toBe(0);
+  });
+
   it('refuses what cannot work, with a code, and writes nothing', async () => {
     const h = await served();
     const source = await makeDir();
