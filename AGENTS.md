@@ -12,7 +12,7 @@ launch (`GET`/`PATCH /api/onboarding`, server migration 009) and the app then op
 libraries (organized in place, arrival folders) are configured in the Settings, with a server-side
 path picker. The Libraries page has a tab per typed library (list read from the snapshot, filters,
 scan progress, the page of an item) and an Arrivals tab (`/arrivals`) where a file is validated:
-candidate, destination library, "always send this work there". A series library reads as a tree (show, season,
+candidate, destination library. A series library reads as a tree (show, season,
 episode) with its missing episodes. Items are renamed and refreshed from the page (a preview first). The History merges batches and
 jobs in one list (see "History" below). A series is validated as a release, not file by file. v1.0 is under way: the NFO and artwork
 writers and the `jellyfin` and `plex-nfo` profiles are built (see "NFO and artwork" below), metadata
