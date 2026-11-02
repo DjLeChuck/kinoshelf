@@ -1,6 +1,6 @@
 import { lstat, readdir, unlink } from 'node:fs/promises';
 import { join } from 'node:path';
-import { KinoshelfError } from '../errors.js';
+import { errnoCode, KinoshelfError } from '../errors.js';
 import { describeFsError, isTemporaryName } from '../execution/fs-ops.js';
 import type { ErrorInfo } from '../types/errors.js';
 
@@ -105,7 +105,7 @@ async function findTemporaryFiles(root: string, isRoot = true): Promise<string[]
     if (!isRoot) {
       return [];
     }
-    const code = error instanceof Error && 'code' in error ? error.code : undefined;
+    const code = errnoCode(error);
     throw code === 'ENOENT' || code === 'ENOTDIR'
       ? new KinoshelfError('discover.not-found', { path: root })
       : describeFsError(error, root);

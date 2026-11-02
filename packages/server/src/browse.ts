@@ -1,5 +1,6 @@
 import { readdir, stat } from 'node:fs/promises';
 import { dirname, isAbsolute, join, resolve } from 'node:path';
+import { errnoCode } from '@kinoshelf/core';
 import { ApiError } from './api-error.js';
 
 export interface FolderEntry {
@@ -95,7 +96,7 @@ async function followed(path: string): Promise<FolderEntry['kind'] | undefined> 
 }
 
 function asApiError(error: unknown, path: string): unknown {
-  const code = (error as NodeJS.ErrnoException).code;
+  const code = errnoCode(error);
   if (code === 'ENOENT' || code === 'ENOTDIR') {
     return new ApiError(404, 'fs.not-found', { path });
   }

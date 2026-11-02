@@ -1,7 +1,7 @@
 import { readdir, readFile, stat } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { parseDocument } from 'yaml';
-import { KinoshelfError } from '../errors.js';
+import { errnoCode, KinoshelfError } from '../errors.js';
 import type { Profile } from '../types/profile.js';
 import { profileSchema, type ProfileFile } from './schema.js';
 import { parseTemplate, templateVariables } from './template.js';
@@ -160,7 +160,7 @@ export async function loadBundledProfile(id: string): Promise<Profile> {
   try {
     return await loadProfileFile(new URL(`${id}.yaml`, BUNDLED_DIR));
   } catch (error) {
-    if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
+    if (errnoCode(error) === 'ENOENT') {
       throw new KinoshelfError('profile.unknown', { id });
     }
     throw error;

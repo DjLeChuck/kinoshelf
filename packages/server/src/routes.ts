@@ -2,7 +2,7 @@ import { basename } from 'node:path';
 import type { Candidate, MovieCandidate, PlanItem, SeriesCandidate } from '@kinoshelf/core';
 import type { FastifyInstance } from 'fastify';
 import { ApiError } from './api-error.js';
-import type { Entry, EntryStore } from './entries.js';
+import { workKindOf, type Entry, type EntryStore } from './entries.js';
 import { resolutionOf } from './library-items.js';
 import type { EventBus } from './events.js';
 import type { ExecutionStore } from './executions.js';
@@ -27,6 +27,7 @@ import {
   paging,
   previewSchema,
   undoSchema,
+  type Paging,
 } from './schemas.js';
 import type { Notifier } from './notify/notifier.js';
 import type { Service } from './service.js';
@@ -41,11 +42,6 @@ export interface RouteContext {
   readonly events: EventBus;
   readonly history: History;
   readonly progress: ProgressTracker;
-}
-
-interface Paging {
-  limit?: number;
-  offset?: number;
 }
 
 interface CandidateBody {
@@ -115,8 +111,7 @@ function presentArrival(entry: Entry, service: Service, jobs: JobStore): unknown
   const job = jobs.get(entry.jobId);
   const destination = service.destinationOf(entry);
   const plan = presentPlan(entry.item);
-  const kind =
-    entry.parsed.kind === 'movie' ? 'movie' : entry.parsed.kind === 'episode' ? 'series' : null;
+  const kind = workKindOf(entry);
   return {
     id: entry.id,
     jobId: entry.jobId,
@@ -213,7 +208,7 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
         response: { 200: { type: 'array', items: jobSchema }, 401: errorSchema },
       },
     },
-    (request) => jobs.list(request.query.limit ?? 50).map(presentJob),
+    (request) => jobs.list(request.query.limit).map(presentJob),
   );
 
   api.get<{ Params: { id: string } }>(
@@ -262,8 +257,8 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
       return entries
         .list(request.params.id, {
           ...(classification && { classification }),
-          limit: limit ?? 50,
-          offset: offset ?? 0,
+          limit,
+          offset,
         })
         .map(presentEntry);
     },
@@ -292,8 +287,8 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
       const page = entries.arrivals({
         arrivalIds: sources.map(({ id }) => id),
         ...(state && { state }),
-        limit: limit ?? 50,
-        offset: offset ?? 0,
+        limit,
+        offset,
       });
       return {
         total: page.total,
@@ -532,8 +527,8 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
     (request) =>
       history.activity({
         all: request.query.all ?? false,
-        limit: request.query.limit ?? 50,
-        offset: request.query.offset ?? 0,
+        limit: request.query.limit,
+        offset: request.query.offset,
       }),
   );
 

@@ -11,3 +11,13 @@ export class KinoshelfError extends Error {
     this.info = params ? { code, params } : { code };
   }
 }
+
+/** The system error code of a failed file or process call (`ENOENT`, `EACCES`…), if it has one. */
+export function errnoCode(error: unknown): string | undefined {
+  return typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    typeof error.code === 'string'
+    ? error.code
+    : undefined;
+}

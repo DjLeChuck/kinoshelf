@@ -1,3 +1,5 @@
+import { errnoCode } from '@kinoshelf/core';
+
 export type ServerCommand =
   | { readonly kind: 'start' }
   | { readonly kind: 'help' }
@@ -40,8 +42,7 @@ export function describeListenError(
 ):
   | { code: 'server.port-in-use' | 'server.port-denied'; params: { host: string; port: number } }
   | undefined {
-  const code =
-    typeof error === 'object' && error !== null && 'code' in error ? error.code : undefined;
+  const code = errnoCode(error);
   if (code === 'EADDRINUSE') {
     return { code: 'server.port-in-use', params: { host, port } };
   }

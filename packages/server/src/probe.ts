@@ -1,5 +1,6 @@
 import { execFile } from 'node:child_process';
 import { stat } from 'node:fs/promises';
+import { errnoCode } from '@kinoshelf/core';
 import type { LibraryItemStore } from './library-items.js';
 
 /** What `ffprobe` tells of a video, plus the file's size and date, which tell when to look again. */
@@ -62,7 +63,7 @@ export const ffprobe: Prober = async (path) => {
       { timeout: TIMEOUT_MS, maxBuffer: 4_000_000 },
       (error, stdout) => {
         if (error) {
-          reject('code' in error && error.code === 'ENOENT' ? new ProbeUnavailableError() : error);
+          reject(errnoCode(error) === 'ENOENT' ? new ProbeUnavailableError() : error);
         } else {
           resolve(stdout);
         }
@@ -197,5 +198,4 @@ export class ProbeQueue {
   }
 }
 
-const isMissing = (error: unknown): boolean =>
-  error instanceof Error && 'code' in error && error.code === 'ENOENT';
+const isMissing = (error: unknown): boolean => errnoCode(error) === 'ENOENT';

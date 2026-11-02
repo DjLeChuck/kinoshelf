@@ -1,5 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import {
+  metadataLanguageFor,
+  libraryProfile,
   createPlan,
   loadProfile,
   MetadataLoader,
@@ -22,7 +24,13 @@ import {
   type UndoEntryResult,
 } from '@kinoshelf/core';
 import { ApiError } from './api-error.js';
-import type { EntryStore, Entry, StoredCandidate, StoredError } from './entries.js';
+import {
+  workKindOf as kindOf,
+  type EntryStore,
+  type Entry,
+  type StoredCandidate,
+  type StoredError,
+} from './entries.js';
 import type { Execution, ExecutionStore } from './executions.js';
 import type { Job, JobStore, PlanSettings } from './jobs.js';
 import type { LibrarySnapshot } from './library-items.js';
@@ -188,10 +196,7 @@ export class Service {
 
   private provider(): MetadataProvider {
     const { config } = this.deps;
-    return makeProvider(
-      this.deps,
-      config.metadataLanguage ?? (config.locale === 'fr' ? 'fr' : 'en-US'),
-    );
+    return makeProvider(this.deps, config.metadataLanguage ?? metadataLanguageFor(config.locale));
   }
 
   /**
@@ -579,7 +584,7 @@ export class Service {
       return base;
     }
     return {
-      profile: library.profile ?? this.deps.config.profile ?? 'plex',
+      profile: libraryProfile(library, this.deps.config),
       mode: base.mode,
       destinationRoot: library.source,
     };
@@ -601,9 +606,6 @@ function classify(item: PlanItem): Classification {
       ? 'compliant'
       : 'conflict';
 }
-
-const kindOf = (entry: Pick<Entry, 'parsed'>): 'movie' | 'series' | null =>
-  entry.parsed.kind === 'movie' ? 'movie' : entry.parsed.kind === 'episode' ? 'series' : null;
 
 /** What the planner reads of a candidate the queue kept: title, year and id. */
 function toCandidate(stored: StoredCandidate): Candidate {

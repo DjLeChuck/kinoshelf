@@ -2,6 +2,8 @@ import { stat } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import type { Database } from 'better-sqlite3';
 import {
+  metadataLanguageFor,
+  libraryProfile,
   analyze,
   discoverVideos,
   GuessitParser,
@@ -63,7 +65,7 @@ async function process(deps: ProcessorDeps, job: Job): Promise<ProcessedJob> {
       source: library ? library.source : job.path,
       sourceIsFile: library ? false : isFile,
       defaultToSource: false,
-      defaultMetadataLanguage: deps.config.locale === 'fr' ? 'fr' : 'en-US',
+      defaultMetadataLanguage: metadataLanguageFor(deps.config.locale),
     },
   );
 
@@ -97,7 +99,7 @@ async function process(deps: ProcessorDeps, job: Job): Promise<ProcessedJob> {
   return {
     analysis,
     settings: {
-      profile: library?.profile ?? deps.config.profile ?? 'plex',
+      profile: libraryProfile(library, deps.config),
       mode: settings.mode,
       destinationRoot: settings.destinations,
     },

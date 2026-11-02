@@ -9,7 +9,7 @@ export type * from './types/plan.js';
 export type * from './types/journal.js';
 export type * from './types/errors.js';
 export { ERROR_CODES, type ErrorCode } from './error-codes.js';
-export { KinoshelfError } from './errors.js';
+export { errnoCode, KinoshelfError } from './errors.js';
 export {
   listBundledProfiles,
   loadProfile,
@@ -77,10 +77,12 @@ export { openConfigDatabase } from './config/database.js';
 export {
   destinationRoots,
   libraryId,
+  libraryProfile,
   libraryOverrides,
   watchedFolders,
 } from './config/libraries.js';
 export {
+  metadataLanguageFor,
   resolveSettings,
   type Settings,
   type SettingsContext,

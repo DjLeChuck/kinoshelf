@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { basename, dirname } from 'node:path';
 import {
+  libraryProfile,
   companionKindOf,
   companionsWritten,
   loadProfile,
@@ -14,7 +15,8 @@ import {
   type Profile,
 } from '@kinoshelf/core';
 import type { Database } from 'better-sqlite3';
-import type { Entry, EntryStore } from './entries.js';
+import { workKindOf as kindOf, type Entry, type EntryStore } from './entries.js';
+import { isInside } from './notify/paths.js';
 import type { Job, JobStore } from './jobs.js';
 import type { Probe } from './probe.js';
 
@@ -554,9 +556,6 @@ export function resolutionOf(path: string): string | null {
 export const itemId = (path: string): string =>
   createHash('sha1').update(path).digest('hex').slice(0, 16);
 
-const kindOf = (entry: Pick<Entry, 'parsed'>): 'movie' | 'series' | null =>
-  entry.parsed.kind === 'movie' ? 'movie' : entry.parsed.kind === 'episode' ? 'series' : null;
-
 /** The row for a file of a scan, from the entry the scan stored for it. */
 function itemOf(
   entry: Entry,
@@ -594,6 +593,12 @@ function itemOf(
  * never has to scan again to be right. A library that is an arrival folder has no snapshot (what
  * lands in it is waiting to go elsewhere).
  */
+/** The typed library a file sits in, if any. */
+const typedLibraryHolding = (config: Config, path: string): LibraryConfig | undefined =>
+  config.libraries?.find(
+    ({ type, source }) => type !== undefined && path !== source && isInside(path, source),
+  );
+
 /**
  * The profile of each typed library, read once per call rather than once per file: a batch or an
  * undo of a whole series goes through thousands of them.
@@ -601,8 +606,7 @@ function itemOf(
 function profilesOf(config: Config): (library: LibraryConfig) => Promise<Profile> {
   const profiles = new Map<string, Promise<Profile>>();
   return (library) => {
-    const profile =
-      profiles.get(library.id) ?? loadProfile(library.profile ?? config.profile ?? 'plex');
+    const profile = profiles.get(library.id) ?? loadProfile(libraryProfile(library, config));
     profiles.set(library.id, profile);
     return profile;
   };
@@ -708,12 +712,7 @@ export class LibrarySnapshot {
         (r) => r.operation.type === 'transfer' && r.operation.role === 'main',
       );
       const path = main?.status === 'done' ? main.operation.destination : undefined;
-      const library =
-        path === undefined
-          ? undefined
-          : config.libraries?.find(
-              ({ type, source }) => type !== undefined && path.startsWith(`${source}/`),
-            );
+      const library = path === undefined ? undefined : typedLibraryHolding(config, path);
       if (path === undefined || !library) {
         continue;
       }
@@ -751,9 +750,7 @@ export class LibrarySnapshot {
       (a, b) => Number(a.kind === 'transfer') - Number(b.kind === 'transfer'),
     );
     for (const entry of ordered) {
-      const library = config.libraries?.find(
-        ({ type, source }) => type !== undefined && entry.destination.startsWith(`${source}/`),
-      );
+      const library = typedLibraryHolding(config, entry.destination);
       if (!library) {
         continue;
       }

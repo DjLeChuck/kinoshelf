@@ -4,7 +4,7 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { isMap, parse, parseDocument, type Document } from 'yaml';
 import { z } from 'zod';
-import { KinoshelfError } from '../errors.js';
+import { errnoCode, KinoshelfError } from '../errors.js';
 
 const pathMappingSchema = z.strictObject({
   /** A folder as Kinoshelf sees it… */
@@ -185,10 +185,10 @@ async function readText(path: string): Promise<string | undefined> {
   try {
     return await readFile(path, 'utf8');
   } catch (error) {
-    if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
+    if (errnoCode(error) === 'ENOENT') {
       return undefined;
     }
-    if (error instanceof Error && 'code' in error && error.code === 'EACCES') {
+    if (errnoCode(error) === 'EACCES') {
       throw new KinoshelfError('fs.permission-denied', { path });
     }
     throw error;

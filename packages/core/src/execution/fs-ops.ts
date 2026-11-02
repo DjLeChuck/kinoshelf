@@ -12,12 +12,7 @@ import {
   writeFile,
 } from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
-import { KinoshelfError } from '../errors.js';
-
-const codeOf = (error: unknown): string | undefined =>
-  error instanceof Error && 'code' in error && typeof error.code === 'string'
-    ? error.code
-    : undefined;
+import { errnoCode as codeOf, KinoshelfError } from '../errors.js';
 
 /** True for anything at the path, a dangling symlink included. */
 export const exists = (path: string): Promise<boolean> =>

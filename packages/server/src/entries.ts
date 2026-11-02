@@ -52,6 +52,10 @@ export interface Entry {
 
 export type JobSummary = Record<Classification, number>;
 
+/** What kind of work a file is, as its name reads: a movie, an episode of a series, or unknown. */
+export const workKindOf = (entry: Pick<Entry, 'parsed'>): 'movie' | 'series' | null =>
+  entry.parsed.kind === 'movie' ? 'movie' : entry.parsed.kind === 'episode' ? 'series' : null;
+
 interface EntryRow {
   id: string;
   job_id: string;

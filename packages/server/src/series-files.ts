@@ -1,6 +1,7 @@
 import { access } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import {
+  libraryProfile,
   loadProfile,
   showFileNames,
   type Config,
@@ -145,7 +146,7 @@ export class SeriesFiles {
     if (library?.type !== 'series') {
       return;
     }
-    const profile = await loadProfile(library.profile ?? config.profile ?? 'plex');
+    const profile = await loadProfile(libraryProfile(library, config));
     this.deps.store.replace(libraryId, await this.look(libraryId, profile));
     this.deps.refreshed?.(libraryId);
   }

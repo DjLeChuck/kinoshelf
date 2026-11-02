@@ -1,5 +1,7 @@
 import { stat } from 'node:fs/promises';
 import {
+  errnoCode,
+  libraryProfile,
   KinoshelfError,
   libraryId,
   loadProfile,
@@ -43,6 +45,7 @@ import {
   progressSchema,
   seasonSchema,
   showSchema,
+  type Paging,
 } from './schemas.js';
 import type { ConfigStore } from './settings.js';
 
@@ -109,7 +112,7 @@ async function requireFolder(path: string): Promise<void> {
     if (error instanceof ApiError) {
       throw error;
     }
-    const code = (error as NodeJS.ErrnoException).code;
+    const code = errnoCode(error);
     throw code === 'EACCES'
       ? new ApiError(422, 'fs.unreadable', { path })
       : new ApiError(422, 'fs.not-found', { path });
@@ -375,7 +378,7 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
 
   api.get<{
     Params: { id: string };
-    Querystring: { state?: ItemFilter; q?: string; limit?: number; offset?: number };
+    Querystring: Paging & { state?: ItemFilter; q?: string };
   }>(
     '/api/libraries/:id/items',
     {
@@ -459,13 +462,13 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
         // An arrival folder holds what waits to go elsewhere: that is `GET /api/arrivals`.
         throw new ApiError(409, 'library.not-typed');
       }
-      const profile = await loadProfile(library.profile ?? store.config.profile ?? 'plex');
+      const profile = await loadProfile(libraryProfile(library, store.config));
       const { state, q, limit, offset } = request.query;
       const page = items.page(library.id, {
         ...(state && { filter: state }),
         ...(q && { query: q }),
-        limit: limit ?? 50,
-        offset: offset ?? 0,
+        limit,
+        offset,
       });
       const last = jobs.lastScan(library.id, library.source);
       const running = last?.status === 'queued' || last?.status === 'running' ? last : undefined;
@@ -588,12 +591,10 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
 
   api.get<{
     Params: { id: string };
-    Querystring: {
+    Querystring: Paging & {
       q?: string;
       missing?: boolean;
       incomplete?: boolean;
-      limit?: number;
-      offset?: number;
     };
   }>(
     '/api/libraries/:id/shows',
@@ -639,8 +640,8 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
         ...(q && { query: q }),
         ...(missing && { missing }),
         ...(incomplete && { incomplete }),
-        limit: limit ?? 50,
-        offset: offset ?? 0,
+        limit,
+        offset,
       });
     },
   );

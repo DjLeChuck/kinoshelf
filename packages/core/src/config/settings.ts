@@ -5,8 +5,13 @@ import type { TransferMode } from '../types/operation.js';
 import type { DestinationRoots } from '../types/plan.js';
 import type { Profile } from '../types/profile.js';
 import type { Config } from './config.js';
+import { libraryProfile } from './libraries.js';
 
 /** Already-validated values that win over the config file (CLI flags, an API request). */
+/** The language TMDB is asked in when nothing sets one: the interface's, as TMDB spells it. */
+export const metadataLanguageFor = (locale: string | undefined): string =>
+  locale === 'fr' ? 'fr' : 'en-US';
+
 export interface SettingsOverrides {
   readonly dest?: string;
   readonly destMovies?: string;
@@ -63,7 +68,7 @@ export async function resolveSettings(
   const threshold = overrides.threshold ?? config.threshold;
 
   return {
-    profile: await loadProfile(overrides.profile ?? config.profile ?? 'plex'),
+    profile: await loadProfile(libraryProfile(overrides, config)),
     mode: overrides.mode ?? config.mode ?? (inPlace ? 'move' : 'copy'),
     ...(threshold !== undefined && { threshold }),
     metadataLanguage:

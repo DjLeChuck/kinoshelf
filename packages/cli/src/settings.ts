@@ -1,4 +1,5 @@
 import {
+  metadataLanguageFor,
   libraryOverrides,
   resolveSettings as resolveCoreSettings,
   type Config,
@@ -75,7 +76,7 @@ export function resolveSettings(
       source: context.source,
       sourceIsFile: context.sourceIsFile,
       defaultToSource: context.defaultToSource,
-      defaultMetadataLanguage: context.locale === 'fr' ? 'fr' : 'en-US',
+      defaultMetadataLanguage: metadataLanguageFor(context.locale),
     },
   );
 }

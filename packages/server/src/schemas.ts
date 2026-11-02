@@ -442,6 +442,12 @@ export const paging = {
   offset: { type: 'integer', minimum: 0, default: 0 },
 } as const;
 
+/** A page of a list, as a route's handler reads it: validation fills in the defaults above. */
+export interface Paging {
+  readonly limit: number;
+  readonly offset: number;
+}
+
 export const classificationValues = CLASSIFICATIONS;
 
 /** One entry per target; a URL is shown without its secret part. */

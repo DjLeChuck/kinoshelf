@@ -1,6 +1,17 @@
 import { LIBRARY_ID_PATTERN, type Config, type LibraryConfig } from './config.js';
 import type { SettingsOverrides } from './settings.js';
 
+/** The profile of a library that sets none, and of Kinoshelf when `config.yaml` sets none either. */
+export const DEFAULT_PROFILE = 'plex';
+
+/** The profile a library writes with: its own, else the global one, else `DEFAULT_PROFILE`. */
+export function libraryProfile(
+  library: Pick<LibraryConfig, 'profile'> | undefined,
+  config: Pick<Config, 'profile'>,
+): string {
+  return library?.profile ?? config.profile ?? DEFAULT_PROFILE;
+}
+
 /** Where a library's works are written: its own source if typed, else its arrival destinations. */
 function destinationOverrides(
   library: LibraryConfig,
