@@ -125,6 +125,9 @@ contains no player-specific rule.
   `source`, the field is disabled with an explanation, and the API refuses the change with a 409
   (`settings.tmdb-key-from-env`, `settings.api-key-from-env`): a value saved and never used is worse
   than a refusal. Do the same for any new variable that shadows a setting.
+- **The first key** (`POST /api/setup/api-key`, while none exists) is only made through a local host
+  name (IP, `localhost`, no dot, `.local`/`.lan`/`.home.arpa`/`.internal`, or
+  `KINOSHELF_ALLOWED_HOSTS`): a DNS-rebinding page sends its own domain as both `Origin` and `Host`.
 - **The welcome page** (`/`, until the setup is left): the TMDB key is tested as soon as it is
   entered and dropped if TMDB refuses it; the destination step creates the first two libraries (a movies folder and a series folder, organized in place), the last step an arrival folder pointing at them (watched, or scanned once). Any job counts as work, so the setup ends even when that job failed: the History
   then lists the analyses in progress and the failed ones with their cause (`GET /api/history`), a

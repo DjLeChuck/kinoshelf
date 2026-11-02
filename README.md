@@ -41,7 +41,10 @@ locale).
 HTTP call instead of running a tool. The API is published as OpenAPI at `/api/openapi.json`;
 `GET /health` is public, everything under `/api` needs the API key as `Authorization: Bearer <key>`.
 On a first launch with no key, the web UI's sign-in page can create it for you (shown once, then you
-sign in with it); the commands below do the same without a browser.
+sign in with it), when the server is reached by a local name: an IP address, `localhost`, a name
+without a dot or ending in `.local`, `.lan`, `.home.arpa` or `.internal` (add others to
+`KINOSHELF_ALLOWED_HOSTS`). A page on the internet could otherwise point a name of its own at your
+server and take the key first. The commands below do the same without a browser.
 
 ```sh
 kinoshelf-server api-key create        # prints a key once (it replaces the previous one)
@@ -59,14 +62,15 @@ transferred in one batch and the others wait among the arrivals (`GET /api/arriv
 undone with `POST /api/batches/{id}/undo`. Transfers are queued, survive a crash and resume at the
 next start.
 
-| Setting             | Where                                                              |
-| ------------------- | ------------------------------------------------------------------ |
-| `TMDB_API_KEY`      | environment, or `apiKey.tmdb` in `config.yaml`                     |
-| `KINOSHELF_API_KEY` | environment (otherwise `api-key create`)                           |
-| `KINOSHELF_HOST`    | address to listen on (default `0.0.0.0`)                           |
-| `KINOSHELF_PORT`    | port (default `8484`)                                              |
-| config directory    | `KINOSHELF_CONFIG_DIR`; holds `config.yaml` and `kinoshelf.sqlite` |
-| `KINOSHELF_WEB_DIR` | built web UI to serve (found by itself in the Docker image)        |
+| Setting                   | Where                                                                  |
+| ------------------------- | ---------------------------------------------------------------------- |
+| `TMDB_API_KEY`            | environment, or `apiKey.tmdb` in `config.yaml`                         |
+| `KINOSHELF_API_KEY`       | environment (otherwise `api-key create`)                               |
+| `KINOSHELF_ALLOWED_HOSTS` | more host names the first key may be created through (comma-separated) |
+| `KINOSHELF_HOST`          | address to listen on (default `0.0.0.0`)                               |
+| `KINOSHELF_PORT`          | port (default `8484`)                                                  |
+| config directory          | `KINOSHELF_CONFIG_DIR`; holds `config.yaml` and `kinoshelf.sqlite`     |
+| `KINOSHELF_WEB_DIR`       | built web UI to serve (found by itself in the Docker image)            |
 
 `profile` is a shipped id or the path of your own YAML file:
 

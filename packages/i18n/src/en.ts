@@ -185,6 +185,8 @@ export const en = {
     'No API key exists yet. Run “kinoshelf-server api-key create”, or set KINOSHELF_API_KEY.',
   'error.setup.already-done':
     'An API key already exists. Sign in with it, or create a new one with “kinoshelf-server api-key create”.',
+  'error.setup.host-not-allowed':
+    'The first key can only be created through a local address (an IP address, localhost, or a name such as nas.local). To use {host}, add it to KINOSHELF_ALLOWED_HOSTS.',
   'error.auth.unauthorized': 'Wrong API key, or your session has expired.',
   'error.batch.already-undone': 'This batch was already undone.',
   'error.fs.not-a-directory': '{path} is a file, not a folder.',

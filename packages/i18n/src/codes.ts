@@ -54,6 +54,7 @@ export const API_ERROR_CODES = [
   'settings.api-key-from-env',
   'settings.tmdb-key-from-env',
   'setup.already-done',
+  'setup.host-not-allowed',
   'settings.webhook-not-found',
   'settings.webhook-url-required',
   'watch.not-configured',

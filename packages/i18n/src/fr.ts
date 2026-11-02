@@ -192,6 +192,8 @@ export const fr: Record<keyof typeof en, string> = {
     'Aucune clé d’API n’existe encore. Lancez « kinoshelf-server api-key create » ou définissez KINOSHELF_API_KEY.',
   'error.setup.already-done':
     'Une clé API existe déjà. Connectez-vous avec elle, ou créez-en une nouvelle avec « kinoshelf-server api-key create ».',
+  'error.setup.host-not-allowed':
+    'La première clé ne peut être créée que par une adresse locale (une adresse IP, localhost ou un nom comme nas.local). Pour utiliser {host}, ajoutez-le à KINOSHELF_ALLOWED_HOSTS.',
   'error.auth.unauthorized': 'Clé d’API incorrecte, ou session expirée.',
   'error.batch.already-undone': 'Ce lot a déjà été annulé.',
   'error.fs.not-a-directory': '{path} est un fichier, pas un dossier.',

@@ -1,6 +1,7 @@
 import type { Database } from 'better-sqlite3';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { generateApiKey, hasApiKey, isValidApiKey, setApiKey } from './auth.js';
+import { isLocalHost } from './local-host.js';
 import { errorSchema } from './schemas.js';
 import {
   createSession,
@@ -48,7 +49,12 @@ export function sameOrigin(request: FastifyRequest): boolean {
  * The UI signs in with the API key, so there is one secret to look after. The key is only
  * exchanged for a cookie: a script keeps using it directly as a bearer token.
  */
-export function registerSessionRoutes(app: FastifyInstance, database: Database): void {
+export function registerSessionRoutes(
+  app: FastifyInstance,
+  database: Database,
+  /** Host names the first-launch key may be created through, besides the local ones. */
+  allowed: readonly string[] = [],
+): void {
   app.get(
     '/api/session',
     {
@@ -76,8 +82,9 @@ export function registerSessionRoutes(app: FastifyInstance, database: Database):
       schema: {
         summary: 'Create the first API key',
         description:
-          'Only while no key exists (409 `setup.already-done` after). The key is returned once ' +
-          'and only its hash is kept.',
+          'Only while no key exists (409 `setup.already-done` after), and only through a local ' +
+          'host name (403 `setup.host-not-allowed`; see `KINOSHELF_ALLOWED_HOSTS`). The key is ' +
+          'returned once and only its hash is kept.',
         security: [],
         response: {
           200: {
@@ -86,6 +93,7 @@ export function registerSessionRoutes(app: FastifyInstance, database: Database):
             properties: { apiKey: { type: 'string' } },
           },
           401: errorSchema,
+          403: errorSchema,
           409: errorSchema,
         },
       },
@@ -93,6 +101,12 @@ export function registerSessionRoutes(app: FastifyInstance, database: Database):
     (request, reply) => {
       if (!sameOrigin(request)) {
         return reply.code(401).send({ error: { code: 'auth.unauthorized' } });
+      }
+      // Origin and Host agree on a rebinding attacker's own domain: the name itself is checked.
+      if (!isLocalHost(request.headers.host, allowed)) {
+        return reply.code(403).send({
+          error: { code: 'setup.host-not-allowed', params: { host: request.headers.host ?? '' } },
+        });
       }
       if (hasApiKey(database)) {
         return reply.code(409).send({ error: { code: 'setup.already-done' } });

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import Database from 'better-sqlite3';
-import { generateApiKey, setApiKey } from '../src/auth.js';
+import { generateApiKey, hasApiKey, setApiKey } from '../src/auth.js';
 import { migrated } from '../src/database.js';
 import { createSession, endSession, isValidSession, readCookie } from '../src/sessions.js';
 import { cleanup, harness } from './harness.js';
@@ -198,6 +198,21 @@ describe('first-launch API key', () => {
     const h = await harness();
     const response = await h.app.inject({ method: 'POST', url: '/api/setup/api-key' });
     expect(response.statusCode).toBe(409);
+  });
+
+  it('refuses a public host name, which DNS rebinding could have pointed here', async () => {
+    const h = await harness();
+    h.database.prepare('DELETE FROM api_keys').run();
+    const response = await h.app.inject({
+      method: 'POST',
+      url: '/api/setup/api-key',
+      headers: { host: 'evil.example:8484', origin: 'http://evil.example:8484' },
+    });
+    expect(response.statusCode).toBe(403);
+    expect(response.json()).toEqual({
+      error: { code: 'setup.host-not-allowed', params: { host: 'evil.example:8484' } },
+    });
+    expect(hasApiKey(h.database)).toBe(false);
   });
 
   it('refuses a request coming from another origin', async () => {
