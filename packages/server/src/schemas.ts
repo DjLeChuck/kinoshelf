@@ -824,10 +824,13 @@ export const arrivalsSchema = {
 
 export const workDestinationSchema = {
   type: 'object',
-  required: ['kind', 'tmdbId', 'libraryId', 'library', 'createdAt'],
+  required: ['kind', 'tmdbId', 'title', 'year', 'libraryId', 'library', 'createdAt'],
   properties: {
     kind: { type: 'string', enum: ['movie', 'series'] },
     tmdbId: { type: 'integer' },
+    /** As a library holds it (its last scan); null when no library has the work yet. */
+    title: { type: 'string', nullable: true },
+    year: { type: 'integer', nullable: true },
     libraryId: { type: 'string' },
     /** The library's name; null if it no longer exists. */
     library: { type: 'string', nullable: true },

@@ -3,7 +3,7 @@ import type { Candidate, MovieCandidate, PlanItem, SeriesCandidate } from '@kino
 import type { FastifyInstance } from 'fastify';
 import { ApiError } from './api-error.js';
 import type { Entry, EntryStore } from './entries.js';
-import { resolutionOf } from './library-items.js';
+import { resolutionOf, type LibraryItemStore } from './library-items.js';
 import type { EventBus } from './events.js';
 import type { ExecutionStore } from './executions.js';
 import type { History } from './history.js';
@@ -41,6 +41,7 @@ export interface RouteContext {
   readonly executions: ExecutionStore;
   readonly aliases: AliasStore;
   readonly workDestinations: WorkDestinationStore;
+  readonly items: LibraryItemStore;
   readonly service: Service;
   readonly runner: JobRunner;
   readonly notifier: Notifier;
@@ -172,6 +173,7 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
     executions,
     aliases,
     workDestinations,
+    items,
     service,
     runner,
     notifier,
@@ -615,10 +617,15 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
       },
     },
     () =>
-      workDestinations.list().map((stored) => ({
-        ...stored,
-        library: service.libraryName(stored.libraryId) ?? null,
-      })),
+      workDestinations.list().map((stored) => {
+        const work = items.workTitle(stored.kind, stored.tmdbId);
+        return {
+          ...stored,
+          title: work?.title ?? null,
+          year: work?.year ?? null,
+          library: service.libraryName(stored.libraryId) ?? null,
+        };
+      }),
   );
 
   api.delete<{ Params: { kind: 'movie' | 'series'; tmdbId: number } }>(

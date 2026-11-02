@@ -359,6 +359,22 @@ export class LibraryItemStore {
     };
   }
 
+  /**
+   * The title and year a library holds for a work, whichever library: the name the settings show
+   * for a remembered destination, without asking TMDB. `undefined` if no library holds it.
+   */
+  workTitle(
+    kind: 'movie' | 'series',
+    tmdbId: number,
+  ): { readonly title: string; readonly year: number | null } | undefined {
+    return this.database
+      .prepare<[string, number], { title: string; year: number | null }>(
+        `SELECT title, year FROM library_items
+         WHERE kind = ? AND tmdb_id = ? AND title IS NOT NULL LIMIT 1`,
+      )
+      .get(kind, tmdbId);
+  }
+
   /** When the snapshot was last replaced by a scan; `null` for a library never scanned. */
   scannedAt(libraryId: string): string | null {
     return (

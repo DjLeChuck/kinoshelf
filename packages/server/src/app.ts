@@ -402,6 +402,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
       executions,
       aliases,
       workDestinations,
+      items,
       service,
       runner,
       notifier,

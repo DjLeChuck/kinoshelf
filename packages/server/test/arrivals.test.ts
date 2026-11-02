@@ -211,7 +211,13 @@ describe('remembering where a work goes', () => {
     expect(matched.statusCode).toBe(200);
 
     expect((await h.request('GET', '/api/work-destinations')).json()).toMatchObject([
-      { kind: 'movie', tmdbId: 438631, libraryId: 'films-4k', library: 'Films 4K' },
+      {
+        kind: 'movie',
+        tmdbId: 438631,
+        title: null,
+        libraryId: 'films-4k',
+        library: 'Films 4K',
+      },
     ]);
 
     // A later arrival of the same work is matched, planned for that library, and not waiting.
