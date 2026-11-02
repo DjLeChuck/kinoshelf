@@ -19,8 +19,8 @@ templates:
   episodeFile: '{title} ({year}) - s{season:02}e{episode:02}'
 
 # Targets Plex's default agents, which fetch their own metadata and artwork and ignore NFO files.
-# Libraries using the optional "Plex NFO" agent (Plex Media Server 1.43.1+) need a separate
-# `plex-nfo` profile: Kodi-format NFO, `poster.jpg` and `background.jpg`. Planned for v1.0, with Jellyfin.
+# Libraries using the optional "Plex NFO" agent (Plex Media Server 1.43.1+) use the `plex-nfo`
+# profile instead: Kodi-format NFO, `poster.jpg` and `background.jpg`.
 nfo: null
 artwork: []
 

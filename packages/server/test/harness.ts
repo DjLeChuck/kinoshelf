@@ -55,8 +55,6 @@ export const fakeProvider: MetadataProvider = {
   searchMovies: ({ title }) =>
     Promise.resolve(catalog.filter((c) => title.toLowerCase().startsWith(c.title.toLowerCase()))),
   searchSeries: () => Promise.resolve([]),
-  getMovie: ({ id }) => Promise.resolve(catalog.find((c) => c.id.id === id) ?? null),
-  getSeries: () => Promise.resolve(null),
   getSeason: () => Promise.resolve(null),
   getMovieDetails: ({ id }) => {
     const found = catalog.find((c) => c.id.id === id);

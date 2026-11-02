@@ -23,11 +23,7 @@ const entrySchema = z.strictObject({
   note: z.string().optional(),
   /** Language of the TMDB metadata, as the CLI would ask for it. Defaults to `en-US`. */
   language: z.string().optional(),
-  /**
-   * A choice the user made in the validation queue, as if it had been remembered: the title of
-   * this file is tied to this work, whatever TMDB calls it. The file must then match it, unless its
-   * season or episode does not exist there.
-   */
+  /** What the matcher must do with it. */
   expect: expectation,
 });
 

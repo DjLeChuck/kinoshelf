@@ -8,8 +8,7 @@ import {
 } from '../src/lib/libraries.js';
 
 const bundled = [{ id: 'plex' }, { id: 'jellyfin' }];
-const counts = { rename: 1, conflict: 0, ambiguous: 0, unrecognized: 0, compliant: 0, renamed: 0 };
-const lastScan = { jobId: 'j1', status: 'done' as const, finishedAt: null, counts };
+const lastScan = { jobId: 'j1', status: 'done' as const };
 const films: Library = {
   id: 'films',
   name: 'Films',
@@ -21,7 +20,6 @@ const films: Library = {
   threshold: 90,
   watch: false,
   lastScan,
-  queued: 0,
   scanning: false,
 };
 const series: Library = { ...films, id: 'series', name: 'Séries', type: 'series' };

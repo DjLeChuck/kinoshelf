@@ -32,9 +32,9 @@ export const tvSearchSchema = z.object({
   ),
 });
 
-// The detail endpoints answer with one record shaped like a search result.
-export const movieDetailSchema = movieSearchSchema.shape.results.element;
-export const tvDetailSchema = tvSearchSchema.shape.results.element;
+/** One result of a search. */
+export type MovieResult = z.infer<typeof movieSearchSchema>['results'][number];
+export type TvResult = z.infer<typeof tvSearchSchema>['results'][number];
 
 const crewMember = z.object({ name: z.string(), job: z.string().nullish() });
 

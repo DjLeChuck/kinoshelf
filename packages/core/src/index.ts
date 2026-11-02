@@ -20,22 +20,17 @@ export {
 export {
   parseTemplate,
   renderTemplate,
-  templateVariables,
   type ParsedTemplate,
   type RenderContext,
   type TemplateValue,
   type TemplateVariables,
 } from './profiles/template.js';
 export { GuessitParser, type GuessitParserOptions } from './parsing/guessit-parser.js';
-export {
-  DEFAULT_MATCHING_CONFIG,
-  type MatchingConfig,
-  type ScoreWeights,
-} from './matching/config.js';
+export { type MatchingConfig, type ScoreWeights } from './matching/config.js';
 export { Matcher } from './matching/matcher.js';
-export { normalizeTitle, titleReadings, titleSimilarity } from './matching/title-similarity.js';
+export { titleSimilarity } from './matching/title-similarity.js';
 export { createPlan, type PlanInput, type PlannerOptions } from './planning/planner.js';
-export { DEFAULT_SIDECAR_EXTENSIONS, findSidecars, type Sidecar } from './planning/sidecars.js';
+export { type Sidecar } from './planning/sidecars.js';
 export { executePlan, type ExecuteOptions } from './execution/executor.js';
 export { MemoryJournal } from './journal/memory-journal.js';
 export { SqliteJournal } from './journal/sqlite-journal.js';
@@ -58,15 +53,8 @@ export {
   type AnalyzeOptions,
   type Classification,
 } from './pipeline/analyze.js';
+export { clusterRelease, isTitledEpisode, voteRelease } from './pipeline/release.js';
 export {
-  clusterRelease,
-  isTitledEpisode,
-  SAME_SERIES_SIMILARITY,
-  sameSeries,
-  voteRelease,
-} from './pipeline/release.js';
-export {
-  CONFIG_FILE,
   configDirectory,
   DATABASE_FILE,
   editConfig,
@@ -79,7 +67,6 @@ export {
   type WatchConfig,
 } from './config/config.js';
 export { openConfigDatabase } from './config/database.js';
-export { LIBRARY_ID_PATTERN } from './config/config.js';
 export {
   destinationRoots,
   libraryId,
@@ -94,7 +81,6 @@ export {
 } from './config/settings.js';
 export {
   cleanupStaleTemporaryFiles,
-  MIN_STALE_AGE_HOURS,
   type CleanupOptions,
   type StaleFile,
 } from './maintenance/stale-temporary.js';

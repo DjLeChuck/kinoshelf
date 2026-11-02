@@ -1,7 +1,7 @@
 import { destinationRoots, type Config } from '@kinoshelf/core';
 import type { Database } from 'better-sqlite3';
 
-export const ONBOARDING_STEPS = ['tmdb', 'server', 'destination', 'source'] as const;
+const ONBOARDING_STEPS = ['tmdb', 'server', 'destination', 'source'] as const;
 export type OnboardingStepId = (typeof ONBOARDING_STEPS)[number];
 export type OnboardingMark = 'done' | 'skipped';
 

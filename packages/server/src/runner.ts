@@ -25,7 +25,7 @@ export interface RunnerHooks {
 }
 
 /** Code for a failure that is not one of the core's typed errors: a bug, not a user mistake. */
-export const UNEXPECTED_ERROR = 'internal.unexpected';
+const UNEXPECTED_ERROR = 'internal.unexpected';
 
 /**
  * Runs the queue one task at a time: analyses and transfers alike. TMDB is rate limited, two

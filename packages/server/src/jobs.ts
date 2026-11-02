@@ -105,17 +105,6 @@ export class JobStore {
       .map(toJob);
   }
 
-  /** Jobs of a library not finished yet (a scan, or releases its folder submitted). */
-  pendingOf(libraryId: string): number {
-    return (
-      this.database
-        .prepare<[string], { total: number }>(
-          "SELECT COUNT(*) AS total FROM jobs WHERE library_id = ? AND status IN ('queued', 'running')",
-        )
-        .get(libraryId)?.total ?? 0
-    );
-  }
-
   /** Whether a scan of the library's whole source is queued or running. */
   scanPending(libraryId: string, source: string): boolean {
     return (

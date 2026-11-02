@@ -146,12 +146,9 @@ export function folderOf(path: string): string {
  * A poster served by our own server, which fetches it from TMDB once: the browser never contacts
  * TMDB. `posterPath` comes with its leading slash.
  */
-export function posterUrl(
-  posterPath: string | undefined,
-  size: 'w92' | 'w154' = 'w92',
-): string | undefined {
+export function posterUrl(posterPath: string | undefined): string | undefined {
   const file = posterPath?.replace(/^\/+/, '');
-  return file ? `/api/images/${size}/${file}` : undefined;
+  return file ? `/api/images/w92/${file}` : undefined;
 }
 
 /** A search result is posted back as is, without the score only the analysis had. */

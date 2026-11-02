@@ -27,12 +27,7 @@ interface LibraryBody {
   mode: string | null;
   threshold: number | null;
   watch: boolean;
-  lastScan: {
-    jobId: string;
-    finishedAt: string | null;
-    counts: Record<string, number>;
-  } | null;
-  queued: number;
+  lastScan: { jobId: string; status: string } | null;
   scanning: boolean;
 }
 
@@ -125,7 +120,6 @@ describe('libraries', () => {
       threshold: 80,
       watch: false,
       lastScan: null,
-      queued: 0,
       scanning: false,
     });
     expect(await h.file()).toContain('id: films-4k');
@@ -290,11 +284,11 @@ describe('scanning a library', () => {
     const unknown = await entriesOf(h, jobId, 'unrecognized');
     expect(unknown.map((f) => f.path)).toEqual([join(source, 'Mystery.Home.Video.mkv')]);
 
-    // The library reports the scan, and what is left to do follows the transfers.
+    // The library reports the scan.
     const library = (await h.request('GET', '/api/libraries'))
       .json<LibraryBody[]>()
       .find((l) => l.id === 'downloads');
-    expect(library?.lastScan).toMatchObject({ jobId, counts: { rename: 2, unrecognized: 1 } });
+    expect(library?.lastScan).toEqual({ jobId, status: 'done' });
 
     // Only the chosen files are transferred.
     const chosen = dune?.id ?? '';
@@ -309,10 +303,6 @@ describe('scanning a library', () => {
     expect((await entriesOf(h, jobId, 'to-rename')).map((f) => f.path)).toEqual([
       join(source, 'Alien.1979.mkv'),
     ]);
-    const settled = (await h.request('GET', '/api/libraries'))
-      .json<LibraryBody[]>()
-      .find((l) => l.id === 'downloads');
-    expect(settled?.lastScan?.counts).toMatchObject({ rename: 1, renamed: 1 });
     expect(
       await readFile(
         join(target, 'Dune (2021) [tmdbid-438631]', 'Dune (2021) [tmdbid-438631].mkv'),
@@ -341,10 +331,6 @@ describe('scanning a library', () => {
     expect(compliant.map((f) => f.path)).toEqual([
       join(root, 'Alien (1979) {tmdb-348}', 'Alien (1979) {tmdb-348}.mkv'),
     ]);
-    const home = (await h.request('GET', '/api/libraries'))
-      .json<LibraryBody[]>()
-      .find((l) => l.id === 'home');
-    expect(home?.lastScan?.counts).toMatchObject({ compliant: 1, rename: 1 });
   });
 
   it('refuses a second scan while one is queued or running', async () => {
@@ -395,8 +381,7 @@ describe('scanning a library', () => {
     const [films] = (await h.request('GET', '/api/libraries')).json<LibraryBody[]>();
     expect(films).toMatchObject({
       scanning: true,
-      queued: 1,
-      lastScan: { status: expect.stringMatching(/^(queued|running)$/) as string, finishedAt: null },
+      lastScan: { status: expect.stringMatching(/^(queued|running)$/) as string },
     });
 
     release();
@@ -428,14 +413,5 @@ describe('scanning a library', () => {
       error: null,
     });
     expect(processed.settings.profile).toBe('plex');
-  });
-
-  it('answers 404 for the files of an unknown job', async () => {
-    const h = await served();
-    const response = await h.request(
-      'GET',
-      '/api/jobs/00000000-0000-4000-8000-000000000000/files?tab=rename',
-    );
-    expect(response.statusCode).toBe(404);
   });
 });

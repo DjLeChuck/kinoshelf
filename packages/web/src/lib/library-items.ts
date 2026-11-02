@@ -286,9 +286,6 @@ export function formatSize(bytes: number): string {
   return `${unit === 0 ? value : value.toFixed(1)} ${units[unit]}`;
 }
 
-/** A library with a typed snapshot (an arrival folder has none). */
-export const isTyped = (library: Pick<Library, 'type'>): boolean => library.type != null;
-
 /** A scan that failed and that nothing newer has replaced. */
 export const lastScanFailed = (library: Pick<Library, 'lastScan' | 'scanning'>): boolean =>
   !library.scanning && library.lastScan?.status === 'failed';

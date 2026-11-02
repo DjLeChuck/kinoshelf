@@ -183,15 +183,7 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
       mode: library.mode ?? null,
       threshold: library.threshold ?? null,
       watch: library.watch ?? false,
-      lastScan: last
-        ? {
-            jobId: last.id,
-            status: last.status,
-            finishedAt: last.finishedAt,
-            counts: entries.tabCounts(last.id),
-          }
-        : null,
-      queued: jobs.pendingOf(library.id),
+      lastScan: last ? { jobId: last.id, status: last.status } : null,
       scanning: jobs.scanPending(library.id, library.source),
     };
   };
@@ -222,9 +214,8 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
           'and is also a destination; with `into` (the ids of a movie and a series library) it is ' +
           'an arrival folder, with its own mode. `profile` goes with `type`, `mode` with `into`; ' +
           'a field that is `null` follows the global setting. ' +
-          '`lastScan` is the latest scan of the whole source, queued, running, failed or done: its ' +
-          'counts are what is left to do now (see `GET /api/jobs/{id}/files`), all zero until it ' +
-          'is done.',
+          '`lastScan` is the latest scan of the whole source, queued, running, failed or done ' +
+          '(its job in `GET /api/jobs/{id}`); what the library holds is `GET /api/libraries/{id}/items`.',
         response: { 200: { type: 'array', items: librarySchema }, 401: errorSchema },
       },
     },
@@ -364,7 +355,7 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
         description:
           'Queues an analysis of the whole source with the library’s settings; nothing is written ' +
           'to the disk. Poll `GET /api/jobs/{id}` (or follow the `jobs` event), then read ' +
-          '`GET /api/jobs/{id}/files` and execute chosen files with `POST /api/plans/{id}/execute`. ' +
+          '`GET /api/libraries/{id}/items` and run chosen items with `POST /api/libraries/{id}/execute`. ' +
           '409 `library.scan-in-progress` while a scan of this library is queued or running.',
         params: idParams,
         response: { 202: jobSchema, 401: errorSchema, 404: errorSchema, 409: errorSchema },

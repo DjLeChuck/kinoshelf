@@ -12,18 +12,17 @@ import {
   type SeasonInfo,
   type SeriesCandidate,
 } from '@kinoshelf/core';
-import type { z } from 'zod';
 import { TmdbClient, type TmdbClientOptions } from './client.js';
 import {
   movieAlternativeTitlesSchema,
-  movieDetailSchema,
   movieFullDetailsSchema,
   movieSearchSchema,
   seasonSchema,
   tvAlternativeTitlesSchema,
-  tvDetailSchema,
   tvFullDetailsSchema,
   tvSearchSchema,
+  type MovieResult,
+  type TvResult,
 } from './schemas.js';
 
 export interface TmdbProviderOptions extends TmdbClientOptions {
@@ -107,21 +106,9 @@ export class TmdbProvider implements MetadataProvider {
     );
   }
 
-  async getMovie(id: ExternalId, language?: string): Promise<MovieCandidate | null> {
-    this.requireOwn(id);
-    const response = await this.client.get(
-      `/3/movie/${id.id}`,
-      { language: language ?? this.language },
-      movieDetailSchema,
-      { ttlMs: DETAIL_TTL_MS, nullOn404: true },
-    );
-    return response && this.movieCandidate(response, true);
-  }
-
   async getMovieDetails(id: ExternalId, language?: string): Promise<MovieDetails | null> {
     this.requireOwn(id);
-    // One request for everything; the extra query string also keeps it apart from `getMovie`'s
-    // cache entry.
+    // One request for everything: credits and external ids come with the details.
     const r = await this.client.get(
       `/3/movie/${id.id}`,
       { language: language ?? this.language, append_to_response: 'credits,external_ids' },
@@ -226,7 +213,7 @@ export class TmdbProvider implements MetadataProvider {
   }
 
   private async movieCandidate(
-    result: z.infer<typeof movieDetailSchema>,
+    result: MovieResult,
     withAlternatives: boolean,
   ): Promise<MovieCandidate> {
     const alternatives = withAlternatives
@@ -274,19 +261,8 @@ export class TmdbProvider implements MetadataProvider {
     );
   }
 
-  async getSeries(id: ExternalId, language?: string): Promise<SeriesCandidate | null> {
-    this.requireOwn(id);
-    const response = await this.client.get(
-      `/3/tv/${id.id}`,
-      { language: language ?? this.language },
-      tvDetailSchema,
-      { ttlMs: DETAIL_TTL_MS, nullOn404: true },
-    );
-    return response && this.seriesCandidate(response, true);
-  }
-
   private async seriesCandidate(
-    result: z.infer<typeof tvDetailSchema>,
+    result: TvResult,
     withAlternatives: boolean,
   ): Promise<SeriesCandidate> {
     const alternatives = withAlternatives

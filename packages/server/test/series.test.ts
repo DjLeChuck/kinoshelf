@@ -70,15 +70,6 @@ const provider = (options: { down?: boolean } = {}): MetadataProvider => ({
           ]
         : [],
     ),
-  getSeries: () =>
-    Promise.resolve({
-      kind: 'series',
-      id: SHOW,
-      title: 'Severance',
-      originalTitle: 'Severance',
-      alternativeTitles: [],
-      year: 2022,
-    }),
   getSeason: (_id, season) =>
     Promise.resolve(SEASONS.find((candidate) => candidate.season === season) ?? null),
   getSeriesDetails: () =>

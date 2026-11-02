@@ -6,6 +6,7 @@
   import {
     canRun,
     formatSize,
+    isSettling,
     libraryItems,
     type ItemDetail,
     type LibraryItem,
@@ -27,7 +28,7 @@
 
   // The parent keys this panel on the item, so what is read here once is right for its life.
   /* svelte-ignore state_referenced_locally */
-  const settling = item.state === 'review' || item.state === 'unrecognized';
+  const settling = isSettling(item);
   let detail = $state<ItemDetail | undefined>(undefined);
   let entry = $state<Arrival | undefined>(undefined);
   let failure = $state<unknown>(undefined);

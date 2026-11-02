@@ -54,7 +54,7 @@ export interface SettingsPatch {
 }
 
 /** A stable handle for a webhook, so the UI can name one without being told its secret URL. */
-export const webhookId = (url: string): string =>
+const webhookId = (url: string): string =>
   createHash('sha256').update(url).digest('hex').slice(0, 12);
 
 type Env = Readonly<Record<string, string | undefined>>;

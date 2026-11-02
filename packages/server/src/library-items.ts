@@ -480,10 +480,7 @@ type Writable = 'nfo' | 'poster' | 'fanart';
  * Which files the profile writes for a work of this kind. A movie written flat (no folder) gets no
  * fixed-name file (`poster.jpg` would be every movie's). For an episode only its own NFO counts.
  */
-export function writes(
-  profile: Profile,
-  kind: 'movie' | 'series' | null,
-): Record<Writable, boolean> {
+function writes(profile: Profile, kind: 'movie' | 'series' | null): Record<Writable, boolean> {
   if (kind === 'series') {
     // An episode has its own NFO; the show's and the seasons' files are not a row's to carry.
     return { nfo: profile.nfo !== null, poster: false, fanart: false };
@@ -581,7 +578,7 @@ const kindOf = (entry: Pick<Entry, 'parsed'>): 'movie' | 'series' | null =>
   entry.parsed.kind === 'movie' ? 'movie' : entry.parsed.kind === 'episode' ? 'series' : null;
 
 /** The row for a file of a scan, from the entry the scan stored for it. */
-export function itemOf(
+function itemOf(
   entry: Entry,
   profile: Profile,
   libraryId: string,

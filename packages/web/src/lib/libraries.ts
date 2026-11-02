@@ -8,11 +8,6 @@ import {
   type ProfileForm,
 } from './settings.js';
 
-/** The tabs of a scan result, as the server counts them. */
-export type ScanTab = 'rename' | 'conflict' | 'ambiguous' | 'unrecognized' | 'compliant';
-/** Files per tab; `renamed` counts those already transferred, which no tab lists any more. */
-export type ScanCounts = Readonly<Record<ScanTab, number>> & { readonly renamed: number };
-
 export type LibraryKind = 'movie' | 'series';
 /** The ids of the libraries an arrival folder sends its releases to. */
 export interface LibraryInto {
@@ -36,11 +31,7 @@ export interface Library {
   readonly lastScan: {
     readonly jobId: string;
     readonly status: 'queued' | 'running' | 'done' | 'failed';
-    readonly finishedAt: string | null;
-    readonly counts: ScanCounts;
   } | null;
-  /** Jobs of this library queued or running. */
-  readonly queued: number;
   /** A scan of the whole source is queued or running. */
   readonly scanning: boolean;
 }

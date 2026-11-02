@@ -47,7 +47,7 @@ export interface JobDetail {
   } | null;
 }
 
-/** What `GET /api/batches` and `GET /api/batches/:id` return, as far as the screen reads it. */
+/** A batch of `GET /api/history`, and what `GET /api/batches/:id` adds, as far as the screen reads it. */
 export interface BatchSummary {
   readonly id: string;
   readonly at: string;

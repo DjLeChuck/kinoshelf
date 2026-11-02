@@ -392,7 +392,7 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
           ...(request.body.libraryId !== undefined && { libraryId: request.body.libraryId }),
         },
       );
-      events.emit('arrivals', 'settings');
+      events.emit('arrivals');
       return { ...(presentEntry(entry) as object), followers };
     },
   );

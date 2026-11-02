@@ -32,7 +32,7 @@ export const healthSchema = {
   },
 } as const;
 
-export const summarySchema = {
+const summarySchema = {
   type: 'object',
   required: CLASSIFICATIONS,
   properties: Object.fromEntries(CLASSIFICATIONS.map((name) => [name, { type: 'integer' }])),
@@ -718,15 +718,6 @@ export const onboardingPatchSchema = {
   anyOf: [{ required: ['step', 'state'] }, { required: ['finished'] }],
 } as const;
 
-const scanTabs = ['rename', 'ambiguous', 'unrecognized', 'compliant', 'conflict'] as const;
-
-/** Files per tab of a scan: handled files leave their tab (`renamed` counts the transferred). */
-export const scanCountsSchema = {
-  type: 'object',
-  required: [...scanTabs, 'renamed'],
-  properties: Object.fromEntries([...scanTabs, 'renamed'].map((tab) => [tab, { type: 'integer' }])),
-} as const;
-
 export const arrivalsSchema = {
   type: 'object',
   required: ['total', 'sources', 'items'],
@@ -976,7 +967,6 @@ export const librarySchema = {
     'threshold',
     'watch',
     'lastScan',
-    'queued',
     'scanning',
   ],
   properties: {
@@ -995,16 +985,12 @@ export const librarySchema = {
     lastScan: {
       type: 'object',
       nullable: true,
-      required: ['jobId', 'status', 'finishedAt', 'counts'],
+      required: ['jobId', 'status'],
       properties: {
         jobId: { type: 'string', format: 'uuid' },
         status: { type: 'string', enum: ['queued', 'running', 'done', 'failed'] },
-        finishedAt: { type: 'string', format: 'date-time', nullable: true },
-        counts: scanCountsSchema,
       },
     },
-    /** Jobs of this library queued or running (scans, releases of its watched folder). */
-    queued: { type: 'integer' },
     /** A scan of the whole source is queued or running. */
     scanning: { type: 'boolean' },
   },

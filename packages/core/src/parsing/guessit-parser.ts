@@ -33,7 +33,6 @@ const text = (value: unknown): string | undefined =>
   typeof value === 'string' && value.trim() !== '' ? value : undefined;
 const count = (value: unknown): number | undefined =>
   typeof value === 'number' && Number.isFinite(value) ? value : undefined;
-// guessit already folds `UK` into `GB`; only a plain two-letter code is trusted.
 // An explicit marker that a number is a season/episode: `S02E05`, `2x05`, `Season 2`, `Épisode 5`.
 const EPISODE_MARKER =
   /s\d+\s*[-.]?\s*e\d+|\b\d{1,2}x\d{2,3}\b|saison|season|[ée]pisode|\bep?\s?\d/i;
@@ -55,6 +54,7 @@ function otherTitlesOf(title: string): readonly string[] {
   return [];
 }
 
+// guessit already folds `UK` into `GB`; only a plain two-letter code is trusted.
 const countryOf = (value: unknown): string | undefined =>
   typeof value === 'string' && /^[A-Za-z]{2}$/.test(value) ? value.toUpperCase() : undefined;
 

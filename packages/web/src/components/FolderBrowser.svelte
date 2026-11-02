@@ -152,7 +152,7 @@
 
   .entry:hover,
   .entry:focus-visible {
-    background: var(--hover, var(--border));
+    background: var(--border);
   }
 
   .actions {

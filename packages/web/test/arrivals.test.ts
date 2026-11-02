@@ -70,7 +70,7 @@ describe('paths', () => {
 describe('posterUrl', () => {
   it('goes through the server, whatever the slash of TMDB’s path', () => {
     expect(posterUrl('/abc.jpg')).toBe('/api/images/w92/abc.jpg');
-    expect(posterUrl('abc.jpg', 'w154')).toBe('/api/images/w154/abc.jpg');
+    expect(posterUrl('abc.jpg')).toBe('/api/images/w92/abc.jpg');
   });
 
   it('is absent without a poster, and never points at TMDB', () => {

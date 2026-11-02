@@ -52,22 +52,6 @@ export interface Entry {
 
 export type JobSummary = Record<Classification, number>;
 
-/**
- * The views of a scan. A file leaves its tab once it is handled (transferred, set aside), and a
- * file that failed to transfer is back in `rename`.
- */
-export const SCAN_TABS = ['rename', 'ambiguous', 'unrecognized', 'compliant', 'conflict'] as const;
-export type ScanTab = (typeof SCAN_TABS)[number];
-export type ScanCounts = Record<ScanTab, number> & { renamed: number };
-
-const TAB_FILTERS: Record<ScanTab, string> = {
-  rename: "classification = 'to-rename' AND (resolution IS NULL OR resolution = 'failed')",
-  ambiguous: "classification = 'ambiguous' AND resolution IS NULL",
-  unrecognized: "classification = 'unrecognized' AND resolution IS NULL",
-  compliant: "classification = 'compliant'",
-  conflict: "classification = 'conflict' AND resolution IS NULL",
-};
-
 interface EntryRow {
   id: string;
   job_id: string;
@@ -181,26 +165,6 @@ export class EntryStore {
       .map(toEntry);
   }
 
-  /** What each tab of a scan holds, and how many files it already transferred. */
-  tabCounts(jobId: string): ScanCounts {
-    const counts = { renamed: 0 } as ScanCounts;
-    for (const tab of SCAN_TABS) {
-      counts[tab] =
-        this.database
-          .prepare<[string], { total: number }>(
-            `SELECT COUNT(*) AS total FROM job_entries WHERE job_id = ? AND ${TAB_FILTERS[tab]}`,
-          )
-          .get(jobId)?.total ?? 0;
-    }
-    counts.renamed =
-      this.database
-        .prepare<[string], { total: number }>(
-          "SELECT COUNT(*) AS total FROM job_entries WHERE job_id = ? AND resolution = 'done'",
-        )
-        .get(jobId)?.total ?? 0;
-    return counts;
-  }
-
   /**
    * Files of the arrival folders (and of jobs sent by hand, which belong to none) that wait for a
    * human: a file to choose a work for, or one whose transfer failed. A scan of a library
@@ -289,18 +253,6 @@ export class EntryStore {
          ORDER BY seq`,
       )
       .all(jobId)
-      .map(toEntry);
-  }
-
-  /** Files nothing decided yet (no candidate was convincing, or none found), across all jobs. */
-  undecided(): Entry[] {
-    return this.database
-      .prepare<[], EntryRow>(
-        `SELECT ${COLUMNS} FROM job_entries
-         WHERE classification IN ('ambiguous', 'unrecognized') AND resolution IS NULL
-         ORDER BY seq`,
-      )
-      .all()
       .map(toEntry);
   }
 

@@ -2,7 +2,7 @@ import type { ErrorInfo } from './errors.js';
 import type { ExternalId, ParsedMedia } from './media.js';
 import type { Operation, OperationResult, TransferMode } from './operation.js';
 
-/** In v0.1 the only resolution is to skip the item; the destination is never overwritten. */
+/** Why an item cannot go where the profile wants it; the destination is never overwritten. */
 export type ConflictReason =
   /** A file already exists at the destination: never overwritten by default. */
   | 'destination-exists'

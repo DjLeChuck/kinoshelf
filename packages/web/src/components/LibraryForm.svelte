@@ -242,7 +242,7 @@
 
   <details class="card advanced">
     <summary>{t('web.libraries.advanced')}</summary>
-    <h2 id="lib-threshold-title">{t('web.libraries.threshold')}</h2>
+    <h2>{t('web.libraries.threshold')}</h2>
     <label class="check">
       <input type="checkbox" bind:checked={form.defaultThreshold} />
       {t('web.libraries.threshold.default')}

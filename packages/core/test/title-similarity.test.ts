@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { normalizeTitle, titleSimilarity } from '../src/index.js';
+import { normalizeTitle, titleSimilarity } from '../src/matching/title-similarity.js';
 
 describe('normalizeTitle', () => {
   it.each([

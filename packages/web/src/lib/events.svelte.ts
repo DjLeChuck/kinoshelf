@@ -6,7 +6,6 @@ export type Topic = 'jobs' | 'progress' | 'arrivals' | 'history' | 'settings' | 
 const TOPICS: readonly Topic[] = ['jobs', 'progress', 'arrivals', 'history', 'settings', 'ready'];
 const listeners = new Map<Topic, Set<() => void>>();
 let source: EventSource | undefined;
-let connected = $state(false);
 
 function fire(topic: Topic): void {
   for (const listener of listeners.get(topic) ?? []) {
@@ -21,30 +20,17 @@ export function connectEvents(): void {
   }
   source = new EventSource('/api/events');
   for (const topic of TOPICS) {
+    // The browser reconnects by itself; `ready` then tells the views to refetch what they missed.
     source.addEventListener(topic, () => {
-      if (topic === 'ready') {
-        connected = true;
-      }
       fire(topic);
     });
   }
-  // The browser reconnects by itself; `ready` then tells the views to refetch what they missed.
-  source.addEventListener('error', () => {
-    connected = false;
-  });
 }
 
 export function disconnectEvents(): void {
   source?.close();
   source = undefined;
-  connected = false;
 }
-
-export const stream = {
-  get connected(): boolean {
-    return connected;
-  },
-};
 
 /**
  * Runs `refetch` now and whenever one of `topics` fires (a burst counts once), until the

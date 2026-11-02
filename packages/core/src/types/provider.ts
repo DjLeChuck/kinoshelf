@@ -59,7 +59,7 @@ export interface SeasonInfo {
   readonly episodes: readonly EpisodeInfo[];
 }
 
-/** Metadata source (TMDB in v0.1). No player-specific rule belongs here. */
+/** Metadata source (TMDB today). No player-specific rule belongs here. */
 export interface MetadataProvider {
   readonly name: string;
   searchMovies(query: SearchQuery): Promise<readonly MovieCandidate[]>;
@@ -70,9 +70,6 @@ export interface MetadataProvider {
    * regular season. Checking that an episode exists in the returned season is the matcher's job.
    */
   getSeason(seriesId: ExternalId, season: number, language?: string): Promise<SeasonInfo | null>;
-  /** Looks a work up by id; `null` if the provider does not know it (any other failure throws). */
-  getMovie(id: ExternalId, language?: string): Promise<MovieCandidate | null>;
-  getSeries(id: ExternalId, language?: string): Promise<SeriesCandidate | null>;
   /** Full record for a metadata file; `null` if unknown (any other failure throws). */
   getMovieDetails(id: ExternalId, language?: string): Promise<MovieDetails | null>;
   getSeriesDetails(id: ExternalId, language?: string): Promise<SeriesDetails | null>;
