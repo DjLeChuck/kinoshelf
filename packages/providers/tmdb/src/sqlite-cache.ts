@@ -24,7 +24,8 @@ export class SqliteHttpCache implements HttpCache {
       status INTEGER NOT NULL,
       body TEXT NOT NULL,
       expires_at INTEGER NOT NULL
-    )`);
+    );
+    CREATE INDEX IF NOT EXISTS tmdb_http_cache_expires ON tmdb_http_cache (expires_at)`);
     this.db = drizzle(sqlite);
   }
 

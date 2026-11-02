@@ -3,6 +3,7 @@ import swagger from '@fastify/swagger';
 import { KinoshelfError, SqliteJournal, type Journal } from '@kinoshelf/core';
 import type { Database } from 'better-sqlite3';
 import Fastify, { type FastifyInstance } from 'fastify';
+import { SqliteHttpCache } from '@kinoshelf/provider-tmdb';
 import { ApiError } from './api-error.js';
 import { hasApiKey, isValidApiKey } from './auth.js';
 import { ProgressTracker } from './progress.js';
@@ -16,7 +17,7 @@ import { createTranslator, detectLocale } from '@kinoshelf/i18n';
 import type { DeliveryOptions } from './notify/delivery.js';
 import { Notifier } from './notify/notifier.js';
 import { createProcessor, type ProcessorDeps } from './processor.js';
-import { purgeHistory } from './purge.js';
+import { forgetReplacedScans, purgeHistory, type LibraryScan } from './purge.js';
 import { registerFsRoutes } from './fs-routes.js';
 import { registerLibraryRoutes } from './library-routes.js';
 import { jobPresenter, registerRoutes } from './routes.js';
@@ -106,6 +107,10 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
   const jobs = new JobStore(options.database, entries, executions);
   const journal = options.journal?.(options.database) ?? new SqliteJournal(options.database);
   const items = new LibraryItemStore(options.database);
+  const typedScans = (): LibraryScan[] =>
+    (options.config.libraries ?? []).flatMap((library) =>
+      library.type ? [{ libraryId: library.id, source: library.source }] : [],
+    );
   const snapshot = new LibrarySnapshot({
     config: () => options.config,
     jobs,
@@ -197,6 +202,9 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
         // Before the snapshot and the notification: a file is planned for the library it goes to.
         await service.planArrivals(job);
         await snapshot.scanned(job);
+        if (options.retentionDays) {
+          forgetReplacedScans(options.database, typedScans());
+        }
         if (job.libraryId) {
           probes.enqueue(job.libraryId);
         }
@@ -249,9 +257,17 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
   let purgeTimer: NodeJS.Timeout | undefined;
   let closeStreams = (): void => undefined;
   const purge = (): void => {
-    const purged = purgeHistory(options.database, { olderThanDays: options.retentionDays ?? 0 });
+    const purged = purgeHistory(options.database, {
+      olderThanDays: options.retentionDays ?? 0,
+      scans: typedScans(),
+    });
     if (purged.jobs > 0) {
       app.log.info(purged, 'Forgot the history of finished jobs');
+    }
+    // Disposable, unlike the history: expired answers go whatever the retention.
+    const expired = new SqliteHttpCache(options.database).prune(Date.now());
+    if (expired > 0) {
+      app.log.info({ expired }, 'Forgot the expired TMDB answers');
     }
   };
   app.addHook('onReady', () => {
@@ -265,11 +281,9 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
       seriesFiles.touch(id);
     });
     watcher.configure(watcherSettings(options.config));
-    if (options.retentionDays) {
-      purge();
-      // Not kept alive by the timer: the process leaves when the server closes.
-      purgeTimer = setInterval(purge, 86_400_000).unref();
-    }
+    purge();
+    // Not kept alive by the timer: the process leaves when the server closes.
+    purgeTimer = setInterval(purge, 86_400_000).unref();
   });
   // `preClose` runs before the server waits for its connections: an event stream never ends alone.
   app.addHook('preClose', () => {

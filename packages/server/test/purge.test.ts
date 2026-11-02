@@ -1,10 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import Database from 'better-sqlite3';
+import { join } from 'node:path';
 import { SqliteJournal } from '@kinoshelf/core';
+import { SqliteHttpCache } from '@kinoshelf/provider-tmdb';
 import { buildApp } from '../src/app.js';
 import { migrated } from '../src/database.js';
-import { purgeHistory } from '../src/purge.js';
-import { cleanup, track } from './harness.js';
+import { forgetReplacedScans, purgeHistory } from '../src/purge.js';
+import { cleanup, harness, makeDir, put, track } from './harness.js';
 
 afterEach(cleanup);
 
@@ -158,6 +160,110 @@ describe('purgeHistory', () => {
   });
 });
 
+describe('replaced scans', () => {
+  const SCANS = [{ libraryId: 'films', source: '/films' }];
+
+  /** Scans in the order given (the queue's order), each with an unrecognized file nobody settled. */
+  function scans() {
+    const t = setup();
+    const scan = (
+      id: string,
+      status: string,
+      ageDays: number,
+      libraryId = 'films',
+      path = '/films',
+    ) => {
+      t.database
+        .prepare(
+          'INSERT INTO jobs (id, path, library_id, status, created_at, finished_at) VALUES (?, ?, ?, ?, ?, ?)',
+        )
+        .run(id, path, libraryId, status, daysAgo(ageDays + 1), daysAgo(ageDays));
+      t.entry(id, 'unrecognized', null);
+    };
+    const snapshotOf = (jobId: string) =>
+      t.database
+        .prepare(
+          "INSERT INTO library_items (library_id, path, state, scan_job_id, scanned_at) VALUES ('films', ?, 'ok', ?, 'x')",
+        )
+        .run(`/films/${jobId}.mkv`, jobId);
+    return { ...t, scan, snapshotOf };
+  }
+
+  it('forgets at once the scans a later one replaced, with their files left undecided', () => {
+    const { scan, snapshotOf, jobsLeft, count, database } = scans();
+    scan('a-first', 'done', 2);
+    scan('b-failed', 'failed', 1);
+    scan('c-latest', 'done', 0);
+    snapshotOf('c-latest');
+
+    expect(forgetReplacedScans(database, SCANS)).toEqual({ jobs: 2, entries: 2, executions: 0 });
+    expect(jobsLeft()).toEqual(['c-latest']);
+    expect(count('job_entries')).toBe(1);
+  });
+
+  it('keeps the latest scan, one that is still running after it, and a failed one after it', () => {
+    const { scan, jobsLeft, database } = scans();
+    scan('a-done', 'done', 3);
+    scan('b-failed', 'failed', 2);
+    expect(forgetReplacedScans(database, SCANS).jobs).toBe(0);
+
+    scan('c-running', 'running', 0);
+    expect(forgetReplacedScans(database, SCANS).jobs).toBe(0);
+    expect(jobsLeft()).toEqual(['a-done', 'b-failed', 'c-running']);
+  });
+
+  it("keeps what is not a scan of a typed library's whole source", () => {
+    const { scan, jobsLeft, database } = scans();
+    scan('a-release', 'done', 3, 'films', '/films/Some.Release');
+    scan('b-arrivals', 'done', 3, 'downloads', '/downloads');
+    scan('c-release', 'done', 2, 'films', '/films/Some.Release');
+    scan('d-arrivals', 'done', 2, 'downloads', '/downloads');
+    scan('e-films', 'done', 1);
+
+    expect(forgetReplacedScans(database, SCANS).jobs).toBe(0);
+    expect(forgetReplacedScans(database, []).jobs).toBe(0);
+    expect(jobsLeft()).toHaveLength(5);
+  });
+
+  it('keeps a replaced scan the snapshot still points at', () => {
+    const { scan, snapshotOf, jobsLeft, database } = scans();
+    scan('a-old', 'done', 2);
+    snapshotOf('a-old');
+    scan('b-new', 'done', 1);
+
+    expect(forgetReplacedScans(database, SCANS).jobs).toBe(0);
+    expect(jobsLeft()).toEqual(['a-old', 'b-new']);
+  });
+
+  it('leaves a replaced scan that made a batch to the retention, then forgets it', () => {
+    const { scan, execution, jobsLeft, database, purge } = scans();
+    scan('a-old', 'done', 60);
+    execution('a-old', 'done');
+    scan('b-new', 'done', 1);
+
+    expect(forgetReplacedScans(database, SCANS).jobs).toBe(0);
+    expect(purge().jobs).toBe(0); // no `scans`: its undecided file keeps it
+    expect(purgeHistory(database, { olderThanDays: 30, now: () => NOW, scans: SCANS })).toEqual({
+      jobs: 1,
+      entries: 1,
+      executions: 1,
+    });
+    expect(jobsLeft()).toEqual(['b-new']);
+  });
+
+  it('still keeps a replaced scan with a transfer under way', () => {
+    const { scan, execution, jobsLeft, database } = scans();
+    scan('a-old', 'done', 60);
+    execution('a-old', 'running');
+    scan('b-new', 'done', 1);
+
+    expect(purgeHistory(database, { olderThanDays: 30, now: () => NOW, scans: SCANS }).jobs).toBe(
+      0,
+    );
+    expect(jobsLeft()).toEqual(['a-old', 'b-new']);
+  });
+});
+
 describe('the purge of a running server', () => {
   const oldJob = (database: Database.Database) =>
     database
@@ -185,6 +291,43 @@ describe('the purge of a running server', () => {
     oldJob(purged);
     track(await buildApp({ ...options(purged), retentionDays: 30 }));
     expect(jobCount(purged)).toBe(0);
+  });
+
+  it('forgets the expired TMDB answers when it starts, whatever the retention', async () => {
+    const database = migrated(new Database(':memory:'));
+    const cache = new SqliteHttpCache(database);
+    cache.set('old', { status: 200, body: '{}' }, Date.now() - 1000);
+    cache.set('fresh', { status: 200, body: '{}' }, Date.now() + 60_000);
+    track(await buildApp(options(database)));
+    expect(
+      database
+        .prepare<[], { key: string }>('SELECT key FROM tmdb_http_cache')
+        .all()
+        .map((row) => row.key),
+    ).toEqual(['fresh']);
+  });
+
+  it('forgets the scan a new one of the same library replaced, once it ends', async () => {
+    const source = await makeDir();
+    await put(join(source, 'Mystery.Home.Video.mkv'));
+    const h = await harness({
+      retentionDays: 30,
+      config: { libraries: [{ id: 'films', name: 'Films', source, type: 'movie' }] },
+    });
+    const scan = async () => {
+      const id = (await h.request('POST', '/api/libraries/films/scan')).json<{ id: string }>().id;
+      await h.app.jobs.idle();
+      return id;
+    };
+    const first = await scan();
+    const second = await scan();
+
+    const left = h.database
+      .prepare<[], { id: string }>('SELECT id FROM jobs')
+      .all()
+      .map((row) => row.id);
+    expect(left).toEqual([second]);
+    expect(left).not.toContain(first);
   });
 
   it('forgets again every day while it runs', async () => {
