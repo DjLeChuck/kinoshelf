@@ -1,5 +1,5 @@
 import type { Locale } from '@kinoshelf/i18n';
-import type { ErrorBody } from './queue.js';
+import type { ErrorBody } from './arrivals.js';
 
 export type BatchStatus = 'done' | 'undone' | 'failed';
 export type Mode = 'copy' | 'hardlink' | 'move';

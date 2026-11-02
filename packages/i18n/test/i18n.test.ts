@@ -40,12 +40,9 @@ describe('catalogs', () => {
     // Words spelled the same in both languages are listed here, so a real omission still shows.
     const SAME_IN_BOTH: readonly string[] = [
       'entry.score',
-      'web.home.suggest.eyebrow',
-      'web.home.services.title',
-      'web.job.title',
-      'web.job.cause',
-      'web.job.col.classification',
-      'web.job.settings.mode',
+      'web.library.scan.running',
+      'web.library.col.fanart',
+      'web.library.runtime',
     ];
     const identical = (Object.keys(en) as (keyof typeof en)[]).filter(
       (key) => fr[key] === en[key] && !key.startsWith('entry.') && !SAME_IN_BOTH.includes(key),

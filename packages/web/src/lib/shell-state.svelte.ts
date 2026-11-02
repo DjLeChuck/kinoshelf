@@ -2,6 +2,7 @@ import { api } from './api.js';
 import type { Onboarding } from './onboarding.js';
 
 let onboarding = $state<Onboarding | undefined>(undefined);
+let arrivals = $state<number | undefined>(undefined);
 
 /**
  * Whether the welcome page has been left, fetched once by the shell for the navigation and the
@@ -12,6 +13,10 @@ export const shell = {
   get onboarding(): Onboarding | undefined {
     return onboarding;
   },
+  /** Files waiting in the arrival folders: the badge of the navigation. */
+  get arrivals(): number | undefined {
+    return arrivals;
+  },
   setOnboarding(value: Onboarding): void {
     onboarding = value;
   },
@@ -20,6 +25,13 @@ export const shell = {
       onboarding = await api.get<Onboarding>('/api/onboarding');
     } catch {
       // The pages say what failed when they load their own data.
+    }
+  },
+  async loadArrivals(): Promise<void> {
+    try {
+      arrivals = (await api.get<{ total: number }>('/api/arrivals?limit=1')).total;
+    } catch {
+      // Same as above.
     }
   },
 };

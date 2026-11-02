@@ -1,6 +1,6 @@
 <script lang="ts">
   import { t } from '../lib/i18n.svelte.js';
-  import { sameCandidate, type Candidate } from '../lib/queue.js';
+  import { sameCandidate, type Candidate } from '../lib/arrivals.js';
   import Poster from './Poster.svelte';
 
   let {

@@ -44,6 +44,6 @@ test('welcomes a new install, remembers a skipped step and ends on the libraries
   await page.getByRole('button', { name: 'Analyse', exact: true }).click();
 
   await expect(page.getByRole('heading', { name: 'Libraries' })).toBeVisible();
-  await expect(page).toHaveURL(/\/libraries$/);
+  await expect(page).toHaveURL(/\/libraries/);
   await expect(page.getByRole('link', { name: 'History' })).toBeVisible();
 });

@@ -6,6 +6,8 @@ describe('matchRoute', () => {
   it.each([
     ['/libraries', 'libraries'],
     ['/libraries/', 'libraries'],
+    ['/libraries/films', 'libraries'],
+    ['/arrivals', 'libraries'],
     ['/history', 'history'],
     ['/history/', 'history'],
     ['/history/3f2a', 'history'],

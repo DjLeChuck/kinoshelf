@@ -3,17 +3,16 @@
   import { messageOf } from '../lib/errors.js';
   import { t } from '../lib/i18n.svelte.js';
   import {
-    episodeLabel,
     folderOf,
-    releaseName,
     statusOf,
+    titleGuess,
     toMatchBody,
     validate,
+    type Arrival,
     type Candidate,
     type ConflictBody,
     type Preview,
-    type QueueEntry,
-  } from '../lib/queue.js';
+  } from '../lib/arrivals.js';
   import type { MessageKey } from '@kinoshelf/i18n';
   import CandidateList from './CandidateList.svelte';
 
@@ -21,8 +20,8 @@
     entry,
     ondone,
   }: {
-    entry: QueueEntry;
-    /** The file left the queue (transferred or set aside): what to tell the user. */
+    entry: Arrival;
+    /** The file left the list (transferred or set aside): what to tell the user. */
     ondone: (message: string) => void;
   } = $props();
 
@@ -34,20 +33,24 @@
   let results = $state<readonly Candidate[] | undefined>(undefined);
   let searching = $state(false);
   /* svelte-ignore state_referenced_locally */
-  let query = $state(entry.parsed.title ?? '');
+  let query = $state(titleGuess(entry.release).title);
   /* svelte-ignore state_referenced_locally */
-  let year = $state(entry.parsed.year ? String(entry.parsed.year) : '');
+  let year = $state(titleGuess(entry.release).year ?? '');
   let kind = $state<'' | 'movie' | 'series'>('');
   let busy = $state(false);
   let remember = $state(true);
+  /* svelte-ignore state_referenced_locally */
+  let library = $state(entry.destination.libraryId ?? entry.destinationOptions[0]?.id ?? '');
+  let rememberDestination = $state(false);
   let failure = $state<unknown>(undefined);
   let refused = $state<readonly ConflictBody[]>([]);
 
   const status = $derived(statusOf(entry));
-  const name = $derived(releaseName(entry.path));
-  const numbering = $derived(episodeLabel(entry.parsed));
-  const parsedKind = $derived(
-    (['movie', 'episode'] as const).find((k) => k === entry.parsed.kind) ?? 'unknown',
+  const name = $derived(entry.release);
+  const guess = $derived(titleGuess(entry.release));
+  /** Only a library other than the default one is a choice; the server knows the default. */
+  const chosenLibrary = $derived(
+    library !== '' && library !== entry.destination.libraryId ? library : undefined,
   );
   const conflicts = $derived(preview?.conflicts ?? []);
   const canValidate = $derived(
@@ -55,6 +58,7 @@
       !busy &&
       !previewing &&
       preview !== undefined &&
+      library !== '' &&
       conflicts.length === 0,
   );
 
@@ -65,6 +69,7 @@
   let latest = 0;
   $effect(() => {
     const candidate = selected;
+    const destination = chosenLibrary;
     const ticket = ++latest;
     preview = undefined;
     refused = [];
@@ -74,7 +79,10 @@
     }
     previewing = true;
     api
-      .post<Preview>(`/api/queue/${entry.id}/preview`, toMatchBody(candidate))
+      .post<Preview>(`/api/entries/${entry.id}/preview`, {
+        ...toMatchBody(candidate),
+        ...(destination !== undefined && { libraryId: destination }),
+      })
       .then((answer) => {
         if (ticket === latest) {
           preview = answer;
@@ -121,9 +129,18 @@
     busy = true;
     failure = undefined;
     try {
-      const outcome = await validate(entry, selected, api.post, { remember });
+      const outcome = await validate(
+        entry,
+        {
+          candidate: selected,
+          remember,
+          libraryId: chosenLibrary,
+          rememberDestination: rememberDestination && library !== '',
+        },
+        api.post,
+      );
       if (outcome.status === 'conflict') {
-        refused = outcome.entry.conflicts;
+        refused = outcome.conflicts;
       } else {
         ondone(
           outcome.rematched > 0
@@ -142,7 +159,7 @@
     busy = true;
     failure = undefined;
     try {
-      await api.post(`/api/queue/${entry.id}/ignore`);
+      await api.post(`/api/entries/${entry.id}/ignore`);
       ondone(t('web.queue.ignored', { name }));
     } catch (error) {
       failure = error;
@@ -170,10 +187,14 @@
   </header>
 
   <dl class="tags" aria-label={t('web.queue.detected')}>
-    <div class="chip chip-neutral">{t(`web.queue.kind.${parsedKind}`)}</div>
-    {#if entry.parsed.title}<div class="chip chip-neutral">{entry.parsed.title}</div>{/if}
-    {#if entry.parsed.year}<div class="chip chip-neutral">{entry.parsed.year}</div>{/if}
-    {#if numbering}<div class="chip chip-neutral">{numbering}</div>{/if}
+    <div class="chip chip-neutral">
+      {t(
+        `web.queue.kind.${entry.kind === 'movie' ? 'movie' : entry.kind === 'series' ? 'series' : 'unknown'}`,
+      )}
+    </div>
+    {#if guess.title}<div class="chip chip-neutral">{guess.title}</div>{/if}
+    {#if guess.year}<div class="chip chip-neutral">{guess.year}</div>{/if}
+    {#if entry.resolution}<div class="chip chip-neutral">{entry.resolution}</div>{/if}
   </dl>
 
   {#if entry.error}
@@ -275,10 +296,32 @@
     <p class="alert alert-danger" role="alert">{messageOf(t, failure)}</p>
   {/if}
 
-  {#if entry.parsed.title}
+  {#if entry.destinationOptions.length > 0}
+    <section aria-labelledby="library-title">
+      <h3 id="library-title">{t('web.queue.library')}</h3>
+      <select
+        id="arrival-library"
+        class="input"
+        aria-labelledby="library-title"
+        bind:value={library}
+      >
+        {#each entry.destinationOptions as option (option.id)}
+          <option value={option.id}>{option.name}</option>
+        {/each}
+      </select>
+      {#if selected && library !== ''}
+        <label class="remember">
+          <input type="checkbox" bind:checked={rememberDestination} />
+          <span>{t('web.queue.remember-destination')}</span>
+        </label>
+      {/if}
+    </section>
+  {/if}
+
+  {#if guess.title}
     <label class="remember">
       <input type="checkbox" bind:checked={remember} />
-      <span>{t('web.queue.remember', { title: entry.parsed.title })}</span>
+      <span>{t('web.queue.remember', { title: guess.title })}</span>
     </label>
   {/if}
 

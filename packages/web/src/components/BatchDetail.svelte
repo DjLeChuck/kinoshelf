@@ -13,8 +13,8 @@
     type BatchDetail,
     type UndoReport,
   } from '../lib/history.js';
-  import { releaseName } from '../lib/queue.js';
-  import type { ErrorBody } from '../lib/queue.js';
+  import { releaseName } from '../lib/arrivals.js';
+  import type { ErrorBody } from '../lib/arrivals.js';
 
   let {
     id,

@@ -25,5 +25,9 @@ export function batchIdOf(path: string): string | undefined {
 /** The route a path belongs to; a trailing slash or a sub-path (`/history/abc`) still match. */
 export function matchRoute(path: string): RouteDefinition | undefined {
   const clean = path.length > 1 ? path.replace(/\/+$/, '') : path;
+  // Arrivals are the first tab of the libraries page.
+  if (clean === '/arrivals') {
+    return ROUTES.find(({ id }) => id === 'libraries');
+  }
   return ROUTES.find(({ path: base }) => clean === base || clean.startsWith(`${base}/`));
 }

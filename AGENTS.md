@@ -10,11 +10,13 @@ are done, and so is getting downloads in (see "Getting downloads in" below). The
 simplified to three entries: Libraries, History and Settings. A welcome shows at `/` on the first
 launch (`GET`/`PATCH /api/onboarding`, server migration 009) and the app then opens on Libraries. The
 libraries (organized in place, arrival folders) are configured in the Settings, with a server-side
-path picker; the Libraries page itself (content of each library, arrivals to validate, scan
-progress) and the merged History are still to be rebuilt on the new server API. Validating a file
-remembers its title (aliases). v1.0 is under way: the NFO and artwork writers and the `jellyfin` and
-`plex-nfo` profiles are built (see "NFO and artwork" below), metadata included for a library that is
-already organized.
+path picker. The Libraries page has a tab per typed library (list read from the snapshot, filters,
+scan progress, the page of an item) and an Arrivals tab (`/arrivals`) where a file is validated:
+candidate, destination library, "remember" boxes. Still to build: series (tree, missing episodes),
+"Refresh" and the rename preview, and the merged History. Validating a file remembers its title
+(aliases). v1.0 is under way: the NFO and artwork writers and the `jellyfin` and `plex-nfo`
+profiles are built (see "NFO and artwork" below), metadata included for a library that is already
+organized.
 
 Backlog, not built: skipping samples by size (today only by name: `sample.*`, a `Sample` folder);
 reading completion from a download client's own API (see "Getting downloads in").
@@ -232,7 +234,7 @@ in the same job queue:
   `watched_files` (migration 008, keyed by path, size and date). `pollSeconds > 0` replaces events
   for network shares; if events cannot be had it falls back to a minute-long poll and logs it.
 - A manual **Check now** (`POST /api/watch/scan`, which skips the settling time but never an
-  incomplete suffix); the web button for it left with the old queue page and comes back with Arrivals.
+  incomplete suffix); the web button for it is not rebuilt yet.
 
 Backlog, not built: reading completion from the client's own API (qBittorrent, Transmission), which
 would need one plugin per client. Watching the raw download folder stays out by design.

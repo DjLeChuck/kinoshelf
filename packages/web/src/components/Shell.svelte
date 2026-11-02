@@ -15,6 +15,7 @@
 
   // It feeds the nav and the root page, so it is fetched once, here.
   refetchOn(['settings', 'ready'], () => void shell.loadOnboarding());
+  refetchOn(['queue', 'jobs', 'settings', 'ready'], () => void shell.loadArrivals());
 
   // Until the welcome page is left only what it needs is shown; unknown, everything is.
   const routes = $derived(
@@ -48,6 +49,9 @@
         aria-current={router.route?.id === route.id ? 'page' : undefined}
       >
         {t(route.label)}
+        {#if route.id === 'libraries' && (shell.arrivals ?? 0) > 0}<span class="chip chip-warn"
+            >{shell.arrivals}</span
+          >{/if}
       </Link>
     {/each}
   </nav>

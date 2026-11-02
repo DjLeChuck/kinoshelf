@@ -1,6 +1,6 @@
 <script lang="ts">
   import { t } from '../lib/i18n.svelte.js';
-  import { posterUrl } from '../lib/queue.js';
+  import { posterUrl } from '../lib/arrivals.js';
 
   let { path }: { path: string | undefined } = $props();
 
