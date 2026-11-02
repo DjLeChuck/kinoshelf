@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
+  canRun,
   formatSize,
   episodeLabel,
   isSettling,
   isStalled,
   itemsUrl,
+  partition,
+  tally,
   scanPercent,
   showsUrl,
   type ScanProgress,
@@ -88,5 +91,40 @@ describe('isSettling', () => {
     expect(isSettling({ state: 'unrecognized' })).toBe(true);
     expect(isSettling({ state: 'rename' })).toBe(false);
     expect(isSettling({ state: 'ok' })).toBe(false);
+  });
+});
+
+describe('canRun and partition', () => {
+  const rows = [
+    { id: 'a', state: 'rename' },
+    { id: 'b', state: 'incomplete' },
+    { id: 'c', state: 'ok' },
+    { id: 'd', state: 'review' },
+  ] as const;
+
+  it('keeps what has something to run, and splits it by what is asked', () => {
+    expect(rows.filter(canRun).map(({ id }) => id)).toEqual(['a', 'b']);
+    expect(partition(rows)).toEqual({ rename: ['a'], refresh: ['b'] });
+  });
+});
+
+describe('tally', () => {
+  const op = (type: 'transfer' | 'write-file', status: 'done' | 'skipped' | 'failed') => ({
+    type,
+    role: null,
+    source: null,
+    destination: '/x',
+    status,
+    error: null,
+  });
+
+  it('counts moves and written files apart, and what would be left alone', () => {
+    const report = {
+      items: [
+        { entryId: '1', results: [op('transfer', 'done'), op('write-file', 'done')] },
+        { entryId: '2', results: [op('write-file', 'skipped'), op('write-file', 'failed')] },
+      ],
+    };
+    expect(tally(report)).toEqual({ transfers: 1, written: 2, skipped: 1, failed: 1 });
   });
 });

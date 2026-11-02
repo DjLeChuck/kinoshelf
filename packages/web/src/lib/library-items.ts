@@ -175,7 +175,66 @@ export function episodeLabel(
 export const isSettling = (item: Pick<LibraryItem, 'state'>): boolean =>
   item.state === 'review' || item.state === 'unrecognized';
 
+/** What a dry run of a selection says of one file: each operation, checked and not run. */
+export interface ReportOperation {
+  readonly type: 'transfer' | 'write-file' | 'download';
+  readonly role: string | null;
+  readonly source: string | null;
+  readonly destination: string;
+  readonly status: 'done' | 'failed' | 'skipped';
+  readonly error: {
+    readonly code: string;
+    readonly params?: Readonly<Record<string, string | number>>;
+  } | null;
+}
+
+export interface RunReport {
+  readonly batchId: string;
+  readonly items: readonly {
+    readonly entryId: string;
+    readonly results: readonly ReportOperation[];
+  }[];
+  /** Items of the selection with nothing to do. */
+  readonly skipped: readonly string[];
+}
+
+/** Only a video to rename or a file to complete has something to run. */
+export const canRun = (item: Pick<LibraryItem, 'state'>): boolean =>
+  item.state === 'rename' || item.state === 'incomplete';
+
+/** A selection split by what it asks: "Rename" takes the first, "Refresh" the second. */
+export function partition(items: readonly Pick<LibraryItem, 'id' | 'state'>[]): {
+  readonly rename: string[];
+  readonly refresh: string[];
+} {
+  return {
+    rename: items.filter(({ state }) => state === 'rename').map(({ id }) => id),
+    refresh: items.filter(({ state }) => state === 'incomplete').map(({ id }) => id),
+  };
+}
+
+/** What a report amounts to: the videos moved, the files written, and what would not be. */
+export function tally(report: Pick<RunReport, 'items'>): {
+  transfers: number;
+  written: number;
+  skipped: number;
+  failed: number;
+} {
+  const results = report.items.flatMap(({ results: operations }) => operations);
+  const count = (keep: (r: ReportOperation) => boolean): number => results.filter(keep).length;
+  return {
+    transfers: count(({ type, status }) => type === 'transfer' && status !== 'skipped'),
+    written: count(({ type, status }) => type !== 'transfer' && status !== 'skipped'),
+    skipped: count(({ status }) => status === 'skipped'),
+    failed: count(({ status }) => status === 'failed'),
+  };
+}
+
 export const libraryItems = {
+  preview: (libraryId: string, items: readonly string[]) =>
+    api.post<RunReport>(`/api/libraries/${libraryId}/execute`, { items, dryRun: true }),
+  run: (libraryId: string, items: readonly string[]) =>
+    api.post<{ skipped: readonly string[] }>(`/api/libraries/${libraryId}/execute`, { items }),
   page: (libraryId: string, query: ItemsQuery) => api.get<ItemsPage>(itemsUrl(libraryId, query)),
   shows: (libraryId: string, query: ShowsQuery) =>
     api.get<{ total: number; items: readonly Show[] }>(showsUrl(libraryId, query)),

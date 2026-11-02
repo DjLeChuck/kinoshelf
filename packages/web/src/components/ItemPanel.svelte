@@ -4,12 +4,14 @@
   import { t } from '../lib/i18n.svelte.js';
   import type { Arrival } from '../lib/arrivals.js';
   import {
+    canRun,
     formatSize,
     libraryItems,
     type ItemDetail,
     type LibraryItem,
   } from '../lib/library-items.js';
   import ArrivalDetail from './ArrivalDetail.svelte';
+  import RunDialog from './RunDialog.svelte';
   import Link from './Link.svelte';
 
   let {
@@ -29,6 +31,7 @@
   let detail = $state<ItemDetail | undefined>(undefined);
   let entry = $state<Arrival | undefined>(undefined);
   let failure = $state<unknown>(undefined);
+  let running = $state(false);
 
   async function load(): Promise<void> {
     const { entryId, id } = item;
@@ -104,7 +107,31 @@
         {t('web.library.col.fanart')}: {present(detail.fanart)}
       </dd>
     </dl>
+    {#if canRun(item)}
+      <div>
+        <button
+          type="button"
+          class="btn btn-primary"
+          onclick={() => {
+            running = true;
+          }}
+        >
+          {t(item.state === 'rename' ? 'web.library.run.rename' : 'web.library.run.refresh')}
+        </button>
+      </div>
+    {/if}
   </article>
+  {#if running}
+    <RunDialog
+      {libraryId}
+      items={[item]}
+      mode={item.state === 'rename' ? 'rename' : 'refresh'}
+      onclose={() => {
+        running = false;
+      }}
+      {ondone}
+    />
+  {/if}
 {:else}
   <p class="muted" role="status">{t('web.loading')}</p>
 {/if}

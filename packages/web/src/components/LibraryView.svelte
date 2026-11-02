@@ -8,6 +8,8 @@
     ITEM_FILTERS,
     PAGE_SIZE,
     SERIES_FILTERS,
+    canRun,
+    partition,
     lastScanFailed,
     libraryItems,
     scanPercent,
@@ -16,6 +18,7 @@
     type ShowFilter,
   } from '../lib/library-items.js';
   import ItemPanel from './ItemPanel.svelte';
+  import RunDialog from './RunDialog.svelte';
   import Link from './Link.svelte';
   import ScanProgress from './ScanProgress.svelte';
   import ShowsTree from './ShowsTree.svelte';
@@ -39,6 +42,19 @@
   let chosen = $state<string | undefined>(undefined);
   let notice = $state<string | undefined>(undefined);
   let starting = $state(false);
+  let picked = $state<readonly string[]>([]);
+  let running = $state<'rename' | 'refresh' | undefined>(undefined);
+
+  const pickedItems = $derived((page?.items ?? []).filter(({ id }) => picked.includes(id)));
+  const split = $derived(partition(pickedItems));
+  const toRun = $derived.by(() => {
+    const mode = running;
+    return mode === undefined ? [] : pickedItems.filter(({ id }) => split[mode].includes(id));
+  });
+
+  function pick(id: string, on: boolean): void {
+    picked = on ? [...picked, id] : picked.filter((other) => other !== id);
+  }
 
   // A series library reads as a tree of shows, until a filter asks for the files themselves
   // (the ones to validate, to rename, without NFO…): then it is the same flat list as the movies'.
@@ -182,11 +198,37 @@
     {:else if page.items.length === 0}
       <p class="card muted">{t('web.library.empty')}</p>
     {:else}
+      {#if picked.length > 0}
+        <div class="bar" role="group">
+          <span>{t('web.library.run.selected', { count: pickedItems.length })}</span>
+          <button
+            type="button"
+            class="btn btn-primary"
+            disabled={split.rename.length === 0}
+            onclick={() => {
+              running = 'rename';
+            }}
+          >
+            {t('web.library.run.rename')}
+          </button>
+          <button
+            type="button"
+            class="btn"
+            disabled={split.refresh.length === 0}
+            onclick={() => {
+              running = 'refresh';
+            }}
+          >
+            {t('web.library.run.refresh')}
+          </button>
+        </div>
+      {/if}
       <div class="layout">
         <div class="table-wrap">
           <table>
             <thead>
               <tr>
+                <th></th>
                 <th>{t('web.library.col.title')}</th>
                 <th>{t('web.library.col.year')}</th>
                 <th>{t('web.library.col.video')}</th>
@@ -200,6 +242,20 @@
             <tbody>
               {#each page.items as item (item.id)}
                 <tr class:current={open?.id === item.id}>
+                  <td>
+                    {#if canRun(item)}
+                      <input
+                        type="checkbox"
+                        aria-label={t('web.library.run.select', {
+                          name: item.title ?? item.path.split('/').pop() ?? '',
+                        })}
+                        checked={picked.includes(item.id)}
+                        onchange={(event) => {
+                          pick(item.id, event.currentTarget.checked);
+                        }}
+                      />
+                    {/if}
+                  </td>
                   <td>
                     <button
                       type="button"
@@ -264,6 +320,23 @@
   {/if}
 </div>
 
+{#if running && toRun.length > 0}
+  <RunDialog
+    libraryId={library.id}
+    items={toRun}
+    mode={running}
+    onclose={() => {
+      running = undefined;
+    }}
+    ondone={(message: string) => {
+      notice = message;
+      picked = [];
+      running = undefined;
+      void load();
+    }}
+  />
+{/if}
+
 <style>
   .stack {
     display: flex;
@@ -305,6 +378,12 @@
   .count {
     margin-left: 6px;
     color: var(--muted);
+  }
+
+  .bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
   }
 
   .notice {
