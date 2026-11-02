@@ -217,8 +217,8 @@ refuses to delete a library an arrival folder points at (`library.in-use`). Ther
   file left unmatched keeps waiting. A library deleted since is ignored: the default applies.
 - **The router reads the query** (`lib/router.svelte.ts`: `router.path` is the path alone, `router.query` the
   `?query`, `router.setQuery` changes it in place, with no history entry). The state filter of a library and of
-  Arrivals is `?state=…` (`oneOf` drops a value the filter does not know). The open tree of a series is still
-  not in the URL.
+  Arrivals is `?state=…` (`oneOf` drops a value the filter does not know). The open tree of a series is too: `?open=<tmdb ids>` for the
+  shows and `?seasons=<tmdb id>:<season>,…` for the seasons (`listOf`/`listParam`).
 - **Events** (`GET /api/events`): the payload-less topics are `jobs`, `arrivals` (files waiting for a human changed:
   match, ignore, cancel, a job ending), `history`, `settings`, and `ready` on each (re)connection.
 - **Snapshot** (`library_items`, server migration 012, `library-items.ts`): what a typed library holds,

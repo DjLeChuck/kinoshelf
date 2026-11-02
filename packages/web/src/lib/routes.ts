@@ -59,3 +59,13 @@ export function oneOf<T extends string>(
 ): T | undefined {
   return allowed.find((option) => option === value);
 }
+
+/** A comma-separated query value as a list (`?open=1,2`); empty or absent is no item. */
+export function listOf(value: string | null): string[] {
+  return (value ?? '').split(',').filter((part) => part !== '');
+}
+
+/** A list as a query value, `undefined` (the parameter is dropped) when it is empty. */
+export function listParam(values: readonly (string | number)[]): string | undefined {
+  return values.length === 0 ? undefined : values.join(',');
+}

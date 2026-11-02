@@ -4,6 +4,8 @@
   import { refetchOn } from '../lib/events.svelte.js';
   import { locale, t } from '../lib/i18n.svelte.js';
   import { formatDate } from '../lib/history.js';
+  import { router } from '../lib/router.svelte.js';
+  import { listOf, listParam } from '../lib/routes.js';
   import {
     PAGE_SIZE,
     episodeLabel,
@@ -48,8 +50,14 @@
   let shows = $state<{ total: number; items: readonly Show[] } | undefined>(undefined);
   let settling = $state<readonly LibraryItem[]>([]);
   let details = $state<Readonly<Record<number, ShowDetail>>>({});
-  let opened = $state<readonly number[]>([]);
-  let seasonsOpen = $state<readonly string[]>([]);
+  // What is open lives in the URL (`?open=<tmdb ids>&seasons=<tmdb id>:<season>,…`): a reload or a
+  // shared link opens the same shows.
+  const opened = $derived(
+    listOf(router.query.get('open'))
+      .map(Number)
+      .filter((id) => Number.isInteger(id)),
+  );
+  const seasonsOpen = $derived(listOf(router.query.get('seasons')));
   let settleOpen = $state(false);
   let selection = $state<Selection | undefined>(undefined);
   let failure = $state<unknown>(undefined);
@@ -121,10 +129,10 @@
   async function toggle(show: Show): Promise<void> {
     selection = { kind: 'show', tmdbId: show.tmdbId };
     if (opened.includes(show.tmdbId)) {
-      opened = opened.filter((id) => id !== show.tmdbId);
+      router.setQuery({ open: listParam(opened.filter((id) => id !== show.tmdbId)) });
       return;
     }
-    opened = [...opened, show.tmdbId];
+    router.setQuery({ open: listParam([...opened, show.tmdbId]) });
     try {
       // Opening a show counts what it lacks, so the badge of the list is right afterwards.
       details = { ...details, [show.tmdbId]: await libraryItems.show(libraryId, show.tmdbId) };
@@ -144,9 +152,11 @@
 
   const seasonKey = (tmdbId: number, season: number): string => `${tmdbId}:${season}`;
   function toggleSeason(key: string): void {
-    seasonsOpen = seasonsOpen.includes(key)
-      ? seasonsOpen.filter((k) => k !== key)
-      : [...seasonsOpen, key];
+    router.setQuery({
+      seasons: listParam(
+        seasonsOpen.includes(key) ? seasonsOpen.filter((k) => k !== key) : [...seasonsOpen, key],
+      ),
+    });
   }
 
   const mark = (value: boolean | null): string => (value === null ? '' : value ? '✓' : '✗');

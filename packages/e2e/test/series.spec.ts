@@ -67,6 +67,12 @@ test('shows which NFO and images a show and its seasons have', async ({ page, re
   const season = page.getByRole('row', { name: /Season 1/ });
   await expect(season.getByRole('cell').filter({ hasText: /^✓$/ })).toHaveCount(1);
 
+  // What is open stays open after a reload: it is in the address.
+  await expect(page).toHaveURL(/open=95396/);
+  await page.reload();
+  await expect(page.getByRole('row', { name: /Season 1/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /Hide the seasons of Severance/ })).toBeVisible();
+
   // The show lacks its fanart: the filter keeps it, and says how many.
   await page.getByRole('button', { name: /Missing show files\s*1/ }).click();
   await expect(page).toHaveURL(/state=missing-show-files/);

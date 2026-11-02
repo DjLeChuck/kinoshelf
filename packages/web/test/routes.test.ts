@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { en, fr } from '@kinoshelf/i18n';
 import {
   historyIdOf,
+  listOf,
+  listParam,
   matchRoute,
   oneOf,
   ROUTES,
@@ -79,5 +81,19 @@ describe('the query of a page', () => {
     expect(oneOf('review', ['review', 'rename'] as const)).toBe('review');
     expect(oneOf('nope', ['review', 'rename'] as const)).toBeUndefined();
     expect(oneOf(null, ['review'] as const)).toBeUndefined();
+  });
+});
+
+describe('a list in the query', () => {
+  it('reads a comma-separated value, empty parts left out', () => {
+    expect(listOf('1,2')).toEqual(['1', '2']);
+    expect(listOf('1,,2,')).toEqual(['1', '2']);
+    expect(listOf(null)).toEqual([]);
+  });
+
+  it('writes a list, and drops the parameter when it is empty', () => {
+    expect(listParam([1, 2])).toBe('1,2');
+    expect(listParam([])).toBeUndefined();
+    expect(withParams('?open=1', { open: listParam([]) })).toBe('');
   });
 });
