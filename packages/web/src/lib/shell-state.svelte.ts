@@ -3,6 +3,8 @@ import type { Onboarding } from './onboarding.js';
 
 let onboarding = $state<Onboarding | undefined>(undefined);
 let arrivals = $state<number | undefined>(undefined);
+/** Why the welcome state could not be read: the root page says it, rather than load forever. */
+let onboardingFailure = $state<unknown>(undefined);
 
 /**
  * Whether the welcome page has been left, fetched once by the shell for the navigation and the
@@ -17,14 +19,19 @@ export const shell = {
   get arrivals(): number | undefined {
     return arrivals;
   },
+  get onboardingFailure(): unknown {
+    return onboardingFailure;
+  },
   setOnboarding(value: Onboarding): void {
     onboarding = value;
   },
   async loadOnboarding(): Promise<void> {
     try {
       onboarding = await api.get<Onboarding>('/api/onboarding');
-    } catch {
-      // The pages say what failed when they load their own data.
+      onboardingFailure = undefined;
+    } catch (error) {
+      // The other pages say what failed when they load their own data; the root page has none.
+      onboardingFailure = error;
     }
   },
   async loadArrivals(): Promise<void> {

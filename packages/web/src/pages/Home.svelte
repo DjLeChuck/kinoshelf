@@ -1,5 +1,6 @@
 <script lang="ts">
   import Welcome from '../components/Welcome.svelte';
+  import { messageOf } from '../lib/errors.js';
   import { t } from '../lib/i18n.svelte.js';
   import { router } from '../lib/router.svelte.js';
   import { shell } from '../lib/shell-state.svelte.js';
@@ -12,7 +13,12 @@
   });
 </script>
 
-{#if shell.onboarding === undefined || shell.onboarding.completed}
+{#if shell.onboarding === undefined && shell.onboardingFailure !== undefined}
+  <p class="alert alert-danger" role="alert">{messageOf(t, shell.onboardingFailure)}</p>
+  <button type="button" class="btn" onclick={() => void shell.loadOnboarding()}
+    >{t('web.retry')}</button
+  >
+{:else if shell.onboarding === undefined || shell.onboarding.completed}
   <p class="muted" role="status">{t('web.loading')}</p>
 {:else}
   <Welcome onboarding={shell.onboarding} />

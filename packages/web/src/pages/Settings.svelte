@@ -30,6 +30,7 @@
   async function load(): Promise<void> {
     try {
       settings = await api.get<Settings>('/api/settings');
+      failure = undefined;
     } catch (error) {
       failure = error;
     }
