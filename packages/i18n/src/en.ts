@@ -54,6 +54,8 @@ export const en = {
     'TMDB is limiting requests. Retry in a moment; what was already fetched is cached.',
   'error.undo.destination-missing': 'Already gone: {path}',
   'error.undo.source-exists': 'Cannot put the file back: something now exists at {path}.',
+  'error.undo.last-copy':
+    'Kept {path}: the file it was copied or linked from is gone or was replaced, so it is the only copy left.',
 
   'error.config.destination-required':
     'Give a destination with --dest (or --dest-movies and --dest-series, or --library).',

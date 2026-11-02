@@ -92,6 +92,33 @@ describe('undoLastBatch', () => {
     expect((await stat(source)).nlink).toBe(1);
   });
 
+  it('keeps a copy whose original was deleted since: it is the last one', async () => {
+    const { lib, source, journal } = await importMovie('copy');
+    await rm(source);
+
+    const result = await undoLastBatch(journal);
+
+    expect(result?.entries[0]).toMatchObject({
+      status: 'skipped',
+      error: { code: 'undo.last-copy' },
+    });
+    expect(await readFile(join(lib, FOLDER, `${STEM}.mkv`), 'utf8')).toBe('video');
+  });
+
+  it('keeps a hardlink whose original name now holds another file', async () => {
+    const { lib, source, journal } = await importMovie('hardlink');
+    await rm(source);
+    await put(source, 'video');
+
+    const result = await undoLastBatch(journal);
+
+    expect(result?.entries[0]).toMatchObject({
+      status: 'skipped',
+      error: { code: 'undo.last-copy' },
+    });
+    expect(await exists(join(lib, FOLDER, `${STEM}.mkv`))).toBe(true);
+  });
+
   it('puts a moved file back, recreating its folder if it is gone', async () => {
     const { src, lib, source, journal } = await importMovie('move');
     expect(await exists(source)).toBe(false);
@@ -289,6 +316,24 @@ describe('undoBatch: generated and downloaded files', () => {
       ['undone', undefined],
     ]);
     expect(await exists(join(folder, 'movie.nfo'))).toBe(false);
+  });
+
+  it('leaves alone, on a retry, what an unfinished undo already reverted', async () => {
+    const { src, folder, journal } = await importWithCompanions();
+    // The video cannot go back (its folder is now a file); the NFO and poster are removed.
+    await rm(src, { recursive: true });
+    await put(src, 'blocker');
+    const first = await undoLastBatch(journal);
+    expect(first?.entries.map((e) => e.status)).toEqual(['undone', 'undone', 'failed']);
+
+    // A later batch wrote the NFO again; the retry must not take it.
+    await put(join(folder, 'movie.nfo'), 'newer batch');
+    await rm(src);
+    const retry = await undoLastBatch(journal);
+
+    expect(retry?.entries.map((e) => [e.entry.kind, e.status])).toEqual([['transfer', 'undone']]);
+    expect(await readFile(join(folder, 'movie.nfo'), 'utf8')).toBe('newer batch');
+    expect(journal.lastBatchId()).toBeNull();
   });
 
   it('keeps a directory the user put something in, and one that already existed', async () => {

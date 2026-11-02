@@ -21,12 +21,18 @@ export class MemoryJournal implements Journal {
     return this.entries.filter((e) => e.entry.batchId === batchId).map((e) => e.entry);
   }
 
-  markUndone(batchId: string): void {
+  markUndone(batchId: string, entryIds?: readonly string[]): void {
     for (const stored of this.entries) {
-      if (stored.entry.batchId === batchId) {
+      if (stored.entry.batchId === batchId && (!entryIds || entryIds.includes(stored.entry.id))) {
         stored.undone = true;
       }
     }
+  }
+
+  undoneEntryIds(batchId: string): ReadonlySet<string> {
+    return new Set(
+      this.entries.filter((e) => e.entry.batchId === batchId && e.undone).map((e) => e.entry.id),
+    );
   }
 
   batches(): readonly JournalBatch[] {

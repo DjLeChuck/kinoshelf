@@ -140,6 +140,20 @@ function behavesLikeAJournal(name: string, make: () => Journal | Promise<Journal
       expect(journal.lastBatchId()).toBe('b2');
     });
 
+    it('marks some entries of a batch undone, keeping the batch pending', async () => {
+      const journal = await make();
+      journal.record(entry('a', 'b1'));
+      journal.record(entry('b', 'b1'));
+      journal.markUndone('b1', ['b']);
+      expect([...journal.undoneEntryIds('b1')]).toEqual(['b']);
+      expect(journal.isUndone('b1')).toBe(false);
+      expect(journal.lastBatchId()).toBe('b1');
+      journal.markUndone('b1', []);
+      expect([...journal.undoneEntryIds('b1')]).toEqual(['b']);
+      journal.markUndone('b1');
+      expect(journal.isUndone('b1')).toBe(true);
+    });
+
     it('ignores an unknown batch when marking undone', async () => {
       const journal = await make();
       journal.record(entry('a', 'b1'));

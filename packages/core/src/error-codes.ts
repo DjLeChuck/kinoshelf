@@ -46,6 +46,7 @@ export const ERROR_CODES = [
   'tmdb.rate-limited',
   'undo.destination-missing',
   'undo.source-exists',
+  'undo.last-copy',
 ] as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[number];

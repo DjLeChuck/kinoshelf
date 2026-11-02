@@ -1,4 +1,4 @@
-import { rmdir, unlink } from 'node:fs/promises';
+import { rmdir, stat, unlink } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { describeFsError, ensureDirectory, exists, moveFile } from '../execution/fs-ops.js';
 import type { ErrorCode } from '../error-codes.js';
@@ -44,6 +44,13 @@ async function revert(entry: JournalEntry, dryRun: boolean): Promise<UndoEntryRe
     // Something took the original place since: moving back would overwrite it.
     return skipped('undo.source-exists', entry.source);
   }
+  if (
+    entry.mode !== 'move' &&
+    !(await originalRemains(entry.source, entry.destination, entry.mode))
+  ) {
+    // The download was deleted after seeding (or replaced): removing this name would lose the file.
+    return skipped('undo.last-copy', entry.destination);
+  }
   if (dryRun) {
     return { entry, status: 'undone' };
   }
@@ -62,6 +69,27 @@ async function revert(entry: JournalEntry, dryRun: boolean): Promise<UndoEntryRe
   }
 }
 
+/**
+ * True while the file a copy or hardlink came from is still there: same inode for a link, same
+ * size for a copy (a file put at that name since is not the original).
+ */
+async function originalRemains(
+  source: string,
+  destination: string,
+  mode: 'copy' | 'hardlink',
+): Promise<boolean> {
+  const [original, made] = await Promise.all([
+    stat(source).catch(() => null),
+    stat(destination).catch(() => null),
+  ]);
+  if (original === null || made === null) {
+    return false;
+  }
+  return mode === 'hardlink'
+    ? original.dev === made.dev && original.ino === made.ino
+    : original.size === made.size;
+}
+
 /** Removes the directories the batch created, deepest first, and only if they are empty. */
 async function pruneDirectories(entries: readonly JournalEntry[]): Promise<void> {
   const directories = [...new Set(entries.flatMap((e) => e.createdDirectories))];
@@ -76,9 +104,11 @@ async function pruneDirectories(entries: readonly JournalEntry[]): Promise<void>
  * is deleted. They are reverted most recent first, so a video's companions go before the video
  * and the directory pruning, which comes last, finds them empty. Each entry is checked against
  * the disk as it is now, so a later batch cannot be damaged: a destination that was moved on or
- * removed since is skipped, an original place taken since is skipped, and directories a later
- * batch also filled are left (only empty ones go). Nothing is forced. The batch is marked undone
- * only when nothing failed, so a failed undo can be retried. Returns `null` for an unknown or
+ * removed since is skipped, an original place taken since is skipped, a copy or link whose
+ * original is gone is kept (it is the last one), and directories a later batch also filled are
+ * left (only empty ones go). Nothing is forced. The batch is marked undone only when nothing
+ * failed, so a failed undo can be retried; the entries it did revert are marked one by one, and
+ * a retry leaves them alone. Returns `null` for an unknown or
  * already undone batch.
  */
 export async function undoBatch(
@@ -92,15 +122,24 @@ export async function undoBatch(
   }
   const dryRun = options.dryRun ?? false;
 
+  // What an earlier, unfinished undo already reverted stays as it is now.
+  const reverted = journal.undoneEntryIds(batchId);
   const entries: UndoEntryResult[] = [];
   for (const entry of [...journaled].reverse()) {
-    entries.push(await revert(entry, dryRun));
+    if (!reverted.has(entry.id)) {
+      entries.push(await revert(entry, dryRun));
+    }
   }
 
   if (!dryRun) {
     await pruneDirectories(journaled);
     if (entries.every((e) => e.status !== 'failed')) {
       journal.markUndone(batchId);
+    } else {
+      journal.markUndone(
+        batchId,
+        entries.filter((e) => e.status === 'undone').map((e) => e.entry.id),
+      );
     }
   }
   return { batchId, dryRun, entries };

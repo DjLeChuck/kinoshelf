@@ -54,6 +54,8 @@ export const fr: Record<keyof typeof en, string> = {
     'TMDB limite les requêtes. Réessayez dans un instant ; ce qui a déjà été récupéré est en cache.',
   'error.undo.destination-missing': 'Déjà supprimé : {path}',
   'error.undo.source-exists': 'Impossible de remettre le fichier : {path} existe maintenant.',
+  'error.undo.last-copy':
+    '{path} est conservé : le fichier dont il a été copié ou lié a disparu ou a été remplacé, c’est donc la seule copie restante.',
 
   'error.config.destination-required':
     'Indiquez une destination avec --dest (ou --dest-movies et --dest-series, ou --library).',

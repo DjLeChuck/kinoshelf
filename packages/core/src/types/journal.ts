@@ -57,7 +57,13 @@ export interface Journal {
   /** True once a batch was undone; false for a batch still pending and for an unknown one. */
   isUndone(batchId: string): boolean;
   entriesOf(batchId: string): readonly JournalEntry[];
-  markUndone(batchId: string): void;
+  /**
+   * Marks the batch undone, or only `entryIds` of it: what an undo that did not finish already
+   * reverted, which a retry must leave alone (a later batch may have put a file there again).
+   */
+  markUndone(batchId: string, entryIds?: readonly string[]): void;
+  /** Ids of the entries of the batch already reverted. */
+  undoneEntryIds(batchId: string): ReadonlySet<string>;
   /** Every batch, the most recent first. */
   batches(): readonly JournalBatch[];
 }

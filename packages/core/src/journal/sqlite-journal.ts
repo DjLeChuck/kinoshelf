@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, isNull, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNotNull, isNull, sql } from 'drizzle-orm';
 import { drizzle, type BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import { integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 import type { Database } from 'better-sqlite3';
@@ -83,12 +83,32 @@ export class SqliteJournal implements Journal {
       });
   }
 
-  markUndone(batchId: string): void {
+  markUndone(batchId: string, entryIds?: readonly string[]): void {
+    if (entryIds?.length === 0) {
+      return;
+    }
     this.db
       .update(journalEntries)
       .set({ undoneAt: new Date().toISOString() })
-      .where(and(eq(journalEntries.batchId, batchId), isNull(journalEntries.undoneAt)))
+      .where(
+        and(
+          eq(journalEntries.batchId, batchId),
+          isNull(journalEntries.undoneAt),
+          entryIds ? inArray(journalEntries.id, [...entryIds]) : undefined,
+        ),
+      )
       .run();
+  }
+
+  undoneEntryIds(batchId: string): ReadonlySet<string> {
+    return new Set(
+      this.db
+        .select({ id: journalEntries.id })
+        .from(journalEntries)
+        .where(and(eq(journalEntries.batchId, batchId), isNotNull(journalEntries.undoneAt)))
+        .all()
+        .map((row) => row.id),
+    );
   }
 
   batches(): readonly JournalBatch[] {

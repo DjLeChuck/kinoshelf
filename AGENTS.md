@@ -171,7 +171,9 @@ format follows the Kodi wiki's templates, saved pages are not in the repository)
   planner keeps the first one of the batch (`shareCompanions`).
 - **Journal and undo**: entries have a `kind` (`transfer`, `generated`, `downloaded`;
   `core:002-journal-kind`). Undo deletes what Kinoshelf made, even if edited, then prunes only the
-  directories it created. Images come with `ImageSize` (`preview`, `standard`, `original`; `size`
+  directories it created. A copy or hardlink whose original is gone (or replaced) is kept
+  (`undo.last-copy`): it is the only one left. An undo that fails partway marks the entries it did
+  revert, and a retry leaves them alone. Images come with `ImageSize` (`preview`, `standard`, `original`; `size`
   in the profile, `standard` by default and `original` for a fanart) through `provider.imageUrl`.
 - **An organized library** gets its missing NFO and images too: an item whose video is already
   where the profile wants it becomes `ready` with only `write-file`/`download` operations (the
