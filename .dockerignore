@@ -1,6 +1,8 @@
 .git
 .claude
 .env
+.env.*
+config
 .direnv
 .work
 node_modules

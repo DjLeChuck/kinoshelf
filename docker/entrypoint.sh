@@ -19,7 +19,8 @@ esac
 
 # Only /config: the media folders belong to the user and are never touched. A failure (NFS with
 # root squash) is not fatal: the server then says what it cannot write.
-if ! chown -R "$PUID:$PGID" /config 2>/dev/null; then
+# -h: a symlink planted in /config is re-owned itself, never the file it points at.
+if ! chown -R -h "$PUID:$PGID" /config 2>/dev/null; then
   echo "Warning: could not give /config to $PUID:$PGID." >&2
 fi
 

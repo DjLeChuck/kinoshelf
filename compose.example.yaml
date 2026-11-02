@@ -4,6 +4,8 @@ services:
   kinoshelf:
     image: ghcr.io/djlechuck/kinoshelf:latest
     restart: unless-stopped
+    # Reachable from the whole network, over plain HTTP. For this machine only, write
+    # '127.0.0.1:8484:8484'; from elsewhere, prefer a reverse proxy that adds TLS.
     ports:
       - '8484:8484'
     environment:
