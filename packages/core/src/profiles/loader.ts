@@ -1,4 +1,4 @@
-import { readdir, readFile } from 'node:fs/promises';
+import { readdir, readFile, stat } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { parseDocument } from 'yaml';
 import { KinoshelfError } from '../errors.js';
@@ -87,7 +87,9 @@ export function parseProfile(yamlText: string): Profile {
     // In a double-quoted YAML scalar `\{` is an invalid escape: templates need single quotes.
     const code =
       yamlError.code === 'BAD_DQ_ESCAPE' ? 'profile.double-quoted-escape' : 'profile.yaml-syntax';
-    throw new KinoshelfError(code, { detail: yamlError.message });
+    // The library quotes the offending lines after its first one: only the description is kept,
+    // so pointing the loader at another file can never send that file's content back.
+    throw new KinoshelfError(code, { detail: yamlError.message.split('\n')[0] ?? '' });
   }
 
   const result = profileSchema.safeParse(doc.toJS());
@@ -122,7 +124,18 @@ export function parseProfile(yamlText: string): Profile {
   };
 }
 
+/** A profile is a few dozen lines; anything much bigger is not one. */
+const MAX_PROFILE_BYTES = 64 * 1024;
+
 export async function loadProfileFile(path: string | URL): Promise<Profile> {
+  if (typeof path === 'string') {
+    // Only a regular YAML file of a sane size is read: not a device (`/dev/zero` never ends), a
+    // FIFO, or a large file of something else.
+    const info = await stat(path).catch(() => null);
+    if (!info?.isFile() || info.size > MAX_PROFILE_BYTES || !/\.ya?ml$/i.test(path)) {
+      throw new KinoshelfError('profile.not-a-file', { path, max: MAX_PROFILE_BYTES / 1024 });
+    }
+  }
   return parseProfile(await readFile(path, 'utf8'));
 }
 

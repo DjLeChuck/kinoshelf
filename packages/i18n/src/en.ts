@@ -30,6 +30,8 @@ export const en = {
     'Invalid profile: templates containing \\{ or \\} must use single quotes. ({detail})',
   'error.profile.invalid': 'Invalid profile at "{path}": {detail}',
   'error.profile.invalid-path': 'Invalid template in {field}: "{template}"',
+  'error.profile.not-a-file':
+    'Cannot use {path} as a profile: give an existing .yaml file of at most {max} KB.',
   'error.profile.unknown': 'Unknown profile "{id}".',
   'error.profile.unknown-variable': 'Unknown variable {variable} in {field}.',
   'error.profile.yaml-syntax': 'The profile is not valid YAML: {detail}',

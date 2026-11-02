@@ -1,3 +1,6 @@
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   KinoshelfError,
@@ -186,6 +189,33 @@ describe('parseProfile', () => {
     expect(
       codeOf(() => parseProfile(base.replace(`seriesFolder: '{title}'`, `seriesFolder: ''`))),
     ).toBe('profile.invalid');
+  });
+
+  it('never quotes the content of the file in a YAML error', () => {
+    try {
+      parseProfile('SECRET_TOKEN: abc: def\n');
+      expect.unreachable();
+    } catch (error) {
+      expect(error).toBeInstanceOf(KinoshelfError);
+      expect(JSON.stringify((error as KinoshelfError).info)).not.toContain('SECRET_TOKEN');
+    }
+  });
+
+  it('reads only an existing, small .yaml file as a profile', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'kinoshelf-profile-'));
+    try {
+      const notYaml = join(dir, 'passwd');
+      await writeFile(notYaml, 'root:x:0:0:root:/root:/bin/bash\n');
+      const huge = join(dir, 'huge.yaml');
+      await writeFile(huge, `# ${'x'.repeat(70 * 1024)}\n`);
+      for (const path of [notYaml, huge, '/dev/zero', join(dir, 'missing.yaml'), dir]) {
+        await expect(loadProfileFile(path)).rejects.toMatchObject({
+          info: { code: 'profile.not-a-file' },
+        });
+      }
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
   });
 
   it('rejects unknown keys and bad YAML', () => {

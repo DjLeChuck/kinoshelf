@@ -25,6 +25,8 @@ export const fr: Record<keyof typeof en, string> = {
     'Profil invalide : les templates contenant \\{ ou \\} doivent utiliser des guillemets simples. ({detail})',
   'error.profile.invalid': 'Profil invalide à « {path} » : {detail}',
   'error.profile.invalid-path': 'Template invalide dans {field} : « {template} »',
+  'error.profile.not-a-file':
+    'Impossible d’utiliser {path} comme profil : indiquez un fichier .yaml existant d’au plus {max} Ko.',
   'error.profile.unknown': 'Profil inconnu « {id} ».',
   'error.profile.unknown-variable': 'Variable inconnue {variable} dans {field}.',
   'error.profile.yaml-syntax': 'Le profil n’est pas du YAML valide : {detail}',

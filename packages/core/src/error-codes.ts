@@ -27,6 +27,7 @@ export const ERROR_CODES = [
   'profile.double-quoted-escape',
   'profile.invalid',
   'profile.invalid-path',
+  'profile.not-a-file',
   'profile.unknown',
   'profile.unknown-variable',
   'profile.yaml-syntax',
