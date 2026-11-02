@@ -171,11 +171,15 @@
       </fieldset>
     {/if}
 
-    <label class="check">
-      <input type="checkbox" bind:checked={form.watch} />
-      {t('web.libraries.watch')}
-    </label>
-    <span class="muted hint">{t('web.libraries.watch.hint')}</span>
+    <!-- Only an arrival folder holds finished downloads; a library organized in place is written to.
+         One already watched keeps the box, or it could never be turned off. -->
+    {#if group === 'arrival' || library?.watch}
+      <label class="check">
+        <input type="checkbox" bind:checked={form.watch} />
+        {t('web.libraries.watch')}
+      </label>
+      <span class="muted hint">{t('web.libraries.watch.hint')}</span>
+    {/if}
   </section>
 
   {#if group === 'in-place'}
