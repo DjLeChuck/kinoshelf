@@ -243,8 +243,14 @@ refuses to delete a library an arrival folder points at (`library.in-use`). Ther
   (`series_completeness`, disposable). Until counted, `missing` is `null` (no badge); a TMDB failure
   leaves it so and the page still lists the files (`determined: false`). `counts['missing-episodes']`
   counts shows, not files, and is not a filter of `GET .../items`: it narrows `.../shows?missing=true`.
-  The NFO column of a series row is the episode's own `<file>.nfo`; the show's and the seasons'
-  files (`tvshow.nfo`, posters) are not tracked per row yet.
+  The NFO column of an episode is its own `<file>.nfo`. The show's files (`tvshow.nfo`, poster, fanart) and
+  a season's poster are looked for **on the disk** by `SeriesFiles` (`series-files.ts`, server migration
+  015 `series_files`, disposable) once a series library's rows change (scan, transfer, undo, startup), in
+  one go for the burst, then emit `history`: `GET .../shows` gives `nfo`/`poster`/`fanart` per show and
+  `GET .../shows/:tmdbId` a `poster` per season, `null` when the profile writes no such file, when no video
+  of the show is in place yet (its folder is unknown) or before it was looked at. The planner cannot say it:
+  it leaves out what exists, and keeps a show-level file on one episode only (`shareCompanions`). These
+  files are not filters (`missing-nfo`, `missing-artwork` still read the rows).
 - **Rename and refresh** (`POST /api/libraries/:id/execute`, body `{ items, dryRun? }`): the items are
   the `id`s of the library's list. The server finds each one's entry and scan job (`entryId`,
   `scan_job_id` of its row), keeps what is still executable, and runs one plan per job under one batch

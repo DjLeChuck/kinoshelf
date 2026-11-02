@@ -106,6 +106,10 @@ export interface Show {
   readonly seasons: number;
   readonly episodes: number;
   readonly missing: number | null;
+  /** The show's own files; `null`: the profile does not write it, or it was not looked at yet. */
+  readonly nfo: boolean | null;
+  readonly poster: boolean | null;
+  readonly fanart: boolean | null;
 }
 
 export type EpisodeState = 'present' | 'missing' | 'unaired' | 'extra';
@@ -123,6 +127,8 @@ export interface ShowSeason {
   readonly season: number;
   readonly name: string | null;
   readonly posterPath: string | null;
+  /** The season's poster file is on the disk; `null`: not written, or not looked at yet. */
+  readonly poster: boolean | null;
   readonly missing: number;
   readonly episodes: readonly ShowEpisode[];
 }

@@ -1,6 +1,6 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
-import { API_KEY, library } from '../support.js';
+import { API_KEY, incoming, library } from '../support.js';
 import { signIn } from './helpers.js';
 
 test('browses a series library as a tree and finds the episode it lacks', async ({
@@ -35,4 +35,35 @@ test('browses a series library as a tree and finds the episode it lacks', async 
   // The filter keeps the shows that lack some.
   await page.getByRole('button', { name: /Missing episodes/ }).click();
   await expect(page.getByRole('button', { name: /Severance/ })).toBeVisible();
+});
+
+test('shows which NFO and images a show and its seasons have', async ({ page, request }) => {
+  const folder = incoming('series-files');
+  const show = `${folder}/Severance (2022) [tmdbid-95396]`;
+  await mkdir(`${show}/Season 01`, { recursive: true });
+  await writeFile(`${show}/Season 01/Severance (2022) S01E01.mkv`, 'video');
+  // The show has its NFO and poster, the season its poster; the fanart is missing.
+  for (const name of ['tvshow.nfo', 'poster.jpg', 'Season 01/poster.jpg']) {
+    await writeFile(`${show}/${name}`, 'x');
+  }
+  const headers = { authorization: `Bearer ${API_KEY}` };
+  const created = await request.post('/api/libraries', {
+    headers,
+    data: { name: 'Jelly series', source: folder, type: 'series', profile: 'jellyfin' },
+  });
+  expect(created.status()).toBe(201);
+  const { id } = (await created.json()) as { id: string };
+  expect((await request.post(`/api/libraries/${id}/scan`, { headers })).status()).toBe(202);
+
+  await signIn(page);
+  await page.goto(`/libraries/${id}`);
+  const row = page.getByRole('row', { name: /Severance/ }).first();
+  await expect(row).toBeVisible();
+  // NFO, poster, fanart: the files are looked for after the scan, not when the page reads.
+  await expect(row.getByRole('cell').filter({ hasText: /^✓$/ })).toHaveCount(2);
+  await expect(row.getByRole('cell').filter({ hasText: /^✗$/ })).toHaveCount(1);
+
+  await row.getByRole('button', { name: /Show the seasons/ }).click();
+  const season = page.getByRole('row', { name: /Season 1/ });
+  await expect(season.getByRole('cell').filter({ hasText: /^✓$/ })).toHaveCount(1);
 });

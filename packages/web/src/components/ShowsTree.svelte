@@ -25,7 +25,7 @@
     onsettled,
   }: {
     libraryId: string;
-    writes: { nfo: boolean };
+    writes: { nfo: boolean; artwork: boolean };
     query: string;
     /** Only the shows that lack episodes (and nothing waiting to be validated). */
     missingOnly: boolean;
@@ -149,7 +149,7 @@
   }
 
   const mark = (value: boolean | null): string => (value === null ? '' : value ? '✓' : '✗');
-  const columns = $derived(5 + (writes.nfo ? 1 : 0));
+  const columns = $derived(5 + (writes.nfo ? 1 : 0) + (writes.artwork ? 2 : 0));
 </script>
 
 {#if failure}
@@ -169,6 +169,10 @@
             <th>{t('web.library.col.seasons')}</th>
             <th>{t('web.library.col.episodes')}</th>
             {#if writes.nfo}<th>NFO</th>{/if}
+            {#if writes.artwork}
+              <th>{t('web.library.col.poster')}</th>
+              <th>{t('web.library.col.fanart')}</th>
+            {/if}
             <th>{t('web.library.col.missing')}</th>
           </tr>
         </thead>
@@ -235,7 +239,11 @@
               <td>{show.year ?? ''}</td>
               <td>{show.seasons}</td>
               <td>{show.episodes}</td>
-              {#if writes.nfo}<td></td>{/if}
+              {#if writes.nfo}<td>{mark(show.nfo)}</td>{/if}
+              {#if writes.artwork}
+                <td>{mark(show.poster)}</td>
+                <td>{mark(show.fanart)}</td>
+              {/if}
               <td>
                 {#if show.missing}
                   <span class="chip chip-warn"
@@ -254,7 +262,7 @@
                   {@const key = seasonKey(show.tmdbId, season.season)}
                   {@const seasonOpen = seasonsOpen.includes(key)}
                   <tr class="child season">
-                    <td colspan={columns - 1}>
+                    <td colspan="4">
                       <button
                         type="button"
                         class="link indent"
@@ -269,6 +277,11 @@
                           : t('web.library.season', { season: season.season })}
                       </button>
                     </td>
+                    {#if writes.nfo}<td></td>{/if}
+                    {#if writes.artwork}
+                      <td>{mark(season.poster)}</td>
+                      <td></td>
+                    {/if}
                     <td>
                       {#if season.missing > 0}
                         <span class="chip chip-warn"
@@ -312,6 +325,7 @@
                           {/if}
                         </td>
                         {#if writes.nfo}<td>{mark(item?.nfo ?? null)}</td>{/if}
+                        {#if writes.artwork}<td></td><td></td>{/if}
                         <td></td>
                       </tr>
                     {/each}
