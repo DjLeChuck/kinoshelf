@@ -5,7 +5,6 @@ import type { Database } from 'better-sqlite3';
 import Fastify, { type FastifyInstance } from 'fastify';
 import { ApiError } from './api-error.js';
 import { hasApiKey, isValidApiKey } from './auth.js';
-import { AliasStore } from './aliases.js';
 import { ProgressTracker } from './progress.js';
 import { WorkDestinationStore } from './work-destinations.js';
 import { EntryStore } from './entries.js';
@@ -105,7 +104,6 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
   const entries = new EntryStore(options.database);
   const executions = new ExecutionStore(options.database);
   const jobs = new JobStore(options.database, entries, executions);
-  const aliases = new AliasStore(options.database);
   const workDestinations = new WorkDestinationStore(options.database);
   const journal = options.journal?.(options.database) ?? new SqliteJournal(options.database);
   const items = new LibraryItemStore(options.database);
@@ -125,7 +123,6 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     entries,
     executions,
     journal,
-    aliases,
     workDestinations,
     snapshot,
   });
@@ -423,7 +420,6 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
       jobs,
       entries,
       executions,
-      aliases,
       workDestinations,
       items,
       service,

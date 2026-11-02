@@ -23,7 +23,7 @@ const toStored = (row: Row): StoredWorkDestination => ({
 });
 
 /**
- * Durable like the aliases: a decision, not a copy of something that can be fetched again. A
+ * Durable: a decision, not a copy of something that can be fetched again. A
  * library that no longer exists is not cleaned up here: whoever reads a destination checks it
  * still exists, and the work then goes back to the default one.
  */

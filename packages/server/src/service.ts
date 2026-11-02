@@ -1,11 +1,9 @@
 import { randomUUID } from 'node:crypto';
 import {
-  aliasKey,
   createPlan,
   loadProfile,
   MetadataLoader,
   type LoadedMetadata,
-  Matcher,
   executePlan,
   undoBatch,
   type Candidate,
@@ -21,11 +19,9 @@ import {
   type OperationResult,
   type Plan,
   type PlanItem,
-  type TitleAlias,
   type UndoEntryResult,
 } from '@kinoshelf/core';
 import { ApiError } from './api-error.js';
-import type { AliasStore } from './aliases.js';
 import type { EntryStore, Entry, StoredCandidate, StoredError } from './entries.js';
 import type { Execution, ExecutionStore } from './executions.js';
 import type { Job, JobStore, PlanSettings } from './jobs.js';
@@ -67,8 +63,8 @@ export interface UndoReport {
 
 export interface MatchResult {
   readonly entry: Entry;
-  /** Other files that the remembered title matched at once, and that left the queue. */
-  readonly rematched: number;
+  /** Ids of the other episodes of the release that followed the choice (matched, no conflict). */
+  readonly followers: readonly string[];
 }
 
 export interface SearchQuery {
@@ -83,7 +79,6 @@ export interface ServiceDeps extends ProcessorDeps {
   readonly entries: EntryStore;
   readonly executions: ExecutionStore;
   readonly journal: Journal;
-  readonly aliases: AliasStore;
   readonly workDestinations: WorkDestinationStore;
   /** What each library holds, kept in step with what is matched, transferred and undone. */
   readonly snapshot: LibrarySnapshot;
@@ -126,92 +121,45 @@ export class Service {
   async match(
     entryId: string,
     candidate: Candidate,
-    options: { remember?: boolean; libraryId?: string; rememberDestination?: boolean } = {},
+    options: { onlyThis?: boolean; libraryId?: string; rememberDestination?: boolean } = {},
   ): Promise<MatchResult> {
     const entry = this.pendingEntry(entryId);
-    const libraryId = this.chosenLibrary(entry, candidate, options.libraryId);
-    const item = await this.planWith(entry, candidate, { libraryId });
-    this.deps.entries.setMatch(entry.id, classify(item), item, { candidate, score: 100 });
-    this.deps.entries.setDestination(entry.id, libraryId);
+    const asked = options.libraryId;
+    const libraryId = this.chosenLibrary(entry, candidate, asked);
+    await this.applyChoice(entry, candidate, libraryId);
     if (options.rememberDestination && libraryId !== null) {
       this.deps.workDestinations.remember(candidate.kind, candidate.id.id, libraryId);
     }
-    await this.deps.snapshot.matched(this.require(entry.id), candidate);
-    const rematched = (options.remember ?? true) ? await this.remember(entry, candidate) : 0;
-    return { entry: this.require(entry.id), rematched };
-  }
-
-  /**
-   * Ties the title of the file to the work the human chose, so the next scan decides alone, and
-   * lets the files already waiting under that title follow. Skipped when the choice says nothing
-   * about the title: a file read as an episode but matched with a film would never look it up.
-   * Returns how many other files left the queue because of it.
-   */
-  private async remember(entry: Entry, candidate: Candidate): Promise<number> {
-    const { parsed } = entry;
-    const kind =
-      parsed.kind === 'episode' ? 'series' : parsed.kind === 'movie' ? 'movie' : undefined;
-    if (!parsed.title || kind !== candidate.kind || parsed.knownIds?.length) {
-      return 0;
-    }
-    const alias: TitleAlias = {
-      kind,
-      title: parsed.title,
-      ...(parsed.year !== undefined && { year: parsed.year }),
-      id: candidate.id,
-    };
-    this.deps.aliases.remember(alias, {
-      title: candidate.title,
-      ...(candidate.year !== undefined && { year: candidate.year }),
-    });
-    return this.rematch(aliasKey(alias), entry.id);
-  }
-
-  /**
-   * Gives the undecided files with this alias's title another go, now that it is known. They go
-   * through the matcher like any file, so an episode the work does not have stays in the queue.
-   * One that fails (the provider is down, say) is left as it was: the alias is already saved.
-   * Returns how many were matched and no longer wait (one whose target is taken stays queued).
-   */
-  private async rematch(key: string, exceptId: string): Promise<number> {
-    const { config, entries, aliases } = this.deps;
-    const same = entries.undecided().filter(
-      (other) =>
-        other.id !== exceptId &&
-        other.parsed.title !== undefined &&
-        aliasKey({
-          kind: other.parsed.kind === 'episode' ? 'series' : 'movie',
-          title: other.parsed.title,
-          ...(other.parsed.year !== undefined && { year: other.parsed.year }),
-        }) === key &&
-        other.parsed.kind !== 'unknown',
-    );
-    if (same.length === 0) {
-      return 0;
-    }
-    const matcher = new Matcher(
-      this.provider(),
-      config.threshold !== undefined ? { threshold: config.threshold } : {},
-      aliases,
-    );
-    let rematched = 0;
-    for (const other of same) {
-      try {
-        const outcome = await matcher.match(other.parsed);
-        if (outcome.status !== 'matched') {
-          continue;
+    // The choice is about the series, so the rest of the release follows; one that cannot (the
+    // provider is down, say) stays as it was and can be settled on its own.
+    const followers: string[] = [];
+    if (candidate.kind === 'series' && !options.onlyThis) {
+      for (const mate of this.deps.entries.releaseMates(entry)) {
+        try {
+          const mateLibrary = this.chosenLibrary(mate, candidate, asked);
+          if ((await this.applyChoice(mate, candidate, mateLibrary)) !== 'conflict') {
+            followers.push(mate.id);
+          }
+        } catch {
+          // See above.
         }
-        const item = await this.planWith(other, outcome.best.candidate);
-        const classification = classify(item);
-        entries.setMatch(other.id, classification, item, outcome.best);
-        if (classification !== 'conflict') {
-          rematched++;
-        }
-      } catch {
-        // See above: not worth failing the validation that taught the alias.
       }
     }
-    return rematched;
+    return { entry: this.require(entry.id), followers };
+  }
+
+  /** Plans one file with the chosen candidate and records it. */
+  private async applyChoice(
+    entry: Entry,
+    candidate: Candidate,
+    libraryId: string | null,
+  ): Promise<Classification> {
+    const item = await this.planWith(entry, candidate, { libraryId });
+    const classification = classify(item);
+    this.deps.entries.setMatch(entry.id, classification, item, { candidate, score: 100 });
+    this.deps.entries.setDestination(entry.id, libraryId);
+    await this.deps.snapshot.matched(this.require(entry.id), candidate);
+    return classification;
   }
 
   /** What the provider knows of a work (cached by the provider's own cache); `null` if nothing. */
@@ -413,8 +361,15 @@ export class Service {
     return chosen?.id ?? null;
   }
 
-  ignore(entryId: string): Entry {
-    this.deps.entries.resolve(this.pendingEntry(entryId).id, 'ignored');
+  /** Sets a file aside, and with it the rest of its release unless `onlyThis`. */
+  ignore(entryId: string, options: { onlyThis?: boolean } = {}): Entry {
+    const entry = this.pendingEntry(entryId);
+    this.deps.entries.resolve(entry.id, 'ignored');
+    if (!options.onlyThis) {
+      for (const mate of this.deps.entries.releaseMates(entry)) {
+        this.deps.entries.resolve(mate.id, 'ignored');
+      }
+    }
     return this.require(entryId);
   }
 

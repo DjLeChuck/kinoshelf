@@ -199,29 +199,6 @@ export const folderListingSchema = {
   },
 } as const;
 
-export const aliasSchema = {
-  type: 'object',
-  required: ['id', 'kind', 'title', 'work', 'createdAt'],
-  properties: {
-    id: { type: 'integer' },
-    kind: { type: 'string', enum: ['movie', 'series'] },
-    /** The title as files spell it. */
-    title: { type: 'string' },
-    /** Only for a film: the same title names several, told apart by year. */
-    year: { type: 'integer' },
-    work: {
-      type: 'object',
-      required: ['id', 'title'],
-      properties: {
-        id: candidateProperties.id,
-        title: { type: 'string' },
-        year: { type: 'integer' },
-      },
-    },
-    createdAt: { type: 'string', format: 'date-time' },
-  },
-} as const;
-
 export const entrySchema = {
   type: 'object',
   required: [
@@ -237,6 +214,8 @@ export const entrySchema = {
     'conflicts',
     'error',
     'batchId',
+    'release',
+    'detached',
   ],
   properties: {
     id: { type: 'string', format: 'uuid' },
@@ -282,6 +261,8 @@ export const entrySchema = {
     },
     error: { ...errorInfo, nullable: true },
     batchId: { type: 'string', nullable: true },
+    release: { type: 'string', nullable: true },
+    detached: { type: 'boolean' },
   },
 } as const;
 
@@ -685,14 +666,14 @@ export const settingsPatchSchema = {
   },
 } as const;
 
-/** The entry as `match` returns it, with what remembering its title did to the other files. */
+/** The entry as `match` returns it, with how many other episodes of its release followed. */
 export const matchResultSchema = {
   ...entrySchema,
-  required: [...entrySchema.required, 'rematched'],
+  required: [...entrySchema.required, 'followers'],
   properties: {
     ...entrySchema.properties,
-    /** Other files, waiting under the same title, that were matched and left the queue. */
-    rematched: { type: 'integer' },
+    /** Other episodes of the release that followed the choice. */
+    followers: { type: 'array', items: { type: 'string' } },
   },
 } as const;
 
@@ -765,7 +746,9 @@ export const arrivalsSchema = {
           'id',
           'jobId',
           'path',
+          'file',
           'release',
+          'detached',
           'state',
           'kind',
           'resolution',
@@ -783,7 +766,18 @@ export const arrivalsSchema = {
           id: { type: 'string', format: 'uuid', description: 'The entry: `/api/entries/{id}/…`.' },
           jobId: { type: 'string', format: 'uuid' },
           path: { type: 'string' },
-          release: { type: 'string', description: 'The name of the file.' },
+          file: { type: 'string', description: 'The name of the file.' },
+          release: {
+            type: 'string',
+            nullable: true,
+            description:
+              'The folder (or file) it came in. Files sharing it are validated together; a ' +
+              'detached one is listed with them but validated alone.',
+          },
+          detached: {
+            type: 'boolean',
+            description: 'Set aside from its release: another series than the rest of the folder.',
+          },
           state: { type: 'string', enum: ['review', 'unrecognized'] },
           kind: { type: 'string', enum: ['movie', 'series'], nullable: true },
           /** The picture size the name announces (`2160p`), null when it says none. */

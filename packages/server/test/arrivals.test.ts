@@ -13,7 +13,7 @@ const DUNE_NAME = (root: string): string =>
 interface Arrival {
   id: string;
   jobId: string;
-  release: string;
+  file: string;
   state: string;
   kind: string | null;
   resolution: string | null;
@@ -72,7 +72,7 @@ describe('GET /api/entries/:id', () => {
     }>();
     const response = await h.request('GET', `/api/entries/${items[0]?.entryId}`);
     expect(response.statusCode).toBe(200);
-    expect(response.json<Arrival>()).toMatchObject({ release: 'Mystery.Home.Video.mkv' });
+    expect(response.json<Arrival>()).toMatchObject({ file: 'Mystery.Home.Video.mkv' });
     expect((await h.request('GET', '/api/entries/nope')).statusCode).toBe(404);
   });
 });
@@ -89,7 +89,7 @@ describe('GET /api/arrivals', () => {
     expect(found.sources).toEqual([{ id: 'downloads', name: 'Downloads', path: downloads }]);
     expect(found.items).toHaveLength(1);
     expect(found.items[0]).toMatchObject({
-      release: 'Mystery.Home.Video.2160p.mkv',
+      file: 'Mystery.Home.Video.2160p.mkv',
       state: 'unrecognized',
       resolution: '2160p',
       sourceId: 'downloads',
@@ -230,7 +230,7 @@ describe('remembering where a work goes', () => {
       classification: 'to-rename',
       destination: DUNE_NAME(roots.uhd),
     });
-    expect((await arrivals(h)).items.map((a) => a.release)).not.toContain('Dune.2021.1080p.mkv');
+    expect((await arrivals(h)).items.map((a) => a.file)).not.toContain('Dune.2021.1080p.mkv');
 
     // Forgotten: the default destination again.
     const gone = await h.request('DELETE', '/api/work-destinations/movie/438631');
@@ -258,7 +258,7 @@ describe('remembering where a work goes', () => {
     const waiting = (await arrivals(h, '?state=review')).items;
     expect(waiting).toMatchObject([
       {
-        release: 'Dune.2021.1080p.mkv',
+        file: 'Dune.2021.1080p.mkv',
         destination: { libraryId: 'films-4k', remembered: true },
       },
     ]);

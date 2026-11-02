@@ -1,5 +1,5 @@
 import { stat } from 'node:fs/promises';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import type { Database } from 'better-sqlite3';
 import {
   analyze,
@@ -12,7 +12,6 @@ import {
   type MetadataProvider,
 } from '@kinoshelf/core';
 import { SqliteHttpCache, TmdbProvider } from '@kinoshelf/provider-tmdb';
-import { AliasStore } from './aliases.js';
 import type { Job, ProcessedJob } from './jobs.js';
 import type { ProgressTracker } from './progress.js';
 
@@ -67,9 +66,17 @@ async function process(deps: ProcessorDeps, job: Job): Promise<ProcessedJob> {
   );
 
   const progress = deps.progress;
-  const files = await discoverVideos(job.path, undefined, (found) => {
-    progress?.found(job.id, found);
-  });
+  // A scan of a whole source holds releases side by side; a path sent by hand (or by the watcher)
+  // is one release itself.
+  const splitReleases = library !== undefined && resolve(job.path) === resolve(library.source);
+  const files = await discoverVideos(
+    job.path,
+    undefined,
+    (found) => {
+      progress?.found(job.id, found);
+    },
+    { splitReleases },
+  );
   progress?.discovered(job.id, files.length);
   const analysis = await analyze(files, {
     parser: new GuessitParser(),
@@ -77,8 +84,6 @@ async function process(deps: ProcessorDeps, job: Job): Promise<ProcessedJob> {
     profile: settings.profile,
     destinationRoot: settings.destinations,
     mode: settings.mode,
-    // What a validation taught applies to every later scan.
-    aliases: new AliasStore(deps.database),
     onProgress: (done, total, file) => {
       progress?.identified(job.id, done, total, file.displayPath);
     },

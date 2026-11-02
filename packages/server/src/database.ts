@@ -244,6 +244,18 @@ export const SERVER_MIGRATIONS: readonly { readonly name: string; readonly sql: 
       );
     `,
   },
+  {
+    // A series' files are validated as a release (the folder they came in): `release` is its path,
+    // `detached` marks an episode set aside because its title is not the one most of the folder
+    // carries. Aliases are gone: one choice for a whole release replaces them.
+    name: 'server:016-releases',
+    sql: `
+      ALTER TABLE job_entries ADD COLUMN release TEXT;
+      ALTER TABLE job_entries ADD COLUMN detached INTEGER NOT NULL DEFAULT 0;
+      CREATE INDEX job_entries_release ON job_entries (job_id, release);
+      DROP TABLE title_aliases;
+    `,
+  },
 ];
 
 /** Opens the single SQLite file of the config directory, shared with the CLI and the cache. */

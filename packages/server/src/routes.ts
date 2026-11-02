@@ -15,7 +15,6 @@ import {
   batchDetailSchema,
   candidateSchema,
   classificationValues,
-  aliasSchema,
   arrivalsSchema,
   workDestinationSchema,
   entrySchema,
@@ -30,7 +29,6 @@ import {
   previewSchema,
   undoSchema,
 } from './schemas.js';
-import type { AliasStore } from './aliases.js';
 import type { WorkDestinationStore } from './work-destinations.js';
 import type { Notifier } from './notify/notifier.js';
 import type { Service } from './service.js';
@@ -39,7 +37,6 @@ export interface RouteContext {
   readonly jobs: JobStore;
   readonly entries: EntryStore;
   readonly executions: ExecutionStore;
-  readonly aliases: AliasStore;
   readonly workDestinations: WorkDestinationStore;
   readonly items: LibraryItemStore;
   readonly service: Service;
@@ -111,6 +108,8 @@ function presentEntry(entry: Entry): unknown {
     ...presentPlan(entry.item),
     error: entry.error,
     batchId: entry.batchId,
+    release: entry.release,
+    detached: entry.detached,
   };
 }
 
@@ -125,7 +124,9 @@ function presentArrival(entry: Entry, service: Service, jobs: JobStore): unknown
     id: entry.id,
     jobId: entry.jobId,
     path: entry.path,
-    release: basename(entry.path),
+    file: basename(entry.path),
+    release: entry.release,
+    detached: entry.detached,
     state: entry.classification === 'unrecognized' ? 'unrecognized' : 'review',
     kind,
     resolution: resolutionOf(entry.path),
@@ -171,7 +172,6 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
     jobs,
     entries,
     executions,
-    aliases,
     workDestinations,
     items,
     service,
@@ -372,7 +372,7 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
 
   api.post<{
     Params: { id: string };
-    Body: CandidateBody & { remember?: boolean; libraryId?: string; rememberDestination?: boolean };
+    Body: CandidateBody & { onlyThis?: boolean; libraryId?: string; rememberDestination?: boolean };
   }>(
     '/api/entries/:id/match',
     {
@@ -380,10 +380,9 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
         summary: 'Validate a match',
         description:
           'Plans the file with a candidate returned by `GET /api/search`; it overrides the score. ' +
-          'The file ends up `to-rename`, or in `conflict` if its target cannot be used. Unless ' +
-          '`remember` is false, the title of the file is tied to the candidate: later scans match ' +
-          'it alone, and the files waiting in the queue under that title are matched too (an ' +
-          'episode the work does not have stays in the queue). `rematched` counts those other files. ' +
+          'The file ends up `to-rename`, or in `conflict` if its target cannot be used. For ' +
+          'a series, the other episodes of the same release follow the choice (not the ones set ' +
+          'aside, `detached`, nor with `onlyThis`); `followers` lists them. ' +
           "`libraryId` sends the file to that library (of the work's kind) rather than to the " +
           'default one, for this file only; with `rememberDestination`, every later file of the ' +
           'work goes there alone. Without `libraryId`, a destination remembered for the work wins.',
@@ -392,7 +391,7 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
           ...matchBodySchema,
           properties: {
             ...matchBodySchema.properties,
-            remember: { type: 'boolean', description: 'Defaults to true' },
+            onlyThis: { type: 'boolean', description: 'Do not apply to the rest of the release' },
             libraryId: { type: 'string' },
             rememberDestination: { type: 'boolean', description: 'Defaults to false' },
           },
@@ -401,11 +400,11 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
       },
     },
     async (request) => {
-      const { entry, rematched } = await service.match(
+      const { entry, followers } = await service.match(
         request.params.id,
         toCandidate(request.body),
         {
-          ...(request.body.remember !== undefined && { remember: request.body.remember }),
+          ...(request.body.onlyThis !== undefined && { onlyThis: request.body.onlyThis }),
           ...(request.body.libraryId !== undefined && { libraryId: request.body.libraryId }),
           ...(request.body.rememberDestination !== undefined && {
             rememberDestination: request.body.rememberDestination,
@@ -413,7 +412,7 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
         },
       );
       events.emit('arrivals', 'settings');
-      return { ...(presentEntry(entry) as object), rematched };
+      return { ...(presentEntry(entry) as object), followers };
     },
   );
 
@@ -444,17 +443,22 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
     },
   );
 
-  api.post<{ Params: { id: string } }>(
+  api.post<{ Params: { id: string }; Body?: { onlyThis?: boolean } }>(
     '/api/entries/:id/ignore',
     {
+      preValidation: emptyBodyByDefault,
       schema: {
         summary: 'Set a file aside',
+        description: 'The rest of its release goes with it, unless `onlyThis`.',
         params: idParams,
+        body: { type: 'object', properties: { onlyThis: { type: 'boolean' } } },
         response: { 200: entrySchema, 401: errorSchema, 404: errorSchema, 409: errorSchema },
       },
     },
     (request) => {
-      const entry = service.ignore(request.params.id);
+      const entry = service.ignore(request.params.id, {
+        ...(request.body?.onlyThis !== undefined && { onlyThis: request.body.onlyThis }),
+      });
       events.emit('arrivals');
       return presentEntry(entry);
     },
@@ -564,44 +568,6 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
     (request, reply) =>
       history.get(request.params.id) ??
       reply.code(404).send({ error: { code: 'batch.not-found' } }),
-  );
-
-  api.get(
-    '/api/aliases',
-    {
-      schema: {
-        summary: 'The titles Kinoshelf remembers',
-        description:
-          'What validations in the queue taught: a title as files spell it, tied to a work. Later ' +
-          'scans match such a file alone.',
-        response: { 200: { type: 'array', items: aliasSchema }, 401: errorSchema },
-      },
-    },
-    () => aliases.list(),
-  );
-
-  api.delete<{ Params: { id: number } }>(
-    '/api/aliases/:id',
-    {
-      schema: {
-        summary: 'Forget a title',
-        description:
-          'Files already matched keep their match; the next scan reads the title afresh.',
-        params: {
-          type: 'object',
-          required: ['id'],
-          properties: { id: { type: 'integer' } },
-        },
-        response: { 204: { type: 'null' }, 401: errorSchema, 404: errorSchema },
-      },
-    },
-    (request, reply) => {
-      if (!aliases.remove(request.params.id)) {
-        return reply.code(404).send({ error: { code: 'alias.not-found' } });
-      }
-      events.emit('settings');
-      return reply.code(204).send();
-    },
   );
 
   api.get(

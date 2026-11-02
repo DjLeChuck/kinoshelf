@@ -42,6 +42,10 @@ export interface Entry {
   readonly batchId: string | null;
   /** The library an arrival was sent to by hand or by a remembered work; null: the default one. */
   readonly destinationLibraryId: string | null;
+  /** The folder (or file) it came in; episodes of one release are validated together. */
+  readonly release: string | null;
+  /** An episode set aside from its release: another title than the rest of the folder. */
+  readonly detached: boolean;
 }
 
 export type JobSummary = Record<Classification, number>;
@@ -74,10 +78,12 @@ interface EntryRow {
   error: string | null;
   batch_id: string | null;
   destination_library_id: string | null;
+  release: string | null;
+  detached: number;
 }
 
 const COLUMNS =
-  'id, job_id, path, classification, resolution, parsed, outcome, item, error, batch_id, destination_library_id';
+  'id, job_id, path, classification, resolution, parsed, outcome, item, error, batch_id, destination_library_id, release, detached';
 
 /** Candidates kept per file: the runner-ups a human needs, a few kilobytes less than all of them. */
 const KEPT_CANDIDATES = 4;
@@ -120,6 +126,8 @@ function toEntry(row: EntryRow): Entry {
     error: row.error === null ? null : (JSON.parse(row.error) as StoredError),
     batchId: row.batch_id,
     destinationLibraryId: row.destination_library_id,
+    release: row.release,
+    detached: row.detached === 1,
   };
 }
 
@@ -129,8 +137,8 @@ export class EntryStore {
 
   insertAll(jobId: string, entries: readonly AnalysisEntry[]): void {
     const insert = this.database.prepare(
-      `INSERT INTO job_entries (id, job_id, path, classification, parsed, outcome, item)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO job_entries (id, job_id, path, classification, parsed, outcome, item, release, detached)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     );
     this.database.transaction(() => {
       for (const entry of entries) {
@@ -142,6 +150,8 @@ export class EntryStore {
           JSON.stringify(entry.parsed),
           JSON.stringify(outcomeOf(entry)),
           entry.item ? JSON.stringify(entry.item) : null,
+          entry.file.release,
+          entry.detached ? 1 : 0,
         );
       }
     })();
@@ -224,6 +234,26 @@ export class EntryStore {
       .all(...options.arrivalIds, options.limit, options.offset)
       .map(toEntry);
     return { total, entries };
+  }
+
+  /**
+   * The other episodes validated along with this one: same job, same release, none set aside, none
+   * handled yet. Empty for a movie or a detached episode, which are validated alone.
+   */
+  releaseMates(entry: Entry): Entry[] {
+    if (entry.release === null || entry.detached || entry.parsed.kind !== 'episode') {
+      return [];
+    }
+    return this.database
+      .prepare<[string, string, string], EntryRow>(
+        `SELECT ${COLUMNS} FROM job_entries
+         WHERE job_id = ? AND release = ? AND id != ? AND detached = 0
+           AND resolution IS NULL AND classification != 'compliant'
+         ORDER BY seq`,
+      )
+      .all(entry.jobId, entry.release, entry.id)
+      .map(toEntry)
+      .filter((other) => other.parsed.kind === 'episode');
   }
 
   /** Where a file goes once transferred, chosen by hand or remembered; null: the default. */
