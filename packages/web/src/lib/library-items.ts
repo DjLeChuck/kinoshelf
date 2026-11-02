@@ -10,7 +10,10 @@ export const ITEM_FILTERS: readonly ItemFilter[] = [
   'missing-nfo',
   'missing-artwork',
 ];
-export type Counts = Readonly<Record<ItemFilter | 'all', number>>;
+/** A series library also filters its shows (`missing-episodes` counts shows, not files). */
+export type ShowFilter = ItemFilter | 'missing-episodes';
+export const SERIES_FILTERS: readonly ShowFilter[] = [...ITEM_FILTERS, 'missing-episodes'];
+export type Counts = Readonly<Record<ShowFilter | 'all', number>>;
 
 /** What a library holds, as `GET /api/libraries/{id}/items` lists it. */
 export interface LibraryItem {
@@ -21,6 +24,10 @@ export interface LibraryItem {
   readonly title: string | null;
   readonly year: number | null;
   readonly tmdbId: number | null;
+  /** Series only; `episodeEnd` is the last episode of a file holding several. */
+  readonly season: number | null;
+  readonly episode: number | null;
+  readonly episodeEnd: number | null;
   readonly resolution: string | null;
   /** `null`: the profile writes none, or it cannot be told. */
   readonly nfo: boolean | null;
@@ -91,8 +98,89 @@ export function itemsUrl(libraryId: string, { state, q, limit }: ItemsQuery): st
   return `/api/libraries/${libraryId}/items?${parameters.join('&')}`;
 }
 
+/** A show of a series library: `missing` is `null` until it was counted. */
+export interface Show {
+  readonly tmdbId: number;
+  readonly title: string | null;
+  readonly year: number | null;
+  readonly seasons: number;
+  readonly episodes: number;
+  readonly missing: number | null;
+}
+
+export type EpisodeState = 'present' | 'missing' | 'unaired' | 'extra';
+
+export interface ShowEpisode {
+  readonly season: number;
+  readonly episode: number;
+  readonly title: string | null;
+  readonly airDate: string | null;
+  readonly state: EpisodeState;
+  readonly item: LibraryItem | null;
+}
+
+export interface ShowSeason {
+  readonly season: number;
+  readonly name: string | null;
+  readonly posterPath: string | null;
+  readonly missing: number;
+  readonly episodes: readonly ShowEpisode[];
+}
+
+/** The page of a show, season by season, as `GET /api/libraries/{id}/shows/{tmdbId}` gives it. */
+export interface ShowDetail {
+  readonly tmdbId: number;
+  readonly title: string | null;
+  readonly year: number | null;
+  readonly overview: string | null;
+  readonly genres: readonly string[];
+  readonly posterPath: string | null;
+  readonly backdropPath: string | null;
+  readonly status: string | null;
+  /** `false` when TMDB could not be asked: only the files are listed, nothing is missing. */
+  readonly determined: boolean;
+  readonly missing: number | null;
+  readonly seasons: readonly ShowSeason[];
+}
+
+export interface ShowsQuery {
+  readonly q?: string | undefined;
+  readonly missing?: boolean | undefined;
+  readonly limit: number;
+}
+
+export function showsUrl(libraryId: string, { q, missing, limit }: ShowsQuery): string {
+  const parameters = [
+    ...(q?.trim() ? [`q=${encodeURIComponent(q.trim())}`] : []),
+    ...(missing ? ['missing=true'] : []),
+    `limit=${limit}`,
+  ];
+  return `/api/libraries/${libraryId}/shows?${parameters.join('&')}`;
+}
+
+/** `S01E02`, or `S01E02-E03` for a file holding several episodes. */
+export function episodeLabel(
+  season: number | null,
+  episode: number | null,
+  episodeEnd: number | null = null,
+): string {
+  if (season === null || episode === null) {
+    return '';
+  }
+  const two = (n: number): string => String(n).padStart(2, '0');
+  return `S${two(season)}E${two(episode)}${episodeEnd === null ? '' : `-E${two(episodeEnd)}`}`;
+}
+
+/** Files that wait for a person: they have no show to sit under. */
+export const isSettling = (item: Pick<LibraryItem, 'state'>): boolean =>
+  item.state === 'review' || item.state === 'unrecognized';
+
 export const libraryItems = {
   page: (libraryId: string, query: ItemsQuery) => api.get<ItemsPage>(itemsUrl(libraryId, query)),
+  shows: (libraryId: string, query: ShowsQuery) =>
+    api.get<{ total: number; items: readonly Show[] }>(showsUrl(libraryId, query)),
+  show: (libraryId: string, tmdbId: number) =>
+    api.get<ShowDetail>(`/api/libraries/${libraryId}/shows/${tmdbId}`),
   detail: (libraryId: string, itemId: string) =>
     api.get<ItemDetail>(`/api/libraries/${libraryId}/items/${itemId}`),
 };

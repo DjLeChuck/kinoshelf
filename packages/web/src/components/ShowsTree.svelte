@@ -1,0 +1,438 @@
+<script lang="ts">
+  import { untrack } from 'svelte';
+  import { messageOf } from '../lib/errors.js';
+  import { refetchOn } from '../lib/events.svelte.js';
+  import { locale, t } from '../lib/i18n.svelte.js';
+  import { formatDate } from '../lib/history.js';
+  import {
+    PAGE_SIZE,
+    episodeLabel,
+    libraryItems,
+    type EpisodeState,
+    type LibraryItem,
+    type Show,
+    type ShowDetail,
+  } from '../lib/library-items.js';
+  import ItemPanel from './ItemPanel.svelte';
+  import ShowPanel from './ShowPanel.svelte';
+
+  let {
+    libraryId,
+    writes,
+    query,
+    missingOnly,
+    settleCount,
+    onsettled,
+  }: {
+    libraryId: string;
+    writes: { nfo: boolean };
+    query: string;
+    /** Only the shows that lack episodes (and nothing waiting to be validated). */
+    missingOnly: boolean;
+    /** Files to validate or identify, from the library's counts: they have no show. */
+    settleCount: number;
+    /** A file was settled: what to tell the user, and the library to read again. */
+    onsettled: (message: string) => void;
+  } = $props();
+
+  const EPISODE_CHIP: Record<Exclude<EpisodeState, 'present'>, string> = {
+    missing: 'chip-warn',
+    unaired: 'chip-neutral',
+    extra: 'chip-danger',
+  };
+
+  type Selection =
+    | { readonly kind: 'show'; readonly tmdbId: number }
+    | { readonly kind: 'item'; readonly item: LibraryItem };
+
+  let shows = $state<{ total: number; items: readonly Show[] } | undefined>(undefined);
+  let settling = $state<readonly LibraryItem[]>([]);
+  let details = $state<Readonly<Record<number, ShowDetail>>>({});
+  let opened = $state<readonly number[]>([]);
+  let seasonsOpen = $state<readonly string[]>([]);
+  let settleOpen = $state(false);
+  let selection = $state<Selection | undefined>(undefined);
+  let failure = $state<unknown>(undefined);
+  let limit = $state(PAGE_SIZE);
+
+  const chosenShow = $derived.by(() => {
+    const chosen = selection;
+    return chosen?.kind === 'show'
+      ? shows?.items.find((show) => show.tmdbId === chosen.tmdbId)
+      : undefined;
+  });
+
+  let latest = 0;
+  async function load(wanted = { query, missingOnly, settleCount }): Promise<void> {
+    const ticket = ++latest;
+    try {
+      const answer = await libraryItems.shows(libraryId, {
+        q: wanted.query,
+        missing: wanted.missingOnly,
+        limit,
+      });
+      // The files that wait for a person are one node at the top, never inside a show.
+      const waiting =
+        wanted.missingOnly || wanted.settleCount === 0
+          ? []
+          : (
+              await Promise.all(
+                (['review', 'unrecognized'] as const).map((state) =>
+                  libraryItems.page(libraryId, { state, q: wanted.query, limit: 100 }),
+                ),
+              )
+            ).flatMap((page) => page.items);
+      // A show that was open is read again, so the tree follows what a transfer changed.
+      const fresh = await Promise.all(
+        opened.map(
+          async (id) => [id, await libraryItems.show(libraryId, id).catch(() => null)] as const,
+        ),
+      );
+      if (ticket === latest) {
+        shows = answer;
+        settling = waiting;
+        details = {
+          ...details,
+          ...Object.fromEntries(
+            fresh.filter((entry): entry is [number, ShowDetail] => entry[1] !== null),
+          ),
+        };
+        failure = undefined;
+      }
+    } catch (error) {
+      if (ticket === latest) {
+        failure = error;
+      }
+    }
+  }
+
+  // The parent's search box and filter come through the props: read again when they change.
+  $effect(() => {
+    const wanted = { query, missingOnly, settleCount };
+    untrack(() => {
+      limit = PAGE_SIZE;
+      void load(wanted);
+    });
+  });
+
+  refetchOn(['jobs', 'queue', 'history', 'settings', 'ready'], () => void load());
+
+  async function toggle(show: Show): Promise<void> {
+    selection = { kind: 'show', tmdbId: show.tmdbId };
+    if (opened.includes(show.tmdbId)) {
+      opened = opened.filter((id) => id !== show.tmdbId);
+      return;
+    }
+    opened = [...opened, show.tmdbId];
+    try {
+      // Opening a show counts what it lacks, so the badge of the list is right afterwards.
+      details = { ...details, [show.tmdbId]: await libraryItems.show(libraryId, show.tmdbId) };
+      const counted = details[show.tmdbId]?.missing ?? null;
+      if (shows) {
+        shows = {
+          ...shows,
+          items: shows.items.map((s) =>
+            s.tmdbId === show.tmdbId ? { ...s, missing: counted } : s,
+          ),
+        };
+      }
+    } catch (error) {
+      failure = error;
+    }
+  }
+
+  const seasonKey = (tmdbId: number, season: number): string => `${tmdbId}:${season}`;
+  function toggleSeason(key: string): void {
+    seasonsOpen = seasonsOpen.includes(key)
+      ? seasonsOpen.filter((k) => k !== key)
+      : [...seasonsOpen, key];
+  }
+
+  const mark = (value: boolean | null): string => (value === null ? '' : value ? '✓' : '✗');
+  const columns = $derived(5 + (writes.nfo ? 1 : 0));
+</script>
+
+{#if failure}
+  <p class="alert alert-danger" role="alert">{messageOf(t, failure)}</p>
+{:else if shows === undefined}
+  <p class="muted" role="status">{t('web.loading')}</p>
+{:else if shows.items.length === 0 && settling.length === 0}
+  <p class="card muted">{t('web.library.empty')}</p>
+{:else}
+  <div class="layout">
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>{t('web.library.col.title')}</th>
+            <th>{t('web.library.col.year')}</th>
+            <th>{t('web.library.col.seasons')}</th>
+            <th>{t('web.library.col.episodes')}</th>
+            {#if writes.nfo}<th>NFO</th>{/if}
+            <th>{t('web.library.col.missing')}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {#if settling.length > 0}
+            <tr class="group">
+              <td colspan={columns}>
+                <button
+                  type="button"
+                  class="link"
+                  aria-expanded={settleOpen}
+                  onclick={() => (settleOpen = !settleOpen)}
+                >
+                  {settleOpen ? '▾' : '▸'}
+                  {t('web.library.shows.settle')}
+                </button>
+                <span class="chip chip-warn">{settling.length}</span>
+              </td>
+            </tr>
+            {#if settleOpen}
+              {#each settling as item (item.id)}
+                <tr
+                  class="child"
+                  class:current={selection?.kind === 'item' && selection.item.id === item.id}
+                >
+                  <td colspan={columns}>
+                    <button
+                      type="button"
+                      class="link"
+                      onclick={() => (selection = { kind: 'item', item })}
+                    >
+                      {item.path.split('/').pop()}
+                    </button>
+                    <span class="chip {item.state === 'review' ? 'chip-warn' : 'chip-danger'}"
+                      >{t(
+                        item.state === 'review'
+                          ? 'web.library.state.review'
+                          : 'web.library.state.unrecognized',
+                      )}</span
+                    >
+                  </td>
+                </tr>
+              {/each}
+            {/if}
+          {/if}
+
+          {#each shows.items as show (show.tmdbId)}
+            {@const isOpen = opened.includes(show.tmdbId)}
+            <tr class:current={selection?.kind === 'show' && selection.tmdbId === show.tmdbId}>
+              <td>
+                <button
+                  type="button"
+                  class="link"
+                  aria-expanded={isOpen}
+                  aria-label={t(isOpen ? 'web.library.shows.close' : 'web.library.shows.open', {
+                    title: show.title ?? '',
+                  })}
+                  onclick={() => void toggle(show)}
+                >
+                  {isOpen ? '▾' : '▸'}
+                  {show.title ?? ''}
+                </button>
+              </td>
+              <td>{show.year ?? ''}</td>
+              <td>{show.seasons}</td>
+              <td>{show.episodes}</td>
+              {#if writes.nfo}<td></td>{/if}
+              <td>
+                {#if show.missing}
+                  <span class="chip chip-warn"
+                    >{t('web.library.shows.missing', { count: show.missing })}</span
+                  >
+                {/if}
+              </td>
+            </tr>
+
+            {#if isOpen}
+              {@const detail = details[show.tmdbId]}
+              {#if detail === undefined}
+                <tr class="child"><td colspan={columns} class="muted">{t('web.loading')}</td></tr>
+              {:else}
+                {#each detail.seasons as season (season.season)}
+                  {@const key = seasonKey(show.tmdbId, season.season)}
+                  {@const seasonOpen = seasonsOpen.includes(key)}
+                  <tr class="child season">
+                    <td colspan={columns - 1}>
+                      <button
+                        type="button"
+                        class="link indent"
+                        aria-expanded={seasonOpen}
+                        onclick={() => {
+                          toggleSeason(key);
+                        }}
+                      >
+                        {seasonOpen ? '▾' : '▸'}
+                        {season.season === 0
+                          ? t('web.library.season.specials')
+                          : t('web.library.season', { season: season.season })}
+                      </button>
+                    </td>
+                    <td>
+                      {#if season.missing > 0}
+                        <span class="chip chip-warn"
+                          >{t('web.library.shows.missing', { count: season.missing })}</span
+                        >
+                      {/if}
+                    </td>
+                  </tr>
+                  {#if seasonOpen}
+                    {#each season.episodes as episode (`${episode.episode}:${episode.item?.id ?? ''}`)}
+                      {@const item = episode.item}
+                      <tr
+                        class="child episode"
+                        class:current={selection?.kind === 'item' && item?.id === selection.item.id}
+                      >
+                        <td class="indent2">
+                          {#if item}
+                            <button
+                              type="button"
+                              class="link"
+                              onclick={() => (selection = { kind: 'item', item })}
+                            >
+                              {episodeLabel(episode.season, episode.episode)}
+                              {episode.title ?? ''}
+                            </button>
+                          {:else}
+                            <span class="muted">
+                              {episodeLabel(episode.season, episode.episode)}
+                              {episode.title ?? ''}
+                            </span>
+                          {/if}
+                        </td>
+                        <td class="muted">
+                          {episode.airDate ? formatDate(episode.airDate, locale.value) : ''}
+                        </td>
+                        <td colspan="2">
+                          {#if episode.state !== 'present'}
+                            <span class="chip {EPISODE_CHIP[episode.state]}"
+                              >{t(`web.library.episode.${episode.state}`)}</span
+                            >
+                          {/if}
+                        </td>
+                        {#if writes.nfo}<td>{mark(item?.nfo ?? null)}</td>{/if}
+                        <td></td>
+                      </tr>
+                    {/each}
+                  {/if}
+                {/each}
+                {#if !detail.determined}
+                  <tr class="child">
+                    <td colspan={columns} class="muted">{t('web.library.shows.undetermined')}</td>
+                  </tr>
+                {/if}
+              {/if}
+            {/if}
+          {/each}
+        </tbody>
+      </table>
+      {#if shows.total > shows.items.length}
+        <button
+          type="button"
+          class="btn"
+          onclick={() => {
+            limit += PAGE_SIZE;
+            void load();
+          }}>{t('web.library.more', { shown: shows.items.length, total: shows.total })}</button
+        >
+      {/if}
+    </div>
+
+    <div>
+      {#if selection?.kind === 'item'}
+        {#key selection.item.id}
+          <ItemPanel
+            {libraryId}
+            item={selection.item}
+            ondone={(message: string) => {
+              selection = undefined;
+              onsettled(message);
+              void load();
+            }}
+          />
+        {/key}
+      {:else if chosenShow}
+        {#key chosenShow.tmdbId}
+          <ShowPanel show={chosenShow} detail={details[chosenShow.tmdbId]} />
+        {/key}
+      {:else}
+        <p class="muted">{t('web.library.pick')}</p>
+      {/if}
+    </div>
+  </div>
+{/if}
+
+<style>
+  .layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) minmax(280px, 1fr);
+    gap: 16px;
+    align-items: start;
+  }
+
+  .table-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    overflow-x: auto;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  th,
+  td {
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+  }
+
+  th {
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  tr.current {
+    background: var(--surface-2);
+  }
+
+  .group td {
+    background: var(--surface-2);
+  }
+
+  .indent {
+    padding-left: 16px;
+  }
+
+  .indent2 {
+    padding-left: 36px;
+  }
+
+  p {
+    margin: 0;
+  }
+
+  .link {
+    min-height: 44px;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--text);
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .link:hover {
+    text-decoration: underline;
+  }
+
+  @media (max-width: 960px) {
+    .layout {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

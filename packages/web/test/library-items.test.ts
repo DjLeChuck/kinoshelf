@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
   formatSize,
+  episodeLabel,
+  isSettling,
   isStalled,
   itemsUrl,
   scanPercent,
+  showsUrl,
   type ScanProgress,
 } from '../src/lib/library-items.js';
 
@@ -52,5 +55,38 @@ describe('formatSize', () => {
     [1_500_000_000, '1.4 GB'],
   ])('%d is %s', (bytes, expected) => {
     expect(formatSize(bytes)).toBe(expected);
+  });
+});
+
+describe('showsUrl', () => {
+  it('asks only for what is set', () => {
+    expect(showsUrl('series', { limit: 50 })).toBe('/api/libraries/series/shows?limit=50');
+    expect(showsUrl('series', { q: ' the office ', missing: true, limit: 20 })).toBe(
+      '/api/libraries/series/shows?q=the%20office&missing=true&limit=20',
+    );
+    expect(showsUrl('series', { missing: false, limit: 50 })).not.toContain('missing');
+  });
+});
+
+describe('episodeLabel', () => {
+  it('pads the numbers and shows the end of a range', () => {
+    expect(episodeLabel(1, 2)).toBe('S01E02');
+    expect(episodeLabel(12, 105)).toBe('S12E105');
+    expect(episodeLabel(1, 2, 3)).toBe('S01E02-E03');
+    expect(episodeLabel(0, 1)).toBe('S00E01');
+  });
+
+  it('is empty for a file without a season or an episode', () => {
+    expect(episodeLabel(null, null)).toBe('');
+    expect(episodeLabel(1, null)).toBe('');
+  });
+});
+
+describe('isSettling', () => {
+  it('is true for the files a person must decide', () => {
+    expect(isSettling({ state: 'review' })).toBe(true);
+    expect(isSettling({ state: 'unrecognized' })).toBe(true);
+    expect(isSettling({ state: 'rename' })).toBe(false);
+    expect(isSettling({ state: 'ok' })).toBe(false);
   });
 });

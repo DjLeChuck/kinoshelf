@@ -7,16 +7,19 @@
   import {
     ITEM_FILTERS,
     PAGE_SIZE,
+    SERIES_FILTERS,
     lastScanFailed,
     libraryItems,
     scanPercent,
-    type ItemFilter,
     type ItemState,
     type ItemsPage,
+    type ShowFilter,
   } from '../lib/library-items.js';
   import ItemPanel from './ItemPanel.svelte';
   import Link from './Link.svelte';
   import ScanProgress from './ScanProgress.svelte';
+  import ShowsTree from './ShowsTree.svelte';
+  import { episodeLabel } from '../lib/library-items.js';
 
   let { library }: { library: Library } = $props();
 
@@ -30,12 +33,18 @@
 
   let page = $state<ItemsPage | undefined>(undefined);
   let failure = $state<unknown>(undefined);
-  let filter = $state<ItemFilter | undefined>(undefined);
+  let filter = $state<ShowFilter | undefined>(undefined);
   let query = $state('');
   let limit = $state(PAGE_SIZE);
   let chosen = $state<string | undefined>(undefined);
   let notice = $state<string | undefined>(undefined);
   let starting = $state(false);
+
+  // A series library reads as a tree of shows, until a filter asks for the files themselves
+  // (the ones to validate, to rename, without NFO…): then it is the same flat list as the movies'.
+  const isSeries = $derived(library.type === 'series');
+  const tree = $derived(isSeries && (filter === undefined || filter === 'missing-episodes'));
+  const filters = $derived(isSeries ? SERIES_FILTERS : ITEM_FILTERS);
 
   const open = $derived(page?.items.find(({ id }) => id === chosen));
   const scanning = $derived(page?.scan != null || library.scanning);
@@ -45,7 +54,12 @@
   async function load(): Promise<void> {
     const ticket = ++latest;
     try {
-      const answer = await libraryItems.page(library.id, { state: filter, q: query, limit });
+      // The tree reads its shows itself: here only the counts and the scan are wanted.
+      const answer = await libraryItems.page(library.id, {
+        state: filter === 'missing-episodes' ? undefined : filter,
+        q: query,
+        limit: tree ? 1 : limit,
+      });
       if (ticket === latest) {
         page = answer;
         failure = undefined;
@@ -129,7 +143,7 @@
     </section>
   {:else}
     <div class="filters" role="group" aria-label={t('web.library.filter.label')}>
-      {#each [undefined, ...ITEM_FILTERS] as option (option ?? 'all')}
+      {#each [undefined, ...filters] as option (option ?? 'all')}
         <button
           type="button"
           class="btn"
@@ -153,7 +167,19 @@
       oninput={refilter}
     />
 
-    {#if page.items.length === 0}
+    {#if tree}
+      <ShowsTree
+        libraryId={library.id}
+        writes={page.library.writes}
+        {query}
+        missingOnly={filter === 'missing-episodes'}
+        settleCount={page.counts.review + page.counts.unrecognized}
+        onsettled={(message: string) => {
+          notice = message;
+          void load();
+        }}
+      />
+    {:else if page.items.length === 0}
       <p class="card muted">{t('web.library.empty')}</p>
     {:else}
       <div class="layout">
@@ -185,6 +211,7 @@
                       }}
                     >
                       {item.title ?? item.path.split('/').pop()}
+                      {episodeLabel(item.season, item.episode, item.episodeEnd)}
                     </button>
                     {#if item.state !== 'ok'}<span class="chip {STATE_CHIP[item.state]}"
                         >{t(`web.library.state.${item.state}`)}</span

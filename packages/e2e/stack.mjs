@@ -47,6 +47,30 @@ const catalog = [
   film(348, 'Alien', 1979, '/alien.jpg'),
 ];
 
+// One show: two seasons, the second not finished, so a library can lack an aired episode and
+// still owe nothing for the ones to come. Aired dates are in the past, the unaired one far ahead.
+const SHOW_ID = 95396;
+const show = {
+  id: SHOW_ID,
+  name: 'Severance',
+  original_name: 'Severance',
+  first_air_date: '2022-02-18',
+  overview: 'Work and life, split.',
+  poster_path: '/severance.jpg',
+  popularity: 10,
+};
+const SEASONS = {
+  1: [
+    ['Good News About Hell', '2022-02-18'],
+    ['Half Loop', '2022-02-18'],
+    ['In Perpetuity', '2022-02-25'],
+  ],
+  2: [
+    ['Hello, Ms. Cobel', '2025-01-17'],
+    ['Goodbye, Mrs. Selvig', '2999-01-24'],
+  ],
+};
+
 // A 1x1 PNG, so a poster really renders.
 const PNG = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
@@ -78,7 +102,38 @@ createServer((request, response) => {
       response.writeHead(404).end();
     }
   } else if (url.pathname === '/3/search/tv') {
-    json({ results: [] });
+    const word = (url.searchParams.get('query') ?? '').toLowerCase().split(' ')[0];
+    json({ results: word && 'severance'.startsWith(word) ? [show] : [] });
+  } else if (url.pathname === `/3/tv/${SHOW_ID}`) {
+    json({
+      ...show,
+      backdrop_path: '/backdrop.jpg',
+      status: 'Returning Series',
+      genres: [{ id: 18, name: 'Drama' }],
+      credits: { cast: [], crew: [] },
+      external_ids: {},
+      seasons: Object.keys(SEASONS).map((number) => ({
+        season_number: Number(number),
+        name: `Season ${number}`,
+        poster_path: null,
+      })),
+    });
+  } else if (new RegExp(`^/3/tv/${SHOW_ID}/season/\\d+$`).test(url.pathname)) {
+    const number = Number(url.pathname.split('/').pop());
+    const episodes = SEASONS[number];
+    if (episodes) {
+      json({
+        season_number: number,
+        episodes: episodes.map(([name, air_date], index) => ({
+          season_number: number,
+          episode_number: index + 1,
+          name,
+          air_date,
+        })),
+      });
+    } else {
+      response.writeHead(404).end();
+    }
   } else if (/\/alternative_titles$/.test(url.pathname)) {
     json({ titles: [], results: [] });
   } else {
