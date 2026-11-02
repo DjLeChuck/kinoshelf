@@ -1,6 +1,5 @@
 import { Matcher } from '../matching/matcher.js';
 import type { MatchingConfig } from '../matching/config.js';
-import { normalizeTitle } from '../matching/title-similarity.js';
 import { createPlan, type PlanInput } from '../planning/planner.js';
 import type { MatchOutcome } from '../types/matching.js';
 import type { ParsedMedia } from '../types/media.js';
@@ -11,6 +10,7 @@ import type { Profile } from '../types/profile.js';
 import type { Candidate, MetadataProvider } from '../types/provider.js';
 import type { DiscoveredFile } from './discover.js';
 import { MetadataLoader } from './metadata.js';
+import { isTitledEpisode, voteRelease } from './release.js';
 
 /**
  * - `compliant`: already where the profile wants it.
@@ -74,38 +74,18 @@ async function mapLimited<T, R>(
   return results;
 }
 
-/** The series name an episode carries, spelled alike however the release writes it. */
-const seriesKey = (parsed: ParsedMedia): string | undefined =>
-  parsed.kind === 'episode' && parsed.title?.trim() ? normalizeTitle(parsed.title) : undefined;
-
-/**
- * Episodes of one release (a folder) split by the title most of them carry: the first value is the
- * indexes of the files that follow it, the second those that do not. Ties go to the title seen
- * first, so the result does not depend on a race.
- */
-function voteRelease(
+/** The vote of a release, in terms of indexes into the analyzed files. */
+function voteMembers(
   members: readonly number[],
   parsedFiles: readonly ParsedMedia[],
 ): { agree: number[]; detached: number[] } {
-  const counts = new Map<string, number>();
-  for (const index of members) {
-    const key = seriesKey(parsedFiles[index] as ParsedMedia) as string;
-    counts.set(key, (counts.get(key) ?? 0) + 1);
-  }
-  let winner = '';
-  let most = 0;
-  for (const [key, count] of counts) {
-    if (count > most) {
-      winner = key;
-      most = count;
-    }
-  }
-  const agree: number[] = [];
-  const detached: number[] = [];
-  for (const index of members) {
-    (seriesKey(parsedFiles[index] as ParsedMedia) === winner ? agree : detached).push(index);
-  }
-  return { agree, detached };
+  const { agree, detached } = voteRelease(
+    members.map((index) => parsedFiles[index] as ParsedMedia),
+  );
+  return {
+    agree: agree.map((position) => members[position] as number),
+    detached: detached.map((position) => members[position] as number),
+  };
 }
 
 /** Episodes grouped by release; everything else (movies, loose files) is left out. */
@@ -115,7 +95,7 @@ function episodeReleases(
 ): number[][] {
   const groups = new Map<string, number[]>();
   files.forEach((file, index) => {
-    if (seriesKey(parsedFiles[index] as ParsedMedia) !== undefined) {
+    if (isTitledEpisode(parsedFiles[index] as ParsedMedia)) {
       groups.set(file.release, [...(groups.get(file.release) ?? []), index]);
     }
   });
@@ -133,7 +113,7 @@ function matchingUnits(
   const grouped = new Set<number>();
   const units: number[][] = [];
   for (const members of episodeReleases(files, parsedFiles)) {
-    const { agree } = voteRelease(members, parsedFiles);
+    const { agree } = voteMembers(members, parsedFiles);
     units.push(agree);
     agree.forEach((index) => grouped.add(index));
   }
@@ -152,7 +132,7 @@ function detachedFiles(
 ): Set<number> {
   return new Set(
     episodeReleases(files, parsedFiles).flatMap(
-      (members) => voteRelease(members, parsedFiles).detached,
+      (members) => voteMembers(members, parsedFiles).detached,
     ),
   );
 }

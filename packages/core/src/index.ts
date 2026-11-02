@@ -59,6 +59,12 @@ export {
   type Classification,
 } from './pipeline/analyze.js';
 export {
+  isTitledEpisode,
+  SAME_SERIES_SIMILARITY,
+  sameSeries,
+  voteRelease,
+} from './pipeline/release.js';
+export {
   CONFIG_FILE,
   configDirectory,
   DATABASE_FILE,
