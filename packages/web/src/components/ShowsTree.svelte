@@ -51,6 +51,10 @@
   let shows = $state<{ total: number; items: readonly Show[] } | undefined>(undefined);
   let settling = $state<readonly LibraryItem[]>([]);
   let details = $state<Readonly<Record<number, ShowDetail>>>({});
+  /** A show that could not be opened says so in its own row: the rest of the tree stays. */
+  let showFailures = $state<Readonly<Record<number, unknown>>>({});
+  /** How many files wait for a person, the server's count (the list shows the first ones). */
+  let settleTotal = $state(0);
   // What is open lives in the URL (`?open=<tmdb ids>&seasons=<tmdb id>:<season>,…`): a reload or a
   // shared link opens the same shows.
   const opened = $derived(
@@ -82,16 +86,14 @@
         limit,
       });
       // The files that wait for a person are one node at the top, never inside a show.
-      const waiting =
+      const pages =
         wanted.only !== undefined || wanted.settleCount === 0
           ? []
-          : (
-              await Promise.all(
-                (['review', 'unrecognized'] as const).map((state) =>
-                  libraryItems.page(libraryId, { state, q: wanted.query, limit: 100 }),
-                ),
-              )
-            ).flatMap((page) => page.items);
+          : await Promise.all(
+              (['review', 'unrecognized'] as const).map((state) =>
+                libraryItems.page(libraryId, { state, q: wanted.query, limit: 100 }),
+              ),
+            );
       // A show that was open is read again, so the tree follows what a transfer changed.
       const fresh = await Promise.all(
         opened.map(
@@ -100,7 +102,8 @@
       );
       if (ticket === latest) {
         shows = answer;
-        settling = waiting;
+        settling = pages.flatMap((page) => page.items);
+        settleTotal = pages.reduce((sum, page) => sum + page.total, 0);
         details = {
           ...details,
           ...Object.fromEntries(
@@ -134,6 +137,9 @@
       return;
     }
     router.setQuery({ open: listParam([...opened, show.tmdbId]) });
+    showFailures = Object.fromEntries(
+      Object.entries(showFailures).filter(([id]) => Number(id) !== show.tmdbId),
+    );
     try {
       // Opening a show counts what it lacks, so the badge of the list is right afterwards.
       details = { ...details, [show.tmdbId]: await libraryItems.show(libraryId, show.tmdbId) };
@@ -147,7 +153,7 @@
         };
       }
     } catch (error) {
-      failure = error;
+      showFailures = { ...showFailures, [show.tmdbId]: error };
     }
   }
 
@@ -201,7 +207,7 @@
                   <Chevron open={settleOpen} />
                   {t('web.library.shows.settle')}
                 </button>
-                <span class="chip chip-warn">{settling.length}</span>
+                <span class="chip chip-warn">{settleTotal}</span>
               </td>
             </tr>
             {#if settleOpen}
@@ -267,7 +273,14 @@
 
             {#if isOpen}
               {@const detail = details[show.tmdbId]}
-              {#if detail === undefined}
+              {@const showFailure = showFailures[show.tmdbId]}
+              {#if detail === undefined && showFailure !== undefined}
+                <tr class="child">
+                  <td colspan={columns}>
+                    <span class="alert alert-danger" role="alert">{messageOf(t, showFailure)}</span>
+                  </td>
+                </tr>
+              {:else if detail === undefined}
                 <tr class="child"><td colspan={columns} class="muted">{t('web.loading')}</td></tr>
               {:else}
                 {#each detail.seasons as season (season.season)}
