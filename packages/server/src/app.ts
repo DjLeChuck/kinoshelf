@@ -392,7 +392,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
       config: configStore,
       env: options.env,
       events,
-      hasWork: () => jobs.list(1).length > 0 || history.list({ limit: 1, offset: 0 }).length > 0,
+      hasWork: () => jobs.list(1).length > 0 || history.hasBatch(),
     });
     registerFsRoutes(api);
     registerLibraryRoutes(api, {

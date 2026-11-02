@@ -102,17 +102,26 @@ export class ExecutionStore {
   }
 
   /**
-   * Finished executions that settled a batch, newest first. History shows those that moved
-   * nothing too, which the journal never saw.
+   * Executions that have a batch, newest first, running ones included. History shows those that
+   * moved nothing too, which the journal never saw.
    */
-  finishedWithBatch(): Execution[] {
+  withBatch(): Execution[] {
     return this.database
       .prepare<[], ExecutionRow>(
-        `SELECT ${COLUMNS} FROM executions
-         WHERE batch_id IS NOT NULL AND status IN ('done', 'failed') ORDER BY seq DESC`,
+        `SELECT ${COLUMNS} FROM executions WHERE batch_id IS NOT NULL ORDER BY seq DESC`,
       )
       .all()
       .map(toExecution);
+  }
+
+  /** The jobs that ever had an execution, whatever became of it. */
+  jobsWithExecution(): Set<string> {
+    return new Set(
+      this.database
+        .prepare<[], { job_id: string }>('SELECT DISTINCT job_id FROM executions')
+        .all()
+        .map((row) => row.job_id),
+    );
   }
 
   latestOf(jobId: string): Execution | undefined {

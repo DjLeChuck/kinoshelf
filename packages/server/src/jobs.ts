@@ -140,6 +140,18 @@ export class JobStore {
     return row && toJob(row);
   }
 
+  /** The transfer mode each job was analyzed with, read in one go for the history. */
+  modes(): Map<string, TransferMode> {
+    return new Map(
+      this.database
+        .prepare<[], { id: string; mode: TransferMode | null }>(
+          "SELECT id, json_extract(settings, '$.mode') AS mode FROM jobs WHERE settings IS NOT NULL",
+        )
+        .all()
+        .flatMap((row) => (row.mode ? [[row.id, row.mode] as const] : [])),
+    );
+  }
+
   settings(id: string): PlanSettings | undefined {
     const row = this.database
       .prepare<[string], { settings: string | null }>('SELECT settings FROM jobs WHERE id = ?')

@@ -1,7 +1,7 @@
 import type { Journal, JournalBatch, TransferMode } from '@kinoshelf/core';
 import type { StoredError } from './entries.js';
 import type { Execution, ExecutionStore } from './executions.js';
-import type { JobStatus, JobStore } from './jobs.js';
+import type { Job, JobStatus, JobStore } from './jobs.js';
 
 /**
  * `done`: something was transferred; `undone`: it was reverted; `failed`: the execution moved
@@ -70,6 +70,14 @@ export interface Activity {
   readonly routine: boolean;
 }
 
+/** What a history read looks up per line, fetched once per request instead of once per line. */
+interface Lookups {
+  /** The latest execution of each batch, by batch id. */
+  readonly executions: ReadonlyMap<string, Execution>;
+  readonly jobs: ReadonlyMap<string, Job>;
+  readonly modes: ReadonlyMap<string, TransferMode>;
+}
+
 export class History {
   constructor(
     private readonly journal: Journal,
@@ -77,9 +85,10 @@ export class History {
     private readonly jobs: JobStore,
   ) {}
 
-  /** Journal batches and the executions that moved nothing, the most recent first. */
-  list(options: { limit: number; offset: number }): BatchSummary[] {
-    return this.batches().slice(options.offset, options.offset + options.limit);
+  /** Whether anything was ever transferred or tried, from the server or the CLI. */
+  hasBatch(): boolean {
+    // An execution that moved nothing has a job, which the caller counts already.
+    return this.journal.lastBatchId() !== null || this.journal.batches().length > 0;
   }
 
   /**
@@ -91,28 +100,39 @@ export class History {
     total: number;
     items: Activity[];
   } {
-    const batched = new Set(
-      this.executions.finishedWithBatch().map((execution) => execution.jobId),
-    );
+    const withBatch = this.executions.withBatch();
+    const jobs = this.jobs.all();
+    const lookups: Lookups = {
+      // Newest first, so the first one seen for a batch is its latest.
+      executions: withBatch.reduce((byBatch, execution) => {
+        if (execution.batchId !== null && !byBatch.has(execution.batchId)) {
+          byBatch.set(execution.batchId, execution);
+        }
+        return byBatch;
+      }, new Map<string, Execution>()),
+      jobs: new Map(jobs.map((job) => [job.id, job])),
+      modes: this.jobs.modes(),
+    };
+    const batched = new Set(withBatch.filter(isFinished).map((execution) => execution.jobId));
+    const executed = this.executions.jobsWithExecution();
     const lines = [
-      ...this.batches().map((batch): Activity => ({
+      ...this.batches(lookups).map((batch): Activity => ({
         id: batch.id,
         kind: 'batch',
         at: batch.at,
         status: batch.status,
         path: batch.origin?.path ?? null,
-        libraryId: (batch.origin && this.jobs.get(batch.origin.jobId)?.libraryId) ?? null,
+        libraryId: (batch.origin && lookups.jobs.get(batch.origin.jobId)?.libraryId) ?? null,
         operations: batch.operations,
         failed: batch.failed,
         modes: batch.modes,
         error: batch.error,
         routine: false,
       })),
-      ...this.jobs
-        .all()
+      ...jobs
         .filter((job) => !batched.has(job.id))
         .map((job): Activity => {
-          const mode = this.jobs.settings(job.id)?.mode;
+          const mode = lookups.modes.get(job.id);
           return {
             id: job.id,
             kind: 'job',
@@ -124,7 +144,7 @@ export class History {
             failed: 0,
             modes: mode ? [mode] : [],
             error: job.error,
-            routine: job.status === 'done' && this.executions.latestOf(job.id) === undefined,
+            routine: job.status === 'done' && !executed.has(job.id),
           };
         }),
     ]
@@ -136,26 +156,37 @@ export class History {
     };
   }
 
-  private batches(): BatchSummary[] {
+  private batches(lookups: Lookups): BatchSummary[] {
     const journaled = this.journal.batches();
     const known = new Set(journaled.map((batch) => batch.batchId));
-    const failed = this.executions
-      .finishedWithBatch()
-      .filter((execution) => execution.batchId !== null && !known.has(execution.batchId));
+    const failed = [...lookups.executions.values()].filter(
+      (execution) =>
+        isFinished(execution) && execution.batchId !== null && !known.has(execution.batchId),
+    );
     return [
-      ...journaled.map((batch) => this.summarize(batch)),
-      ...failed.map((execution) => this.summarizeFailed(execution)),
-    ].sort((a, b) => b.at.localeCompare(a.at));
+      ...journaled.map((batch) =>
+        this.summarize(batch, lookups.executions.get(batch.batchId), lookups),
+      ),
+      ...failed.map((execution) => this.summarizeFailed(execution, lookups)),
+    ];
   }
 
   get(id: string): BatchDetail | undefined {
-    const batch = this.journal.batches().find((candidate) => candidate.batchId === id);
+    const batch = this.journal.batch(id);
     const execution = this.executions.ofBatch(id);
-    if (!batch && !(execution && execution.status !== 'queued' && execution.status !== 'running')) {
+    if (!batch && !(execution && isFinished(execution))) {
       return undefined;
     }
-    const summary = batch ? this.summarize(batch) : this.summarizeFailed(execution as Execution);
-    const mode = this.modeOf(execution);
+    const job = execution && this.jobs.get(execution.jobId);
+    const mode = execution && this.jobs.settings(execution.jobId)?.mode;
+    const lookups: Lookups = {
+      executions: new Map(execution ? [[id, execution]] : []),
+      jobs: new Map(job ? [[job.id, job]] : []),
+      modes: new Map(job && mode ? [[job.id, mode]] : []),
+    };
+    const summary = batch
+      ? this.summarize(batch, execution, lookups)
+      : this.summarizeFailed(execution as Execution, lookups);
     const journaled = this.journal.entriesOf(id);
     const failures = (execution?.failures ?? []).map((failure): BatchOperation => ({
       source: failure.path,
@@ -189,8 +220,11 @@ export class History {
     };
   }
 
-  private summarize(batch: JournalBatch): BatchSummary {
-    const execution = this.executions.ofBatch(batch.batchId);
+  private summarize(
+    batch: JournalBatch,
+    execution: Execution | undefined,
+    lookups: Lookups,
+  ): BatchSummary {
     return {
       id: batch.batchId,
       at: batch.at,
@@ -198,13 +232,13 @@ export class History {
       operations: batch.operations,
       modes: batch.modes,
       failed: execution?.summary?.failed ?? 0,
-      origin: this.originOf(execution),
+      origin: originOf(execution, lookups),
       error: null,
     };
   }
 
-  private summarizeFailed(execution: Execution): BatchSummary {
-    const mode = this.modeOf(execution);
+  private summarizeFailed(execution: Execution, lookups: Lookups): BatchSummary {
+    const mode = lookups.modes.get(execution.jobId);
     return {
       id: execution.batchId ?? execution.id,
       at: execution.finishedAt ?? execution.createdAt,
@@ -212,17 +246,16 @@ export class History {
       operations: 0,
       modes: mode ? [mode] : [],
       failed: execution.summary?.failed ?? execution.failures.length,
-      origin: this.originOf(execution),
+      origin: originOf(execution, lookups),
       error: execution.error ?? execution.failures[0]?.error ?? null,
     };
   }
+}
 
-  private originOf(execution: Execution | undefined): BatchOrigin | null {
-    const job = execution && this.jobs.get(execution.jobId);
-    return job ? { jobId: job.id, path: job.path } : null;
-  }
+const isFinished = (execution: Execution): boolean =>
+  execution.status === 'done' || execution.status === 'failed';
 
-  private modeOf(execution: Execution | undefined): TransferMode | undefined {
-    return execution && this.jobs.settings(execution.jobId)?.mode;
-  }
+function originOf(execution: Execution | undefined, lookups: Lookups): BatchOrigin | null {
+  const job = execution && lookups.jobs.get(execution.jobId);
+  return job ? { jobId: job.id, path: job.path } : null;
 }
