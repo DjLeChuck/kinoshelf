@@ -1,4 +1,4 @@
-import { readdir, readFile, stat } from 'node:fs/promises';
+import { chmod, readdir, readFile, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
@@ -93,6 +93,40 @@ describe('moveFile', () => {
     const dir = await makeDir();
     expect(await codeOf(moveFile(join(dir, 'nope'), join(dir, 'b')))).toBe('source.missing');
   });
+
+  // Root ignores directory permissions, so the source could not be kept from going.
+  it.skipIf(process.getuid?.() === 0)(
+    'takes the new name back when the source cannot be removed',
+    async () => {
+      const [src, lib] = [await makeDir(), await makeDir()];
+      const source = await put(join(src, 'a.mkv'), 'v');
+      const destination = join(lib, 'a.mkv');
+      await chmod(src, 0o555);
+      try {
+        expect(await codeOf(moveFile(source, destination))).toBe('unexpected');
+      } finally {
+        await chmod(src, 0o755);
+      }
+      expect(await readdir(lib)).toEqual([]);
+      expect(await readFile(source, 'utf8')).toBe('v');
+    },
+  );
+
+  it.skipIf(!crossDeviceAvailable || process.getuid?.() === 0)(
+    'removes its copy when the source cannot be removed across filesystems',
+    async () => {
+      const [src, lib] = [await makeDir(), await makeDir(SHM)];
+      const source = await put(join(src, 'a.mkv'), 'v');
+      await chmod(src, 0o555);
+      try {
+        expect(await codeOf(moveFile(source, join(lib, 'a.mkv')))).toBe('unexpected');
+      } finally {
+        await chmod(src, 0o755);
+      }
+      expect(await readdir(lib)).toEqual([]);
+      expect(await readFile(source, 'utf8')).toBe('v');
+    },
+  );
 });
 
 describe('ensureDirectory', () => {

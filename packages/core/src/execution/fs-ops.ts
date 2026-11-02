@@ -181,11 +181,9 @@ export async function hardlinkFile(source: string, destination: string): Promise
  * volumes it is a verified copy then a delete, which is what a move means there.
  */
 export async function moveFile(source: string, destination: string): Promise<void> {
+  let published: 'linked' | 'renamed';
   try {
-    if ((await publish(source, destination)) === 'linked') {
-      await unlink(source);
-    }
-    return;
+    published = await publish(source, destination);
   } catch (error) {
     if (codeOf(error) === 'ENOENT') {
       throw new KinoshelfError('source.missing', { path: source });
@@ -193,10 +191,29 @@ export async function moveFile(source: string, destination: string): Promise<voi
     if (codeOf(error) !== 'EXDEV') {
       throw error;
     }
+    await moveAcrossDevices(source, destination);
+    return;
   }
+  if (published === 'linked') {
+    // Two names for one file: if the old one cannot go, the new one must, or the file would sit
+    // at its destination with nothing journaled to undo it.
+    await unlink(source).catch(async (error: unknown) => {
+      await unlink(destination).catch(() => undefined);
+      throw error;
+    });
+  }
+}
+
+/** A verified copy then a delete; the copy is removed again if either step fails. */
+async function moveAcrossDevices(source: string, destination: string): Promise<void> {
   await copyAtomic(source, destination);
-  if ((await stat(source)).size !== (await stat(destination)).size) {
-    throw new KinoshelfError('move.verification-failed', { source, destination });
+  try {
+    if ((await stat(source)).size !== (await stat(destination)).size) {
+      throw new KinoshelfError('move.verification-failed', { source, destination });
+    }
+    await unlink(source);
+  } catch (error) {
+    await unlink(destination).catch(() => undefined);
+    throw error;
   }
-  await unlink(source);
 }
