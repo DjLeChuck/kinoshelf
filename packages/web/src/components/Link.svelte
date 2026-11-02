@@ -7,9 +7,11 @@
     $props();
 
   function go(event: MouseEvent): void {
-    // Let the browser handle a new tab, a download, or a modified click.
+    // Let the browser handle a new tab, an address outside the app, a download, or a modified click.
     if (
       event.defaultPrevented ||
+      (rest.target !== undefined && rest.target !== '_self') ||
+      !href.startsWith('/') ||
       event.button !== 0 ||
       event.metaKey ||
       event.ctrlKey ||
