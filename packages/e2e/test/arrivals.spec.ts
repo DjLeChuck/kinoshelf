@@ -94,6 +94,44 @@ test('lists a remembered destination in the settings and forgets it', async ({ p
   expect(await (await request.get('/api/work-destinations', { headers })).json()).toEqual([]);
 });
 
+test('Check now submits what a watched folder holds without waiting for it to settle', async ({
+  page,
+  request,
+}) => {
+  const folder = incoming('arrivals-watched');
+  await mkdir(folder, { recursive: true });
+  const headers = { authorization: `Bearer ${API_KEY}` };
+  const created = await request.post('/api/libraries', {
+    headers,
+    data: {
+      name: 'Watched drop',
+      source: folder,
+      into: { movie: 'films', series: 'series' },
+      watch: true,
+    },
+  });
+  expect(created.status()).toBe(201);
+  const { id } = (await created.json()) as { id: string };
+  try {
+    // Written just now: the watcher would still wait for it to settle.
+    await mkdir(`${folder}/Alien.1979.1080p`, { recursive: true });
+    await writeFile(`${folder}/Alien.1979.1080p/Alien.1979.1080p.mkv`, 'video');
+
+    await signInAt(page, '/arrivals');
+    const check = page.getByRole('button', { name: 'Check now' });
+    await expect(check).toBeEnabled();
+    await check.click();
+    await expect(
+      page.getByRole('status').filter({ hasText: 'Releases found: 1 submitted' }),
+    ).toBeVisible();
+  } finally {
+    // The other tests expect no watched folder.
+    await request.delete(`/api/libraries/${id}`, { headers });
+  }
+  await page.reload();
+  await expect(page.getByRole('button', { name: 'Check now' })).toBeDisabled();
+});
+
 test('keeps the state filter in the address', async ({ page }) => {
   await signInAt(page, '/arrivals?state=review');
   const filter = (name: string) => page.getByRole('button', { name, exact: true });
