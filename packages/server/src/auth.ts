@@ -4,6 +4,18 @@ import type { Database } from 'better-sqlite3';
 /** Short enough to guess is not a key: a value given through the environment must be long. */
 export const MIN_API_KEY_LENGTH = 32;
 
+/**
+ * Why a key given through the environment cannot be used, or `undefined` when it can. The
+ * placeholder of the compose example is refused by name: copied as is, it would be a key anyone
+ * who read the example knows.
+ */
+export function envApiKeyProblem(key: string): 'too-short' | 'placeholder' | undefined {
+  if (key.length < MIN_API_KEY_LENGTH) {
+    return 'too-short';
+  }
+  return /change-?me/i.test(key) ? 'placeholder' : undefined;
+}
+
 const hash = (key: string): string => createHash('sha256').update(key).digest('hex');
 
 export function generateApiKey(): string {

@@ -1,12 +1,25 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import Database from 'better-sqlite3';
-import { generateApiKey, hasApiKey, isValidApiKey, setApiKey } from '../src/auth.js';
+import {
+  envApiKeyProblem,
+  generateApiKey,
+  hasApiKey,
+  isValidApiKey,
+  setApiKey,
+} from '../src/auth.js';
 import { migrated } from '../src/database.js';
 import { cleanup, harness } from './harness.js';
 
 afterEach(cleanup);
 
 describe('API key', () => {
+  it('refuses a short key or the placeholder of the compose example from the environment', () => {
+    expect(envApiKeyProblem('short')).toBe('too-short');
+    expect(envApiKeyProblem('change-me-to-a-long-random-string')).toBe('placeholder');
+    expect(envApiKeyProblem('ChangeMe-0123456789abcdef0123456789')).toBe('placeholder');
+    expect(envApiKeyProblem(generateApiKey())).toBeUndefined();
+  });
+
   it('is stored only as a hash, and a new key replaces the old one', () => {
     const database = migrated(new Database(':memory:'));
     expect(hasApiKey(database)).toBe(false);

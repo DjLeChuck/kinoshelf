@@ -10,7 +10,14 @@ import {
 } from '@kinoshelf/core';
 import { createTranslator, describeError, detectLocale } from '@kinoshelf/i18n';
 import { buildApp } from './app.js';
-import { generateApiKey, hasApiKey, MIN_API_KEY_LENGTH, setApiKey } from './auth.js';
+import {
+  envApiKeyProblem,
+  generateApiKey,
+  hasApiKey,
+  isValidApiKey,
+  MIN_API_KEY_LENGTH,
+  setApiKey,
+} from './auth.js';
 import { openDatabase } from './database.js';
 import { runNotifyCommand } from './notify-command.js';
 import { createShutdown } from './shutdown.js';
@@ -86,11 +93,25 @@ try {
 
 const fromEnv = process.env.KINOSHELF_API_KEY;
 if (fromEnv !== undefined && fromEnv !== '') {
-  if (fromEnv.length < MIN_API_KEY_LENGTH) {
-    process.stderr.write(`KINOSHELF_API_KEY must be at least ${MIN_API_KEY_LENGTH} characters.\n`);
-    process.exit(1);
+  switch (envApiKeyProblem(fromEnv)) {
+    case 'too-short':
+      process.stderr.write(
+        `KINOSHELF_API_KEY must be at least ${MIN_API_KEY_LENGTH} characters.\n`,
+      );
+      process.exit(1);
+      break;
+    case 'placeholder':
+      process.stderr.write(
+        'KINOSHELF_API_KEY is still the placeholder of the example: choose your own, or run `kinoshelf-server api-key create`.\n',
+      );
+      process.exit(1);
+      break;
+    case undefined:
+      // Setting the same key again would sign every browser out at each restart.
+      if (!isValidApiKey(database, fromEnv)) {
+        setApiKey(database, fromEnv);
+      }
   }
-  setApiKey(database, fromEnv);
 }
 
 const host = process.env.KINOSHELF_HOST ?? '0.0.0.0';

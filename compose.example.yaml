@@ -11,9 +11,11 @@ services:
       # so what it moves or links belongs to you.
       PUID: 1000
       PGID: 1000
-      TMDB_API_KEY: your-tmdb-key
-      # At least 32 characters; or run `docker compose exec kinoshelf kinoshelf-server api-key create`.
-      KINOSHELF_API_KEY: change-me-to-a-long-random-string
+      # Both are optional: the welcome page asks for the TMDB key and makes the API key. Set them
+      # here to manage them yourself; a variable wins over what the settings could save.
+      # TMDB_API_KEY: <your TMDB key>
+      # At least 32 random characters (`openssl rand -base64 32`).
+      # KINOSHELF_API_KEY: <your own key>
     volumes:
       - ./config:/config
       # Same filesystem for downloads and library: a hardlink cannot cross two mounts.
