@@ -1,11 +1,12 @@
 import { onDestroy } from 'svelte';
+import { session } from './session.svelte.js';
+import { Stream } from './stream.js';
 
 /** What the server says changed; `ready` fires on each (re)connection, when anything may have. */
 export type Topic = 'jobs' | 'progress' | 'arrivals' | 'history' | 'settings' | 'ready';
 
 const TOPICS: readonly Topic[] = ['jobs', 'progress', 'arrivals', 'history', 'settings', 'ready'];
 const listeners = new Map<Topic, Set<() => void>>();
-let source: EventSource | undefined;
 
 function fire(topic: Topic): void {
   for (const listener of listeners.get(topic) ?? []) {
@@ -13,23 +14,26 @@ function fire(topic: Topic): void {
   }
 }
 
-/** One stream for the whole app, opened once signed in and closed on sign-out. */
+const stream = new Stream({
+  open: () => new EventSource('/api/events'),
+  check: () => session.check(),
+  signedIn: () => session.status === 'signed-in',
+  topics: TOPICS,
+  fire: (topic) => {
+    fire(topic as Topic);
+  },
+});
+
+/**
+ * One stream for the whole app, opened once signed in and closed on sign-out. `ready` fires on
+ * each (re)connection: the views refetch what they missed.
+ */
 export function connectEvents(): void {
-  if (source) {
-    return;
-  }
-  source = new EventSource('/api/events');
-  for (const topic of TOPICS) {
-    // The browser reconnects by itself; `ready` then tells the views to refetch what they missed.
-    source.addEventListener(topic, () => {
-      fire(topic);
-    });
-  }
+  stream.connect();
 }
 
 export function disconnectEvents(): void {
-  source?.close();
-  source = undefined;
+  stream.disconnect();
 }
 
 /**
