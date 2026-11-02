@@ -12,6 +12,10 @@ export type ExecutionRunner = (execution: Execution) => Promise<ExecutionOutcome
 
 /** What the runner tells, once something ended: who to notify is the caller's business. */
 export interface RunnerHooks {
+  /** A job is stored, before anyone is told: what depends on its files is brought up to date. */
+  scanned?(job: Job): Promise<void>;
+  /** The queue ran dry: background work (probing files) may use the disk. */
+  idle?(): void;
   jobDone?(job: Job): void;
   jobFailed?(job: Job, error: StoredError): void;
   executionDone?(job: Job, execution: Execution, outcome: ExecutionOutcome): void;
@@ -55,6 +59,7 @@ export class JobRunner {
     }
     this.loop = this.drain().finally(() => {
       this.loop = undefined;
+      this.tell(() => this.hooks.idle?.());
     });
   }
 
@@ -138,6 +143,8 @@ export class JobRunner {
     this.tell(() => this.hooks.changed?.('jobs'));
     try {
       this.jobs.complete(job, await this.process(job));
+      // A snapshot that fails to follow is a log line, not a failed scan: the files are stored.
+      await Promise.resolve(this.hooks.scanned?.(job)).catch(this.onError);
       this.tell(() => this.hooks.jobDone?.(job));
       this.tell(() => this.hooks.changed?.('jobs', 'queue'));
     } catch (error) {

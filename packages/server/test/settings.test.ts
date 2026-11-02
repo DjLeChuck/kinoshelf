@@ -5,7 +5,15 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { isValidApiKey } from '../src/auth.js';
 import { presentSettings } from '../src/settings.js';
 import { isValidSession } from '../src/sessions.js';
-import { cleanup, harness, makeDir, put, type Harness } from './harness.js';
+import {
+  cleanup,
+  harness,
+  librariesAt,
+  librariesYaml,
+  makeDir,
+  put,
+  type Harness,
+} from './harness.js';
 
 afterEach(cleanup);
 
@@ -38,7 +46,7 @@ async function withConfig(yaml: string, overrides: Parameters<typeof harness>[0]
 
 describe('GET /api/settings', () => {
   it('lists the bundled profiles, so the UI can offer them', async () => {
-    const h = await withConfig('destination: /media\n');
+    const h = await withConfig(librariesYaml('/media'));
     expect(
       (await h.request('GET', '/api/settings')).json<{ profiles: unknown }>().profiles,
     ).toEqual([
@@ -153,7 +161,7 @@ describe('presentSettings', () => {
 describe('PATCH /api/settings', () => {
   it('creates config.yaml when the server started without one', async () => {
     const configDir = await makeDir();
-    const h = await harness({ configDir, config: { destination: '/media' } });
+    const h = await harness({ configDir, config: { libraries: [...librariesAt('/media')] } });
     const response = await h.app.inject({
       method: 'PATCH',
       url: '/api/settings',
@@ -165,7 +173,7 @@ describe('PATCH /api/settings', () => {
   });
 
   it('unsets a value restricted to a list of choices (the form sends null for an empty field)', async () => {
-    const h = await withConfig('destination: /media\nmode: copy\nlocale: en\n');
+    const h = await withConfig(`${librariesYaml('/media')}mode: copy\nlocale: en\n`);
     const response = await h.patch({
       locale: null,
       processing: { profile: null, mode: null, threshold: null },
@@ -284,17 +292,17 @@ describe('PATCH /api/settings', () => {
   });
 
   it('lets the processor see a changed setting on its next job', async () => {
-    const h = await withConfig('locale: en\n');
-    await h.patch({ processing: { destination: '/elsewhere' } });
-    // The analysis of a new job reads the live config: the plan's root is the new destination.
+    const h = await withConfig(`${librariesYaml('/media')}locale: en\n`);
+    await h.patch({ processing: { mode: 'hardlink' } });
+    // The analysis of a new job reads the live config: the plan is made with the new mode.
     const source = await makeDir();
     await put(join(source, 'Dune.2021.mkv'));
     const job = (await h.request('POST', '/api/jobs', { path: source })).json<{ id: string }>();
     await h.app.jobs.idle();
-    const entries = (await h.request('GET', `/api/jobs/${job.id}/entries`)).json<
-      { destination: string | null }[]
-    >();
-    expect(entries[0]?.destination).toMatch(/^\/elsewhere\//);
+    const done = (await h.request('GET', `/api/jobs/${job.id}`)).json<{
+      settings: { mode: string };
+    }>();
+    expect(done.settings.mode).toBe('hardlink');
   });
 
   it('serializes concurrent edits, so none is lost', async () => {

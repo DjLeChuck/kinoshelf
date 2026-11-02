@@ -1,20 +1,48 @@
-import { basename } from 'node:path';
-import { LIBRARY_ID_PATTERN, type Config, type ConfigEdit, type LibraryConfig } from './config.js';
+import { LIBRARY_ID_PATTERN, type Config, type LibraryConfig } from './config.js';
 import type { SettingsOverrides } from './settings.js';
 
-/** What a library sets, as overrides for `resolveSettings`: the rest follows the config. */
-export function libraryOverrides(library: LibraryConfig): SettingsOverrides {
-  const { destination } = library;
+/** Where a library's works are written: its own source if typed, else its arrival destinations. */
+function destinationOverrides(
+  library: LibraryConfig,
+  libraries: readonly LibraryConfig[],
+): SettingsOverrides {
+  if (library.into === undefined) {
+    // One root also for the other kind: a stray file in it is laid out in place, which the plan
+    // shows before anything moves.
+    return { dest: library.source };
+  }
+  const sourceOf = (id: string): string | undefined =>
+    libraries.find((candidate) => candidate.id === id)?.source;
+  const movies = sourceOf(library.into.movie);
+  const series = sourceOf(library.into.series);
   return {
-    ...(typeof destination === 'string' && { dest: destination }),
-    ...(typeof destination === 'object' && {
-      destMovies: destination.movies,
-      destSeries: destination.series,
-    }),
+    ...(movies !== undefined && { destMovies: movies }),
+    ...(series !== undefined && { destSeries: series }),
+  };
+}
+
+/**
+ * What a library sets, as overrides for `resolveSettings`: the rest follows the config. An arrival
+ * folder sets no profile: it is planned with the global one until the user picks a destination
+ * (the profile of that library is then the right one).
+ */
+export function libraryOverrides(
+  library: LibraryConfig,
+  libraries: readonly LibraryConfig[],
+): SettingsOverrides {
+  return {
+    ...destinationOverrides(library, libraries),
     ...(library.profile !== undefined && { profile: library.profile }),
     ...(library.mode !== undefined && { mode: library.mode }),
     ...(library.threshold !== undefined && { threshold: library.threshold }),
   };
+}
+
+/** Roots the works end up in: the sources of the typed libraries (never an arrival folder). */
+export function destinationRoots(config: Config): string[] {
+  return (config.libraries ?? [])
+    .filter(({ type }) => type !== undefined)
+    .map(({ source }) => source);
 }
 
 /** Sources of the libraries that ask to be watched. */
@@ -36,31 +64,4 @@ export function libraryId(name: string, taken: ReadonlySet<string>): string {
     id = `${base}-${String(n)}`;
   }
   return id;
-}
-
-/**
- * `watch.folders` (older versions) become libraries that are watched, and the key goes away.
- * The libraries set no destination, profile or mode: they keep following the top-level ones, so
- * nothing changes for what is already running. Returns no edit once nothing is left to move.
- */
-export function legacyWatchMigration(config: Config): ConfigEdit[] {
-  const folders = config.watch?.folders;
-  if (folders === undefined) {
-    return [];
-  }
-  const libraries = [...(config.libraries ?? [])];
-  const taken = new Set(libraries.map(({ id }) => id));
-  for (const folder of folders) {
-    const existing = libraries.find(({ source }) => source === folder);
-    if (existing) {
-      // Already a library: it only has to be watched.
-      libraries[libraries.indexOf(existing)] = { ...existing, watch: true };
-      continue;
-    }
-    const name = basename(folder.replace(/\/+$/, '')) || folder;
-    const id = libraryId(name, taken);
-    taken.add(id);
-    libraries.push({ id, name, source: folder, watch: true });
-  }
-  return [{ path: ['libraries'], value: libraries }, { path: ['watch', 'folders'] }];
 }

@@ -5,6 +5,7 @@ import { Command, CommanderError } from 'commander';
 import {
   analyze,
   cleanupStaleTemporaryFiles,
+  destinationRoots,
   configDirectory,
   ensureConfigDirectory,
   DATABASE_FILE,
@@ -220,18 +221,12 @@ async function runUndo(
 
 const DEFAULT_CLEANUP_AGE_HOURS = 24;
 
-/** The folders to scan: those given, else the destinations of `config.yaml` (never the sources). */
+/** The folders to scan: those given, else the libraries organized in place (never an arrival folder). */
 function cleanupRoots(folders: readonly string[], context: Context): string[] {
   if (folders.length > 0) {
     return folders.map((folder) => resolve(folder));
   }
-  const { destination } = context.config;
-  const configured =
-    destination === undefined
-      ? []
-      : typeof destination === 'string'
-        ? [destination]
-        : [destination.movies, destination.series];
+  const configured = destinationRoots(context.config);
   if (configured.length === 0) {
     throw new CliError('cleanup.no-folder', { path: join(context.configDir, 'config.yaml') });
   }
@@ -289,6 +284,7 @@ function buildProgram(context: Context, exit: { code: number }): Command {
 
   const common = (command: Command): Command =>
     command
+      .option('--library <id>', t('help.opt.library'))
       .option('--dest <dir>', t('help.opt.dest'))
       .option('--dest-movies <dir>', t('help.opt.dest-movies'))
       .option('--dest-series <dir>', t('help.opt.dest-series'))

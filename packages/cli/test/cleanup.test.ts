@@ -66,14 +66,20 @@ describe('cleanup', () => {
     expect(await exists(path)).toBe(false);
   });
 
-  it('scans the configured destinations by default, never the sources', async () => {
+  it('scans the libraries organized in place by default, never an arrival folder', async () => {
     const movies = await makeDir();
     const series = await makeDir();
     const source = await makeDir();
     const h = await harness({}, { now: inDays(3) });
     await put(
       join(h.configDir, 'config.yaml'),
-      `destination:\n  movies: ${movies}\n  series: ${series}\n`,
+      [
+        'libraries:',
+        `  - {id: films, name: Films, source: ${movies}, type: movie}`,
+        `  - {id: shows, name: Shows, source: ${series}, type: series}`,
+        `  - {id: dl, name: Downloads, source: ${source}, into: {movie: films, series: shows}}`,
+        '',
+      ].join('\n'),
     );
     const inMovies = await put(join(movies, TEMP));
     const inSeries = await put(join(series, 'Show', TEMP));
@@ -100,11 +106,11 @@ describe('cleanup', () => {
     expect(await Promise.all(others.map(exists))).toEqual([true, true, true, true]);
   });
 
-  it('needs a folder when the config has no destination', async () => {
+  it('needs a folder when the config has no typed library', async () => {
     const h = await harness();
     expect(await h.cli('cleanup')).toBe(2);
     expect(h.err[0]).toMatch(
-      /^Give at least one folder to scan, or set "destination" in .*config\.yaml\.$/,
+      /^Give at least one folder to scan, or add a library with a "type" in .*config\.yaml\.$/,
     );
   });
 

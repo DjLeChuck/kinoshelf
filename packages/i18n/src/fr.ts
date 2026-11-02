@@ -56,13 +56,15 @@ export const fr: Record<keyof typeof en, string> = {
   'error.undo.source-exists': 'Impossible de remettre le fichier : {path} existe maintenant.',
 
   'error.config.destination-required':
-    'Indiquez une destination avec --dest (ou --dest-movies et --dest-series).',
+    'Indiquez une destination avec --dest (ou --dest-movies et --dest-series, ou --library).',
   'error.config.dir-not-writable':
     'Impossible d’écrire dans le dossier de configuration {path} (exécuté avec l’uid {uid}). Rendez-le accessible en écriture à cet utilisateur.',
   'error.config.invalid': 'Fichier de configuration invalide {path} : {detail}',
   'error.undo.batch-already-undone': 'Le lot {batch} a déjà été annulé.',
   'error.undo.batch-not-found': 'Aucun lot {batch} dans le journal.',
   'error.config.invalid-value': 'Valeur invalide « {value} » pour {option}.',
+  'error.config.library-unknown':
+    'Aucune bibliothèque « {id} » dans config.yaml (bibliothèques : {ids}).',
   'error.config.tmdb-key-missing':
     'Aucune clé d’API TMDB. Définissez la variable d’environnement TMDB_API_KEY ou « apiKey.tmdb » dans {path}.',
   'error.unknown': 'Erreur inattendue ({code}).',
@@ -142,7 +144,8 @@ export const fr: Record<keyof typeof en, string> = {
   'help.arg.batch': 'identifiant du lot à annuler (affiché lors de son application)',
   'help.cleanup':
     'Supprime les fichiers temporaires qu’une copie interrompue a laissés dans les dossiers de destination (simulation sans --apply).',
-  'help.arg.folders': 'dossiers à parcourir (par défaut : les destinations de config.yaml)',
+  'help.arg.folders':
+    'dossiers à parcourir (par défaut : les bibliothèques de config.yaml qui ont un type)',
   'help.opt.older-than':
     'uniquement les fichiers inchangés depuis au moins ce nombre d’heures (24 par défaut, 1 au minimum)',
   'cleanup.header':
@@ -155,7 +158,7 @@ export const fr: Record<keyof typeof en, string> = {
   'error.cleanup.age-too-short':
     'L’âge minimum est de {min} heure : un fichier plus récent est peut-être en cours de copie.',
   'error.cleanup.no-folder':
-    'Indiquez au moins un dossier à parcourir, ou définissez « destination » dans {path}.',
+    'Indiquez au moins un dossier à parcourir, ou ajoutez une bibliothèque avec un « type » dans {path}.',
   'help.submit':
     'Met un fichier ou un dossier en file d’attente sur un serveur en marche (pour le script de fin de téléchargement d’un client).',
   'help.opt.url': 'adresse du serveur (par défaut : KINOSHELF_URL, sinon localhost)',
@@ -166,6 +169,8 @@ export const fr: Record<keyof typeof en, string> = {
   'error.submit.rejected': 'Le serveur a refusé la requête (HTTP {status}).',
   'help.arg.source': 'dossier ou fichier vidéo à analyser',
   'help.arg.path': 'fichier vidéo ou dossier à traiter',
+  'help.opt.library':
+    'utilise les destinations, le profil, le mode et le seuil d’une bibliothèque de config.yaml',
   'help.opt.dest': 'dossier de destination des films et des séries',
   'help.opt.dest-movies': 'dossier de destination des films',
   'help.opt.dest-series': 'dossier de destination des séries',
@@ -197,6 +202,12 @@ export const fr: Record<keyof typeof en, string> = {
     'Une erreur est survenue sur le serveur. Consultez son journal pour les détails.',
   'error.job.not-done': 'L’analyse de ce travail n’est pas terminée ({status}).',
   'error.job.not-found': 'Ce travail n’existe pas.',
+  'error.library.in-use':
+    'Le dossier d’arrivée « {name} » envoie ses fichiers dans cette bibliothèque.',
+  'error.library.invalid': 'Cette bibliothèque n’est pas valide : {detail}',
+  'error.library.not-typed': 'C’est un dossier d’arrivée : il ne contient pas de bibliothèque.',
+  'error.library.item-not-found':
+    'Ce fichier n’est plus dans la bibliothèque. Mettez la source à jour et réessayez.',
   'error.library.not-found': 'Cette bibliothèque n’existe plus. Rechargez la page.',
   'error.library.scan-in-progress':
     'Une analyse de cette bibliothèque est déjà en attente ou en cours.',
@@ -479,7 +490,7 @@ export const fr: Record<keyof typeof en, string> = {
     'Facultatif : votre bibliothèque sera rafraîchie automatiquement après chaque rangement.',
   'web.onboarding.step.destination.title': 'Choisir où ranger vos fichiers',
   'web.onboarding.step.destination.body':
-    'Indiquez le dossier de destination et le profil de sortie (Plex ou Jellyfin).',
+    'Indiquez le dossier de vos films et celui de vos séries. Ils deviennent vos deux premières bibliothèques, rangées sur place.',
   'web.onboarding.step.source.title': 'Envoyer un premier dossier',
   'web.onboarding.step.source.body':
     'Kinoshelf analyse les fichiers et vous montre ce qu’il propose, sans rien modifier.',
@@ -487,9 +498,12 @@ export const fr: Record<keyof typeof en, string> = {
   'web.onboarding.form.tmdb.hint':
     'Créez une clé gratuite dans votre compte TMDB, sous Réglages › API.',
   'web.onboarding.form.server.kind': 'Serveur',
-  'web.onboarding.form.destination': 'Dossier de destination',
+  'web.onboarding.form.destination.movies': 'Dossier des films',
+  'web.onboarding.form.destination.series': 'Dossier des séries',
   'web.onboarding.form.destination.hint':
-    'Films et séries y sont rangés. Des dossiers séparés pour chacun se règlent dans les réglages.',
+    'Deux dossiers différents, comme Plex le recommande. Le profil de sortie et d’autres bibliothèques se règlent dans les réglages.',
+  'web.onboarding.form.source.needs-destination':
+    'Indiquez d’abord vos dossiers de films et de séries (étape précédente).',
   'web.onboarding.form.source': 'Dossier à analyser',
   'web.onboarding.form.source.hint': 'Le dossier où se trouvent vos vidéos en ce moment.',
   'web.onboarding.form.source.once': 'Analyser une fois',

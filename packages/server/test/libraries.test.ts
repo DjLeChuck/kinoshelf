@@ -5,7 +5,15 @@ import { afterEach, describe, expect, it } from 'vitest';
 import Database from 'better-sqlite3';
 import { migrated } from '../src/database.js';
 import { createProcessor } from '../src/processor.js';
-import { cleanup, fakeProvider, harness, makeDir, put, type Harness } from './harness.js';
+import {
+  cleanup,
+  fakeProvider,
+  harness,
+  librariesAt,
+  makeDir,
+  put,
+  type Harness,
+} from './harness.js';
 
 afterEach(cleanup);
 
@@ -13,7 +21,8 @@ interface LibraryBody {
   id: string;
   name: string;
   source: string;
-  destination: unknown;
+  type: string | null;
+  into: { movie: string; series: string } | null;
   profile: string | null;
   mode: string | null;
   threshold: number | null;
@@ -43,11 +52,19 @@ interface FilesBody {
 /** A server with a real config.yaml, since libraries live there. */
 async function served(yaml = '') {
   const configDir = await makeDir();
-  const destination = await makeDir();
-  await put(join(configDir, 'config.yaml'), `destination: ${destination}\n${yaml}`);
+  await put(join(configDir, 'config.yaml'), yaml);
   const h = await harness({ configDir, config: await loadConfig(configDir) });
   const file = (): Promise<string> => readFile(join(configDir, 'config.yaml'), 'utf8');
-  return { ...h, destination: h.destination, configDir, libraryDestination: destination, file };
+  return { ...h, configDir, file };
+}
+
+/** A movie library and a series library, the destinations an arrival folder points at. */
+async function typedLibraries(h: Harness): Promise<{ movies: string; series: string }> {
+  const movies = await makeDir();
+  const series = await makeDir();
+  await h.request('POST', '/api/libraries', { name: 'Films', source: movies, type: 'movie' });
+  await h.request('POST', '/api/libraries', { name: 'Series', source: series, type: 'series' });
+  return { movies, series };
 }
 
 const scan = async (h: Harness, id: string): Promise<string> => {
@@ -61,21 +78,25 @@ describe('libraries', () => {
   it('accepts the form of an edit that only turns watching on: every unset field is null', async () => {
     const h = await served();
     const source = await makeDir();
-    const created = await h.request('POST', '/api/libraries', { name: 'Films', source });
+    const created = await h.request('POST', '/api/libraries', {
+      name: 'Films',
+      source,
+      type: 'movie',
+    });
     const { id } = created.json<LibraryBody>();
 
     // What the web form sends for a library that follows the global settings.
     const patched = await h.request('PATCH', `/api/libraries/${id}`, {
       name: 'Films',
       source,
-      destination: null,
+      into: null,
       profile: null,
       mode: null,
       threshold: null,
       watch: true,
     });
     expect(patched.statusCode, patched.body).toBe(200);
-    expect(patched.json<LibraryBody>()).toMatchObject({ watch: true, destination: null });
+    expect(patched.json<LibraryBody>()).toMatchObject({ watch: true, type: 'movie', into: null });
   });
 
   it('creates, lists, changes and removes a library, in config.yaml', async () => {
@@ -86,6 +107,7 @@ describe('libraries', () => {
     const created = await h.request('POST', '/api/libraries', {
       name: 'Films 4K',
       source,
+      type: 'movie',
       profile: 'jellyfin',
       threshold: 80,
     });
@@ -94,7 +116,8 @@ describe('libraries', () => {
       id: 'films-4k',
       name: 'Films 4K',
       source,
-      destination: null,
+      type: 'movie',
+      into: null,
       profile: 'jellyfin',
       mode: null,
       threshold: 80,
@@ -108,22 +131,24 @@ describe('libraries', () => {
     const patched = await h.request('PATCH', '/api/libraries/films-4k', {
       name: 'Films',
       profile: null,
-      mode: 'hardlink',
-      destination: h.libraryDestination,
+      threshold: 90,
     });
     expect(patched.json<LibraryBody>()).toMatchObject({
       id: 'films-4k',
       name: 'Films',
+      type: 'movie',
       profile: null,
-      mode: 'hardlink',
-      threshold: 80,
-      destination: h.libraryDestination,
+      threshold: 90,
     });
     expect(await h.file()).not.toContain('profile: jellyfin');
 
     // A second library of the same name gets its own id.
     const other = await makeDir();
-    const second = await h.request('POST', '/api/libraries', { name: 'Films 4K', source: other });
+    const second = await h.request('POST', '/api/libraries', {
+      name: 'Films 4K',
+      source: other,
+      type: 'series',
+    });
     expect(second.json<LibraryBody>().id).toBe('films-4k-2');
 
     expect((await h.request('DELETE', '/api/libraries/films-4k')).statusCode).toBe(204);
@@ -137,7 +162,7 @@ describe('libraries', () => {
     const h = await served();
     const source = await makeDir();
     const file = await put(join(source, 'a.mkv'));
-    const body = (extra: object) => ({ name: 'L', source, ...extra });
+    const body = (extra: object) => ({ name: 'L', source, type: 'movie', ...extra });
     const code = async (payload: object): Promise<[number, string]> => {
       const response = await h.request('POST', '/api/libraries', payload);
       return [response.statusCode, response.json<{ error: { code: string } }>().error.code];
@@ -145,13 +170,21 @@ describe('libraries', () => {
 
     expect(await code(body({ source: join(source, 'missing') }))).toEqual([422, 'fs.not-found']);
     expect(await code(body({ source: file }))).toEqual([422, 'fs.not-a-directory']);
-    expect(await code(body({ destination: join(source, 'missing') }))).toEqual([
-      422,
-      'fs.not-found',
-    ]);
     expect(await code(body({ profile: 'nope' }))).toEqual([422, 'profile.unknown']);
     expect(await code(body({ source: 'relative' }))).toEqual([400, 'request.invalid']);
     expect(await code(body({ mode: 'teleport' }))).toEqual([400, 'request.invalid']);
+    // A library is a typed one or an arrival folder, never both nor neither, and `into` must name
+    // libraries of the right type: the config refuses, and nothing is written.
+    expect(await code({ name: 'L', source })).toEqual([422, 'library.invalid']);
+    expect(await code(body({ into: { movie: 'a', series: 'b' } }))).toEqual([
+      422,
+      'library.invalid',
+    ]);
+    expect(await code(body({ mode: 'copy' }))).toEqual([422, 'library.invalid']);
+    expect(await code({ name: 'L', source, into: { movie: 'nope', series: 'nope' } })).toEqual([
+      422,
+      'library.invalid',
+    ]);
     expect(await h.file()).not.toContain('libraries');
 
     await h.request('POST', '/api/libraries', body({}));
@@ -162,6 +195,31 @@ describe('libraries', () => {
     expect(bad.statusCode).toBe(422);
   });
 
+  it('keeps a library an arrival folder points at', async () => {
+    const h = await served();
+    await typedLibraries(h);
+    const arrival = await h.request('POST', '/api/libraries', {
+      name: 'Downloads',
+      source: await makeDir(),
+      into: { movie: 'films', series: 'series' },
+      mode: 'hardlink',
+    });
+    expect(arrival.statusCode, arrival.body).toBe(201);
+    expect(arrival.json<LibraryBody>()).toMatchObject({
+      type: null,
+      into: { movie: 'films', series: 'series' },
+      mode: 'hardlink',
+    });
+
+    const refused = await h.request('DELETE', '/api/libraries/films');
+    expect(refused.statusCode).toBe(409);
+    expect(refused.json()).toEqual({
+      error: { code: 'library.in-use', params: { name: 'Downloads' } },
+    });
+    expect((await h.request('DELETE', '/api/libraries/downloads')).statusCode).toBe(204);
+    expect((await h.request('DELETE', '/api/libraries/films')).statusCode).toBe(204);
+  });
+
   it('tells the event stream that settings changed', async () => {
     const h = await served();
     const base = await h.app.listen({ host: '127.0.0.1', port: 0 });
@@ -170,7 +228,11 @@ describe('libraries', () => {
     });
     const reader = response.body?.getReader();
     await reader?.read();
-    await h.request('POST', '/api/libraries', { name: 'L', source: await makeDir() });
+    await h.request('POST', '/api/libraries', {
+      name: 'L',
+      source: await makeDir(),
+      type: 'movie',
+    });
     const chunk = await reader?.read();
     await reader?.cancel();
     expect(new TextDecoder().decode(chunk?.value as Uint8Array)).toContain('event: settings');
@@ -185,30 +247,34 @@ describe('libraries', () => {
 
 describe('scanning a library', () => {
   it('scans its source with its own settings and sorts the files in tabs', async () => {
-    const h = await served();
+    const h = await served('profile: jellyfin\n');
     const source = await makeDir();
-    const target = await makeDir();
+    const { movies: target, series } = await typedLibraries(h);
     await put(join(source, 'Dune.2021.1080p.mkv'), 'dune');
     await put(join(source, 'Alien.1979.mkv'), 'alien');
     await put(join(source, 'Mystery.Home.Video.mkv'), 'mystery');
+    // An arrival folder: its files go to the typed libraries, with its own mode.
     await h.request('POST', '/api/libraries', {
-      name: 'Films',
+      name: 'Downloads',
       source,
-      destination: target,
-      profile: 'jellyfin',
+      into: { movie: 'films', series: 'series' },
       mode: 'hardlink',
     });
 
-    const jobId = await scan(h, 'films');
+    const jobId = await scan(h, 'downloads');
     const job = (await h.request('GET', `/api/jobs/${jobId}`)).json<{
       libraryId: string;
       path: string;
-      settings: { profile: string; mode: string; destinationRoot: string };
+      settings: { profile: string; mode: string; destinationRoot: unknown };
     }>();
     expect(job).toMatchObject({
-      libraryId: 'films',
+      libraryId: 'downloads',
       path: source,
-      settings: { profile: 'jellyfin', mode: 'hardlink', destinationRoot: target },
+      settings: {
+        profile: 'jellyfin',
+        mode: 'hardlink',
+        destinationRoot: { movie: target, series },
+      },
     });
 
     const rename = (
@@ -236,7 +302,9 @@ describe('scanning a library', () => {
     expect(unknown.files.map((f) => f.path)).toEqual([join(source, 'Mystery.Home.Video.mkv')]);
 
     // The library reports the scan, and what is left to do follows the transfers.
-    const [library] = (await h.request('GET', '/api/libraries')).json<LibraryBody[]>();
+    const library = (await h.request('GET', '/api/libraries'))
+      .json<LibraryBody[]>()
+      .find((l) => l.id === 'downloads');
     expect(library?.lastScan).toMatchObject({ jobId, counts: { rename: 2, unrecognized: 1 } });
 
     // Only the chosen files are transferred.
@@ -265,7 +333,11 @@ describe('scanning a library', () => {
     const root = await makeDir();
     await put(join(root, 'Dune.2021.mkv'), 'dune');
     await put(join(root, 'Alien (1979) {tmdb-348}', 'Alien (1979) {tmdb-348}.mkv'), 'alien');
-    await h.request('POST', '/api/libraries', { name: 'Home', source: root, destination: root });
+    await h.request('POST', '/api/libraries', {
+      name: 'Home',
+      source: root,
+      type: 'movie',
+    });
 
     const jobId = await scan(h, 'home');
     const job = (await h.request('GET', `/api/jobs/${jobId}`)).json<{
@@ -288,10 +360,9 @@ describe('scanning a library', () => {
       release = resolve;
     });
     const configDir = await makeDir();
-    await put(join(configDir, 'config.yaml'), 'destination: /media\n');
     const h = await harness({
       configDir,
-      config: await loadConfig(configDir),
+      config: {},
       processor: async () => {
         await gate;
         return {
@@ -310,8 +381,16 @@ describe('scanning a library', () => {
         };
       },
     });
-    await h.request('POST', '/api/libraries', { name: 'Films', source: await makeDir() });
-    await h.request('POST', '/api/libraries', { name: 'Series', source: await makeDir() });
+    await h.request('POST', '/api/libraries', {
+      name: 'Films',
+      source: await makeDir(),
+      type: 'movie',
+    });
+    await h.request('POST', '/api/libraries', {
+      name: 'Series',
+      source: await makeDir(),
+      type: 'series',
+    });
 
     const first = await h.request('POST', '/api/libraries/films/scan');
     expect(first.statusCode).toBe(202);
@@ -344,7 +423,7 @@ describe('scanning a library', () => {
     const source = await makeDir();
     await put(join(source, 'Dune.2021.mkv'));
     const process = createProcessor({
-      config: { destination: await makeDir(), libraries: [] },
+      config: { libraries: [...librariesAt(await makeDir())] },
       configDir: '/nonexistent',
       database: migrated(new Database(':memory:')),
       env: {},

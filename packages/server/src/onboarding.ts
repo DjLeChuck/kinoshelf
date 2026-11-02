@@ -1,4 +1,4 @@
-import type { Config } from '@kinoshelf/core';
+import { destinationRoots, type Config } from '@kinoshelf/core';
 import type { Database } from 'better-sqlite3';
 
 export const ONBOARDING_STEPS = ['tmdb', 'server', 'destination', 'source'] as const;
@@ -35,10 +35,9 @@ function detected(facts: OnboardingFacts): Record<OnboardingStepId, boolean> {
   return {
     tmdb: (env.TMDB_API_KEY ?? '').trim() !== '' || config.apiKey?.tmdb !== undefined,
     server: config.notify?.plex !== undefined || config.notify?.jellyfin !== undefined,
-    destination: config.destination !== undefined,
-    // A library is what the step creates; `watch.folders` is what older versions wrote.
-    source:
-      hasWork || (config.libraries?.length ?? 0) > 0 || (config.watch?.folders?.length ?? 0) > 0,
+    // The destinations are the libraries organized in place; the source is an arrival folder.
+    destination: destinationRoots(config).length > 0,
+    source: hasWork || (config.libraries ?? []).some(({ into }) => into !== undefined),
   };
 }
 

@@ -152,6 +152,55 @@ export const SERVER_MIGRATIONS: readonly { readonly name: string; readonly sql: 
       CREATE INDEX jobs_library ON jobs (library_id, seq);
     `,
   },
+  {
+    // What the user chose to remember about where a work goes ("Remember for this work"): a work
+    // and a library. A library that no longer exists is not an error, the work just goes back to
+    // the default destination. Durable like the aliases: it is a decision.
+    name: 'server:011-work-destinations',
+    sql: `
+      CREATE TABLE work_destinations (
+        kind TEXT NOT NULL,
+        tmdb_id INTEGER NOT NULL,
+        library_id TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        PRIMARY KEY (kind, tmdb_id)
+      );
+    `,
+  },
+  {
+    // What a library holds, as its last scan saw it, so the page lists it without reading the disk
+    // or asking TMDB again. A snapshot: replaced as a whole when a scan ends, patched by path after
+    // a transfer. `nfo`, `poster` and `fanart` are 1 or 0, NULL when the profile writes no such
+    // file; `season` and `episode` stay NULL for a movie. `video`, `audio`, `size`, `mtime` and
+    // `probed_at` are filled later by ffprobe (a row without `probed_at` is still to probe).
+    name: 'server:012-library-items',
+    sql: `
+      CREATE TABLE library_items (
+        library_id TEXT NOT NULL,
+        path TEXT NOT NULL,
+        kind TEXT,
+        tmdb_id INTEGER,
+        title TEXT,
+        year INTEGER,
+        state TEXT NOT NULL,
+        nfo INTEGER,
+        poster INTEGER,
+        fanart INTEGER,
+        season INTEGER,
+        episode INTEGER,
+        entry_id TEXT,
+        scan_job_id TEXT,
+        scanned_at TEXT NOT NULL,
+        video TEXT,
+        audio TEXT,
+        size INTEGER,
+        mtime INTEGER,
+        probed_at TEXT,
+        PRIMARY KEY (library_id, path)
+      );
+      CREATE INDEX library_items_state ON library_items (library_id, state);
+    `,
+  },
 ];
 
 /** Opens the single SQLite file of the config directory, shared with the CLI and the cache. */

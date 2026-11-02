@@ -114,7 +114,7 @@ contains no player-specific rule.
   (`settings.tmdb-key-from-env`, `settings.api-key-from-env`): a value saved and never used is worse
   than a refusal. Do the same for any new variable that shadows a setting.
 - **The welcome page** (`/`, until the setup is left): the TMDB key is tested as soon as it is
-  entered and dropped if TMDB refuses it; the last step creates a library from a folder (watched, or scanned once). Any job counts as work, so the setup ends even when that job failed: the home page
+  entered and dropped if TMDB refuses it; the destination step creates the first two libraries (a movies folder and a series folder, organized in place), the last step an arrival folder pointing at them (watched, or scanned once). Any job counts as work, so the setup ends even when that job failed: the home page
   then lists the analyses in progress and the failed ones with their cause (`GET /api/jobs`), a
   failure staying until the same path is sent again and does not fail. A job must never fail without
   leaving a trace in the UI.
@@ -153,24 +153,45 @@ format follows the Kodi wiki's templates, saved pages are not in the repository)
 
 ## Libraries and scan
 
-A **library** (`libraries:` in `config.yaml`, edited through `/api/libraries`) is a named `source` with
-an optional `destination`, `profile`, `mode`, `threshold` and `watch`; each unset field follows the
-top-level setting of the same name. `source` equal to the destination is a library organized in place
-(default mode `move`); a different one is a folder of downloads to sort. Ids are generated from the
-name (`libraryId`) and never change; two libraries cannot share a source (`library.source-taken`).
+A **library** (`libraries:` in `config.yaml`, edited through `/api/libraries`) is a named `source` of
+one of two kinds, told apart by which of `type` / `into` it has (exactly one):
 
-- `libraryOverrides(lib)` feeds `resolveSettings`; a job carries `library_id` (server migration 010)
-  and keeps its `PlanSettings`. Deleting a library only forgets it: its queued jobs fall back to the
-  global settings.
+- **Organized in place**: `type: movie | series`. Its source is where the works of that type live,
+  so it is also a destination (mode `move` implied, no `mode` allowed). It may set `profile`.
+- **Arrival folder**: `into: { movie, series }`, ids of typed libraries. Never a destination: what
+  lands in it goes to those libraries, with its own `mode` (default `copy`). No `profile`: it takes
+  the one of its destination (until the per-library destination is built, the global one).
+
+`threshold` and `watch` are allowed on both. Ids are generated from the name (`libraryId`) and never
+change; two libraries cannot share a source (`library.source-taken`); the config refuses an `into`
+that names a missing library or one of the wrong type (`library.invalid` in the API), and the API
+refuses to delete a library an arrival folder points at (`library.in-use`). There is no global
+`destination`: `resolveSettings` sends a kind to the first library of its type unless a flag or
+`libraryOverrides` says otherwise (`--library <id>` in the CLI, `--dest*` flags win).
+
+- `libraryOverrides(lib, libraries)` feeds `resolveSettings`; a job carries `library_id` (server
+  migration 010) and keeps its `PlanSettings`. Deleting a library only forgets it: its queued jobs
+  fall back to the defaults. A typed library has one root for both kinds (a stray series in a
+  movie library would be laid out in place; the plan shows it).
 - **Scan**: `POST /api/libraries/:id/scan` queues a job on the whole source (409
   `library.scan-in-progress`). `GET /api/jobs/:id/files?tab=rename|ambiguous|unrecognized|compliant|conflict`
   pages the analysis; counts are what is left to do (a transferred file leaves its tab). A batch runs
   through `POST /api/plans/:id/execute` with `entries` (also `dryRun`); only the `rename` tab is
   selectable, the others go through the validation queue.
-- **`watch.folders` is legacy.** At startup `legacyWatchMigration` moves it into watched libraries
-  (no destination, profile or mode set: they keep following the global ones). The folders the watcher
-  uses are `watchedFolders(config)`, read-only in the settings; `watch` keeps only `settleSeconds`,
-  `pollSeconds` and `apply`.
+- **Snapshot** (`library_items`, server migration 012, `library-items.ts`): what a typed library holds,
+  as its last scan saw it (title, year, tmdb id, state, presence of NFO / poster / fanart, entry id).
+  Replaced as a whole when a scan of the whole source ends, then patched by path after a transfer,
+  an undo or a manual match, so listing never reads the disk nor asks TMDB. `GET
+/api/libraries/:id/items` lists it (filters `review|rename|unrecognized|missing-nfo|missing-artwork`,
+  `q`, paging, counts); `/items/:itemId` adds the work's details and `ffprobe`. An arrival folder
+  has no snapshot. `work_destinations` (migration 011) is created, not used yet.
+- **ffprobe** (`probe.ts`): `ProbeQueue` fills `video`, `audio`, `size`, `mtime`, `probed_at` in the
+  background, only while the job queue is idle (the runner's `idle` hook wakes it), and rebuilds from
+  the rows without `probed_at` at startup. A page's probe jumps the line; a row whose size and date
+  are unchanged is not read again. Missing `ffprobe` remembers nothing; a file it cannot read is
+  remembered empty. Tests use a fake prober; `probe.test.ts` reads a real clip made with `ffmpeg`.
+- The folders the watcher uses are `watchedFolders(config)` (the libraries with `watch: true`),
+  read-only in the settings; `watch` keeps only `settleSeconds`, `pollSeconds` and `apply`.
 
 ## Getting downloads in
 

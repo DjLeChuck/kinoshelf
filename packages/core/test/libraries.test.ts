@@ -1,9 +1,8 @@
-import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { editConfig, loadConfig } from '../src/config/config.js';
+import { loadConfig, type Config } from '../src/config/config.js';
 import {
-  legacyWatchMigration,
+  destinationRoots,
   libraryId,
   libraryOverrides,
   watchedFolders,
@@ -12,41 +11,49 @@ import { cleanup, makeDir, put } from './workspace.js';
 
 afterEach(cleanup);
 
+const films = { id: 'films', name: 'Films', source: '/m/films', type: 'movie' } as const;
+const shows = { id: 'shows', name: 'Shows', source: '/m/shows', type: 'series' } as const;
+const arrival = {
+  id: 'dl',
+  name: 'Downloads',
+  source: '/dl',
+  into: { movie: 'films', series: 'shows' },
+} as const;
+const libraries = [films, shows, arrival];
+
+async function load(yaml: string): Promise<Config> {
+  const dir = await makeDir();
+  await put(join(dir, 'config.yaml'), yaml);
+  return loadConfig(dir);
+}
+
 describe('libraries', () => {
-  it('turns a library into overrides, leaving out what it does not set', () => {
-    expect(libraryOverrides({ id: 'a', name: 'A', source: '/s' })).toEqual({});
-    expect(
-      libraryOverrides({
-        id: 'a',
-        name: 'A',
-        source: '/s',
-        destination: { movies: '/m', series: '/t' },
-        profile: 'jellyfin',
-        mode: 'hardlink',
-        threshold: 90,
-      }),
-    ).toEqual({
-      destMovies: '/m',
-      destSeries: '/t',
+  it('makes a typed library its own destination and an arrival folder follow its targets', () => {
+    expect(libraryOverrides(films, libraries)).toEqual({ dest: '/m/films' });
+    expect(libraryOverrides({ ...films, profile: 'jellyfin', threshold: 90 }, libraries)).toEqual({
+      dest: '/m/films',
       profile: 'jellyfin',
-      mode: 'hardlink',
       threshold: 90,
     });
-    expect(libraryOverrides({ id: 'a', name: 'A', source: '/s', destination: '/d' })).toEqual({
-      dest: '/d',
+    expect(libraryOverrides({ ...arrival, mode: 'hardlink', threshold: 80 }, libraries)).toEqual({
+      destMovies: '/m/films',
+      destSeries: '/m/shows',
+      mode: 'hardlink',
+      threshold: 80,
     });
   });
 
   it('lists the sources of the watched libraries only', () => {
     expect(
       watchedFolders({
-        libraries: [
-          { id: 'a', name: 'A', source: '/a', watch: true },
-          { id: 'b', name: 'B', source: '/b' },
-          { id: 'c', name: 'C', source: '/c', watch: false },
-        ],
+        libraries: [{ ...films, watch: true }, { ...shows }, { ...arrival, watch: false }],
       }),
-    ).toEqual(['/a']);
+    ).toEqual(['/m/films']);
+  });
+
+  it('lists the destinations: typed libraries, never an arrival folder', () => {
+    expect(destinationRoots({ libraries })).toEqual(['/m/films', '/m/shows']);
+    expect(destinationRoots({})).toEqual([]);
   });
 
   it('builds a readable id, unique among the others', () => {
@@ -55,44 +62,51 @@ describe('libraries', () => {
     expect(libraryId('→→', new Set())).toBe('library');
   });
 
-  it('rejects two libraries with the same id', async () => {
-    const dir = await makeDir();
-    await put(
-      join(dir, 'config.yaml'),
-      'libraries:\n  - {id: a, name: A, source: /a}\n  - {id: a, name: B, source: /b}\n',
-    );
-    await expect(loadConfig(dir)).rejects.toMatchObject({ info: { code: 'config.invalid' } });
-  });
+  describe('config.yaml', () => {
+    const rejected = (yaml: string) =>
+      expect(load(yaml)).rejects.toMatchObject({ info: { code: 'config.invalid' } });
+    const head =
+      'libraries:\n  - {id: films, name: Films, source: /f, type: movie}\n' +
+      '  - {id: shows, name: Shows, source: /s, type: series}\n';
 
-  describe('legacy watch folders', () => {
-    it('moves them into libraries and keeps the other watch settings and the comments', async () => {
-      const dir = await makeDir();
-      await put(
-        join(dir, 'config.yaml'),
-        '# mine\nwatch:\n  folders: [/dl/complete, /dl/more/]\n  settleSeconds: 30\n',
+    it('reads both kinds', async () => {
+      const config = await load(
+        `${head}  - {id: dl, name: DL, source: /dl, into: {movie: films, series: shows}, mode: copy}\n`,
       );
-      const edits = legacyWatchMigration(await loadConfig(dir));
-      const config = await editConfig(dir, edits);
-      expect(config.watch).toEqual({ settleSeconds: 30 });
-      expect(config.libraries).toEqual([
-        { id: 'complete', name: 'complete', source: '/dl/complete', watch: true },
-        { id: 'more', name: 'more', source: '/dl/more/', watch: true },
-      ]);
-      expect(await readFile(join(dir, 'config.yaml'), 'utf8')).toContain('# mine');
-      expect(legacyWatchMigration(config)).toEqual([]);
+      expect(config.libraries).toHaveLength(3);
     });
 
-    it('drops the watch key when nothing else is in it, and reuses a library on that source', async () => {
-      const dir = await makeDir();
-      await put(
-        join(dir, 'config.yaml'),
-        'watch:\n  folders: [/dl]\nlibraries:\n  - {id: dl, name: Mine, source: /dl, mode: move}\n',
+    it('rejects two libraries with the same id', async () => {
+      await rejected(`${head}  - {id: films, name: Again, source: /x, type: movie}\n`);
+    });
+
+    it('needs exactly one of type and into', async () => {
+      await rejected('libraries:\n  - {id: a, name: A, source: /a}\n');
+      await rejected(
+        `${head}  - {id: a, name: A, source: /a, type: movie, into: {movie: films, series: shows}}\n`,
       );
-      const config = await editConfig(dir, legacyWatchMigration(await loadConfig(dir)));
-      expect(config.watch).toBeUndefined();
-      expect(config.libraries).toEqual([
-        { id: 'dl', name: 'Mine', source: '/dl', mode: 'move', watch: true },
-      ]);
+    });
+
+    it('keeps the profile on typed libraries and the mode on arrival folders', async () => {
+      await rejected(
+        `${head}  - {id: a, name: A, source: /a, into: {movie: films, series: shows}, profile: plex}\n`,
+      );
+      await rejected('libraries:\n  - {id: a, name: A, source: /a, type: movie, mode: copy}\n');
+    });
+
+    it('needs into to name existing libraries of the right type', async () => {
+      await rejected(
+        `${head}  - {id: a, name: A, source: /a, into: {movie: nope, series: shows}}\n`,
+      );
+      await rejected(
+        `${head}  - {id: a, name: A, source: /a, into: {movie: shows, series: films}}\n`,
+      );
+      await rejected(`${head}  - {id: a, name: A, source: /a, into: {movie: films}}\n`);
+    });
+
+    it('no longer reads a global destination or watch.folders', async () => {
+      await rejected('destination: /media\n');
+      await rejected('watch:\n  folders: [/dl]\n');
     });
   });
 });

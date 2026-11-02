@@ -416,18 +416,57 @@ describe('options and configuration', () => {
   it('uses the config file for defaults, flags winning over it', async () => {
     const { src, dest } = await library();
     const h = await harness();
-    await put(
-      join(h.configDir, 'config.yaml'),
-      `destination: ${dest}\nmode: hardlink\nthreshold: 100\n`,
-    );
+    await put(join(h.configDir, 'config.yaml'), `mode: hardlink\nthreshold: 100\n`);
 
-    await h.cli('scan', src);
+    await h.cli('scan', src, '--dest', dest);
     expect(h.out.join('\n')).toContain('mode hardlink');
     expect(h.out.join('\n')).toContain(`Destination: ${dest}`);
 
     h.out.length = 0;
-    await h.cli('scan', src, '--mode', 'copy');
+    await h.cli('scan', src, '--dest', dest, '--mode', 'copy');
     expect(h.out.join('\n')).toContain('mode copy');
+  });
+
+  describe('--library', () => {
+    async function configured() {
+      const { src, dest } = await library();
+      const shows = await makeDir();
+      const h = await harness();
+      await put(
+        join(h.configDir, 'config.yaml'),
+        [
+          'libraries:',
+          `  - {id: films, name: Films, source: ${dest}, type: movie}`,
+          `  - {id: shows, name: Shows, source: ${shows}, type: series}`,
+          `  - {id: dl, name: Downloads, source: ${src}, into: {movie: films, series: shows}, mode: hardlink}`,
+          '',
+        ].join('\n'),
+      );
+      return { h, src, dest, shows };
+    }
+
+    it('takes the destinations and the mode of an arrival folder', async () => {
+      const { h, src, dest, shows } = await configured();
+      expect(await h.cli('scan', src, '--library', 'dl')).toBe(0);
+      const text = h.out.join('\n');
+      expect(text).toContain('mode hardlink');
+      expect(text).toContain(dest);
+      expect(text).toContain(shows);
+    });
+
+    it('lets a flag win over the library', async () => {
+      const { h, src } = await configured();
+      await h.cli('scan', src, '--library', 'dl', '--mode', 'copy');
+      expect(h.out.join('\n')).toContain('mode copy');
+    });
+
+    it('names the libraries when the id is unknown', async () => {
+      const { h, src } = await configured();
+      expect(await h.cli('scan', src, '--library', 'nope')).toBe(2);
+      expect(h.err.join('\n')).toContain(
+        'No library "nope" in config.yaml (libraries: films, shows, dl).',
+      );
+    });
   });
 
   it('applies the threshold: a strict one holds back what a lax one accepts', async () => {

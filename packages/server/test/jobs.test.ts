@@ -7,7 +7,7 @@ import { EntryStore } from '../src/entries.js';
 import { ExecutionStore } from '../src/executions.js';
 import { JobStore, type ProcessedJob } from '../src/jobs.js';
 import { JobRunner } from '../src/runner.js';
-import { cleanup, harness, makeDir, put } from './harness.js';
+import { cleanup, harness, librariesAt, makeDir, put } from './harness.js';
 
 afterEach(cleanup);
 
@@ -85,7 +85,10 @@ describe('POST /api/jobs', () => {
   });
 
   it('fails the job when the TMDB key is missing', async () => {
-    const h = await harness({ config: { destination: '/media' }, realProvider: true });
+    const h = await harness({
+      config: { libraries: [...librariesAt('/media')] },
+      realProvider: true,
+    });
     const source = await makeDir();
     await put(join(source, 'Dune.2021.mkv'));
     const created = await h.request('POST', '/api/jobs', { path: source });

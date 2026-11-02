@@ -80,7 +80,7 @@ export {
 } from './config/config.js';
 export { LIBRARY_ID_PATTERN } from './config/config.js';
 export {
-  legacyWatchMigration,
+  destinationRoots,
   libraryId,
   libraryOverrides,
   watchedFolders,

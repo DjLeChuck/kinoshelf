@@ -53,26 +53,21 @@ describe('loadConfig', () => {
     const dir = await makeDir();
     await put(
       join(dir, 'config.yaml'),
-      'locale: fr\nmode: hardlink\nthreshold: 90\nprofile: plex\ndestination: /media\n',
+      'locale: fr\nmode: hardlink\nthreshold: 90\nprofile: plex\n',
     );
     expect(await loadConfig(dir)).toEqual({
       locale: 'fr',
       mode: 'hardlink',
       threshold: 90,
       profile: 'plex',
-      destination: '/media',
     });
   });
 
-  it('reads the key of each service and a destination per kind', async () => {
+  it('reads the key of each service', async () => {
     const dir = await makeDir();
-    await put(
-      join(dir, 'config.yaml'),
-      'apiKey:\n  tmdb: abc\ndestination:\n  movies: /films\n  series: /shows\n',
-    );
+    await put(join(dir, 'config.yaml'), 'apiKey:\n  tmdb: abc\n  plex: def\n');
     expect(await loadConfig(dir)).toEqual({
-      apiKey: { tmdb: 'abc' },
-      destination: { movies: '/films', series: '/shows' },
+      apiKey: { tmdb: 'abc', plex: 'def' },
     });
   });
 
@@ -162,7 +157,7 @@ describe('loadConfig', () => {
     ['wrong type', 'threshold: high\n'],
     ['the former tmdbApiKey', 'tmdbApiKey: abc\n'],
     ['the former destinationMovies', 'destinationMovies: /films\n'],
-    ['a destination with one kind only', 'destination:\n  movies: /films\n'],
+    ['the former global destination', 'destination: /media\n'],
     ['an unknown service key', 'apiKey:\n  tvdb: abc\n'],
   ])('rejects %s with the file path', async (_name, content) => {
     const dir = await makeDir();

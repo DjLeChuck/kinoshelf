@@ -36,8 +36,8 @@ export interface SettingsContext {
 }
 
 /**
- * Merges overrides over the config file over defaults. A library organized in place
- * (destination = source) defaults to `move`, otherwise to `copy`.
+ * Merges overrides over the config file over defaults. Writing in the folder being read
+ * (organized in place) defaults to `move`, otherwise to `copy`.
  */
 export async function resolveSettings(
   overrides: SettingsOverrides,
@@ -46,14 +46,13 @@ export async function resolveSettings(
 ): Promise<Settings> {
   const sourceDir = resolve(context.sourceIsFile ? dirname(context.source) : context.source);
 
-  const configured = config.destination;
-  const configuredRoot = typeof configured === 'string' ? configured : undefined;
-  const configuredByKind = typeof configured === 'object' ? configured : undefined;
-
-  const shared =
-    overrides.dest ?? configuredRoot ?? (context.defaultToSource ? sourceDir : undefined);
-  const movie = overrides.destMovies ?? configuredByKind?.movies ?? shared;
-  const series = overrides.destSeries ?? configuredByKind?.series ?? shared;
+  // Without a word of the caller, a kind goes to the first library of that type; the folder being
+  // read stands in only as a last resort (a scan, which writes nothing).
+  const firstOf = (type: 'movie' | 'series'): string | undefined =>
+    config.libraries?.find((library) => library.type === type)?.source;
+  const fallback = context.defaultToSource ? sourceDir : undefined;
+  const movie = overrides.destMovies ?? overrides.dest ?? firstOf('movie') ?? fallback;
+  const series = overrides.destSeries ?? overrides.dest ?? firstOf('series') ?? fallback;
   if (movie === undefined || series === undefined) {
     throw new KinoshelfError('config.destination-required');
   }

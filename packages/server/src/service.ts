@@ -13,6 +13,8 @@ import {
   type ErrorInfo,
   type Journal,
   type MetadataProvider,
+  type MovieDetails,
+  type SeriesDetails,
   type Operation,
   type OperationResult,
   type Plan,
@@ -25,6 +27,7 @@ import type { AliasStore } from './aliases.js';
 import type { EntryStore, Entry, StoredError } from './entries.js';
 import type { Execution, ExecutionStore } from './executions.js';
 import type { Job, JobStore, PlanSettings } from './jobs.js';
+import type { LibrarySnapshot } from './library-items.js';
 import type { ExecutionOutcome, OutcomeFile } from './notify/message.js';
 import { makeProvider, type ProcessorDeps } from './processor.js';
 
@@ -78,6 +81,8 @@ export interface ServiceDeps extends ProcessorDeps {
   readonly executions: ExecutionStore;
   readonly journal: Journal;
   readonly aliases: AliasStore;
+  /** What each library holds, kept in step with what is matched, transferred and undone. */
+  readonly snapshot: LibrarySnapshot;
 }
 
 const report = (result: OperationResult): OperationReport => ({
@@ -122,6 +127,7 @@ export class Service {
     const entry = this.pendingEntry(entryId);
     const item = await this.planWith(entry, candidate);
     this.deps.entries.setMatch(entry.id, classify(item), item);
+    await this.deps.snapshot.matched(this.require(entry.id), candidate);
     const rematched = (options.remember ?? true) ? await this.remember(entry, candidate) : 0;
     return { entry: this.require(entry.id), rematched };
   }
@@ -197,6 +203,16 @@ export class Service {
       }
     }
     return rematched;
+  }
+
+  /** What the provider knows of a work (cached by the provider's own cache); `null` if nothing. */
+  async details(
+    kind: 'movie' | 'series',
+    tmdbId: number,
+  ): Promise<MovieDetails | SeriesDetails | null> {
+    const provider = this.provider();
+    const id = { provider: provider.name, id: tmdbId };
+    return kind === 'movie' ? provider.getMovieDetails(id) : provider.getSeriesDetails(id);
   }
 
   private provider(): MetadataProvider {
@@ -298,6 +314,7 @@ export class Service {
     let done = 0;
     let failed = 0;
     const files: OutcomeFile[] = [];
+    const settled: { entry: Entry; results: readonly OperationResult[] }[] = [];
     await executePlan(plan, {
       journal: this.deps.journal,
       batchId,
@@ -307,6 +324,7 @@ export class Service {
           return;
         }
         const status = this.settle(entry, result.results, batchId);
+        settled.push({ entry, results: result.results });
         if (status === 'done') {
           done++;
         } else {
@@ -324,6 +342,7 @@ export class Service {
         });
       },
     });
+    await this.deps.snapshot.transferred(execution.jobId, settled);
     return { summary: { done, failed }, files };
   }
 
@@ -381,6 +400,7 @@ export class Service {
     }
     // Marked undone only when nothing failed: otherwise the files stay as they were.
     if (!options.dryRun && journal.isUndone(batchId)) {
+      await this.deps.snapshot.undone(journal.entriesOf(batchId));
       entries.reopenBatch(batchId);
     }
     return {

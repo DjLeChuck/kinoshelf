@@ -33,11 +33,6 @@ const webhookSchema = z.strictObject({
 });
 
 const watchSchema = z.strictObject({
-  /**
-   * Legacy: the folders to watch are now the libraries with `watch: true`. Still read, so a file
-   * written by an older version loads; the server moves them into `libraries` at startup.
-   */
-  folders: z.array(z.string().min(1)).min(1).optional(),
   /** Seconds a file must stay unchanged before it is submitted: a copy in progress keeps moving. */
   settleSeconds: z.number().int().min(0).optional(),
   /** 0 (default) listens for changes; above, scans every N seconds (network shares send none). */
@@ -49,64 +44,93 @@ const watchSchema = z.strictObject({
 /** Stable, URL-safe: it names a library in the API and in the jobs it started. */
 export const LIBRARY_ID_PATTERN = /^[a-z0-9][a-z0-9-]*$/;
 
-const destinationSchema = z.union([
-  z.string().min(1),
-  z.strictObject({ movies: z.string().min(1), series: z.string().min(1) }),
-]);
+const libraryKindSchema = z.enum(['movie', 'series']);
 
-const librarySchema = z.strictObject({
-  id: z.string().regex(LIBRARY_ID_PATTERN),
-  name: z.string().min(1),
-  /** What a scan reads. The destination itself for a library organized in place. */
-  source: z.string().min(1),
-  /** Each of these falls back to the top-level setting of the same name. */
-  destination: destinationSchema.optional(),
-  profile: z.string().min(1).optional(),
-  mode: z.enum(['copy', 'hardlink', 'move']).optional(),
-  threshold: z.number().min(0).max(100).optional(),
-  /** Submit what lands in `source`, once complete (a folder that only holds finished downloads). */
-  watch: z.boolean().optional(),
-});
+/**
+ * Two kinds of library, told apart by which of `type` / `into` is set. A typed one is organized in
+ * place: its source is where the works of that type live, so it is also a destination (`move`
+ * implied). One with `into` is an arrival folder, never a destination: what lands in it goes to
+ * the typed libraries it names, with its own mode.
+ */
+const librarySchema = z
+  .strictObject({
+    id: z.string().regex(LIBRARY_ID_PATTERN),
+    name: z.string().min(1),
+    source: z.string().min(1),
+    type: libraryKindSchema.optional(),
+    /** Ids of typed libraries; both kinds, so a release always has a default destination. */
+    into: z.strictObject({ movie: z.string().min(1), series: z.string().min(1) }).optional(),
+    /** Typed libraries only: an arrival folder takes the profile of its destination. */
+    profile: z.string().min(1).optional(),
+    /** Arrival folders only (default `copy`): a typed library is organized in place. */
+    mode: z.enum(['copy', 'hardlink', 'move']).optional(),
+    threshold: z.number().min(0).max(100).optional(),
+    /** Submit what lands in `source`, once complete (a folder that only holds finished downloads). */
+    watch: z.boolean().optional(),
+  })
+  .superRefine((library, context) => {
+    const problem = (message: string): void => {
+      context.addIssue({ code: 'custom', message });
+    };
+    if ((library.type === undefined) === (library.into === undefined)) {
+      problem('needs exactly one of "type" and "into"');
+    } else if (library.into !== undefined && library.profile !== undefined) {
+      problem('an arrival folder ("into") takes the profile of its destination: remove "profile"');
+    } else if (library.type !== undefined && library.mode !== undefined) {
+      problem('a library with a "type" is organized in place: remove "mode"');
+    }
+  });
 
-const configSchema = z.strictObject({
-  /** One key per metadata service, so a second provider adds a key here, not a new setting. */
-  apiKey: z
-    .strictObject({
-      tmdb: z.string().min(1).optional(),
-      /** Plex admin token, to refresh a library after a transfer. */
-      plex: z.string().min(1).optional(),
-      jellyfin: z.string().min(1).optional(),
-    })
-    .optional(),
-  /** Language of the tool itself. */
-  locale: z.enum(['en', 'fr']).optional(),
-  /** Language of the titles fetched from TMDB, e.g. `fr` or `en-US`. */
-  metadataLanguage: z.string().min(2).optional(),
-  profile: z.string().min(1).optional(),
-  mode: z.enum(['copy', 'hardlink', 'move']).optional(),
-  threshold: z.number().min(0).max(100).optional(),
-  /** Server: who is told what happened, and which media servers are asked to look again. */
-  notify: z
-    .strictObject({
-      webhooks: z.array(webhookSchema).optional(),
-      plex: mediaServerSchema.extend({ section: z.number().int().min(1).optional() }).optional(),
-      jellyfin: mediaServerSchema.optional(),
-    })
-    .optional(),
-  /** Server: submit what lands in these folders, once complete. */
-  watch: watchSchema.optional(),
-  /** Server: days after which a finished job, all its files settled, is forgotten. 0 keeps all. */
-  retentionDays: z.number().int().min(0).optional(),
-  /** One root for everything, or one per kind (Plex asks for separate libraries). */
-  destination: destinationSchema.optional(),
-  /** Server: named source/destination pairs, each with its own profile, mode and threshold. */
-  libraries: z
-    .array(librarySchema)
-    .refine((all) => new Set(all.map(({ id }) => id)).size === all.length, {
-      message: 'library ids must be unique',
-    })
-    .optional(),
-});
+const configSchema = z
+  .strictObject({
+    /** One key per metadata service, so a second provider adds a key here, not a new setting. */
+    apiKey: z
+      .strictObject({
+        tmdb: z.string().min(1).optional(),
+        /** Plex admin token, to refresh a library after a transfer. */
+        plex: z.string().min(1).optional(),
+        jellyfin: z.string().min(1).optional(),
+      })
+      .optional(),
+    /** Language of the tool itself. */
+    locale: z.enum(['en', 'fr']).optional(),
+    /** Language of the titles fetched from TMDB, e.g. `fr` or `en-US`. */
+    metadataLanguage: z.string().min(2).optional(),
+    profile: z.string().min(1).optional(),
+    mode: z.enum(['copy', 'hardlink', 'move']).optional(),
+    threshold: z.number().min(0).max(100).optional(),
+    /** Server: who is told what happened, and which media servers are asked to look again. */
+    notify: z
+      .strictObject({
+        webhooks: z.array(webhookSchema).optional(),
+        plex: mediaServerSchema.extend({ section: z.number().int().min(1).optional() }).optional(),
+        jellyfin: mediaServerSchema.optional(),
+      })
+      .optional(),
+    /** Server: submit what lands in these folders, once complete. */
+    watch: watchSchema.optional(),
+    /** Server: days after which a finished job, all its files settled, is forgotten. 0 keeps all. */
+    retentionDays: z.number().int().min(0).optional(),
+    /** Server: libraries (organized in place) and arrival folders, see `librarySchema`. */
+    libraries: z.array(librarySchema).optional(),
+  })
+  .superRefine(({ libraries = [] }, context) => {
+    const problem = (index: number, message: string): void => {
+      context.addIssue({ code: 'custom', path: ['libraries', index], message });
+    };
+    const byId = new Map(libraries.map((library) => [library.id, library]));
+    if (byId.size !== libraries.length) {
+      problem(0, 'library ids must be unique');
+    }
+    libraries.forEach((library, index) => {
+      for (const kind of ['movie', 'series'] as const) {
+        const target = library.into?.[kind];
+        if (target !== undefined && byId.get(target)?.type !== kind) {
+          problem(index, `"into.${kind}" must be the id of a library of type "${kind}"`);
+        }
+      }
+    });
+  });
 
 export type Config = z.infer<typeof configSchema>;
 export type WatchConfig = NonNullable<Config['watch']>;

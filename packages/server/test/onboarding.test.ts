@@ -1,5 +1,4 @@
 import { join } from 'node:path';
-import { loadConfig } from '@kinoshelf/core';
 import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, harness, makeDir, put } from './harness.js';
 
@@ -18,7 +17,7 @@ describe('first-launch setup', () => {
     const h = await harness();
     const body = (await h.request('GET', '/api/onboarding')).json<Body>();
     expect(body.completed).toBe(false);
-    // The harness configures a destination; nothing else is settled.
+    // The harness configures the libraries organized in place; nothing else is settled.
     expect(body.steps.map((s) => s.state)).toEqual(['todo', 'todo', 'done', 'todo']);
   });
 
@@ -59,12 +58,29 @@ describe('first-launch setup', () => {
 
   it('ticks the source step once a library exists, with no job yet', async () => {
     const configDir = await makeDir();
-    await put(join(configDir, 'config.yaml'), 'destination: /media\n');
-    const h = await harness({ configDir, config: await loadConfig(configDir) });
+    const h = await harness({ configDir, config: {} });
     expect(stateOf((await h.request('GET', '/api/onboarding')).json<Body>(), 'source')).toBe(
       'todo',
     );
-    await h.request('POST', '/api/libraries', { name: 'Films', source: await makeDir() });
+    // A library organized in place is a destination, not a first folder to send.
+    await h.request('POST', '/api/libraries', {
+      name: 'Films',
+      source: await makeDir(),
+      type: 'movie',
+    });
+    expect(stateOf((await h.request('GET', '/api/onboarding')).json<Body>(), 'source')).toBe(
+      'todo',
+    );
+    await h.request('POST', '/api/libraries', {
+      name: 'Series',
+      source: await makeDir(),
+      type: 'series',
+    });
+    await h.request('POST', '/api/libraries', {
+      name: 'Downloads',
+      source: await makeDir(),
+      into: { movie: 'films', series: 'series' },
+    });
     const body = (await h.request('GET', '/api/onboarding')).json<Body>();
     expect(stateOf(body, 'source')).toBe('done');
     expect(body.steps.find((s) => s.id === 'source')?.auto).toBe(true);

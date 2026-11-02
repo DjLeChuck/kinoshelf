@@ -50,7 +50,6 @@ export interface SettingsPatch {
     profile?: Nullable<string>;
     mode?: Nullable<'copy' | 'hardlink' | 'move'>;
     threshold?: Nullable<number>;
-    destination?: Nullable<string | { movies: string; series: string }>;
   };
 }
 
@@ -111,7 +110,6 @@ export function presentSettings(config: Config, env: Env): unknown {
       profile: config.profile ?? null,
       mode: config.mode ?? null,
       threshold: config.threshold ?? null,
-      destination: config.destination ?? null,
     },
   };
 }

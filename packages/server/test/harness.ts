@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import Database from 'better-sqlite3';
@@ -7,6 +7,7 @@ import type { Config, MetadataProvider, MovieCandidate } from '@kinoshelf/core';
 import { buildApp, type AppOptions } from '../src/app.js';
 import { generateApiKey, setApiKey } from '../src/auth.js';
 import { migrated } from '../src/database.js';
+import type { Prober } from '../src/probe.js';
 
 const created: string[] = [];
 const apps: FastifyInstance[] = [];
@@ -80,6 +81,17 @@ export const fakeProvider: MetadataProvider = {
   imageUrl: (path, size) => `https://image.test/${size}${path}`,
 };
 
+/** Reads no file: a codec chosen by the name, so a test can tell what was probed. */
+export const fakeProber: Prober = async (path) => {
+  const info = await stat(path);
+  return {
+    video: path.includes('hevc') ? 'hevc' : 'h264',
+    audio: 'aac 2.0',
+    size: info.size,
+    mtime: Math.floor(info.mtimeMs),
+  };
+};
+
 export interface Harness {
   readonly app: FastifyInstance;
   readonly database: Database.Database;
@@ -93,6 +105,21 @@ export interface Harness {
   ) => Promise<LightMyRequestResponse>;
 }
 
+/**
+ * The two libraries organized in place that give every kind of work a destination. Both read the
+ * same folder, which is all a test needs to find what was written in one place.
+ */
+export const librariesAt = (root: string) =>
+  [
+    { id: 'films', name: 'Films', source: root, type: 'movie' },
+    { id: 'shows', name: 'Shows', source: root, type: 'series' },
+  ] as const;
+
+/** The same two libraries, as the text of a `config.yaml`. */
+export const librariesYaml = (root: string): string =>
+  `libraries:\n  - {id: films, name: Films, source: ${root}, type: movie}\n` +
+  `  - {id: shows, name: Shows, source: ${root}, type: series}\n`;
+
 /** `realProvider` skips the fake TMDB, to exercise the key lookup. */
 export async function harness(
   overrides: Partial<AppOptions> & { config?: Config; realProvider?: boolean } = {},
@@ -104,11 +131,13 @@ export async function harness(
   const destination = await makeDir();
   const app = await buildApp({
     version: '1.2.3',
-    config: { destination },
+    config: { libraries: [...librariesAt(destination)] },
     configDir: '/nonexistent',
     database,
     env: {},
     ...(!realProvider && { createProvider: () => fakeProvider }),
+    // Nothing in a test is a real video: the real `ffprobe` has its own test.
+    prober: fakeProber,
     ...options,
   });
   apps.push(app);

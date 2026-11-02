@@ -37,17 +37,21 @@ export function createProcessor(deps: ProcessorDeps): (job: Job) => Promise<Proc
       throw new KinoshelfError('discover.not-found', { path: job.path });
     }
 
-    // The library's own profile, mode, threshold and destination over the global ones. A release
+    // The library's own profile, mode, threshold and destinations over the global ones. A release
     // its watched folder submitted is read against the library's source: the in-place case
     // (source = destination) must not depend on which sub-folder arrived. A library removed since
     // the job was queued leaves the global settings.
     const library = deps.config.libraries?.find(({ id }) => id === job.libraryId);
-    const settings = await resolveSettings(library ? libraryOverrides(library) : {}, deps.config, {
-      source: library ? library.source : job.path,
-      sourceIsFile: library ? false : isFile,
-      defaultToSource: false,
-      defaultMetadataLanguage: deps.config.locale === 'fr' ? 'fr' : 'en-US',
-    });
+    const settings = await resolveSettings(
+      library ? libraryOverrides(library, deps.config.libraries ?? []) : {},
+      deps.config,
+      {
+        source: library ? library.source : job.path,
+        sourceIsFile: library ? false : isFile,
+        defaultToSource: false,
+        defaultMetadataLanguage: deps.config.locale === 'fr' ? 'fr' : 'en-US',
+      },
+    );
 
     const analysis = await analyze(await discoverVideos(job.path), {
       parser: new GuessitParser(),

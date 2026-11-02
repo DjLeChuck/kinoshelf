@@ -6,7 +6,7 @@ import type { Execution } from '../src/executions.js';
 import type { Job } from '../src/jobs.js';
 import { Notifier } from '../src/notify/notifier.js';
 import { closeFakeServers, fakeServer, type Received } from './fake-server.js';
-import { cleanup, harness, makeDir, put, type Harness } from './harness.js';
+import { cleanup, harness, librariesAt, makeDir, put, type Harness } from './harness.js';
 
 afterEach(async () => {
   await cleanup();
@@ -53,7 +53,7 @@ async function reporting(
   const destination = await makeDir();
   const h = await harness({
     config: {
-      destination,
+      libraries: [...librariesAt(destination)],
       ...(options.locale && { locale: options.locale }),
       apiKey: { plex: 'PTOKEN', jellyfin: 'JKEY' },
       notify: {

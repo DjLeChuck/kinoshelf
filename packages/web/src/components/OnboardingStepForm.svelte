@@ -16,6 +16,7 @@
   let url = $state('');
   let token = $state('');
   let folder = $state('');
+  let seriesFolder = $state('');
   let libraryName = $state('');
   let busy = $state(false);
   let failure = $state<unknown>(undefined);
@@ -49,10 +50,20 @@
         });
         break;
       case 'destination':
-        if (!needsAbsolute(folder.trim())) {
+        if (!needsAbsolute(folder.trim()) || !needsAbsolute(seriesFolder.trim())) {
           throw new FormError(t('web.settings.invalid.watch-folders'));
         }
-        await api.patch('/api/settings', { processing: { destination: folder.trim() } });
+        // The first libraries: the two folders the works end up in, organized in place.
+        await libraryApi.create({
+          name: folderName(folder.trim()),
+          source: folder.trim(),
+          type: 'movie',
+        });
+        await libraryApi.create({
+          name: folderName(seriesFolder.trim()),
+          source: seriesFolder.trim(),
+          type: 'series',
+        });
         break;
       case 'source':
         if (!needsAbsolute(folder.trim())) {
@@ -68,9 +79,17 @@
   /** The source is a library either way: watched, or scanned once. A failed scan shows on the home page. */
   async function submitSource(path: string): Promise<void> {
     const watch = mode === 'watch';
+    // An arrival folder sends what it receives to the first library of each type.
+    const libraries = await libraryApi.list();
+    const movie = libraries.find((library) => library.type === 'movie');
+    const series = libraries.find((library) => library.type === 'series');
+    if (!movie || !series) {
+      throw new FormError(t('web.onboarding.form.source.needs-destination'));
+    }
     const library = await libraryApi.create({
       name: nullIfBlank(libraryName) ?? folderName(path),
       source: path,
+      into: { movie: movie.id, series: series.id },
       watch,
     });
     if (!watch) {
@@ -140,12 +159,23 @@
       />
     </div>
   {:else}
-    {@const which = step === 'destination' ? 'destination' : 'source'}
-    <div class="field">
-      <label for="ob-folder">{t(`web.onboarding.form.${which}`)}</label>
-      <PathField id="ob-folder" bind:value={folder} placeholder="/" />
-      <span class="muted hint">{t(`web.onboarding.form.${which}.hint`)}</span>
-    </div>
+    {#if step === 'destination'}
+      <div class="field">
+        <label for="ob-folder">{t('web.onboarding.form.destination.movies')}</label>
+        <PathField id="ob-folder" bind:value={folder} placeholder="/" />
+      </div>
+      <div class="field">
+        <label for="ob-series-folder">{t('web.onboarding.form.destination.series')}</label>
+        <PathField id="ob-series-folder" bind:value={seriesFolder} placeholder="/" />
+        <span class="muted hint">{t('web.onboarding.form.destination.hint')}</span>
+      </div>
+    {:else}
+      <div class="field">
+        <label for="ob-folder">{t('web.onboarding.form.source')}</label>
+        <PathField id="ob-folder" bind:value={folder} placeholder="/" />
+        <span class="muted hint">{t('web.onboarding.form.source.hint')}</span>
+      </div>
+    {/if}
     {#if step === 'source'}
       <fieldset class="modes">
         <legend class="sr-only">{t('web.onboarding.form.source')}</legend>

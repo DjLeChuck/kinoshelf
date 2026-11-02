@@ -24,12 +24,22 @@ export const SCAN_TABS: readonly ScanTab[] = [
 /** Files per tab; `renamed` counts those already transferred, which no tab lists any more. */
 export type ScanCounts = Readonly<Record<ScanTab, number>> & { readonly renamed: number };
 
+export type LibraryKind = 'movie' | 'series';
+/** The ids of the libraries an arrival folder sends its releases to. */
+export interface LibraryInto {
+  readonly movie: string;
+  readonly series: string;
+}
+
 /** What `GET /api/libraries` returns. A field that is `null` follows the global setting. */
 export interface Library {
   readonly id: string;
   readonly name: string;
   readonly source: string;
   readonly destination: string | Destination | null;
+  /** A library organized in place has a type; an arrival folder has `into`. */
+  readonly type?: LibraryKind | null;
+  readonly into?: LibraryInto | null;
   readonly profile: string | null;
   readonly mode: Mode | null;
   readonly threshold: number | null;
@@ -50,6 +60,8 @@ export interface LibraryBody {
   name: string;
   source: string;
   destination?: string | Destination | null;
+  type?: LibraryKind;
+  into?: LibraryInto | null;
   profile?: string | null;
   mode?: Mode | null;
   threshold?: number | null;

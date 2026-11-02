@@ -1,11 +1,10 @@
 import { readFile, rename, rm, utimes, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import Database from 'better-sqlite3';
-import { loadConfig } from '@kinoshelf/core';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { migrated } from '../src/database.js';
 import { FolderWatcher, type WatcherSettings } from '../src/watcher.js';
-import { cleanup, harness, makeDir, put } from './harness.js';
+import { cleanup, harness, librariesAt, makeDir, put } from './harness.js';
 
 const watchers: FolderWatcher[] = [];
 afterEach(async () => {
@@ -224,8 +223,16 @@ describe('the watch API', () => {
     const folder = await makeDir();
     const h = await harness({
       config: {
-        destination: await makeDir(),
-        libraries: [{ id: 'downloads', name: 'Downloads', source: folder, watch: true }],
+        libraries: [
+          ...librariesAt(await makeDir()),
+          {
+            id: 'downloads',
+            name: 'Downloads',
+            source: folder,
+            into: { movie: 'films', series: 'shows' },
+            watch: true,
+          },
+        ],
         watch: { settleSeconds: 3600, pollSeconds: 3600 },
       },
     });
@@ -246,8 +253,7 @@ describe('the watch API', () => {
   it('watches the libraries that ask for it, and applies a change without a restart', async () => {
     const configDir = await makeDir();
     const folder = await makeDir();
-    await put(join(configDir, 'config.yaml'), 'destination: /media\n');
-    const h = await harness({ configDir, config: await loadConfig(configDir) });
+    const h = await harness({ configDir, config: {} });
     const patch = (payload: object) =>
       h.app.inject({
         method: 'PATCH',
@@ -257,7 +263,11 @@ describe('the watch API', () => {
       });
 
     // Not watched yet: the library exists, nothing listens.
-    const created = await h.request('POST', '/api/libraries', { name: 'Films', source: folder });
+    const created = await h.request('POST', '/api/libraries', {
+      name: 'Films',
+      source: folder,
+      type: 'movie',
+    });
     expect(created.statusCode).toBe(201);
     expect((await h.request('GET', '/api/watch')).json()).toMatchObject({ enabled: false });
 
@@ -283,24 +293,5 @@ describe('the watch API', () => {
     expect((await h.request('GET', '/api/watch')).json()).toMatchObject({ enabled: false });
     await patch({ watch: null });
     expect(await readFile(join(configDir, 'config.yaml'), 'utf8')).not.toContain('apply');
-  });
-
-  it('turns the `watch.folders` of an older version into libraries at startup', async () => {
-    const configDir = await makeDir();
-    const folder = await makeDir();
-    await put(
-      join(configDir, 'config.yaml'),
-      `destination: /media\nwatch:\n  folders: [${folder}]\n  pollSeconds: 3600\n`,
-    );
-    const h = await harness({ configDir, config: await loadConfig(configDir) });
-    await h.app.watcher.idle();
-
-    const libraries = (await h.request('GET', '/api/libraries')).json<{ id: string }[]>();
-    expect(libraries).toMatchObject([{ source: folder, watch: true, destination: null }]);
-    expect(await readFile(join(configDir, 'config.yaml'), 'utf8')).not.toContain('folders');
-    expect((await h.request('GET', '/api/watch')).json()).toMatchObject({
-      enabled: true,
-      folders: [{ path: folder, libraryId: libraries[0]?.id }],
-    });
   });
 });

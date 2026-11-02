@@ -6,7 +6,16 @@ import { SqliteJournal } from '@kinoshelf/core';
 import { buildApp } from '../src/app.js';
 import { migrated } from '../src/database.js';
 import { createProcessor } from '../src/processor.js';
-import { cleanup, fakeProvider, harness, makeDir, put, track, type Harness } from './harness.js';
+import {
+  cleanup,
+  fakeProvider,
+  harness,
+  librariesAt,
+  makeDir,
+  put,
+  track,
+  type Harness,
+} from './harness.js';
 
 afterEach(cleanup);
 
@@ -295,7 +304,7 @@ describe('a queue that is busy', () => {
   /** A runner kept busy by an analysis that waits for `release`, so what comes after is queued. */
   async function busyHarness() {
     const destination = await makeDir();
-    const config = { destination };
+    const config = { libraries: [...librariesAt(destination)] };
     let release: () => void = () => undefined;
     const gate = new Promise<void>((resolve) => (release = resolve));
     const real = createProcessor({
@@ -382,7 +391,7 @@ describe('after a crash', () => {
     const restarted = track(
       await buildApp({
         version: '1.2.3',
-        config: { destination: h.destination },
+        config: { libraries: [...librariesAt(h.destination)] },
         configDir: '/nonexistent',
         database: h.database,
         env: {},
@@ -444,7 +453,7 @@ describe('apply jobs', () => {
 
   it('are refused a manual transfer while their own is pending', async () => {
     const destination = await makeDir();
-    const config = { destination };
+    const config = { libraries: [...librariesAt(destination)] };
     let release: () => void = () => undefined;
     const gate = new Promise<void>((resolve) => (release = resolve));
     const real = createProcessor({

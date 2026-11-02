@@ -1,23 +1,38 @@
 import { stat } from 'node:fs/promises';
 import {
+  KinoshelfError,
   libraryId,
   loadProfile,
+  type MovieDetails,
+  type SeriesDetails,
   type Config,
   type ConfigEdit,
   type LibraryConfig,
 } from '@kinoshelf/core';
 import type { FastifyInstance } from 'fastify';
 import { ApiError } from './api-error.js';
+import type { ProbeQueue } from './probe.js';
 import type { EntryStore } from './entries.js';
 import type { EventBus } from './events.js';
 import type { JobStore } from './jobs.js';
+import {
+  ITEM_FILTERS,
+  itemId,
+  profileWrites,
+  resolutionOf,
+  type ItemFilter,
+  type LibraryItem,
+  type LibraryItemStore,
+} from './library-items.js';
 import type { JobRunner } from './runner.js';
 import {
   errorSchema,
   jobSchema,
   libraryCreateSchema,
+  libraryItemSchema,
   libraryPatchSchema,
   librarySchema,
+  paging,
 } from './schemas.js';
 import type { ConfigStore } from './settings.js';
 
@@ -25,19 +40,28 @@ export interface LibraryContext {
   readonly config: ConfigStore;
   readonly jobs: JobStore;
   readonly entries: EntryStore;
+  readonly items: LibraryItemStore;
+  readonly probes: ProbeQueue;
+  /** The provider's details of a work, for the page of one item. */
+  readonly details: (
+    kind: 'movie' | 'series',
+    tmdbId: number,
+  ) => Promise<MovieDetails | SeriesDetails | null>;
   readonly events: EventBus;
   readonly runner: JobRunner;
   /** Shapes a job like `GET /api/jobs/{id}`. */
   readonly presentJob: (job: ReturnType<JobStore['create']>) => unknown;
 }
 
-type Destination = string | { movies: string; series: string };
+type Kind = 'movie' | 'series';
+type Into = { movie: string; series: string };
 type Mode = 'copy' | 'hardlink' | 'move';
 
 interface CreateBody {
   name: string;
   source: string;
-  destination?: Destination;
+  type?: Kind;
+  into?: Into;
   profile?: string;
   mode?: Mode;
   threshold?: number;
@@ -48,7 +72,8 @@ interface CreateBody {
 interface PatchBody {
   name?: string;
   source?: string;
-  destination?: Destination | null;
+  type?: Kind;
+  into?: Into | null;
   profile?: string | null;
   mode?: Mode | null;
   threshold?: number | null;
@@ -72,19 +97,9 @@ async function requireFolder(path: string): Promise<void> {
   }
 }
 
-const destinationPaths = (destination: Destination | null | undefined): string[] =>
-  destination == null
-    ? []
-    : typeof destination === 'string'
-      ? [destination]
-      : [destination.movies, destination.series];
-
 async function validate(body: PatchBody): Promise<void> {
-  for (const path of [
-    ...(body.source ? [body.source] : []),
-    ...destinationPaths(body.destination),
-  ]) {
-    await requireFolder(path);
+  if (body.source) {
+    await requireFolder(body.source);
   }
   if (typeof body.profile === 'string') {
     // A bundled id or a path to a YAML file: refused with the loader's own typed error.
@@ -103,6 +118,21 @@ function requireSourceFree(
   }
 }
 
+const presentItem = (item: LibraryItem): unknown => ({
+  id: itemId(item.path),
+  path: item.path,
+  state: item.state,
+  kind: item.kind,
+  title: item.title,
+  year: item.year,
+  tmdbId: item.tmdbId,
+  resolution: resolutionOf(item.path),
+  nfo: item.nfo,
+  poster: item.poster,
+  fanart: item.fanart,
+  entryId: item.entryId,
+});
+
 const find = (config: Config, id: string): LibraryConfig => {
   const library = config.libraries?.find((candidate) => candidate.id === id);
   if (!library) {
@@ -113,7 +143,7 @@ const find = (config: Config, id: string): LibraryConfig => {
 
 /** `config.yaml` is the only home of libraries: every route edits it through the store. */
 export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext): void {
-  const { config: store, jobs, entries, events, runner } = ctx;
+  const { config: store, jobs, entries, items, probes, events, runner } = ctx;
 
   const present = (library: LibraryConfig): unknown => {
     const last = jobs.lastScan(library.id, library.source);
@@ -121,7 +151,8 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
       id: library.id,
       name: library.name,
       source: library.source,
-      destination: library.destination ?? null,
+      type: library.type ?? null,
+      into: library.into ?? null,
       profile: library.profile ?? null,
       mode: library.mode ?? null,
       threshold: library.threshold ?? null,
@@ -139,9 +170,17 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
     };
   };
   const write = async (makeLibraries: (current: Config) => LibraryConfig[]): Promise<Config> => {
-    const next = await store.update((current): ConfigEdit[] => [
-      { path: ['libraries'], value: makeLibraries(current) },
-    ]);
+    // The config checks the whole set (exactly one of `type` / `into`, `into` naming libraries of
+    // the right type) before writing anything: its refusal is the request's.
+    const next = await store
+      .update((current): ConfigEdit[] => [{ path: ['libraries'], value: makeLibraries(current) }])
+      .catch((error: unknown) => {
+        throw error instanceof KinoshelfError && error.info.code === 'config.invalid'
+          ? new ApiError(422, 'library.invalid', {
+              detail: String(error.info.params?.detail ?? ''),
+            })
+          : error;
+      });
     events.emit('settings');
     return next;
   };
@@ -153,8 +192,10 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
       schema: {
         summary: 'The libraries, with the state of their last scan',
         description:
-          'A library is a source folder (what a scan reads) and where it goes, with its own ' +
-          'profile, mode and threshold; a field that is `null` follows the global setting. ' +
+          'A library is a source folder (what a scan reads). With a `type` it is organized in place ' +
+          'and is also a destination; with `into` (the ids of a movie and a series library) it is ' +
+          'an arrival folder, with its own mode. `profile` goes with `type`, `mode` with `into`; ' +
+          'a field that is `null` follows the global setting. ' +
           '`lastScan` is the latest scan of the whole source, queued, running, failed or done: its ' +
           'counts are what is left to do now (see `GET /api/jobs/{id}/files`), all zero until it ' +
           'is done.',
@@ -170,9 +211,9 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
       schema: {
         summary: 'Add a library',
         description:
-          'The id is made from the name. The source (and each destination) must be an existing ' +
+          'The id is made from the name. The source must be an existing ' +
           'folder (422 `fs.not-found`, `fs.not-a-directory`, `fs.unreadable`), the profile a known ' +
-          'one (422 `profile.unknown`), and no other library may have the same source (409 ' +
+          'one (422 `profile.unknown`), exactly one of `type` and `into` is given and `into` names libraries of the right type (422 `library.invalid`), and no other library may have the same source (409 ' +
           '`library.source-taken`).',
         body: libraryCreateSchema,
         response: {
@@ -196,7 +237,8 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
           id,
           name: body.name,
           source: body.source,
-          ...(body.destination !== undefined && { destination: body.destination }),
+          ...(body.type !== undefined && { type: body.type }),
+          ...(body.into !== undefined && { into: body.into }),
           ...(body.profile !== undefined && { profile: body.profile }),
           ...(body.mode !== undefined && { mode: body.mode }),
           ...(body.threshold !== undefined && { threshold: body.threshold }),
@@ -214,8 +256,8 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
       schema: {
         summary: 'Change a library',
         description:
-          'Only what is sent changes; `null` removes `destination`, `profile`, `mode` or ' +
-          '`threshold`, so the library follows the global setting again. The id never changes. ' +
+          'Only what is sent changes; `null` removes `profile`, `mode`, `threshold` or `into`; ' +
+          'the type never changes. The id never changes. ' +
           'Same validation as `POST /api/libraries`. Files already planned keep the settings they ' +
           'were planned with; the next scan uses the new ones.',
         params: idParams,
@@ -266,9 +308,9 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
         summary: 'Remove a library',
         description:
           'Forgets the library only: its files stay where they are, and the jobs it started keep ' +
-          'their history.',
+          'their history. 409 `library.in-use` while an arrival folder sends its files to it.',
         params: idParams,
-        response: { 204: { type: 'null' }, 401: errorSchema, 404: errorSchema },
+        response: { 204: { type: 'null' }, 401: errorSchema, 404: errorSchema, 409: errorSchema },
       },
     },
     async (request, reply) => {
@@ -276,6 +318,12 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
       find(store.config, id);
       await write((current) => {
         find(current, id);
+        const user = (current.libraries ?? []).find(
+          ({ into }) => into?.movie === id || into?.series === id,
+        );
+        if (user) {
+          throw new ApiError(409, 'library.in-use', { name: user.name });
+        }
         return (current.libraries ?? []).filter((library) => library.id !== id);
       });
       return reply.code(204).send();
@@ -305,6 +353,195 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
       events.emit('jobs');
       runner.kick();
       return reply.code(202).send(ctx.presentJob(job));
+    },
+  );
+
+  api.get<{
+    Params: { id: string };
+    Querystring: { state?: ItemFilter; q?: string; limit?: number; offset?: number };
+  }>(
+    '/api/libraries/:id/items',
+    {
+      schema: {
+        summary: 'What a library holds, as its last scan saw it',
+        description:
+          'Read from the snapshot a scan leaves, never from the disk: listing costs nothing, and ' +
+          'transfers and undos keep it in step. `state` filters (`missing-nfo` and ' +
+          '`missing-artwork` look at the files, so one without either shows under both); `q` ' +
+          'matches the title or the file name. `counts` do not depend on the filters. ' +
+          '`scannedAt` is `null` until a scan of the source has ended; `scan` is the one queued ' +
+          'or running. `writes` says which columns the profile gives a page.',
+        params: idParams,
+        querystring: {
+          type: 'object',
+          properties: {
+            state: { type: 'string', enum: ITEM_FILTERS },
+            q: { type: 'string', minLength: 1 },
+            ...paging,
+          },
+        },
+        response: {
+          200: {
+            type: 'object',
+            required: ['library', 'scannedAt', 'scan', 'counts', 'total', 'items'],
+            properties: {
+              library: {
+                type: 'object',
+                required: ['id', 'name', 'type', 'path', 'profile', 'writes'],
+                properties: {
+                  id: { type: 'string' },
+                  name: { type: 'string' },
+                  type: { type: 'string', enum: ['movie', 'series'] },
+                  path: { type: 'string' },
+                  profile: { type: 'string', description: 'The id of the profile that applies.' },
+                  writes: {
+                    type: 'object',
+                    required: ['nfo', 'artwork'],
+                    properties: { nfo: { type: 'boolean' }, artwork: { type: 'boolean' } },
+                  },
+                },
+              },
+              scannedAt: { type: 'string', format: 'date-time', nullable: true },
+              scan: {
+                type: 'object',
+                nullable: true,
+                required: ['jobId', 'status'],
+                properties: {
+                  jobId: { type: 'string', format: 'uuid' },
+                  status: { type: 'string', enum: ['queued', 'running'] },
+                },
+              },
+              counts: {
+                type: 'object',
+                required: ['all', ...ITEM_FILTERS],
+                properties: Object.fromEntries(
+                  ['all', ...ITEM_FILTERS].map((key) => [key, { type: 'integer' }]),
+                ),
+              },
+              total: { type: 'integer', description: 'Items matching the filters, for paging.' },
+              items: { type: 'array', items: libraryItemSchema },
+            },
+          },
+          401: errorSchema,
+          404: errorSchema,
+          409: errorSchema,
+          422: errorSchema,
+        },
+      },
+    },
+    async (request) => {
+      const library = find(store.config, request.params.id);
+      if (library.type === undefined) {
+        // An arrival folder holds what waits to go elsewhere: that is `GET /api/arrivals`.
+        throw new ApiError(409, 'library.not-typed');
+      }
+      const profile = await loadProfile(library.profile ?? store.config.profile ?? 'plex');
+      const { state, q, limit, offset } = request.query;
+      const page = items.page(library.id, {
+        ...(state && { filter: state }),
+        ...(q && { query: q }),
+        limit: limit ?? 50,
+        offset: offset ?? 0,
+      });
+      const last = jobs.lastScan(library.id, library.source);
+      const running = last?.status === 'queued' || last?.status === 'running' ? last : undefined;
+      return {
+        library: {
+          id: library.id,
+          name: library.name,
+          type: library.type,
+          path: library.source,
+          profile: profile.id,
+          writes: profileWrites(profile, library.type),
+        },
+        // A scan that found nothing leaves no row, yet it did end.
+        scannedAt:
+          items.scannedAt(library.id) ?? (last?.status === 'done' ? last.finishedAt : null),
+        scan: running ? { jobId: running.id, status: running.status } : null,
+        counts: items.counts(library.id),
+        total: page.total,
+        items: page.items.map(presentItem),
+      };
+    },
+  );
+
+  api.get<{ Params: { id: string; itemId: string } }>(
+    '/api/libraries/:id/items/:itemId',
+    {
+      schema: {
+        summary: 'The page of one item of a library',
+        description:
+          'The item as the list gives it, plus what the provider knows of the work (summary, ' +
+          'runtime in minutes, genres, `posterPath` and `backdropPath` for `GET /api/images`) and ' +
+          'what `ffprobe` reads of the file (`file`: codec, audio, size in bytes). Both are ' +
+          'best effort: with no TMDB answer or no `ffprobe`, the fields are empty and the page ' +
+          'still works. The file is read now unless the snapshot already has it up to date.',
+        params: {
+          type: 'object',
+          properties: { id: { type: 'string' }, itemId: { type: 'string' } },
+        },
+        response: {
+          200: {
+            type: 'object',
+            required: [
+              ...libraryItemSchema.required,
+              'overview',
+              'runtime',
+              'genres',
+              'posterPath',
+              'backdropPath',
+              'file',
+            ],
+            properties: {
+              ...libraryItemSchema.properties,
+              overview: { type: 'string', nullable: true },
+              runtime: { type: 'integer', nullable: true },
+              genres: { type: 'array', items: { type: 'string' } },
+              posterPath: { type: 'string', nullable: true },
+              backdropPath: { type: 'string', nullable: true },
+              file: {
+                type: 'object',
+                nullable: true,
+                required: ['video', 'audio', 'size'],
+                properties: {
+                  video: { type: 'string', nullable: true },
+                  audio: { type: 'string', nullable: true },
+                  size: { type: 'integer' },
+                },
+              },
+            },
+          },
+          401: errorSchema,
+          404: errorSchema,
+        },
+      },
+    },
+    async (request) => {
+      const library = find(store.config, request.params.id);
+      const item = items.all(library.id).find(({ path }) => itemId(path) === request.params.itemId);
+      if (!item) {
+        throw new ApiError(404, 'library.item-not-found');
+      }
+      const [details, probe] = await Promise.all([
+        item.kind !== null && item.tmdbId !== null
+          ? ctx.details(item.kind, item.tmdbId).catch(() => null)
+          : null,
+        probes.now(library.id, item.path),
+      ]);
+      const file = (probe ?? undefined) && {
+        video: probe?.video ?? null,
+        audio: probe?.audio ?? null,
+        size: probe?.size ?? 0,
+      };
+      return {
+        ...(presentItem(item) as object),
+        overview: details?.overview ?? null,
+        runtime: details?.kind === 'movie' ? (details.runtime ?? null) : null,
+        genres: details?.genres ?? [],
+        posterPath: details?.posterPath?.replace(/^\//, '') ?? null,
+        backdropPath: details?.backdropPath?.replace(/^\//, '') ?? null,
+        file: file ?? null,
+      };
     },
   );
 }

@@ -1,4 +1,5 @@
 import {
+  libraryOverrides,
   resolveSettings as resolveCoreSettings,
   type Config,
   type Settings,
@@ -8,6 +9,7 @@ import { CliError } from './errors.js';
 import type { Locale } from '@kinoshelf/i18n';
 
 export interface CommonOptions {
+  readonly library?: string;
   readonly dest?: string;
   readonly destMovies?: string;
   readonly destSeries?: string;
@@ -37,15 +39,27 @@ function parseThreshold(value: string): number {
 
 /**
  * Turns the flags into typed overrides, then lets the core merge them over the config file.
- * `defaultToSource` lets `scan` work on a folder without any destination.
+ * `--library` stands for the settings of a library of `config.yaml` (its destinations, profile,
+ * mode, threshold); a flag given as well wins over it. `defaultToSource` lets `scan` work on a
+ * folder without any destination.
  */
 export function resolveSettings(
   options: CommonOptions,
   config: Config,
   context: { source: string; sourceIsFile: boolean; defaultToSource: boolean; locale: Locale },
 ): Promise<Settings> {
+  const libraries = config.libraries ?? [];
+  const library =
+    options.library === undefined ? undefined : libraries.find(({ id }) => id === options.library);
+  if (options.library !== undefined && !library) {
+    throw new CliError('config.library-unknown', {
+      id: options.library,
+      ids: libraries.map(({ id }) => id).join(', ') || '-',
+    });
+  }
   return resolveCoreSettings(
     {
+      ...(library && libraryOverrides(library, libraries)),
       ...(options.dest !== undefined && { dest: options.dest }),
       ...(options.destMovies !== undefined && { destMovies: options.destMovies }),
       ...(options.destSeries !== undefined && { destSeries: options.destSeries }),

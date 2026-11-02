@@ -437,23 +437,6 @@ const pathMappings = {
 } as const;
 const webhookFormats = ['generic', 'gotify', 'ntfy', 'discord'] as const;
 const webhookEvents = ['transferred', 'failed', 'needs-review'] as const;
-// `anyOf`, not `oneOf`: Ajv coerces types, and `oneOf` tries every branch, so a `null` reached the
-// string one and became `""` (a library edited back to the default destination was refused).
-const destination = {
-  anyOf: [
-    { type: 'null' },
-    { type: 'string', minLength: 1 },
-    {
-      type: 'object',
-      required: ['movies', 'series'],
-      additionalProperties: false,
-      properties: {
-        movies: { type: 'string', minLength: 1 },
-        series: { type: 'string', minLength: 1 },
-      },
-    },
-  ],
-} as const;
 
 /** What `GET /api/settings` returns: secrets are only ever reported as set or not. */
 export const settingsSchema = {
@@ -531,12 +514,11 @@ export const settingsSchema = {
     },
     processing: {
       type: 'object',
-      required: ['profile', 'mode', 'threshold', 'destination'],
+      required: ['profile', 'mode', 'threshold'],
       properties: {
         profile: { type: 'string', nullable: true },
         mode: { type: 'string', enum: ['copy', 'hardlink', 'move'], nullable: true },
         threshold: { type: 'number', nullable: true },
-        destination,
       },
     },
     profiles: {
@@ -641,7 +623,6 @@ export const settingsPatchSchema = {
         profile: nullable({ type: 'string', minLength: 1 }),
         mode: nullable({ type: 'string', enum: ['copy', 'hardlink', 'move'] }),
         threshold: nullable({ type: 'number', minimum: 0, maximum: 100 }),
-        destination,
       },
     },
   },
@@ -769,22 +750,62 @@ export const scanFilesSchema = {
   },
 } as const;
 
-const libraryDestinationSchema = {
-  oneOf: [
-    { type: 'string', minLength: 1 },
-    {
-      type: 'object',
-      required: ['movies', 'series'],
-      additionalProperties: false,
-      properties: {
-        movies: { type: 'string', minLength: 1 },
-        series: { type: 'string', minLength: 1 },
-      },
-    },
+const libraryKinds = ['movie', 'series'] as const;
+
+export const libraryItemSchema = {
+  type: 'object',
+  required: [
+    'id',
+    'path',
+    'state',
+    'kind',
+    'title',
+    'year',
+    'tmdbId',
+    'resolution',
+    'nfo',
+    'poster',
+    'fanart',
+    'entryId',
   ],
+  properties: {
+    id: {
+      type: 'string',
+      description: 'Stable for a path: `GET /api/libraries/{id}/items/{itemId}`.',
+    },
+    path: { type: 'string' },
+    state: { type: 'string', enum: ['review', 'rename', 'unrecognized', 'incomplete', 'ok'] },
+    kind: { type: 'string', enum: [...libraryKinds, null], nullable: true },
+    title: {
+      type: 'string',
+      nullable: true,
+      description: 'The official title; the file name’s when nothing matched.',
+    },
+    year: { type: 'integer', nullable: true },
+    tmdbId: { type: 'integer', nullable: true },
+    resolution: {
+      type: 'string',
+      nullable: true,
+      description: 'Read in the file name, e.g. `1080p`.',
+    },
+    nfo: {
+      type: 'boolean',
+      nullable: true,
+      description: '`null`: the profile writes none, or it cannot be told.',
+    },
+    poster: { type: 'boolean', nullable: true },
+    fanart: { type: 'boolean', nullable: true },
+    entryId: { type: 'string', nullable: true, description: 'To validate or change the match.' },
+  },
 } as const;
 
 const libraryModes = ['copy', 'hardlink', 'move'] as const;
+const libraryInto = {
+  type: 'object',
+  required: ['movie', 'series'],
+  additionalProperties: false,
+  properties: { movie: { type: 'string', minLength: 1 }, series: { type: 'string', minLength: 1 } },
+} as const;
 
 export const librarySchema = {
   type: 'object',
@@ -792,7 +813,8 @@ export const librarySchema = {
     'id',
     'name',
     'source',
-    'destination',
+    'type',
+    'into',
     'profile',
     'mode',
     'threshold',
@@ -805,8 +827,10 @@ export const librarySchema = {
     id: { type: 'string' },
     name: { type: 'string' },
     source: { type: 'string' },
-    /** Unset: follows the global destination. */
-    destination,
+    /** A library organized in place has a type; an arrival folder has `into` instead. */
+    type: { type: 'string', enum: [...libraryKinds, null], nullable: true },
+    /** Arrival folder: the typed libraries its releases go to by default. */
+    into: { ...libraryInto, nullable: true },
     /** Unset (null): follows the global profile, mode and threshold. */
     profile: { type: 'string', nullable: true },
     mode: { type: 'string', enum: [...libraryModes, null], nullable: true },
@@ -833,7 +857,8 @@ export const librarySchema = {
 const libraryFields = {
   name: { type: 'string', minLength: 1 },
   source: { type: 'string', pattern: '^/' },
-  destination: libraryDestinationSchema,
+  type: { type: 'string', enum: libraryKinds },
+  into: libraryInto,
   profile: { type: 'string', minLength: 1 },
   mode: { type: 'string', enum: libraryModes },
   threshold: { type: 'number', minimum: 0, maximum: 100 },
@@ -854,7 +879,8 @@ export const libraryPatchSchema = {
   properties: {
     name: libraryFields.name,
     source: libraryFields.source,
-    destination,
+    type: libraryFields.type,
+    into: nullable(libraryFields.into),
     profile: nullable(libraryFields.profile),
     mode: nullable(libraryFields.mode),
     threshold: nullable(libraryFields.threshold),

@@ -63,3 +63,40 @@ describe('server migrations', () => {
     expect(database.prepare('SELECT COUNT(*) AS n FROM onboarding_state').get()).toEqual({ n: 0 });
   });
 });
+
+describe('library migrations', () => {
+  it('add the remembered destinations and the library snapshot to a database of the previous layout', () => {
+    const database = new Database(':memory:');
+    applyMigrations(database, SERVER_MIGRATIONS.slice(0, 10));
+    database
+      .prepare(
+        "INSERT INTO jobs (id, path, status, created_at, library_id) VALUES ('j1', '/a', 'done', 'now', 'films')",
+      )
+      .run();
+
+    migrated(database);
+    migrated(database);
+
+    expect(database.prepare('SELECT library_id FROM jobs').get()).toEqual({ library_id: 'films' });
+    expect(database.prepare('SELECT COUNT(*) AS n FROM work_destinations').get()).toEqual({ n: 0 });
+    expect(database.prepare('SELECT COUNT(*) AS n FROM library_items').get()).toEqual({ n: 0 });
+  });
+
+  it('remember one library per work, and one row per file of a library', () => {
+    const database = migrated(new Database(':memory:'));
+    const remember = database.prepare(
+      "INSERT INTO work_destinations (kind, tmdb_id, library_id, created_at) VALUES (?, ?, ?, 'now')",
+    );
+    remember.run('movie', 603, 'films');
+    // The same id can be a movie and a series; the same work cannot have two destinations.
+    expect(() => remember.run('series', 603, 'shows')).not.toThrow();
+    expect(() => remember.run('movie', 603, 'other')).toThrow(/UNIQUE/);
+
+    const item = database.prepare(
+      "INSERT INTO library_items (library_id, path, state, scanned_at) VALUES (?, ?, 'ok', 'now')",
+    );
+    item.run('films', '/f/a.mkv');
+    expect(() => item.run('shows', '/f/a.mkv')).not.toThrow();
+    expect(() => item.run('films', '/f/a.mkv')).toThrow(/UNIQUE/);
+  });
+});

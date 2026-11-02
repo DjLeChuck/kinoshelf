@@ -1,6 +1,6 @@
 import { join } from 'node:path';
 import swagger from '@fastify/swagger';
-import { KinoshelfError, legacyWatchMigration, SqliteJournal, type Journal } from '@kinoshelf/core';
+import { KinoshelfError, SqliteJournal, type Journal } from '@kinoshelf/core';
 import type { Database } from 'better-sqlite3';
 import Fastify, { type FastifyInstance } from 'fastify';
 import { ApiError } from './api-error.js';
@@ -20,6 +20,8 @@ import { purgeHistory } from './purge.js';
 import { registerFsRoutes } from './fs-routes.js';
 import { registerLibraryRoutes } from './library-routes.js';
 import { jobPresenter, registerRoutes } from './routes.js';
+import { ffprobe, ProbeQueue, type Prober } from './probe.js';
+import { LibraryItemStore, LibrarySnapshot } from './library-items.js';
 import { JobRunner, type JobProcessor } from './runner.js';
 import { healthSchema } from './schemas.js';
 import { Service } from './service.js';
@@ -39,6 +41,8 @@ declare module 'fastify' {
     jobs: JobRunner;
     /** Tells the targets of `notify`; tests await `notifier.idle()` for what is in flight. */
     notifier: Notifier;
+    /** Reads the videos' codecs in the background; tests await `probes.idle()`. */
+    probes: ProbeQueue;
     /** The folder watcher; tests await `watcher.idle()`. */
     watcher: FolderWatcher;
   }
@@ -62,6 +66,8 @@ export interface AppOptions extends Omit<ProcessorDeps, 'database'> {
   readonly webRoot?: string;
   /** Replaces the network for poster downloads, for tests. */
   readonly fetch?: typeof fetch;
+  /** Replaces `ffprobe`, for tests. */
+  readonly prober?: Prober;
   /** Wraps or replaces the journal, for tests. */
   readonly journal?: (database: Database) => Journal;
 }
@@ -89,6 +95,13 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
   const jobs = new JobStore(options.database, entries, executions);
   const aliases = new AliasStore(options.database);
   const journal = options.journal?.(options.database) ?? new SqliteJournal(options.database);
+  const items = new LibraryItemStore(options.database);
+  const snapshot = new LibrarySnapshot({
+    config: () => options.config,
+    jobs,
+    entries,
+    store: items,
+  });
   const service = new Service({
     ...options,
     jobs,
@@ -96,6 +109,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     executions,
     journal,
     aliases,
+    snapshot,
   });
   const history = new History(journal, executions, jobs);
   const notifier = new Notifier({
@@ -121,12 +135,30 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
       createTranslator(detectLocale(undefined, config.locale, options.env)),
     );
   });
+  // Reads the videos' codecs once nothing else needs the disk; `runner` is only used when it runs.
+  const probes = new ProbeQueue({
+    store: items,
+    prober: options.prober ?? ffprobe,
+    busy: () => runner.busy,
+    onError: (error) => {
+      app.log.warn(error, 'Could not read a video with ffprobe');
+    },
+  });
   const runner = new JobRunner(
     jobs,
     executions,
     options.processor ?? createProcessor(options),
     (execution) => service.run(execution),
     {
+      scanned: async (job) => {
+        await snapshot.scanned(job);
+        if (job.libraryId) {
+          probes.enqueue(job.libraryId);
+        }
+      },
+      idle: () => {
+        probes.kick();
+      },
       jobDone: (job) => {
         notifier.jobDone(job, entries.summary(job.id));
       },
@@ -162,6 +194,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     },
   });
   app.decorate('jobs', runner);
+  app.decorate('probes', probes);
   app.decorate('watcher', watcher);
   app.decorate('notifier', notifier);
 
@@ -173,17 +206,11 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
       app.log.info(purged, 'Forgot the history of finished jobs');
     }
   };
-  app.addHook('onReady', async () => {
+  app.addHook('onReady', () => {
     runner.start();
-    // `watch.folders` of an older version become libraries before anything reads the config.
-    if (options.config.watch?.folders !== undefined) {
-      try {
-        await configStore.update(legacyWatchMigration);
-        app.log.info('Moved the folders of `watch` into libraries (config.yaml)');
-      } catch (error) {
-        app.log.error(error, 'Could not move `watch.folders` into libraries');
-      }
-    }
+    probes.rebuild(
+      (options.config.libraries ?? []).flatMap((library) => (library.type ? [library.id] : [])),
+    );
     watcher.configure(watcherSettings(options.config));
     if (options.retentionDays) {
       purge();
@@ -200,6 +227,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     watcher.stop();
     await watcher.idle();
     await runner.stop();
+    await probes.stop();
     await notifier.idle();
   });
 
@@ -315,6 +343,9 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
       config: configStore,
       jobs,
       entries,
+      items,
+      probes,
+      details: (kind, id) => service.details(kind, id),
       events,
       runner,
       presentJob: jobPresenter({ jobs, entries, executions }),

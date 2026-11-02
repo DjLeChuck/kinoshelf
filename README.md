@@ -82,11 +82,20 @@ next start.
 Metadata files are never overwritten (one already there is left as it is and reported), and `undo`
 removes the ones a batch wrote.
 
-`config.yaml` is the one source of the other settings (`destination`, `profile`, `mode`,
+`config.yaml` is the one source of the other settings (`libraries`, `profile`, `mode`,
 `threshold`, `locale`, `metadataLanguage`, `retentionDays`) and of the notifications:
 
 ```yaml
-destination: { movies: /media/Movies, series: /media/TV }
+libraries:
+  - { id: films, name: Films, type: movie, source: /media/Movies }
+  - { id: series, name: Series, type: series, source: /media/TV }
+  - {
+      id: downloads,
+      name: Downloads,
+      source: /downloads/complete,
+      into: { movie: films, series: series },
+      watch: true,
+    }
 notify:
   plex: { url: 'http://plex:32400' } # token in apiKey.plex
   jellyfin: { url: 'http://jellyfin:8096' } # key in apiKey.jellyfin

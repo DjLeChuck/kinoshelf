@@ -56,13 +56,14 @@ export const en = {
   'error.undo.source-exists': 'Cannot put the file back: something now exists at {path}.',
 
   'error.config.destination-required':
-    'Give a destination with --dest (or --dest-movies and --dest-series).',
+    'Give a destination with --dest (or --dest-movies and --dest-series, or --library).',
   'error.config.dir-not-writable':
     'Cannot write to the config directory {path} (running as uid {uid}). Make it writable for that user.',
   'error.config.invalid': 'Invalid configuration file {path}: {detail}',
   'error.undo.batch-already-undone': 'Batch {batch} was already reverted.',
   'error.undo.batch-not-found': 'No batch {batch} in the journal.',
   'error.config.invalid-value': 'Invalid value "{value}" for {option}.',
+  'error.config.library-unknown': 'No library "{id}" in config.yaml (libraries: {ids}).',
   'error.config.tmdb-key-missing':
     'No TMDB API key. Set the TMDB_API_KEY environment variable or "apiKey.tmdb" in {path}.',
   'error.unknown': 'Unexpected error ({code}).',
@@ -139,7 +140,7 @@ export const en = {
   'help.arg.batch': 'id of the batch to revert (printed when it was applied)',
   'help.cleanup':
     'Remove the temporary files an interrupted copy left in the destination folders (dry run unless --apply).',
-  'help.arg.folders': 'folders to scan (default: the destinations of config.yaml)',
+  'help.arg.folders': 'folders to scan (default: the libraries of config.yaml that have a type)',
   'help.opt.older-than':
     'only files untouched for at least this many hours (default 24, minimum 1)',
   'cleanup.header': 'Stale temporary files (untouched for {hours} h or more) in: {folders}',
@@ -149,7 +150,8 @@ export const en = {
   'cleanup.dry-run': 'Dry run: nothing was removed. Add --apply to delete them.',
   'error.cleanup.age-too-short':
     'The minimum age is {min} hour: a younger file may still be being copied.',
-  'error.cleanup.no-folder': 'Give at least one folder to scan, or set "destination" in {path}.',
+  'error.cleanup.no-folder':
+    'Give at least one folder to scan, or add a library with a "type" in {path}.',
   'help.submit':
     'Queue a file or folder on a running server (for a download client’s “on completion” hook).',
   'help.opt.url': 'address of the server (default: KINOSHELF_URL, else localhost)',
@@ -160,6 +162,8 @@ export const en = {
   'error.submit.rejected': 'The server refused the request (HTTP {status}).',
   'help.arg.source': 'folder or video file to analyze',
   'help.arg.path': 'video file or folder to process',
+  'help.opt.library':
+    'use the destinations, profile, mode and threshold of a library of config.yaml',
   'help.opt.dest': 'destination folder for movies and series',
   'help.opt.dest-movies': 'destination folder for movies',
   'help.opt.dest-series': 'destination folder for series',
@@ -190,6 +194,11 @@ export const en = {
   'error.internal.unexpected': 'Something went wrong on the server. See its log for details.',
   'error.job.not-done': 'This job has not finished its analysis yet ({status}).',
   'error.job.not-found': 'This job does not exist.',
+  'error.library.in-use': 'The arrival folder “{name}” sends its files to this library.',
+  'error.library.invalid': 'This library is not valid: {detail}',
+  'error.library.not-typed': 'This is an arrival folder: it holds no library of its own.',
+  'error.library.item-not-found':
+    'This file is no longer in the library. Update the source and try again.',
   'error.library.not-found': 'This library no longer exists. Reload the page.',
   'error.library.scan-in-progress': 'A scan of this library is already queued or running.',
   'error.library.source-taken': 'The library “{name}” already reads this folder.',
@@ -466,16 +475,19 @@ export const en = {
     'Optional: your library is refreshed automatically after each batch.',
   'web.onboarding.step.destination.title': 'Choose where to put your files',
   'web.onboarding.step.destination.body':
-    'Pick the destination folder and the output profile (Plex or Jellyfin).',
+    'Give the folder of your movies and the folder of your series. They become your first two libraries, organized in place.',
   'web.onboarding.step.source.title': 'Send a first folder',
   'web.onboarding.step.source.body':
     'Kinoshelf analyses the files and shows what it proposes, without changing anything.',
   'web.onboarding.form.tmdb.key': 'TMDB API key',
   'web.onboarding.form.tmdb.hint': 'Create a free key in your TMDB account, under Settings › API.',
   'web.onboarding.form.server.kind': 'Server',
-  'web.onboarding.form.destination': 'Destination folder',
+  'web.onboarding.form.destination.movies': 'Movies folder',
+  'web.onboarding.form.destination.series': 'Series folder',
   'web.onboarding.form.destination.hint':
-    'Movies and series go here. Separate folders for each are in the settings.',
+    'Two different folders, as Plex recommends. The output profile and more libraries are in the settings.',
+  'web.onboarding.form.source.needs-destination':
+    'Give your movies and series folders first (previous step).',
   'web.onboarding.form.source': 'Folder to analyse',
   'web.onboarding.form.source.hint': 'The folder where your videos are right now.',
   'web.onboarding.form.source.once': 'Analyse it once',

@@ -1,7 +1,7 @@
 import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { cleanup, fakeProvider, harness, makeDir, put } from './harness.js';
+import { cleanup, fakeProvider, harness, librariesAt, makeDir, put } from './harness.js';
 
 afterEach(cleanup);
 
@@ -32,7 +32,7 @@ async function setup(options: { detailsFail?: boolean } = {}) {
   await writeFile(profile, PROFILE);
   const destination = await makeDir();
   const h = await harness({
-    config: { destination, profile },
+    config: { libraries: [...librariesAt(destination)], profile },
     createProvider: () => ({
       ...fakeProvider,
       ...(options.detailsFail && {
