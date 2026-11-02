@@ -254,6 +254,12 @@ export const libraryItems = {
     api.get<ShowDetail>(`/api/libraries/${libraryId}/shows/${tmdbId}`),
   detail: (libraryId: string, itemId: string) =>
     api.get<ItemDetail>(`/api/libraries/${libraryId}/items/${itemId}`),
+  /** Where a scan is, without the counts and the page around it. */
+  scan: (jobId: string) =>
+    api.get<{
+      readonly status: 'queued' | 'running' | 'done' | 'failed';
+      readonly progress: ScanProgress | null;
+    }>(`/api/jobs/${jobId}`),
 };
 
 /** Whole percent of the identification, once the walk of the folder has told how many files. */

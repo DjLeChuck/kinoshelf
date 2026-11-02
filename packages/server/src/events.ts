@@ -4,7 +4,7 @@ import type { FastifyInstance } from 'fastify';
  * What changed, not how: a client refetches the view it shows. Payloads would duplicate the REST
  * shapes and drift from them, and a missed event costs one refetch.
  */
-export type EventTopic = 'jobs' | 'arrivals' | 'history' | 'settings';
+export type EventTopic = 'jobs' | 'progress' | 'arrivals' | 'history' | 'settings';
 
 export type EventListener = (topic: EventTopic) => void;
 
@@ -29,7 +29,7 @@ export class EventBus {
 }
 
 /** A comment line keeps proxies from closing an idle stream (they often cut at 30 to 60 s). */
-export const HEARTBEAT_MS = 20_000;
+const HEARTBEAT_MS = 20_000;
 
 /**
  * `GET /api/events`: Server-Sent Events. The browser reconnects by itself, and refetches on each
@@ -47,8 +47,10 @@ export function registerEventRoutes(
       schema: {
         summary: 'Stream of changes (Server-Sent Events)',
         description:
-          'Each event is named after what changed (`jobs`, `arrivals`, `history`, `settings`) and carries no ' +
-          'data: refetch the matching list. A `ready` event opens the stream.',
+          'Each event is named after what changed (`jobs`, `progress`, `arrivals`, `history`, `settings`) ' +
+          'and carries no data: refetch the matching list. `progress` is only where a running analysis ' +
+          'is (`GET /api/jobs/{id}`), at most twice a second; `jobs` is a job queued, started or ended. ' +
+          'A `ready` event opens the stream.',
         response: { 200: { type: 'string', description: 'text/event-stream' } },
       },
     },

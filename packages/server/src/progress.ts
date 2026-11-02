@@ -37,7 +37,7 @@ export class ProgressTracker {
   private timer: NodeJS.Timeout | undefined;
 
   constructor(
-    /** Tells the clients something moved (the `jobs` topic, with no payload). */
+    /** Tells the clients something moved (the `progress` topic, with no payload). */
     private readonly notify: () => void,
     private readonly now: () => number = Date.now,
   ) {}

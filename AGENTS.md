@@ -233,7 +233,7 @@ refuses to delete a library an arrival folder points at (`library.in-use`). Ther
   `?query`, `router.setQuery` changes it in place, with no history entry). The state filter of a library and of
   Arrivals is `?state=…` (`oneOf` drops a value the filter does not know). The open tree of a series is too: `?open=<tmdb ids>` for the
   shows and `?seasons=<tmdb id>:<season>,…` for the seasons (`listOf`/`listParam`).
-- **Events** (`GET /api/events`): the payload-less topics are `jobs`, `arrivals` (files waiting for a human changed:
+- **Events** (`GET /api/events`): the payload-less topics are `jobs` (queued, started, ended), `progress`, `arrivals` (files waiting for a human changed:
   match, ignore, cancel, a job ending), `history`, `settings`, and `ready` on each (re)connection.
 - **Snapshot** (`library_items`, server migration 012, `library-items.ts`): what a typed library holds,
   as its last scan saw it (title, year, tmdb id, state, presence of NFO / poster / fanart, entry id).
@@ -282,7 +282,8 @@ refuses to delete a library an arrival folder points at (`library.in-use`). Ther
   `total`, `current`, `idleSeconds`) while an analysis runs, `null` otherwise. It lives in the
   server's memory (`ProgressTracker`), never in the database: a restart runs the job again from 0.
   `idleSeconds` is the server's clock, so the web can say "still running" past a minute without
-  trusting the browser's. Every change emits the payload-less `jobs` event, at most twice a second.
+  trusting the browser's. Every change emits the payload-less `progress` event, at most twice a second;
+  only a view showing a scan listens to it, and reads `GET /api/jobs/:id` alone (`jobs` reloads every list).
   The core reports through `discoverVideos`' `onFound`, and `analyze`'s `onProgress` (with the file)
   and `onPlanning`.
 - **ffprobe** (`probe.ts`): `ProbeQueue` fills `video`, `audio`, `size`, `mtime`, `probed_at` in the

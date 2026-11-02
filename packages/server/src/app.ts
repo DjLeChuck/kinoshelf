@@ -99,8 +99,9 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
   });
   const events = new EventBus();
   // Where each analysis is, told to the clients at most twice a second (see `ProgressTracker`).
+  // A topic of its own: `jobs` makes every list reload, which a scan must not do twice a second.
   const progress = new ProgressTracker(() => {
-    events.emit('jobs');
+    events.emit('progress');
   });
   const entries = new EntryStore(options.database);
   const executions = new ExecutionStore(options.database);

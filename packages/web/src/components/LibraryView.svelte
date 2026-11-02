@@ -104,6 +104,36 @@
 
   refetchOn(['jobs', 'arrivals', 'history', 'settings', 'ready'], () => void load());
 
+  // A running scan moves twice a second: only its progress is read again, not the counts and the
+  // list (the `jobs` event reloads them once it ends). One read at a time.
+  let following = false;
+  async function follow(): Promise<void> {
+    const scan = page?.scan;
+    if (!scan || following) {
+      return;
+    }
+    following = true;
+    const ticket = latest;
+    try {
+      const job = await libraryItems.scan(scan.jobId);
+      const current = page?.scan;
+      if (
+        ticket === latest &&
+        page &&
+        current?.jobId === scan.jobId &&
+        (job.status === 'queued' || job.status === 'running')
+      ) {
+        page = { ...page, scan: { ...current, status: job.status, progress: job.progress } };
+      }
+    } catch {
+      // The next full load says what went wrong.
+    } finally {
+      following = false;
+    }
+  }
+
+  refetchOn(['progress'], () => void follow());
+
   async function scan(): Promise<void> {
     starting = true;
     failure = undefined;

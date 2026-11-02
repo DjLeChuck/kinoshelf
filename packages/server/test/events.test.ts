@@ -74,6 +74,25 @@ describe('GET /api/events', () => {
     expect(text).toContain('event: arrivals');
   });
 
+  it('tells where an analysis is on a topic of its own, so lists do not reload with it', async () => {
+    const { base, auth } = await listening();
+    const directory = await makeDir();
+    for (let n = 1; n <= 5; n++) {
+      await put(`${directory}/Show.S01E0${String(n)}.mkv`);
+    }
+    const response = await fetch(`${base}/api/events`, { headers: auth });
+    const reading = collect(response, (t) => t.includes('event: arrivals'));
+    await fetch(`${base}/api/jobs`, {
+      method: 'POST',
+      headers: { ...auth, 'content-type': 'application/json' },
+      body: JSON.stringify({ path: directory }),
+    });
+    const text = await reading;
+    expect(text).toContain('event: progress');
+    // Queued, started, ended: never once per file.
+    expect(text.match(/event: jobs\n/g)?.length).toBeLessThanOrEqual(3);
+  });
+
   it('asks proxies not to buffer the stream', async () => {
     const { base, auth } = await listening();
     const response = await fetch(`${base}/api/events`, { headers: auth });
