@@ -93,3 +93,17 @@ test('lists a remembered destination in the settings and forgets it', async ({ p
   await expect(forget).toHaveCount(0);
   expect(await (await request.get('/api/work-destinations', { headers })).json()).toEqual([]);
 });
+
+test('keeps the state filter in the address', async ({ page }) => {
+  await signInAt(page, '/arrivals?state=review');
+  const filter = (name: string) => page.getByRole('button', { name, exact: true });
+  await expect(filter('To validate')).toHaveAttribute('aria-pressed', 'true');
+
+  await filter('Not recognized').click();
+  await expect(page).toHaveURL(/\/arrivals\?state=unrecognized$/);
+  await page.reload();
+  await expect(filter('Not recognized')).toHaveAttribute('aria-pressed', 'true');
+
+  await filter('All').click();
+  await expect(page).toHaveURL(/\/arrivals$/);
+});

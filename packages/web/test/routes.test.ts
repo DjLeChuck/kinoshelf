@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { en, fr } from '@kinoshelf/i18n';
-import { historyIdOf, matchRoute, ROUTES } from '../src/lib/routes.js';
+import {
+  historyIdOf,
+  matchRoute,
+  oneOf,
+  ROUTES,
+  splitTarget,
+  withParams,
+} from '../src/lib/routes.js';
 
 describe('matchRoute', () => {
   it.each([
@@ -46,5 +53,31 @@ describe('historyIdOf', () => {
     expect(historyIdOf('/history')).toBeUndefined();
     expect(historyIdOf('/jobs/9b1c')).toBeUndefined();
     expect(historyIdOf('/history/a/b')).toBeUndefined();
+  });
+});
+
+describe('the query of a page', () => {
+  it('is cut from the path of a link', () => {
+    expect(splitTarget('/libraries/films?state=review')).toEqual({
+      path: '/libraries/films',
+      search: '?state=review',
+    });
+    expect(splitTarget('/arrivals')).toEqual({ path: '/arrivals', search: '' });
+  });
+
+  it('keeps matching its page', () => {
+    expect(matchRoute(splitTarget('/libraries/films?state=review').path)?.id).toBe('libraries');
+  });
+
+  it('sets, replaces and drops parameters, leaving the others', () => {
+    expect(withParams('', { state: 'review' })).toBe('?state=review');
+    expect(withParams('?state=review&q=a', { state: 'rename' })).toBe('?state=rename&q=a');
+    expect(withParams('?state=review', { state: undefined })).toBe('');
+  });
+
+  it('accepts only the values a filter knows', () => {
+    expect(oneOf('review', ['review', 'rename'] as const)).toBe('review');
+    expect(oneOf('nope', ['review', 'rename'] as const)).toBeUndefined();
+    expect(oneOf(null, ['review'] as const)).toBeUndefined();
   });
 });

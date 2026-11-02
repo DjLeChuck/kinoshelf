@@ -1,8 +1,11 @@
 <script lang="ts">
+  import { untrack } from 'svelte';
   import { api } from '../lib/api.js';
   import { messageOf } from '../lib/errors.js';
   import { refetchOn } from '../lib/events.svelte.js';
   import { t } from '../lib/i18n.svelte.js';
+  import { router } from '../lib/router.svelte.js';
+  import { oneOf } from '../lib/routes.js';
   import {
     STATUS_CHIP,
     STATUS_LABEL,
@@ -18,7 +21,17 @@
 
   let page = $state<ArrivalPage | undefined>(undefined);
   let failure = $state<unknown>(undefined);
-  let filter = $state<Filter>('all');
+  // In the URL (`?state=review`), like the libraries' filter.
+  const filter = $derived<Filter>(oneOf(router.query.get('state'), FILTERS) ?? 'all');
+  let firstFilter = true;
+  $effect(() => {
+    void filter;
+    if (firstFilter) {
+      firstFilter = false;
+      return;
+    }
+    untrack(() => void load());
+  });
   let chosen = $state<string | undefined>(undefined);
   let notice = $state<string | undefined>(undefined);
   let watch = $state<WatchStatus | undefined>(undefined);
@@ -88,10 +101,8 @@
         type="button"
         class="btn"
         aria-pressed={filter === option}
-        onclick={() => {
-          filter = option;
-          void load();
-        }}>{t(`web.arrivals.filter.${option}`)}</button
+        onclick={() => router.setQuery({ state: option === 'all' ? undefined : option })}
+        >{t(`web.arrivals.filter.${option}`)}</button
       >
     {/each}
   </div>

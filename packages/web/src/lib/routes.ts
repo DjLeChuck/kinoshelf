@@ -31,3 +31,31 @@ export function matchRoute(path: string): RouteDefinition | undefined {
   }
   return ROUTES.find(({ path: base }) => clean === base || clean.startsWith(`${base}/`));
 }
+
+/** A link target cut into what the router keeps apart: the path, and the `?query` (with its `?`). */
+export function splitTarget(to: string): { path: string; search: string } {
+  const at = to.indexOf('?');
+  return at === -1 ? { path: to, search: '' } : { path: to.slice(0, at), search: to.slice(at) };
+}
+
+/** `search` with these parameters set, or dropped when `undefined`; others are kept. */
+export function withParams(search: string, params: Record<string, string | undefined>): string {
+  const next = new URLSearchParams(search);
+  for (const [key, value] of Object.entries(params)) {
+    if (value === undefined) {
+      next.delete(key);
+    } else {
+      next.set(key, value);
+    }
+  }
+  const text = next.toString();
+  return text === '' ? '' : `?${text}`;
+}
+
+/** A query value that is one of the allowed ones, else `undefined` (a stale or mistyped link). */
+export function oneOf<T extends string>(
+  value: string | null,
+  allowed: readonly T[],
+): T | undefined {
+  return allowed.find((option) => option === value);
+}

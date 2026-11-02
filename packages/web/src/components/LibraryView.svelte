@@ -1,9 +1,12 @@
 <script lang="ts">
   import { messageOf } from '../lib/errors.js';
+  import { untrack } from 'svelte';
   import { refetchOn } from '../lib/events.svelte.js';
   import { locale, t } from '../lib/i18n.svelte.js';
   import { formatDate } from '../lib/history.js';
   import { libraryApi, type Library } from '../lib/libraries.js';
+  import { router } from '../lib/router.svelte.js';
+  import { oneOf } from '../lib/routes.js';
   import {
     ITEM_FILTERS,
     PAGE_SIZE,
@@ -15,7 +18,6 @@
     scanPercent,
     type ItemState,
     type ItemsPage,
-    type ShowFilter,
   } from '../lib/library-items.js';
   import ItemPanel from './ItemPanel.svelte';
   import RunDialog from './RunDialog.svelte';
@@ -36,7 +38,6 @@
 
   let page = $state<ItemsPage | undefined>(undefined);
   let failure = $state<unknown>(undefined);
-  let filter = $state<ShowFilter | undefined>(undefined);
   let query = $state('');
   let limit = $state(PAGE_SIZE);
   let chosen = $state<string | undefined>(undefined);
@@ -59,8 +60,19 @@
   // A series library reads as a tree of shows, until a filter asks for the files themselves
   // (the ones to validate, to rename, without NFO…): then it is the same flat list as the movies'.
   const isSeries = $derived(library.type === 'series');
-  const tree = $derived(isSeries && (filter === undefined || filter === 'missing-episodes'));
   const filters = $derived(isSeries ? SERIES_FILTERS : ITEM_FILTERS);
+  // The filter lives in the URL (`?state=review`): a link keeps it, and so does a reload.
+  const filter = $derived(oneOf(router.query.get('state'), filters));
+  let firstFilter = true;
+  $effect(() => {
+    void filter;
+    if (firstFilter) {
+      firstFilter = false;
+      return;
+    }
+    untrack(refilter);
+  });
+  const tree = $derived(isSeries && (filter === undefined || filter === 'missing-episodes'));
 
   const open = $derived(page?.items.find(({ id }) => id === chosen));
   const scanning = $derived(page?.scan != null || library.scanning);
@@ -166,10 +178,7 @@
           type="button"
           class="btn"
           aria-pressed={filter === option}
-          onclick={() => {
-            filter = option;
-            refilter();
-          }}
+          onclick={() => router.setQuery({ state: option })}
         >
           {t(`web.library.filter.${option ?? 'all'}`)}
           <span class="count">{page.counts[option ?? 'all']}</span>

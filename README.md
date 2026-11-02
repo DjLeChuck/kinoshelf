@@ -173,7 +173,7 @@ API key: the browser keeps a session cookie for 7 days, so the key itself is not
   configuration says so; the server remembers what you skipped. The app then opens on Libraries.
 - **Libraries.** One tab per library organized in place (movies, series) and an **Arrivals** tab.
   A library lists what its last scan saw, with filters (to validate, to rename, unrecognized,
-  missing NFO or images), a search, the scan progress and a page per item (summary, `ffprobe`). A
+  missing NFO or images; kept in the address as `?state=…`, so a link or a reload keeps it), a search, the scan progress and a page per item (summary, `ffprobe`). A
   series library reads as a tree (show, season, episode) with its missing episodes. **Rename** and
   **Refresh** open a preview first; nothing is written until you confirm, and an existing file is
   never overwritten. Arrivals hold the files Kinoshelf could not place with confidence, with their
