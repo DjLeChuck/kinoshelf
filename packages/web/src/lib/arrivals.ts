@@ -106,6 +106,36 @@ export interface ReleaseGroup {
   readonly others: readonly { readonly cluster: number; readonly files: readonly Arrival[] }[];
 }
 
+/** A release as the server pages them: a folder (or a loose file) within one job. */
+export const releaseKey = (arrival: Pick<Arrival, 'jobId' | 'release' | 'path'>): string =>
+  `${arrival.jobId}|${arrival.release ?? arrival.path}`;
+
+/** The most releases one request may ask for (the API refuses more). */
+const MAX_RELEASES = 200;
+
+/**
+ * Reads the first `releases` releases of the arrivals, `MAX_RELEASES` at a time. The API pages by
+ * release, never cutting one between two pages, so the offset counts releases, not files.
+ */
+export async function readArrivals(
+  releases: number,
+  read: (limit: number, offset: number) => Promise<ArrivalPage>,
+): Promise<ArrivalPage> {
+  const count = (items: readonly Arrival[]): number => new Set(items.map(releaseKey)).size;
+  const first = await read(Math.min(releases, MAX_RELEASES), 0);
+  const items = [...first.items];
+  let seen = count(first.items);
+  while (seen < releases && seen < first.total) {
+    const next = await read(Math.min(releases - seen, MAX_RELEASES), seen);
+    if (next.items.length === 0) {
+      break;
+    }
+    items.push(...next.items);
+    seen += count(next.items);
+  }
+  return { ...first, items };
+}
+
 /**
  * Groups what the arrivals list returns by release, keeping the order of first appearance. A
  * release is a folder within one job, as the server pages them: the same folder sent twice is two
@@ -118,7 +148,7 @@ export function groupReleases(items: readonly Arrival[]): ReleaseGroup[] {
   >();
   for (const item of items) {
     const folder = item.release ?? item.path;
-    const key = `${item.jobId}|${folder}`;
+    const key = releaseKey(item);
     const group = groups.get(key) ?? { folder, files: [], others: new Map<number, Arrival[]>() };
     if (item.cluster === 0) {
       group.files.push(item);

@@ -10,6 +10,8 @@
     STATUS_CHIP,
     STATUS_LABEL,
     groupReleases,
+    readArrivals,
+    releaseKey,
     statusOf,
     type Arrival,
     type ArrivalPage,
@@ -20,7 +22,11 @@
   type Filter = 'all' | 'review' | 'unrecognized';
   const FILTERS: readonly Filter[] = ['all', 'review', 'unrecognized'];
 
+  const PAGE = 50;
+
   let page = $state<ArrivalPage | undefined>(undefined);
+  /** How many releases are shown: "Show more" asks for the next ones. */
+  let releases = $state(PAGE);
   let failure = $state<unknown>(undefined);
   // In the URL (`?state=review`), like the libraries' filter.
   const filter = $derived<Filter>(oneOf(router.query.get('state'), FILTERS) ?? 'all');
@@ -29,6 +35,7 @@
     const current = filter;
     if (current !== shown) {
       shown = current;
+      releases = PAGE;
       untrack(() => void load());
     }
   });
@@ -47,7 +54,7 @@
   const siblings = $derived(
     open
       ? (page?.items.filter(
-          ({ release, cluster }) => release === open.release && cluster === open.cluster,
+          (item) => releaseKey(item) === releaseKey(open) && item.cluster === open.cluster,
         ).length ?? 1)
       : 1,
   );
@@ -55,18 +62,29 @@
   /** Whether the open file is of the same series of the same release. */
   function inSeriesOfOpen(arrival: Arrival): boolean {
     return (
-      open !== undefined && open.release === arrival.release && open.cluster === arrival.cluster
+      open !== undefined &&
+      releaseKey(open) === releaseKey(arrival) &&
+      open.cluster === arrival.cluster
     );
   }
 
+  // A ticket per read: a slow answer (the other filter's, or an older event's) is dropped.
+  let latest = 0;
   async function load(): Promise<void> {
+    const ticket = ++latest;
+    const state = filter === 'all' ? '' : `&state=${filter}`;
     try {
-      page = await api.get<ArrivalPage>(
-        `/api/arrivals?limit=200${filter === 'all' ? '' : `&state=${filter}`}`,
+      const answer = await readArrivals(releases, (limit, offset) =>
+        api.get<ArrivalPage>(`/api/arrivals?limit=${limit}&offset=${offset}${state}`),
       );
-      failure = undefined;
+      if (ticket === latest) {
+        page = answer;
+        failure = undefined;
+      }
     } catch (error) {
-      failure = error;
+      if (ticket === latest) {
+        failure = error;
+      }
     }
   }
 
@@ -203,6 +221,18 @@
             {/if}
           </li>
         {/each}
+        {#if page.total > groups.length}
+          <li>
+            <button
+              type="button"
+              class="btn"
+              onclick={() => {
+                releases += PAGE;
+                void load();
+              }}>{t('web.library.more', { shown: groups.length, total: page.total })}</button
+            >
+          </li>
+        {/if}
       </ul>
 
       <div>

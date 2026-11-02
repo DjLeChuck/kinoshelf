@@ -5,6 +5,7 @@ import {
   folderOf,
   posterUrl,
   groupReleases,
+  readArrivals,
   releaseName,
   sameCandidate,
   statusOf,
@@ -225,5 +226,32 @@ describe('groupReleases', () => {
 
   it('makes a group of its own of a file without a release', () => {
     expect(groupReleases([file('a', null)]).map((g) => g.name)).toEqual(['a.mkv']);
+  });
+});
+
+describe('readArrivals', () => {
+  const file = (jobId: string, release: string, id: string): Arrival =>
+    arrival({ id, jobId, release, path: `${release}/${id}.mkv`, file: `${id}.mkv` });
+
+  it('counts releases, not files, to read the next page', async () => {
+    // Three releases of two files each; the API pages by release.
+    const releases = ['/d/A', '/d/B', '/d/C'].map((release, n) => [
+      file(`j${String(n)}`, release, `${release}-1`),
+      file(`j${String(n)}`, release, `${release}-2`),
+    ]);
+    const asked: [number, number][] = [];
+    const page = await readArrivals(3, (limit, offset) => {
+      asked.push([limit, offset]);
+      return Promise.resolve({
+        total: 3,
+        sources: [],
+        items: releases.slice(offset, offset + Math.min(limit, 2)).flat(),
+      });
+    });
+    expect(asked).toEqual([
+      [3, 0],
+      [1, 2],
+    ]);
+    expect(page.items).toHaveLength(6);
   });
 });
