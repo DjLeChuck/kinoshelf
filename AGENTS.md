@@ -12,11 +12,11 @@ launch (`GET`/`PATCH /api/onboarding`, server migration 009) and the app then op
 libraries (organized in place, arrival folders) are configured in the Settings, with a server-side
 path picker. The Libraries page has a tab per typed library (list read from the snapshot, filters,
 scan progress, the page of an item) and an Arrivals tab (`/arrivals`) where a file is validated:
-candidate, destination library, "remember" boxes. Still to build: series (tree, missing episodes),
-"Refresh" and the rename preview, and the merged History. Validating a file remembers its title
-(aliases). v1.0 is under way: the NFO and artwork writers and the `jellyfin` and `plex-nfo`
-profiles are built (see "NFO and artwork" below), metadata included for a library that is already
-organized.
+candidate, destination library, "remember" boxes. A series library reads as a tree (show, season,
+episode) with its missing episodes. Still to build: "Refresh" and the rename preview, and the merged
+History. Validating a file remembers its title (aliases). v1.0 is under way: the NFO and artwork
+writers and the `jellyfin` and `plex-nfo` profiles are built (see "NFO and artwork" below), metadata
+included for a library that is already organized.
 
 Backlog, not built: skipping samples by size (today only by name: `sample.*`, a `Sample` folder);
 reading completion from a download client's own API (see "Getting downloads in").
@@ -202,6 +202,22 @@ refuses to delete a library an arrival folder points at (`library.in-use`). Ther
   `q`, paging, counts); `/items/:itemId` adds the work's details and `ffprobe`. An arrival folder
   has no snapshot; what an arrival sends to a typed library is added to that library's rows once
   transferred.
+- **Series** (`completeness.ts`, server migration 014): a row of a series library carries `season`,
+  `episode` and `episodeEnd` (a file holding `S01E02E03` is one row, `episode` its first and
+  `episodeEnd` its last). `GET /api/libraries/:id/shows` lists one row per work (files nobody identified
+  are not shows: they stay under the `review` and `unrecognized` filters, and the tree puts them in a
+  "To validate" node at the top), `GET .../shows/:tmdbId` gives it season by season: `present`,
+  `missing`, `unaired` or `extra` (a file TMDB does not list). A missing episode is one that has aired
+  and no file holds; an episode with no date or a future one is never missing, and the specials
+  (season 0) are listed when present and never counted. **The scan never calls TMDB more for it**: the
+  count is made when a show is opened (`Completeness.report`, TMDB's cached `getSeason`), and
+  otherwise by `Completeness`, a queue like `ProbeQueue` that runs only while no job does and counts
+  the shows whose `signature` (the episodes that were there) differs from the stored one
+  (`series_completeness`, disposable). Until counted, `missing` is `null` (no badge); a TMDB failure
+  leaves it so and the page still lists the files (`determined: false`). `counts['missing-episodes']`
+  counts shows, not files, and is not a filter of `GET .../items`: it narrows `.../shows?missing=true`.
+  The NFO column of a series row is the episode's own `<file>.nfo`; the show's and the seasons'
+  files (`tvshow.nfo`, posters) are not tracked per row yet.
 - **Scan progress** (`progress.ts`): `GET /api/jobs`, `GET /api/jobs/:id` and the `scan` of
   `GET /api/libraries/:id/items` carry `progress` (`phase` discover|identify|plan, `found`, `done`,
   `total`, `current`, `idleSeconds`) while an analysis runs, `null` otherwise. It lives in the
