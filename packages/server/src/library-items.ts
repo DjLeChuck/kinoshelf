@@ -1,8 +1,11 @@
 import { createHash } from 'node:crypto';
 import { basename, dirname } from 'node:path';
 import {
+  companionKindOf,
+  companionsWritten,
   loadProfile,
   type Candidate,
+  type CompanionKind,
   type Config,
   type JournalEntry,
   type LibraryConfig,
@@ -474,40 +477,17 @@ interface ShowQuery {
 /** A LIKE pattern that matches the text itself, `%` and `_` included. */
 const contains = (text: string): string => `%${text.replace(/[\\%_]/g, '\\$&')}%`;
 
-type Writable = 'nfo' | 'poster' | 'fanart';
+type Writable = CompanionKind;
 
-/**
- * Which files the profile writes for a work of this kind. A movie written flat (no folder) gets no
- * fixed-name file (`poster.jpg` would be every movie's). For an episode only its own NFO counts.
- */
-function writes(profile: Profile, kind: 'movie' | 'series' | null): Record<Writable, boolean> {
-  if (kind === 'series') {
-    // An episode has its own NFO; the show's and the seasons' files are not a row's to carry.
-    return { nfo: profile.nfo !== null, poster: false, fanart: false };
-  }
-  if (kind !== 'movie') {
-    return { nfo: false, poster: false, fanart: false };
-  }
-  const foldered = profile.templates.movieFolder !== '';
-  return {
-    nfo: profile.nfo !== null && (foldered || profile.nfo.movie.includes('{file}')),
-    poster: foldered && profile.artwork.some((spec) => spec.kind === 'poster'),
-    fanart: foldered && profile.artwork.some((spec) => spec.kind === 'fanart'),
-  };
-}
+/** Which files the profile writes for a work of this kind (none for a file nobody identified). */
+const writes = (profile: Profile, kind: 'movie' | 'series' | null): Record<Writable, boolean> =>
+  kind === null
+    ? { nfo: false, poster: false, fanart: false }
+    : companionsWritten(profile, kind, kind === 'movie' && profile.templates.movieFolder === '');
 
 /** What an NFO or image path is, according to the profile; `undefined` for any other file. */
-function fileKind(profile: Profile, destination: string): Writable | undefined {
-  const name = basename(destination);
-  if (profile.nfo !== null && name.endsWith('.nfo')) {
-    // `tvshow.nfo` is the show's, not the episode's: it must not read as a missing episode NFO.
-    return profile.nfo.series !== undefined && name === basename(profile.nfo.series)
-      ? undefined
-      : 'nfo';
-  }
-  const spec = profile.artwork.find((candidate) => candidate.name === name);
-  return spec?.kind === 'poster' || spec?.kind === 'fanart' ? spec.kind : undefined;
-}
+const fileKind = (profile: Profile, destination: string): Writable | undefined =>
+  companionKindOf(profile, basename(destination));
 
 const isTransfer = (operation: Operation): boolean => operation.type === 'transfer';
 

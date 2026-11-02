@@ -2,8 +2,7 @@ import { access } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import {
   loadProfile,
-  parseTemplate,
-  renderTemplate,
+  showFileNames,
   type Config,
   type Profile,
 } from '@kinoshelf/core';
@@ -159,21 +158,8 @@ export class SeriesFiles {
     if (profile.templates.seriesFolder === '') {
       return [];
     }
-    const render = (template: string, variables: Record<string, string | number>): string =>
-      renderTemplate(parseTemplate(template), variables, {
-        rules: profile.filesystem,
-        rangeSeparator: profile.episodeRangeSeparator,
-      }).join('');
+    const names = showFileNames(profile);
     const seasonFolders = profile.templates.seasonFolder !== '';
-    const imageName = (
-      kind: 'poster' | 'fanart' | 'season-poster',
-      season = 0,
-    ): string | undefined => {
-      const spec = profile.artwork.find((candidate) => candidate.kind === kind);
-      return spec && render(spec.name, { season });
-    };
-    const nfoName =
-      profile.nfo?.series === undefined ? undefined : render(profile.nfo.series, { file: '' });
 
     const shows = new Map<number, { dir: string; seasons: Map<number, string> }>();
     for (const item of this.deps.items.all(libraryId).filter(placed)) {
@@ -197,9 +183,9 @@ export class SeriesFiles {
         tmdbId,
         season: null,
         files: {
-          nfo: await has(show.dir, nfoName),
-          poster: await has(show.dir, imageName('poster')),
-          fanart: await has(show.dir, imageName('fanart')),
+          nfo: await has(show.dir, names.nfo),
+          poster: await has(show.dir, names.poster),
+          fanart: await has(show.dir, names.fanart),
         },
       });
       for (const [season, dir] of show.seasons) {
@@ -208,7 +194,7 @@ export class SeriesFiles {
           season,
           files: {
             nfo: null,
-            poster: await has(dir, imageName('season-poster', season)),
+            poster: await has(dir, names.seasonPoster(season)),
             fanart: null,
           },
         });

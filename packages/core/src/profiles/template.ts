@@ -1,5 +1,5 @@
 import { KinoshelfError } from '../errors.js';
-import type { FilesystemRules } from '../types/profile.js';
+import type { FilesystemRules, Profile } from '../types/profile.js';
 import { finalizeSegment, sanitizeValue } from './sanitize.js';
 
 /** A list renders as a range (first and last values), e.g. a double episode. */
@@ -156,5 +156,22 @@ export function renderTemplate(
       throw new KinoshelfError('template.empty-segment', { template: template.source });
     }
     return result;
+  });
+}
+
+/**
+ * Renders one of a profile's templates with the profile's own rules (forbidden characters, segment
+ * length, episode range): the path segments it gives, `reserveBytes` kept free at the end.
+ */
+export function renderProfileTemplate(
+  profile: Profile,
+  template: string,
+  variables: TemplateVariables,
+  reserveBytes = 0,
+): string[] {
+  return renderTemplate(parseTemplate(template), variables, {
+    rules: profile.filesystem,
+    rangeSeparator: profile.episodeRangeSeparator,
+    reserveBytes,
   });
 }

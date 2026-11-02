@@ -19,6 +19,7 @@ export {
 } from './profiles/loader.js';
 export {
   parseTemplate,
+  renderProfileTemplate,
   renderTemplate,
   type ParsedTemplate,
   type RenderContext,
@@ -29,6 +30,12 @@ export { GuessitParser, type GuessitParserOptions } from './parsing/guessit-pars
 export { type MatchingConfig, type ScoreWeights } from './matching/config.js';
 export { Matcher } from './matching/matcher.js';
 export { titleSimilarity } from './matching/title-similarity.js';
+export {
+  companionKindOf,
+  companionsWritten,
+  showFileNames,
+  type CompanionKind,
+} from './planning/companions.js';
 export { createPlan, type PlanInput, type PlannerOptions } from './planning/planner.js';
 export { type Sidecar } from './planning/sidecars.js';
 export { executePlan, type ExecuteOptions } from './execution/executor.js';

@@ -3,7 +3,7 @@ import { lstat, stat } from 'node:fs/promises';
 import { dirname, join, resolve, sep } from 'node:path';
 import { KinoshelfError } from '../errors.js';
 import { nearestExistingDevice } from '../execution/fs-ops.js';
-import { parseTemplate, renderTemplate, type TemplateVariables } from '../profiles/template.js';
+import { renderProfileTemplate, type TemplateVariables } from '../profiles/template.js';
 import type { Details, ImageSize } from '../types/details.js';
 import type { ErrorInfo } from '../types/errors.js';
 import type { ParsedMedia } from '../types/media.js';
@@ -68,12 +68,8 @@ function targetSegments(
     ...(parsed.episodes.length > 0 && { episode: parsed.episodes }),
     ...(episodeTitle !== undefined && { episodeTitle }),
   };
-  const context = {
-    rules: profile.filesystem,
-    rangeSeparator: profile.episodeRangeSeparator,
-  };
   const render = (template: string, reserveBytes = 0): string[] =>
-    renderTemplate(parseTemplate(template), variables, { ...context, reserveBytes });
+    renderProfileTemplate(profile, template, variables, reserveBytes);
   const { templates } = profile;
 
   if (candidate.kind === 'movie') {

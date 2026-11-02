@@ -1,10 +1,10 @@
 import { join } from 'node:path';
 import { renderEpisodeNfo, renderMovieNfo, renderSeriesNfo } from '../nfo/nfo.js';
-import { parseTemplate, renderTemplate, templateVariables } from '../profiles/template.js';
+import { parseTemplate, renderProfileTemplate, templateVariables } from '../profiles/template.js';
 import type { Details, ImageSize } from '../types/details.js';
 import type { ParsedMedia } from '../types/media.js';
 import type { Operation } from '../types/operation.js';
-import type { Profile } from '../types/profile.js';
+import type { ArtworkKind, Profile } from '../types/profile.js';
 import type { EpisodeInfo } from '../types/provider.js';
 
 export interface CompanionInput {
@@ -48,10 +48,7 @@ export function companionOperations(
   }
 
   const render = (template: string, variables: Record<string, string | number>): string =>
-    renderTemplate(parseTemplate(template), variables, {
-      rules: profile.filesystem,
-      rangeSeparator: profile.episodeRangeSeparator,
-    }).join('');
+    companionName(profile, template, variables);
 
   const operations: Operation[] = [];
   const write = (folders: readonly string[], name: string, content: string): void => {
@@ -72,16 +69,18 @@ export function companionOperations(
   };
 
   const nfoOptions = imageUrl ? { imageUrl: (path: string) => imageUrl(path, 'preview') } : {};
-  // A movie written flat has no folder of its own: a fixed name (`movie.nfo`, `poster.jpg`) would
-  // be shared by every movie in the library, so only a name carrying the file name is safe.
   const flat = details.kind === 'movie' && place.workFolders.length === 0;
+  const written = companionsWritten(profile, details.kind, flat);
 
   const { nfo } = profile;
   if (nfo) {
     if (details.kind === 'movie') {
-      const name = render(nfo.movie, { file: place.stem });
-      if (!flat || templateVariables(parseTemplate(nfo.movie)).includes('file')) {
-        write(place.workFolders, name, renderMovieNfo(details, nfoOptions));
+      if (written.nfo) {
+        write(
+          place.workFolders,
+          render(nfo.movie, { file: place.stem }),
+          renderMovieNfo(details, nfoOptions),
+        );
       }
     } else {
       if (nfo.series !== undefined) {
@@ -127,9 +126,88 @@ export function companionOperations(
       continue;
     }
     const path = image.kind === 'poster' ? details.posterPath : details.backdropPath;
-    if (path && !flat) {
+    // A show's poster and fanart are its own, in its folder: only a movie can lack one.
+    if (path && (details.kind === 'series' || written[image.kind])) {
       download(place.workFolders, render(image.name, {}), path, image.size);
     }
   }
   return operations;
+}
+
+/** A file a profile writes beside a video, as a library page counts it. */
+export type CompanionKind = 'nfo' | 'poster' | 'fanart';
+
+/** The name a profile gives a file it writes beside a video (no folder in it). */
+export function companionName(
+  profile: Profile,
+  template: string,
+  variables: Readonly<Record<string, string | number>>,
+): string {
+  return renderProfileTemplate(profile, template, variables).join('');
+}
+
+/**
+ * Which files a profile writes for one work of this kind. A movie written flat (no folder of its
+ * own) gets no fixed-name file: `movie.nfo` or `poster.jpg` would be every movie's, so only a name
+ * carrying the video's (`{file}.nfo`) is safe. For an episode only its own NFO is counted: the
+ * show's and the seasons' files belong to no single video.
+ */
+export function companionsWritten(
+  profile: Profile,
+  kind: 'movie' | 'series',
+  flat: boolean,
+): Record<CompanionKind, boolean> {
+  const { nfo } = profile;
+  if (kind === 'series') {
+    return { nfo: nfo !== null, poster: false, fanart: false };
+  }
+  const has = (art: ArtworkKind): boolean => profile.artwork.some((spec) => spec.kind === art);
+  return {
+    nfo: nfo !== null && (!flat || templateVariables(parseTemplate(nfo.movie)).includes('file')),
+    poster: !flat && has('poster'),
+    fanart: !flat && has('fanart'),
+  };
+}
+
+/**
+ * What a file beside a video is, by its name and the profile's templates; `undefined` for a file
+ * the profile does not write per video (the show's `tvshow.nfo`, a season poster, anything else).
+ */
+export function companionKindOf(profile: Profile, fileName: string): CompanionKind | undefined {
+  const { nfo } = profile;
+  if (nfo !== null && fileName.endsWith('.nfo')) {
+    const show =
+      nfo.series === undefined ? undefined : companionName(profile, nfo.series, { file: '' });
+    return fileName === show ? undefined : 'nfo';
+  }
+  const spec = profile.artwork.find(
+    (candidate) =>
+      candidate.kind !== 'season-poster' && companionName(profile, candidate.name, {}) === fileName,
+  );
+  return spec?.kind === 'poster' || spec?.kind === 'fanart' ? spec.kind : undefined;
+}
+
+/**
+ * The names of a show's own files and of a season's poster, `undefined` when the profile writes
+ * no such file.
+ */
+export function showFileNames(profile: Profile): {
+  readonly nfo: string | undefined;
+  readonly poster: string | undefined;
+  readonly fanart: string | undefined;
+  readonly seasonPoster: (season: number) => string | undefined;
+} {
+  const image = (kind: ArtworkKind, season = 0): string | undefined => {
+    const spec = profile.artwork.find((candidate) => candidate.kind === kind);
+    return spec && companionName(profile, spec.name, { season });
+  };
+  return {
+    nfo:
+      profile.nfo?.series === undefined
+        ? undefined
+        : companionName(profile, profile.nfo.series, { file: '' }),
+    poster: image('poster'),
+    fanart: image('fanart'),
+    seasonPoster: (season) => image('season-poster', season),
+  };
 }

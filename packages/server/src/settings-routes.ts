@@ -1,8 +1,7 @@
 import {
   listBundledProfiles,
   loadBundledProfile,
-  parseTemplate,
-  renderTemplate,
+  renderProfileTemplate,
   type Profile,
   type TemplateVariables,
 } from '@kinoshelf/core';
@@ -28,10 +27,7 @@ export interface SettingsContext {
 /** What a profile writes, rendered from its own templates so the UI never repeats them. */
 function exampleOf(profile: Profile): { movie: string; series: string } {
   const render = (key: keyof Profile['templates'], variables: TemplateVariables): string[] =>
-    renderTemplate(parseTemplate(profile.templates[key]), variables, {
-      rules: profile.filesystem,
-      rangeSeparator: profile.episodeRangeSeparator,
-    });
+    renderProfileTemplate(profile, profile.templates[key], variables);
   const movie = { title: 'Dune', year: 2021, tmdb: 438631 };
   const series = { title: 'The Bear', year: 2022, tmdb: 136315, season: 3, episode: 4 };
   const [movieFile = ''] = render('movieFile', movie);
