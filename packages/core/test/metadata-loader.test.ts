@@ -181,6 +181,29 @@ describe('analyze with a profile that writes NFO and artwork', () => {
     expect(provider.calls.filter((c) => c.method === 'getSeriesDetails')).toHaveLength(1);
   });
 
+  it('names an episode by the title the provider gives it, asking only for its season', async () => {
+    const naming = parseProfile(`
+id: titled
+name: Titled
+episodeRangeSeparator: '-e'
+templates:
+  movieFolder: '{title} ({year})'
+  movieFile: '{title} ({year})'
+  seriesFolder: '{title}'
+  seasonFolder: 'Season {season:02}'
+  episodeFile: '{title} - s{season:02}e{episode:02} - {episodeTitle}'
+filesystem: { forbidden: posix, replacement: '', maxSegmentBytes: 255 }
+`);
+    const { result, provider, lib } = await run(naming, ['Breaking.Bad.S02E01.720p.mkv']);
+    const [item] = result.plan.items;
+    expect(item?.status).toBe('ready');
+    expect(item?.operations[0]?.destination).toBe(
+      join(lib, 'Breaking Bad', 'Season 02', 'Breaking Bad - s02e01 - Ep 1.mkv'),
+    );
+    expect(item?.operations).toHaveLength(1);
+    expect(provider.calls.map((c) => c.method)).not.toContain('getSeriesDetails');
+  });
+
   it('plans nothing extra, and asks nothing, for a profile that writes nothing', async () => {
     const { result, provider } = await run(await loadBundledProfile('plex'), [
       'Dune.2021.2160p.mkv',

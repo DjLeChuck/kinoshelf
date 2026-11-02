@@ -18,13 +18,12 @@ import { DEFAULT_SIDECAR_EXTENSIONS, findSidecars } from './sidecars.js';
 export interface PlanInput {
   readonly parsed: ParsedMedia;
   readonly candidate: Candidate;
-  readonly episodeTitle?: string;
   /**
    * What an NFO and the images are made of. Only read when the profile writes any; without it
    * the file is still renamed, just with nothing beside it.
    */
   readonly details?: Details;
-  /** The provider's record of the file's episodes. */
+  /** The provider's record of the file's episodes (also where `{episodeTitle}` comes from). */
   readonly episodes?: readonly EpisodeInfo[];
 }
 
@@ -59,13 +58,15 @@ function targetSegments(
   extensionBytes: number,
 ): { folders: string[]; stem: string; workDepth: number } {
   const { parsed, candidate } = input;
+  // The provider's title for the (first) episode, else what the file name says.
+  const episodeTitle = input.episodes?.find((e) => e.title)?.title ?? parsed.episodeTitle;
   const variables: TemplateVariables = {
     title: candidate.title,
     year: candidate.year,
     tmdb: candidate.id.id,
     ...(parsed.season !== undefined && { season: parsed.season }),
     ...(parsed.episodes.length > 0 && { episode: parsed.episodes }),
-    ...(input.episodeTitle !== undefined && { episodeTitle: input.episodeTitle }),
+    ...(episodeTitle !== undefined && { episodeTitle }),
   };
   const context = {
     rules: profile.filesystem,

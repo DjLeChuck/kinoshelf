@@ -1,3 +1,4 @@
+import { parseTemplate, templateVariables } from '../profiles/template.js';
 import type { Details } from '../types/details.js';
 import type { ParsedMedia } from '../types/media.js';
 import type { Profile } from '../types/profile.js';
@@ -30,28 +31,42 @@ export class MetadataLoader {
 
   constructor(private readonly options: MetadataLoaderOptions) {}
 
-  /** False for a profile that writes neither: no request is ever made then. */
+  /**
+   * False for a profile that writes neither and names no episode by its title: no request is
+   * ever made then.
+   */
   get needsMetadata(): boolean {
+    return this.writesCompanions || this.namesEpisodes;
+  }
+
+  private get writesCompanions(): boolean {
     const { profile } = this.options;
     return profile.nfo !== null || profile.artwork.length > 0;
+  }
+
+  /** `{episodeTitle}` in the episode file name: it comes from the provider's season. */
+  private get namesEpisodes(): boolean {
+    return templateVariables(parseTemplate(this.options.profile.templates.episodeFile)).includes(
+      'episodeTitle',
+    );
   }
 
   async forCandidate(candidate: Candidate, parsed: ParsedMedia): Promise<LoadedMetadata> {
     if (!this.needsMetadata) {
       return {};
     }
-    const details = await this.detailsOf(candidate);
-    if (!details) {
+    const details = this.writesCompanions ? await this.detailsOf(candidate) : null;
+    if (details === null && !this.namesEpisodes) {
       return {};
     }
     if (candidate.kind !== 'series' || parsed.season === undefined) {
-      return { details };
+      return details ? { details } : {};
     }
     const season = await this.seasonOf(candidate, parsed.season);
     const episodes = (season?.episodes ?? []).filter((info) =>
       parsed.episodes.includes(info.episode),
     );
-    return { details, episodes };
+    return { ...(details && { details }), episodes };
   }
 
   private detailsOf(candidate: Candidate): Promise<Details | null> {
