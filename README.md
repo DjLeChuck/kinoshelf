@@ -159,9 +159,8 @@ submitted once; a file that is replaced is submitted again. Network shares (NFS,
 change, so give them a `pollSeconds`. What is already in the folder when watching starts is
 submitted too. Prefer the `hardlink` or `copy` mode: `move` takes the file from under its torrent.
 
-**3. Ask by hand.** The validation queue has a **Check now** button that scans the watched folders
-without waiting for files to settle (`POST /api/watch/scan`, `GET /api/watch`). It is greyed out
-while no folder is watched.
+**3. Ask by hand.** `POST /api/watch/scan` scans the watched folders without waiting for files to
+settle (`GET /api/watch` says what is watched). The web has no button for it yet.
 
 ## Web UI
 
@@ -169,18 +168,24 @@ The server also serves a web UI on the same port (`http://localhost:8484`), in F
 (follows your browser, switchable in the header), with a dark and a light theme. Sign in with the
 API key: the browser keeps a session cookie for 7 days, so the key itself is not stored.
 
-- **Home** (`/`). On a new install, a four-step welcome (TMDB key, Plex or Jellyfin, destination
-  folder, first files), each step ticking itself once the configuration says so; the server
-  remembers what you skipped. Afterwards, what needs you (the queue, a failed batch), the latest
-  batches and which services are configured.
-- **Queue** (`/queue`). The files Kinoshelf could not place with confidence, with their TMDB candidates and
-  score, a manual search, and the destination path a choice would give. **Validate** transfers the
-  file, **Ignore** sets it aside. Nothing is moved until you validate, and an existing file is never
-  overwritten.
-- **History.** Every transfer as a batch, with each file. **Undo** shows what would be restored,
-  then asks for confirmation; a file moved or replaced since is left alone.
-- **Settings.** The TMDB key, languages, output profile, file mode, threshold, destination folders,
-  Plex, Jellyfin, webhooks (with a test) and the API key. They are saved in `config.yaml` and apply
+- **Welcome** (`/`, until you leave it). On a new install, a four-step setup (TMDB key, Plex or
+  Jellyfin, your movies and series folders, first files), each step ticking itself once the
+  configuration says so; the server remembers what you skipped. The app then opens on Libraries.
+- **Libraries.** One tab per library organized in place (movies, series) and an **Arrivals** tab.
+  A library lists what its last scan saw, with filters (to validate, to rename, unrecognized,
+  missing NFO or images), a search, the scan progress and a page per item (summary, `ffprobe`). A
+  series library reads as a tree (show, season, episode) with its missing episodes. **Rename** and
+  **Refresh** open a preview first; nothing is written until you confirm, and an existing file is
+  never overwritten. Arrivals hold the files Kinoshelf could not place with confidence, with their
+  TMDB candidates and score, a manual search and the destination a choice would give: **Validate**
+  sends the file to the library you pick (and can remember that for the work), **Ignore** sets it
+  aside.
+- **History.** Every transfer as a batch with its files, and the analyses that are waiting or
+  failed, with their cause and a way to send them again. Analyses that finished and moved nothing
+  are hidden until you ask for them. **Undo** shows what would be restored, then asks for
+  confirmation; a file moved or replaced since is left alone.
+- **Settings.** The TMDB key, languages, output profile, file mode, threshold, your libraries and
+  arrival folders, remembered titles, Plex, Jellyfin, webhooks (with a test) and the API key. They are saved in `config.yaml` and apply
   at once, without a restart. Secrets are never shown again.
 
 The screens update by themselves when a job ends or a file is validated elsewhere. Posters come

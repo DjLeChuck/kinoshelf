@@ -158,7 +158,7 @@ const candidateProperties = {
   posterPath: { type: 'string' },
 } as const;
 
-/** What `GET /api/search` returns and `POST /api/queue/{id}/match` takes back. */
+/** What `GET /api/search` returns and `POST /api/entries/{id}/match` takes back. */
 export const candidateSchema = {
   type: 'object',
   required: ['kind', 'id', 'title', 'originalTitle'],
