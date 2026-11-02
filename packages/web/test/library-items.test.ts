@@ -68,6 +68,9 @@ describe('showsUrl', () => {
       '/api/libraries/series/shows?q=the%20office&missing=true&limit=20',
     );
     expect(showsUrl('series', { missing: false, limit: 50 })).not.toContain('missing');
+    expect(showsUrl('series', { incomplete: true, limit: 50 })).toBe(
+      '/api/libraries/series/shows?incomplete=true&limit=50',
+    );
   });
 });
 

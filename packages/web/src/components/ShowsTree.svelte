@@ -20,15 +20,15 @@
     libraryId,
     writes,
     query,
-    missingOnly,
+    only,
     settleCount,
     onsettled,
   }: {
     libraryId: string;
     writes: { nfo: boolean; artwork: boolean };
     query: string;
-    /** Only the shows that lack episodes (and nothing waiting to be validated). */
-    missingOnly: boolean;
+    /** Only the shows that lack episodes, or files of their own (and nothing waiting to be validated). */
+    only: 'missing-episodes' | 'missing-show-files' | undefined;
     /** Files to validate or identify, from the library's counts: they have no show. */
     settleCount: number;
     /** A file was settled: what to tell the user, and the library to read again. */
@@ -63,17 +63,18 @@
   });
 
   let latest = 0;
-  async function load(wanted = { query, missingOnly, settleCount }): Promise<void> {
+  async function load(wanted = { query, only, settleCount }): Promise<void> {
     const ticket = ++latest;
     try {
       const answer = await libraryItems.shows(libraryId, {
         q: wanted.query,
-        missing: wanted.missingOnly,
+        missing: wanted.only === 'missing-episodes',
+        incomplete: wanted.only === 'missing-show-files',
         limit,
       });
       // The files that wait for a person are one node at the top, never inside a show.
       const waiting =
-        wanted.missingOnly || wanted.settleCount === 0
+        wanted.only !== undefined || wanted.settleCount === 0
           ? []
           : (
               await Promise.all(
@@ -108,7 +109,7 @@
 
   // The parent's search box and filter come through the props: read again when they change.
   $effect(() => {
-    const wanted = { query, missingOnly, settleCount };
+    const wanted = { query, only, settleCount };
     untrack(() => {
       limit = PAGE_SIZE;
       void load(wanted);

@@ -66,4 +66,9 @@ test('shows which NFO and images a show and its seasons have', async ({ page, re
   await row.getByRole('button', { name: /Show the seasons/ }).click();
   const season = page.getByRole('row', { name: /Season 1/ });
   await expect(season.getByRole('cell').filter({ hasText: /^✓$/ })).toHaveCount(1);
+
+  // The show lacks its fanart: the filter keeps it, and says how many.
+  await page.getByRole('button', { name: /Missing show files\s*1/ }).click();
+  await expect(page).toHaveURL(/state=missing-show-files/);
+  await expect(page.getByRole('button', { name: /the seasons of Severance/ })).toBeVisible();
 });

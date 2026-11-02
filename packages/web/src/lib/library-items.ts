@@ -11,8 +11,12 @@ export const ITEM_FILTERS: readonly ItemFilter[] = [
   'missing-artwork',
 ];
 /** A series library also filters its shows (`missing-episodes` counts shows, not files). */
-export type ShowFilter = ItemFilter | 'missing-episodes';
-export const SERIES_FILTERS: readonly ShowFilter[] = [...ITEM_FILTERS, 'missing-episodes'];
+export type ShowFilter = ItemFilter | 'missing-episodes' | 'missing-show-files';
+export const SERIES_FILTERS: readonly ShowFilter[] = [
+  ...ITEM_FILTERS,
+  'missing-episodes',
+  'missing-show-files',
+];
 export type Counts = Readonly<Record<ShowFilter | 'all', number>>;
 
 /** What a library holds, as `GET /api/libraries/{id}/items` lists it. */
@@ -152,13 +156,15 @@ export interface ShowDetail {
 export interface ShowsQuery {
   readonly q?: string | undefined;
   readonly missing?: boolean | undefined;
+  readonly incomplete?: boolean | undefined;
   readonly limit: number;
 }
 
-export function showsUrl(libraryId: string, { q, missing, limit }: ShowsQuery): string {
+export function showsUrl(libraryId: string, { q, missing, incomplete, limit }: ShowsQuery): string {
   const parameters = [
     ...(q?.trim() ? [`q=${encodeURIComponent(q.trim())}`] : []),
     ...(missing ? ['missing=true'] : []),
+    ...(incomplete ? ['incomplete=true'] : []),
     `limit=${limit}`,
   ];
   return `/api/libraries/${libraryId}/shows?${parameters.join('&')}`;

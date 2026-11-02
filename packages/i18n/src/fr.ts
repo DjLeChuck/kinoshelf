@@ -252,6 +252,7 @@ export const fr: Record<keyof typeof en, string> = {
   'web.library.filter.missing-nfo': 'NFO manquant',
   'web.library.filter.missing-artwork': 'Images manquantes',
   'web.library.filter.missing-episodes': 'Épisodes manquants',
+  'web.library.filter.missing-show-files': 'Fichiers de série manquants',
   'web.library.shows.settle': 'À valider',
   'web.library.col.seasons': 'Saisons',
   'web.library.col.episodes': 'Épisodes',

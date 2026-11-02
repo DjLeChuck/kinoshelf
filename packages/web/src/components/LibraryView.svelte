@@ -71,7 +71,10 @@
       untrack(refilter);
     }
   });
-  const tree = $derived(isSeries && (filter === undefined || filter === 'missing-episodes'));
+  const tree = $derived(
+    isSeries &&
+      (filter === undefined || filter === 'missing-episodes' || filter === 'missing-show-files'),
+  );
 
   const open = $derived(page?.items.find(({ id }) => id === chosen));
   const scanning = $derived(page?.scan != null || library.scanning);
@@ -83,7 +86,8 @@
     try {
       // The tree reads its shows itself: here only the counts and the scan are wanted.
       const answer = await libraryItems.page(library.id, {
-        state: filter === 'missing-episodes' ? undefined : filter,
+        state:
+          filter === 'missing-episodes' || filter === 'missing-show-files' ? undefined : filter,
         q: query,
         limit: tree ? 1 : limit,
       });
@@ -200,7 +204,7 @@
         libraryId={library.id}
         writes={page.library.writes}
         {query}
-        missingOnly={filter === 'missing-episodes'}
+        only={filter === 'missing-episodes' || filter === 'missing-show-files' ? filter : undefined}
         settleCount={page.counts.review + page.counts.unrecognized}
         onsettled={(message: string) => {
           notice = message;
