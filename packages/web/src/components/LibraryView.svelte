@@ -149,6 +149,8 @@
 
   function refilter(): void {
     limit = PAGE_SIZE;
+    // What was picked under another filter or search is no longer on screen to be unpicked.
+    picked = [];
     void load();
   }
 </script>
@@ -244,7 +246,7 @@
     {:else if page.items.length === 0}
       <p class="card muted">{t('web.library.empty')}</p>
     {:else}
-      {#if picked.length > 0}
+      {#if pickedItems.length > 0}
         <div class="bar" role="group">
           <span>{t('web.library.run.selected', { count: pickedItems.length })}</span>
           <button
