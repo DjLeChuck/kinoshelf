@@ -4,6 +4,7 @@
   import { t } from '../lib/i18n.svelte.js';
   import {
     folderOf,
+    releaseName,
     statusOf,
     titleGuess,
     toMatchBody,
@@ -18,9 +19,12 @@
 
   let {
     entry,
+    siblings = 1,
     ondone,
   }: {
     entry: Arrival;
+    /** Files validated together with this one: its release's (1 for a movie or a detached file). */
+    siblings?: number;
     /** The file left the list (transferred or set aside): what to tell the user. */
     ondone: (message: string) => void;
   } = $props();
@@ -33,12 +37,11 @@
   let results = $state<readonly Candidate[] | undefined>(undefined);
   let searching = $state(false);
   /* svelte-ignore state_referenced_locally */
-  let query = $state(titleGuess(entry.release).title);
+  let query = $state(titleGuess(label(entry, siblings)).title);
   /* svelte-ignore state_referenced_locally */
-  let year = $state(titleGuess(entry.release).year ?? '');
+  let year = $state(titleGuess(label(entry, siblings)).year ?? '');
   let kind = $state<'' | 'movie' | 'series'>('');
   let busy = $state(false);
-  let remember = $state(true);
   /* svelte-ignore state_referenced_locally */
   let library = $state(entry.destination.libraryId ?? entry.destinationOptions[0]?.id ?? '');
   let rememberDestination = $state(false);
@@ -46,8 +49,8 @@
   let refused = $state<readonly ConflictBody[]>([]);
 
   const status = $derived(statusOf(entry));
-  const name = $derived(entry.release);
-  const guess = $derived(titleGuess(entry.release));
+  const name = $derived(label(entry, siblings));
+  const guess = $derived(titleGuess(name));
   /** Only a library other than the default one is a choice; the server knows the default. */
   const chosenLibrary = $derived(
     library !== '' && library !== entry.destination.libraryId ? library : undefined,
@@ -133,7 +136,6 @@
         entry,
         {
           candidate: selected,
-          remember,
           libraryId: chosenLibrary,
           rememberDestination: rememberDestination && library !== '',
         },
@@ -143,8 +145,8 @@
         refused = outcome.conflicts;
       } else {
         ondone(
-          outcome.rematched > 0
-            ? t('web.queue.validated.rematched', { name, count: outcome.rematched })
+          outcome.followed > 0
+            ? t('web.queue.validated.followed', { name, count: outcome.followed })
             : t('web.queue.validated', { name }),
         );
       }
@@ -167,6 +169,11 @@
       busy = false;
     }
   }
+
+  /** What the panel calls the file: its release when several files go along, its own name else. */
+  function label(arrival: Arrival, count: number): string {
+    return count > 1 && arrival.release ? releaseName(arrival.release) : arrival.file;
+  }
 </script>
 
 <article class="card">
@@ -185,6 +192,14 @@
       {t(`web.queue.status.${status}`)}
     </span>
   </header>
+
+  {#if entry.detached}
+    <p class="alert" role="note">
+      {t('web.queue.detached', { release: entry.release ? releaseName(entry.release) : '' })}
+    </p>
+  {:else if siblings > 1}
+    <p class="alert" role="note">{t('web.queue.release-scope', { count: siblings })}</p>
+  {/if}
 
   <dl class="tags" aria-label={t('web.queue.detected')}>
     <div class="chip chip-neutral">
@@ -316,13 +331,6 @@
         </label>
       {/if}
     </section>
-  {/if}
-
-  {#if guess.title}
-    <label class="remember">
-      <input type="checkbox" bind:checked={remember} />
-      <span>{t('web.queue.remember', { title: guess.title })}</span>
-    </label>
   {/if}
 
   <footer>

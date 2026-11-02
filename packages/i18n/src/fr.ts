@@ -189,7 +189,6 @@ export const fr: Record<keyof typeof en, string> = {
     'Une clé API existe déjà. Connectez-vous avec elle, ou créez-en une nouvelle avec « kinoshelf-server api-key create ».',
   'error.auth.unauthorized': 'Clé d’API incorrecte, ou session expirée.',
   'error.batch.already-undone': 'Ce lot a déjà été annulé.',
-  'error.alias.not-found': 'Ce titre mémorisé n’existe pas.',
   'error.fs.not-a-directory': '{path} est un fichier, pas un dossier.',
   'error.fs.not-absolute': 'Un chemin doit être absolu (il commence par /).',
   'error.fs.not-found': 'Aucun dossier à {path}.',
@@ -544,11 +543,17 @@ export const fr: Record<keyof typeof en, string> = {
   'web.queue.ignore': 'Ignorer',
   'web.queue.library': 'Bibliothèque de destination',
   'web.queue.remember-destination': 'Toujours envoyer cette œuvre dans cette bibliothèque',
-  'web.queue.remember':
-    'Mémoriser « {title} » comme cette œuvre : les prochains scans l’apparieront seuls, et les fichiers déjà en attente sous ce titre le sont maintenant.',
   'web.queue.validated': 'Transfert lancé pour {name}.',
-  'web.queue.validated.rematched':
-    'Transfert lancé pour {name}. {count, plural, one {# autre fichier de même titre est maintenant apparié} other {# autres fichiers de même titre sont maintenant appariés}}.',
+  'web.queue.validated.followed':
+    'Transfert lancé pour {name}. {count, plural, one {# autre fichier de la release suit} other {# autres fichiers de la release suivent}}.',
+  'web.queue.detached':
+    'Cet épisode porte un autre titre que le reste de « {release} » : il a été mis à part et se valide seul.',
+  'web.queue.release-scope':
+    'Ce choix s’applique aux {count} fichiers de cette release (hors épisodes mis à part).',
+  'web.arrivals.files': '{count} fichiers',
+  'web.arrivals.detached': 'Mis à part',
+  'web.arrivals.detached.from': 'lié à « {release} »',
+  'web.arrivals.detached.label': 'Épisodes mis à part de {release}',
   'web.queue.ignored': '{name} mis de côté.',
   'web.history.title': 'Historique',
   'web.history.intro':
@@ -705,12 +710,6 @@ export const fr: Record<keyof typeof en, string> = {
   'web.path.empty.file': 'Aucun dossier ni fichier YAML ici.',
   'web.path.truncated':
     'Seules les premières entrées sont affichées : saisissez le chemin pour le reste.',
-  'web.settings.aliases.title': 'Titres mémorisés',
-  'web.settings.aliases.hint':
-    'Les titres que vous avez liés à une œuvre dans la file. Un fichier portant l’un de ces titres est apparié seul ; en oublier un n’agit que sur les prochains scans.',
-  'web.settings.aliases.empty': 'Rien n’est mémorisé pour l’instant.',
-  'web.settings.aliases.forget': 'Oublier',
-  'web.settings.aliases.forget.label': 'Oublier « {title} »',
   'web.settings.destinations.title': 'Destinations retenues',
   'web.settings.destinations.hint':
     'Les œuvres que vous avez demandé d’envoyer toujours dans une bibliothèque : leurs prochains fichiers y vont seuls. Si une bibliothèque est supprimée, ses œuvres retombent sur la destination par défaut ; oublier une destination n’agit que sur les prochaines arrivées.',

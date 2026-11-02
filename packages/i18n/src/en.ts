@@ -182,7 +182,6 @@ export const en = {
     'An API key already exists. Sign in with it, or create a new one with “kinoshelf-server api-key create”.',
   'error.auth.unauthorized': 'Wrong API key, or your session has expired.',
   'error.batch.already-undone': 'This batch was already undone.',
-  'error.alias.not-found': 'This remembered title does not exist.',
   'error.fs.not-a-directory': '{path} is a file, not a folder.',
   'error.fs.not-absolute': 'A path must be absolute (it starts with /).',
   'error.fs.not-found': 'No folder at {path}.',
@@ -526,11 +525,17 @@ export const en = {
   'web.queue.ignore': 'Ignore',
   'web.queue.library': 'Destination library',
   'web.queue.remember-destination': 'Always send this work to this library',
-  'web.queue.remember':
-    'Remember “{title}” as this work: the next scans match it alone, and the files already waiting under that title are matched now.',
   'web.queue.validated': 'Transfer started for {name}.',
-  'web.queue.validated.rematched':
-    'Transfer started for {name}. {count, plural, one {# other file with the same title is} other {# other files with the same title are}} now matched.',
+  'web.queue.validated.followed':
+    'Transfer started for {name}. {count, plural, one {# other file of the release follows} other {# other files of the release follow}}.',
+  'web.queue.detached':
+    'This episode carries another title than the rest of “{release}”: it was set apart and is validated on its own.',
+  'web.queue.release-scope':
+    'This choice applies to the {count} files of this release (set-aside episodes excepted).',
+  'web.arrivals.files': '{count} files',
+  'web.arrivals.detached': 'Set apart',
+  'web.arrivals.detached.from': 'linked to “{release}”',
+  'web.arrivals.detached.label': 'Episodes set apart from {release}',
   'web.queue.ignored': '{name} set aside.',
   'web.history.title': 'History',
   'web.history.intro':
@@ -684,12 +689,6 @@ export const en = {
   'web.path.empty': 'No sub-folder here.',
   'web.path.empty.file': 'No folder or YAML file here.',
   'web.path.truncated': 'Only the first entries are shown: type the path for the rest.',
-  'web.settings.aliases.title': 'Remembered titles',
-  'web.settings.aliases.hint':
-    'Titles you tied to a work in the queue. A file with one of these titles is matched alone; forgetting one only affects the next scans.',
-  'web.settings.aliases.empty': 'Nothing remembered yet.',
-  'web.settings.aliases.forget': 'Forget',
-  'web.settings.aliases.forget.label': 'Forget “{title}”',
   'web.settings.destinations.title': 'Remembered destinations',
   'web.settings.destinations.hint':
     'Works you asked to always send to a library. Their next files go there alone. If a library is deleted, its works go back to the default destination; forgetting one only affects the next arrivals.',

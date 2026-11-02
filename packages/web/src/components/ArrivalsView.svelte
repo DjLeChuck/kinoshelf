@@ -9,6 +9,7 @@
   import {
     STATUS_CHIP,
     STATUS_LABEL,
+    groupReleases,
     statusOf,
     type Arrival,
     type ArrivalPage,
@@ -36,7 +37,16 @@
   let watch = $state<WatchStatus | undefined>(undefined);
   let checking = $state(false);
 
-  const open = $derived(page?.items.find(({ id }) => id === chosen) ?? page?.items[0]);
+  const groups = $derived(groupReleases(page?.items ?? []));
+  const open = $derived(
+    page?.items.find(({ id }) => id === chosen) ?? groups[0]?.files[0] ?? groups[0]?.detached[0],
+  );
+  /** The files that go along with the open one: its release's, none when it was set aside. */
+  const siblings = $derived(
+    open && !open.detached
+      ? (groups.find((group) => group.files.some(({ id }) => id === open.id))?.files.length ?? 1)
+      : 1,
+  );
 
   async function load(): Promise<void> {
     try {
@@ -118,27 +128,62 @@
   {:else}
     <div class="layout">
       <ul class="list" aria-label={t('web.arrivals.list.label')}>
-        {#each page.items as arrival (arrival.id)}
-          {@const status = statusOf(arrival)}
+        {#each groups as group (group.key)}
+          {@const lead = group.files[0]}
           <li>
-            <button
-              type="button"
-              class:current={open?.id === arrival.id}
-              aria-current={open?.id === arrival.id ? 'true' : undefined}
-              onclick={() => {
-                chosen = arrival.id;
-                notice = undefined;
-              }}
-            >
-              <span class="mono release">{arrival.release}</span>
-              <span class="meta">
-                <span class="chip {STATUS_CHIP[status]}">{t(STATUS_LABEL[status])}</span>
-                {#if arrival.resolution}<span class="muted">{arrival.resolution}</span>{/if}
-                {#if sourceName(arrival)}<span class="muted"
-                    >{t('web.arrivals.from', { source: sourceName(arrival) ?? '' })}</span
-                  >{/if}
-              </span>
-            </button>
+            {#if lead}
+              {@const status = statusOf(lead)}
+              <button
+                type="button"
+                class:current={open?.id !== undefined && group.files.some((f) => f.id === open.id)}
+                aria-current={group.files.some((f) => f.id === open?.id) ? 'true' : undefined}
+                onclick={() => {
+                  chosen = lead.id;
+                  notice = undefined;
+                }}
+              >
+                <span class="mono release">{group.name}</span>
+                <span class="meta">
+                  <span class="chip {STATUS_CHIP[status]}">{t(STATUS_LABEL[status])}</span>
+                  {#if group.files.length > 1}<span class="muted"
+                      >{t('web.arrivals.files', { count: group.files.length })}</span
+                    >{/if}
+                  {#if sourceName(lead)}<span class="muted"
+                      >{t('web.arrivals.from', { source: sourceName(lead) ?? '' })}</span
+                    >{/if}
+                </span>
+              </button>
+            {/if}
+            {#if group.detached.length > 0}
+              <ul
+                class="detached"
+                aria-label={t('web.arrivals.detached.label', { release: group.name })}
+              >
+                {#each group.detached as arrival (arrival.id)}
+                  {@const status = statusOf(arrival)}
+                  <li>
+                    <button
+                      type="button"
+                      class:current={open?.id === arrival.id}
+                      aria-current={open?.id === arrival.id ? 'true' : undefined}
+                      onclick={() => {
+                        chosen = arrival.id;
+                        notice = undefined;
+                      }}
+                    >
+                      <span class="mono release">{arrival.file}</span>
+                      <span class="meta">
+                        <span class="chip chip-neutral">{t('web.arrivals.detached')}</span>
+                        <span class="chip {STATUS_CHIP[status]}">{t(STATUS_LABEL[status])}</span>
+                        <span class="muted"
+                          >{t('web.arrivals.detached.from', { release: group.name })}</span
+                        >
+                      </span>
+                    </button>
+                  </li>
+                {/each}
+              </ul>
+            {/if}
           </li>
         {/each}
       </ul>
@@ -148,6 +193,7 @@
           {#key open.id}
             <ArrivalDetail
               entry={open}
+              {siblings}
               ondone={(message: string) => {
                 notice = message;
                 void load();
@@ -248,6 +294,16 @@
     align-items: center;
     gap: 8px;
     font-size: 12px;
+  }
+
+  .detached {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin: 6px 0 0 16px;
+    padding: 0 0 0 10px;
+    border-left: 2px solid var(--border);
+    list-style: none;
   }
 
   @media (max-width: 860px) {

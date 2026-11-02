@@ -28,7 +28,12 @@ export interface Arrival {
   readonly id: string;
   readonly jobId: string;
   readonly path: string;
-  readonly release: string;
+  /** The file's name. */
+  readonly file: string;
+  /** The folder (or file) it came in: files sharing it are validated together. */
+  readonly release: string | null;
+  /** Set aside from its release (another series than the rest of the folder), validated alone. */
+  readonly detached: boolean;
   readonly state: 'review' | 'unrecognized';
   readonly kind: 'movie' | 'series' | null;
   readonly resolution: string | null;
@@ -88,6 +93,34 @@ export const STATUS_CHIP: Record<QueueStatus, string> = {
   failed: 'chip-danger',
 };
 
+/** A release as the list shows it: its files, and the episodes set aside from it. */
+export interface ReleaseGroup {
+  readonly key: string;
+  /** Name of the folder (the file's own name for a loose file). */
+  readonly name: string;
+  /** Files validated together; the first one stands for the group. */
+  readonly files: readonly Arrival[];
+  /** Other series found in the same folder: listed under the release, linked to it. */
+  readonly detached: readonly Arrival[];
+}
+
+/** Groups what the arrivals list returns by release, keeping the order of first appearance. */
+export function groupReleases(items: readonly Arrival[]): ReleaseGroup[] {
+  const groups = new Map<string, { files: Arrival[]; detached: Arrival[] }>();
+  for (const item of items) {
+    const key = item.release ?? item.path;
+    const group = groups.get(key) ?? { files: [], detached: [] };
+    (item.detached ? group.detached : group.files).push(item);
+    groups.set(key, group);
+  }
+  return [...groups].map(([key, { files, detached }]) => ({
+    key,
+    name: releaseName(key),
+    files,
+    detached,
+  }));
+}
+
 /** The file name, which is what a release is called; the API gives the whole path. */
 export function releaseName(path: string): string {
   const name = path.split('/').filter(Boolean).pop();
@@ -128,8 +161,6 @@ type Post = <T>(url: string, body?: unknown) => Promise<T>;
 
 export interface Choice {
   readonly candidate: Candidate;
-  /** Tie the title of the file to the candidate (the server does by default). */
-  readonly remember?: boolean;
   /** Send the file to this library rather than the default one, for this file only. */
   readonly libraryId?: string | undefined;
   /** Send every later file of the work there too. */
@@ -137,8 +168,8 @@ export interface Choice {
 }
 
 export type ValidateOutcome =
-  /** Matched, and the transfer is queued. `rematched`: other files the remembered title matched. */
-  | { readonly status: 'started'; readonly rematched: number }
+  /** Matched, and the transfer is queued. `followed`: other files of the release that went along. */
+  | { readonly status: 'started'; readonly followed: number }
   /** The plan refused the choice (target taken, name not buildable): the file stays to be settled. */
   | { readonly status: 'conflict'; readonly conflicts: readonly ConflictBody[] };
 
@@ -155,19 +186,18 @@ export async function validate(
   const matched = await post<{
     classification: string;
     conflicts: readonly ConflictBody[];
-    rematched?: number;
+    followers?: readonly string[];
   }>(`/api/entries/${arrival.id}/match`, {
     ...toMatchBody(choice.candidate),
-    // The server remembers by default; only a refusal needs saying.
-    ...(choice.remember === false && { remember: false }),
     ...(choice.libraryId !== undefined && { libraryId: choice.libraryId }),
     ...(choice.rememberDestination && { rememberDestination: true }),
   });
   if (matched.classification !== 'to-rename') {
     return { status: 'conflict', conflicts: matched.conflicts };
   }
-  await post(`/api/plans/${arrival.jobId}/execute`, { entries: [arrival.id] });
-  return { status: 'started', rematched: matched.rematched ?? 0 };
+  const followers = matched.followers ?? [];
+  await post(`/api/plans/${arrival.jobId}/execute`, { entries: [arrival.id, ...followers] });
+  return { status: 'started', followed: followers.length };
 }
 
 /**

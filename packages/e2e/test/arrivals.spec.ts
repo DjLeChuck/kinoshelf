@@ -145,3 +145,45 @@ test('keeps the state filter in the address', async ({ page }) => {
   await filter('All').click();
   await expect(page).toHaveURL(/\/arrivals$/);
 });
+
+test('sets a series folder aside once, and shows the episode of another show set apart', async ({
+  page,
+  request,
+}) => {
+  const folder = incoming('arrivals-release');
+  const pack = `${folder}/Sev.Pack.1080p`;
+  await mkdir(pack, { recursive: true });
+  // "Sev" is not close enough to "Severance" to be decided alone; "Zzz" finds nothing.
+  for (const name of ['Sev.S01E01.mkv', 'Sev.S01E02.mkv', 'Zzz.S01E01.mkv']) {
+    await writeFile(`${pack}/${name}`, 'video');
+  }
+  const headers = { authorization: `Bearer ${API_KEY}` };
+  const created = await request.post('/api/libraries', {
+    headers,
+    data: { name: 'Release drop', source: folder, into: { movie: 'films', series: 'series' } },
+  });
+  expect(created.status()).toBe(201);
+  const { id } = (await created.json()) as { id: string };
+  expect((await request.post(`/api/libraries/${id}/scan`, { headers })).status()).toBe(202);
+
+  await signIn(page);
+  await page.goto('/arrivals');
+
+  // One line for the release, the other show listed under it and tied to it.
+  await expect(page.getByRole('button', { name: /^Sev\.Pack\.1080p/ })).toBeVisible();
+  const aside = page.getByRole('list', { name: /set apart from Sev\.Pack\.1080p/ });
+  await expect(aside.getByText('Zzz.S01E01.mkv')).toBeVisible();
+  await expect(aside.getByText('Set apart')).toBeVisible();
+  await expect(aside.getByText('linked to “Sev.Pack.1080p”')).toBeVisible();
+
+  await page.getByRole('button', { name: /^Sev\.Pack\.1080p/ }).click();
+  await expect(page.getByText('applies to the 2 files of this release')).toBeVisible();
+  // Setting the release aside takes its two files along (a transfer would fill the series
+  // library that another test counts).
+  await page.getByRole('button', { name: 'Ignore' }).click();
+  await expect(page.getByRole('status').filter({ hasText: 'set aside' })).toBeVisible();
+
+  // The set-apart episode still waits for its own decision.
+  await expect(page.getByRole('button', { name: /Zzz\.S01E01\.mkv/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /^Sev\.Pack\.1080p/ })).toHaveCount(0);
+});

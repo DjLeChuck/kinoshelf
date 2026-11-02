@@ -4,6 +4,7 @@ import {
   STATUS_LABEL,
   folderOf,
   posterUrl,
+  groupReleases,
   releaseName,
   sameCandidate,
   statusOf,
@@ -18,7 +19,9 @@ const arrival = (over: Partial<Arrival> = {}): Arrival => ({
   id: 'e1',
   jobId: 'j1',
   path: '/downloads/Dune.2021.1080p/Dune.2021.1080p.mkv',
-  release: 'Dune.2021.1080p.mkv',
+  file: 'Dune.2021.1080p.mkv',
+  release: '/downloads/Dune.2021.1080p',
+  detached: false,
   state: 'review',
   kind: 'movie',
   resolution: '1080p',
@@ -109,11 +112,11 @@ describe('validate', () => {
   };
   const renamed = { classification: 'to-rename', conflicts: [] };
 
-  it('matches, then queues the transfer of that file alone', async () => {
+  it('matches, then queues the transfer of the file', async () => {
     const { calls, post } = recorder((url) => (url.includes('/match') ? renamed : {}));
     expect(await validate(arrival(), { candidate: dune }, post)).toEqual({
       status: 'started',
-      rematched: 0,
+      followed: 0,
     });
     expect(calls.map((c) => c.url)).toEqual(['/api/entries/e1/match', '/api/plans/j1/execute']);
     expect(calls[0]?.body).not.toHaveProperty('score');
@@ -130,14 +133,15 @@ describe('validate', () => {
     expect(calls).toHaveLength(1);
   });
 
-  it('reports how many other files the remembered title matched', async () => {
-    const { post } = recorder((url) =>
-      url.includes('/match') ? { ...renamed, rematched: 77 } : {},
+  it('transfers the rest of the release along, and says how many went', async () => {
+    const { calls, post } = recorder((url) =>
+      url.includes('/match') ? { ...renamed, followers: ['e2', 'e3'] } : {},
     );
     expect(await validate(arrival(), { candidate: dune }, post)).toEqual({
       status: 'started',
-      rematched: 77,
+      followed: 2,
     });
+    expect(calls[1]?.body).toEqual({ entries: ['e1', 'e2', 'e3'] });
   });
 
   it('sends only the choices that differ from the defaults', async () => {
@@ -145,15 +149,13 @@ describe('validate', () => {
     await validate(arrival(), { candidate: dune }, post);
     await validate(
       arrival(),
-      { candidate: dune, remember: false, libraryId: 'uhd', rememberDestination: true },
+      { candidate: dune, libraryId: 'uhd', rememberDestination: true },
       post,
     );
     const bodies = calls.filter((c) => c.url.includes('/match')).map((c) => c.body);
-    expect(bodies[0]).not.toHaveProperty('remember');
     expect(bodies[0]).not.toHaveProperty('libraryId');
     expect(bodies[0]).not.toHaveProperty('rememberDestination');
     expect(bodies[1]).toMatchObject({
-      remember: false,
       libraryId: 'uhd',
       rememberDestination: true,
     });
@@ -174,5 +176,29 @@ describe('titleGuess', () => {
     ['Mystery.Footage.mkv', { title: 'Mystery Footage' }],
   ])('%s', (release, expected) => {
     expect(titleGuess(release)).toEqual(expected);
+  });
+});
+
+describe('groupReleases', () => {
+  const file = (id: string, release: string | null, detached = false): Arrival =>
+    arrival({ id, path: `/d/${id}.mkv`, file: `${id}.mkv`, release, detached });
+
+  it('groups by release, keeps the order, and lists the detached apart', () => {
+    const groups = groupReleases([
+      file('a', '/d/Pack'),
+      file('b', '/d/Pack'),
+      file('x', '/d/Pack', true),
+      file('c', '/d/Other'),
+    ]);
+    expect(
+      groups.map((g) => [g.name, g.files.map((f) => f.id), g.detached.map((f) => f.id)]),
+    ).toEqual([
+      ['Pack', ['a', 'b'], ['x']],
+      ['Other', ['c'], []],
+    ]);
+  });
+
+  it('makes a group of its own of a file without a release', () => {
+    expect(groupReleases([file('a', null)]).map((g) => g.name)).toEqual(['a.mkv']);
   });
 });
