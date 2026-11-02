@@ -1,4 +1,4 @@
-import { access, mkdir, writeFile } from 'node:fs/promises';
+import { access, mkdir, readdir, writeFile } from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
 import { API_KEY, incoming, library } from '../support.js';
 import { signIn, signInAt } from './helpers.js';
@@ -188,4 +188,55 @@ test('sets a series folder aside once, and shows the episode of another show set
   // The set-apart episode still waits for its own decision.
   await expect(page.getByRole('button', { name: /Zzz\.S01E01\.mkv/ })).toBeVisible();
   await expect(page.getByRole('button', { name: /^Sev\.Pack\.1080p/ })).toHaveCount(0);
+});
+
+test('validates a series folder once and transfers every episode of it', async ({
+  page,
+  request,
+}) => {
+  const folder = incoming('arrivals-validate');
+  const pack = `${folder}/Sev.Pack.720p`;
+  await mkdir(pack, { recursive: true });
+  for (const name of ['Sev.S01E01.mkv', 'Sev.S01E02.mkv', 'Zzz.S01E01.mkv']) {
+    await writeFile(`${pack}/${name}`, 'video');
+  }
+  // Its own destination: the shared series library is counted by another test.
+  const shows = library('release-shows');
+  await mkdir(shows, { recursive: true });
+  const headers = { authorization: `Bearer ${API_KEY}` };
+  const destination = await request.post('/api/libraries', {
+    headers,
+    data: { name: 'Release shows', source: shows, type: 'series' },
+  });
+  expect(destination.status()).toBe(201);
+  const created = await request.post('/api/libraries', {
+    headers,
+    data: {
+      name: 'Validate drop',
+      source: folder,
+      into: { movie: 'films', series: ((await destination.json()) as { id: string }).id },
+    },
+  });
+  expect(created.status()).toBe(201);
+  const { id } = (await created.json()) as { id: string };
+  expect((await request.post(`/api/libraries/${id}/scan`, { headers })).status()).toBe(202);
+
+  await signIn(page);
+  await page.goto('/arrivals');
+  await page.getByRole('button', { name: /^Sev\.Pack\.720p/ }).click();
+  await page.getByRole('radio', { name: /Severance/ }).check();
+  await page.getByRole('button', { name: 'Validate', exact: true }).click();
+  await expect(
+    page.getByRole('status').filter({ hasText: '1 other file of the release follows' }),
+  ).toBeVisible();
+
+  // Both episodes of the release went to the library, whatever the folders are called.
+  const videos = async (): Promise<string[]> =>
+    (await readdir(shows, { recursive: true })).filter((path) => path.endsWith('.mkv'));
+  await expect.poll(async () => (await videos()).length).toBe(2);
+
+  // The show of another title stays in Arrivals, set apart and untouched (the list of this
+  // release only: another test leaves its own set-apart episode behind).
+  const aside = page.getByRole('list', { name: /set apart from Sev\.Pack\.720p/ });
+  await expect(aside.getByText('Zzz.S01E01.mkv')).toBeVisible();
 });
