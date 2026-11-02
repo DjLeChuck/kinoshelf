@@ -700,7 +700,6 @@ export const onboardingPatchSchema = {
 } as const;
 
 const scanTabs = ['rename', 'ambiguous', 'unrecognized', 'compliant', 'conflict'] as const;
-export const scanTabValues = scanTabs;
 
 /** Files per tab of a scan: handled files leave their tab (`renamed` counts the transferred). */
 export const scanCountsSchema = {
