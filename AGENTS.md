@@ -13,8 +13,8 @@ libraries (organized in place, arrival folders) are configured in the Settings, 
 path picker. The Libraries page has a tab per typed library (list read from the snapshot, filters,
 scan progress, the page of an item) and an Arrivals tab (`/arrivals`) where a file is validated:
 candidate, destination library, "remember" boxes. A series library reads as a tree (show, season,
-episode) with its missing episodes. Items are renamed and refreshed from the page (a preview first). Still to build: the merged
-History. Validating a file remembers its title (aliases). v1.0 is under way: the NFO and artwork
+episode) with its missing episodes. Items are renamed and refreshed from the page (a preview first). The History merges batches and
+jobs in one list (see "History" below). Validating a file remembers its title (aliases). v1.0 is under way: the NFO and artwork
 writers and the `jellyfin` and `plex-nfo` profiles are built (see "NFO and artwork" below), metadata
 included for a library that is already organized.
 
@@ -118,10 +118,30 @@ contains no player-specific rule.
   (`settings.tmdb-key-from-env`, `settings.api-key-from-env`): a value saved and never used is worse
   than a refusal. Do the same for any new variable that shadows a setting.
 - **The welcome page** (`/`, until the setup is left): the TMDB key is tested as soon as it is
-  entered and dropped if TMDB refuses it; the destination step creates the first two libraries (a movies folder and a series folder, organized in place), the last step an arrival folder pointing at them (watched, or scanned once). Any job counts as work, so the setup ends even when that job failed: the home page
-  then lists the analyses in progress and the failed ones with their cause (`GET /api/jobs`), a
+  entered and dropped if TMDB refuses it; the destination step creates the first two libraries (a movies folder and a series folder, organized in place), the last step an arrival folder pointing at them (watched, or scanned once). Any job counts as work, so the setup ends even when that job failed: the History
+  then lists the analyses in progress and the failed ones with their cause (`GET /api/history`), a
   failure staying until the same path is sent again and does not fail. A job must never fail without
   leaving a trace in the UI.
+
+## History
+
+One list for what Kinoshelf did (`GET /api/history`, `History.activity`): a **batch** is a line
+(`GET /api/batches/{id}` for its files and `POST .../undo`), and a **job** is one only while it has no
+batch: waiting, running, or failed. A job that made a batch is folded into it (the batch's detail embeds
+the job: cause, frozen settings, "Send again"). A batch made by the CLI has no job.
+
+- **Hidden is not deleted.** A job that finished and moved nothing (an analysis whose files wait in
+  Arrivals, or sit in an organized library) is `routine`: left out of the default view, listed with
+  `?all=true` (the "Show every analysis" box), and still in the database until the daily purge
+  (`purge.ts`) forgets it. The journal is never purged, so any batch stays undoable.
+- Nothing scans on its own: a job comes from a click (scan, `POST /api/jobs`), from the watcher (one per
+  release found) or from `kinoshelf submit`.
+- The selected line is in the path (`/history/<id>`, a batch or a job id); `/jobs/:id` no longer exists.
+  A failed scan banner in a library links to its job.
+- "Send again" (failed jobs only): the scan of a library's whole source goes through
+  `POST /api/libraries/:id/scan` (so the 409 `library.scan-in-progress` guard applies), anything else is
+  submitted again with `POST /api/jobs` (`resendRequest`, `lib/history.ts`). It uses today's settings, and
+  the job's own, frozen, are shown beside it without being compared.
 
 ## NFO and artwork
 
