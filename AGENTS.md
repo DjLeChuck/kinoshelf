@@ -6,13 +6,15 @@ renames them for a media player (Plex, Jellyfin) and writes their metadata (NFO,
 ## Where we are
 
 v0.1 (core, CLI and matching corpus) and v0.2 (REST server, notifications, multi-arch Docker image)
-are done, and so is getting downloads in (see "Getting downloads in" below). The web UI (v0.3) has
-a home (a welcome for the first launch, `GET`/`PATCH /api/onboarding`, server migration 009), its
-validation queue (at `/queue`), libraries and their scan result, history and settings, with a
-server-side path picker; the "Movies & series" page is still "coming soon". Validating a file in the queue remembers its
-title (aliases). v1.0 is under way: the NFO and artwork writers and the `jellyfin` and `plex-nfo`
-profiles are built (see "NFO and artwork" below), metadata included for a library that is already
-organized; left is the "Movies & series" page.
+are done, and so is getting downloads in (see "Getting downloads in" below). The web UI (v0.3) is being
+simplified to three entries: Libraries, History and Settings. A welcome shows at `/` on the first
+launch (`GET`/`PATCH /api/onboarding`, server migration 009) and the app then opens on Libraries. The
+libraries (organized in place, arrival folders) are configured in the Settings, with a server-side
+path picker; the Libraries page itself (content of each library, arrivals to validate, scan
+progress) and the merged History are still to be rebuilt on the new server API. Validating a file
+remembers its title (aliases). v1.0 is under way: the NFO and artwork writers and the `jellyfin` and
+`plex-nfo` profiles are built (see "NFO and artwork" below), metadata included for a library that is
+already organized.
 
 Backlog, not built: skipping samples by size (today only by name: `sample.*`, a `Sample` folder);
 reading completion from a download client's own API (see "Getting downloads in").
@@ -230,7 +232,7 @@ in the same job queue:
   `watched_files` (migration 008, keyed by path, size and date). `pollSeconds > 0` replaces events
   for network shares; if events cannot be had it falls back to a minute-long poll and logs it.
 - A manual **Check now** (`POST /api/watch/scan`, which skips the settling time but never an
-  incomplete suffix) in the queue page, greyed out when no folder is watched.
+  incomplete suffix); the web button for it left with the old queue page and comes back with Arrivals.
 
 Backlog, not built: reading completion from the client's own API (qBittorrent, Transmission), which
 would need one plugin per client. Watching the raw download folder stays out by design.
