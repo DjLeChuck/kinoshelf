@@ -393,10 +393,15 @@
 
   .remember {
     display: flex;
-    align-items: baseline;
+    align-items: center;
     gap: 8px;
     margin-bottom: 12px;
     font-size: 13px;
+  }
+
+  /* Under the destination select, which has no margin of its own. */
+  select + .remember {
+    margin-top: 12px;
   }
 
   footer {
