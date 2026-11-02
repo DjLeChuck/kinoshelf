@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { api } from '../lib/api.js';
+  import { api, ApiError } from '../lib/api.js';
   import { messageOf } from '../lib/errors.js';
   import { t } from '../lib/i18n.svelte.js';
   import { session } from '../lib/session.svelte.js';
@@ -18,9 +18,13 @@
     try {
       ({ apiKey: key } = await api.post<{ apiKey: string }>('/api/setup/api-key'));
     } catch (error) {
-      failure = error;
-      // Someone else created it meanwhile: there is nothing left to offer but the sign-in.
-      session.endSetup();
+      if (error instanceof ApiError && error.code === 'setup.already-done') {
+        // Someone else created it meanwhile: there is nothing left to offer but the sign-in.
+        session.endSetup();
+      } else {
+        // Anything else (a refused host name, the server unreachable) is shown, and can be retried.
+        failure = error;
+      }
     } finally {
       busy = false;
     }
