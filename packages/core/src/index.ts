@@ -78,6 +78,7 @@ export {
   type NotifyConfig,
   type WatchConfig,
 } from './config/config.js';
+export { openConfigDatabase } from './config/database.js';
 export { LIBRARY_ID_PATTERN } from './config/config.js';
 export {
   destinationRoots,

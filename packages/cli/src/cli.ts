@@ -1,19 +1,18 @@
 import { stat } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
-import Database from 'better-sqlite3';
+import type Database from 'better-sqlite3';
 import { Command, CommanderError } from 'commander';
 import {
   analyze,
   cleanupStaleTemporaryFiles,
   destinationRoots,
   configDirectory,
-  ensureConfigDirectory,
-  DATABASE_FILE,
   discoverVideos,
   executePlan,
   GuessitParser,
   KinoshelfError,
   loadConfig,
+  openConfigDatabase,
   SqliteJournal,
   undoBatch,
   undoLastBatch,
@@ -86,8 +85,7 @@ interface Context {
 }
 
 async function openDatabase(context: Context): Promise<Database.Database> {
-  await ensureConfigDirectory(context.configDir);
-  return new Database(join(context.configDir, DATABASE_FILE));
+  return openConfigDatabase(context.configDir);
 }
 
 function makeProvider(context: Context, language: string, cache: HttpCache): MetadataProvider {
