@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  inChunks,
   canRun,
   episodeLabel,
   isSettling,
@@ -118,5 +119,32 @@ describe('tally', () => {
       ],
     };
     expect(tally(report)).toEqual({ transfers: 1, written: 2, skipped: 1, failed: 1 });
+  });
+});
+
+describe('inChunks', () => {
+  it('reads past what one request may ask for, 200 at a time', async () => {
+    const all = Array.from({ length: 450 }, (_, n) => n);
+    const asked: [number, number][] = [];
+    const page = await inChunks(250, (limit, offset) => {
+      asked.push([limit, offset]);
+      return Promise.resolve({ total: all.length, items: all.slice(offset, offset + limit) });
+    });
+    expect(asked).toEqual([
+      [200, 0],
+      [50, 200],
+    ]);
+    expect(page.items).toEqual(all.slice(0, 250));
+    expect(page.total).toBe(450);
+  });
+
+  it('stops at the end of the list', async () => {
+    const asked: number[] = [];
+    const page = await inChunks(400, (limit, offset) => {
+      asked.push(offset);
+      return Promise.resolve({ total: 3, items: [1, 2, 3].slice(offset, offset + limit) });
+    });
+    expect(asked).toEqual([0]);
+    expect(page.items).toEqual([1, 2, 3]);
   });
 });

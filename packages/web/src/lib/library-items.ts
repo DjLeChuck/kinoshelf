@@ -91,13 +91,15 @@ export interface ItemsQuery {
   readonly state?: ItemFilter | undefined;
   readonly q?: string | undefined;
   readonly limit: number;
+  readonly offset?: number;
 }
 
-export function itemsUrl(libraryId: string, { state, q, limit }: ItemsQuery): string {
+export function itemsUrl(libraryId: string, { state, q, limit, offset }: ItemsQuery): string {
   const parameters = [
     ...(state ? [`state=${state}`] : []),
     ...(q?.trim() ? [`q=${encodeURIComponent(q.trim())}`] : []),
     `limit=${limit}`,
+    ...(offset ? [`offset=${offset}`] : []),
   ];
   return `/api/libraries/${libraryId}/items?${parameters.join('&')}`;
 }
@@ -158,14 +160,19 @@ export interface ShowsQuery {
   readonly missing?: boolean | undefined;
   readonly incomplete?: boolean | undefined;
   readonly limit: number;
+  readonly offset?: number;
 }
 
-export function showsUrl(libraryId: string, { q, missing, incomplete, limit }: ShowsQuery): string {
+export function showsUrl(
+  libraryId: string,
+  { q, missing, incomplete, limit, offset }: ShowsQuery,
+): string {
   const parameters = [
     ...(q?.trim() ? [`q=${encodeURIComponent(q.trim())}`] : []),
     ...(missing ? ['missing=true'] : []),
     ...(incomplete ? ['incomplete=true'] : []),
     `limit=${limit}`,
+    ...(offset ? [`offset=${offset}`] : []),
   ];
   return `/api/libraries/${libraryId}/shows?${parameters.join('&')}`;
 }
@@ -242,14 +249,43 @@ export function tally(report: Pick<RunReport, 'items'>): {
   };
 }
 
+/** The most a list request may ask for (the API refuses more). */
+export const MAX_PAGE = 200;
+
+/**
+ * Reads the first `limit` lines of a list, `MAX_PAGE` at a time: "Show more" grows past what one
+ * request may ask for. The first answer gives everything but the lines (counts, total…).
+ */
+export async function inChunks<
+  T extends { readonly total: number; readonly items: readonly unknown[] },
+>(limit: number, read: (limit: number, offset: number) => Promise<T>): Promise<T> {
+  const first = await read(Math.min(limit, MAX_PAGE), 0);
+  const items = [...first.items];
+  while (items.length < limit && items.length < first.total) {
+    const next = await read(Math.min(limit - items.length, MAX_PAGE), items.length);
+    if (next.items.length === 0) {
+      break;
+    }
+    items.push(...next.items);
+  }
+  return { ...first, items };
+}
+
 export const libraryItems = {
   preview: (libraryId: string, items: readonly string[]) =>
     api.post<RunReport>(`/api/libraries/${libraryId}/execute`, { items, dryRun: true }),
   run: (libraryId: string, items: readonly string[]) =>
     api.post<{ skipped: readonly string[] }>(`/api/libraries/${libraryId}/execute`, { items }),
-  page: (libraryId: string, query: ItemsQuery) => api.get<ItemsPage>(itemsUrl(libraryId, query)),
+  page: (libraryId: string, query: ItemsQuery) =>
+    inChunks(query.limit, (limit, offset) =>
+      api.get<ItemsPage>(itemsUrl(libraryId, { ...query, limit, offset })),
+    ),
   shows: (libraryId: string, query: ShowsQuery) =>
-    api.get<{ total: number; items: readonly Show[] }>(showsUrl(libraryId, query)),
+    inChunks(query.limit, (limit, offset) =>
+      api.get<{ total: number; items: readonly Show[] }>(
+        showsUrl(libraryId, { ...query, limit, offset }),
+      ),
+    ),
   show: (libraryId: string, tmdbId: number) =>
     api.get<ShowDetail>(`/api/libraries/${libraryId}/shows/${tmdbId}`),
   detail: (libraryId: string, itemId: string) =>
