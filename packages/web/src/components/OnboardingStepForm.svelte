@@ -2,7 +2,7 @@
   import { api, ApiError } from '../lib/api.js';
   import { messageOf } from '../lib/errors.js';
   import { t } from '../lib/i18n.svelte.js';
-  import type { StepId } from '../lib/onboarding.js';
+  import { createDestinations, type StepId } from '../lib/onboarding.js';
   import { folderName, libraryApi } from '../lib/libraries.js';
   import { FormError, isHttpUrl, nullIfBlank } from '../lib/settings.js';
   import { shell } from '../lib/shell-state.svelte.js';
@@ -33,11 +33,13 @@
           // A key TMDB refuses would only show up later, as a failed analysis.
           await api.post('/api/settings/tmdb/test');
         } catch (error) {
-          await api.patch('/api/settings', { tmdb: { apiKey: null } }).catch(() => undefined);
-          // The key just typed is the one at fault: the generic message points at the config.
-          throw error instanceof ApiError && error.code === 'tmdb.invalid-key'
-            ? new FormError(t('web.onboarding.form.tmdb.invalid'))
-            : error;
+          // Only a key TMDB refuses is dropped: an unreachable TMDB says nothing of the key.
+          if (error instanceof ApiError && error.code === 'tmdb.invalid-key') {
+            await api.patch('/api/settings', { tmdb: { apiKey: null } }).catch(() => undefined);
+            // The key just typed is the one at fault: the generic message points at the config.
+            throw new FormError(t('web.onboarding.form.tmdb.invalid'));
+          }
+          throw error;
         }
         tmdbKey = '';
         break;
@@ -54,16 +56,11 @@
           throw new FormError(t('web.onboarding.invalid.folder'));
         }
         // The first libraries: the two folders the works end up in, organized in place.
-        await libraryApi.create({
-          name: folderName(folder.trim()),
-          source: folder.trim(),
-          type: 'movie',
-        });
-        await libraryApi.create({
-          name: folderName(seriesFolder.trim()),
-          source: seriesFolder.trim(),
-          type: 'series',
-        });
+        await createDestinations(
+          libraryApi,
+          { name: folderName(folder.trim()), source: folder.trim(), type: 'movie' },
+          { name: folderName(seriesFolder.trim()), source: seriesFolder.trim(), type: 'series' },
+        );
         break;
       case 'source':
         if (!needsAbsolute(folder.trim())) {
