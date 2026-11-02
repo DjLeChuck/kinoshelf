@@ -38,6 +38,15 @@ describe('tmdbFromEnv', () => {
     ).toBeInstanceOf(TmdbProvider);
   });
 
+  it('points images at KINOSHELF_TMDB_IMAGES_URL when set', () => {
+    const provider = tmdbFromEnv({
+      ...options,
+      env: { TMDB_API_KEY: 'k', KINOSHELF_TMDB_IMAGES_URL: 'http://fake:9/t/p/' },
+      config: {},
+    });
+    expect(provider.imageUrl('/a.jpg', 'preview')).toBe('http://fake:9/t/p/w185/a.jpg');
+  });
+
   it('says where the key goes when there is none', () => {
     let thrown: unknown;
     try {

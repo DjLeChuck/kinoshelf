@@ -33,6 +33,8 @@ export interface TmdbProviderOptions extends TmdbClientOptions {
    * them (they are cached afterwards).
    */
   readonly alternativeTitlesFor?: number;
+  /** Where images are fetched from (`KINOSHELF_TMDB_IMAGES_URL`), TMDB's own server by default. */
+  readonly imagesUrl?: string;
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -42,7 +44,19 @@ const SEASON_TTL_MS = DAY_MS;
 const ALTERNATIVE_TITLES_TTL_MS = 30 * DAY_MS;
 const DETAIL_TTL_MS = DAY_MS;
 
-const IMAGE_BASE = 'https://image.tmdb.org/t/p/';
+const IMAGE_BASE = 'https://image.tmdb.org/t/p';
+
+/**
+ * An image path as TMDB gives it (`/kqjL17yufvn9OVLyXYpvtyrFfak.jpg`). Anything else is dropped:
+ * it ends up in a URL that is downloaded and written next to a video.
+ */
+const IMAGE_PATH = /^\/[A-Za-z0-9]{1,64}\.(jpg|png)$/;
+function imageField<K extends string>(
+  key: K,
+  path: string | null | undefined,
+): Partial<Record<K, string>> {
+  return path != null && IMAGE_PATH.test(path) ? ({ [key]: path } as Record<K, string>) : {};
+}
 // Sizes TMDB serves: w185 is enough for a list, w780 for a poster file.
 const IMAGE_SIZES: Record<ImageSize, string> = {
   preview: 'w185',
@@ -79,11 +93,13 @@ export class TmdbProvider implements MetadataProvider {
   private readonly client: TmdbClient;
   private readonly language: string | undefined;
   private readonly alternativeTitlesFor: number;
+  private readonly imagesUrl: string;
 
   constructor(options: TmdbProviderOptions) {
     this.client = new TmdbClient(options);
     this.language = options.language;
     this.alternativeTitlesFor = options.alternativeTitlesFor ?? 5;
+    this.imagesUrl = (options.imagesUrl ?? IMAGE_BASE).replace(/\/+$/, '');
   }
 
   async searchMovies(query: SearchQuery): Promise<readonly MovieCandidate[]> {
@@ -161,13 +177,13 @@ export class TmdbProvider implements MetadataProvider {
       seasons: (r.seasons ?? []).map((s) => ({
         season: s.season_number,
         ...(s.name && { name: s.name }),
-        ...(s.poster_path && { posterPath: s.poster_path }),
+        ...imageField('posterPath', s.poster_path),
       })),
     };
   }
 
   imageUrl(path: string, size: ImageSize): string {
-    return `${IMAGE_BASE}${IMAGE_SIZES[size]}${path}`;
+    return `${this.imagesUrl}/${IMAGE_SIZES[size]}${path}`;
   }
 
   /** The fields movies and series share, whatever their TMDB spelling. */
@@ -198,7 +214,7 @@ export class TmdbProvider implements MetadataProvider {
       name: p.name,
       ...(p.character && { role: p.character }),
       ...(p.order != null && { order: p.order }),
-      ...(p.profile_path && { profilePath: p.profile_path }),
+      ...imageField('profilePath', p.profile_path),
     }));
     return {
       genres: (r.genres ?? []).map((g) => g.name),
@@ -207,8 +223,8 @@ export class TmdbProvider implements MetadataProvider {
       cast,
       ...(r.overview && { overview: r.overview }),
       ...(r.tagline && { tagline: r.tagline }),
-      ...(r.poster_path && { posterPath: r.poster_path }),
-      ...(r.backdrop_path && { backdropPath: r.backdrop_path }),
+      ...imageField('posterPath', r.poster_path),
+      ...imageField('backdropPath', r.backdrop_path),
     };
   }
 
@@ -236,7 +252,7 @@ export class TmdbProvider implements MetadataProvider {
       ]),
       ...(year !== undefined && { year }),
       ...(result.overview && { overview: result.overview }),
-      ...(result.poster_path && { posterPath: result.poster_path }),
+      ...imageField('posterPath', result.poster_path),
       ...(result.popularity != null && { popularity: result.popularity }),
     };
   }
@@ -285,7 +301,7 @@ export class TmdbProvider implements MetadataProvider {
       ]),
       ...(year !== undefined && { year }),
       ...(result.overview && { overview: result.overview }),
-      ...(result.poster_path && { posterPath: result.poster_path }),
+      ...imageField('posterPath', result.poster_path),
       ...(result.popularity != null && { popularity: result.popularity }),
       ...(result.origin_country &&
         result.origin_country.length > 0 && { countries: result.origin_country }),
@@ -323,7 +339,7 @@ export class TmdbProvider implements MetadataProvider {
             ...(directors.length > 0 && { directors }),
             ...(writers.length > 0 && { writers }),
             ...(rating && { rating }),
-            ...(episode.still_path && { stillPath: episode.still_path }),
+            ...imageField('stillPath', episode.still_path),
           };
         }),
       }

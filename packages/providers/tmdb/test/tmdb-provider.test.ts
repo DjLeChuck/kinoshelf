@@ -425,6 +425,40 @@ describe('getMovieDetails and getSeriesDetails', () => {
   });
 });
 
+describe('image paths', () => {
+  it('keeps only what reads as a TMDB image path', async () => {
+    const result = (poster_path: string) => ({
+      id: 1,
+      title: 'X',
+      original_title: 'X',
+      release_date: '2001-01-01',
+      poster_path,
+    });
+    const { provider } = make(
+      [
+        at('/3/search/movie', () =>
+          json(
+            JSON.stringify({
+              results: [
+                result('/kqjL17yufvn9OVLyXYpvtyrFfak.jpg'),
+                result('/../../etc/passwd'),
+                result('https://evil.example/x.jpg'),
+              ],
+            }),
+          ),
+        ),
+      ],
+      { alternativeTitlesFor: 0 },
+    );
+    const found = await provider.searchMovies({ title: 'X' });
+    expect(found.map((candidate) => candidate.posterPath)).toEqual([
+      '/kqjL17yufvn9OVLyXYpvtyrFfak.jpg',
+      undefined,
+      undefined,
+    ]);
+  });
+});
+
 describe('imageUrl', () => {
   it('picks the size from what the image is for', () => {
     const { provider } = make([]);

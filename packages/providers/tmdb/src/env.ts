@@ -18,8 +18,9 @@ export function tmdbApiKey(env: Env, config: Pick<Config, 'apiKey'>): string | u
 }
 
 /**
- * The TMDB provider the CLI and the server use, with the key and the API address
- * (`KINOSHELF_TMDB_URL`, a fake TMDB in the end-to-end tests) they are given. Without a key it
+ * The TMDB provider the CLI and the server use, with the key, the API address
+ * (`KINOSHELF_TMDB_URL`, a fake TMDB in the end-to-end tests) and the images' address
+ * (`KINOSHELF_TMDB_IMAGES_URL`) they are given. Without a key it
  * throws `config.tmdb-key-missing`, naming the file where one goes.
  */
 export function tmdbFromEnv(options: {
@@ -36,10 +37,13 @@ export function tmdbFromEnv(options: {
     });
   }
   const baseUrl = options.env.KINOSHELF_TMDB_URL?.trim() ?? '';
+  // The images NFO and artwork point at come from the same place the server's proxy reads.
+  const imagesUrl = options.env.KINOSHELF_TMDB_IMAGES_URL?.trim() ?? '';
   return new TmdbProvider({
     apiKey,
     language: options.language,
     cache: options.cache,
     ...(baseUrl !== '' && { baseUrl }),
+    ...(imagesUrl !== '' && { imagesUrl }),
   });
 }
