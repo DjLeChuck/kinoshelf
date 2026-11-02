@@ -146,8 +146,10 @@ async function runPipeline(
         !options.json && {
           onProgress: (done: number, total: number) => deps.io.progress?.(`${done}/${total}`),
         }),
+    }).finally(() => {
+      // Cleared on a failure too: the error must not print after a half-written counter.
+      deps.io.progress?.('');
     });
-    deps.io.progress?.('');
 
     const apply = kind === 'process' && options.apply === true;
     const batch = apply
@@ -354,6 +356,17 @@ function buildProgram(context: Context, exit: { code: number }): Command {
   return program;
 }
 
+/**
+ * Failures that come from what was typed (a path that does not exist, a profile nobody knows, no
+ * destination, an age below the minimum): bad usage, exit 2, like an invalid option.
+ */
+const USAGE_ERRORS: ReadonlySet<string> = new Set([
+  'cleanup.age-too-short',
+  'config.destination-required',
+  'discover.not-found',
+  'profile.unknown',
+]);
+
 /** Runs the CLI and returns the exit code: 0 ok, 1 an operation or the run failed, 2 bad usage. */
 export async function run(argv: readonly string[], deps: CliDeps): Promise<number> {
   const configDir = configDirectory(peekOption(argv, '--config-dir'), deps.env);
@@ -394,8 +407,7 @@ export async function run(argv: readonly string[], deps: CliDeps): Promise<numbe
     }
     if (error instanceof KinoshelfError) {
       deps.io.err(describeError(t, error.info));
-      // An age below the minimum is a bad argument, like any other invalid value.
-      return error.info.code === 'cleanup.age-too-short' ? 2 : 1;
+      return USAGE_ERRORS.has(error.info.code) ? 2 : 1;
     }
     if (error instanceof CliError) {
       deps.io.err(describeError(t, error));

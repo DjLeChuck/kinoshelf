@@ -130,7 +130,7 @@ describe('cleanup', () => {
 
   it('fails clearly on a folder that does not exist', async () => {
     const h = await harness();
-    expect(await h.cli('cleanup', '/no/such/folder')).toBe(1);
+    expect(await h.cli('cleanup', '/no/such/folder')).toBe(2);
     expect(h.err).toEqual(['Path not found: /no/such/folder']);
   });
 

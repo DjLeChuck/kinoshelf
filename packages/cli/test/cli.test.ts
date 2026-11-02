@@ -2,7 +2,7 @@ import { readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { run } from '../src/cli.js';
-import { cleanup, harness, makeDir, put } from './helpers.js';
+import { CATALOG, cleanup, FakeProvider, harness, makeDir, put, SEASONS } from './helpers.js';
 
 afterEach(cleanup);
 
@@ -176,17 +176,17 @@ describe('process', () => {
     expect(h.out.join('\n')).toContain('failed: File system error');
   });
 
-  it('requires a destination', async () => {
+  it('requires a destination: bad usage, exit 2', async () => {
     const src = await makeDir();
     await put(join(src, 'Dune.2021.mkv'));
     const h = await harness();
-    expect(await h.cli('process', src)).toBe(1);
+    expect(await h.cli('process', src)).toBe(2);
     expect(h.err.join('\n')).toContain('Give a destination with --dest');
   });
 
   it('reports a path that does not exist', async () => {
     const h = await harness();
-    expect(await h.cli('process', '/nonexistent/kinoshelf', '--dest', '/tmp')).toBe(1);
+    expect(await h.cli('process', '/nonexistent/kinoshelf', '--dest', '/tmp')).toBe(2);
     expect(h.err.join('\n')).toContain('Path not found: /nonexistent/kinoshelf');
   });
 });
@@ -409,7 +409,7 @@ describe('options and configuration', () => {
     const src = await makeDir();
     await put(join(src, 'Dune.2021.mkv'));
     const h = await harness();
-    expect(await h.cli('scan', src, '--profile', 'nope')).toBe(1);
+    expect(await h.cli('scan', src, '--profile', 'nope')).toBe(2);
     expect(h.err.join('\n')).toContain('Unknown profile "nope".');
   });
 
@@ -521,5 +521,29 @@ describe('options and configuration', () => {
     seen.length = 0;
     await h.cli('scan', src, '--json');
     expect(seen).toEqual(['']);
+  });
+
+  it('clears the progress before an error is printed', async () => {
+    const src = await makeDir();
+    await put(join(src, 'Dune.2021.mkv'));
+    const lines: string[] = [];
+    const h = await harness(
+      {},
+      {
+        io: {
+          out: () => undefined,
+          err: (line) => lines.push(`err:${line}`),
+          progress: (text) => lines.push(`progress:${text}`),
+        },
+        createProvider: () => {
+          const provider = new FakeProvider(CATALOG, SEASONS);
+          provider.searchMovies = () => Promise.reject(new Error('provider down'));
+          return provider;
+        },
+      },
+    );
+    await expect(h.cli('scan', src)).rejects.toThrow('provider down');
+    expect(lines).toContain('progress:');
+    expect(lines.at(-1)).not.toMatch(/^progress:\d/);
   });
 });
