@@ -6,6 +6,7 @@ import {
   type Config,
   type ConfigEdit,
 } from '@kinoshelf/core';
+import { tmdbKeyFromEnv } from '@kinoshelf/provider-tmdb';
 import { ApiError } from './api-error.js';
 import { redactUrl } from './notify/paths.js';
 
@@ -66,7 +67,7 @@ type Env = Readonly<Record<string, string | undefined>>;
  */
 export function presentSettings(config: Config, env: Env): unknown {
   const { plex, jellyfin, webhooks = [] } = config.notify ?? {};
-  const tmdbFromEnv = (env.TMDB_API_KEY ?? '').trim() !== '';
+  const tmdbFromEnv = tmdbKeyFromEnv(env) !== undefined;
   return {
     tmdb: {
       configured: tmdbFromEnv || config.apiKey?.tmdb !== undefined,

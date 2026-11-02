@@ -1,4 +1,5 @@
 import { destinationRoots, type Config } from '@kinoshelf/core';
+import { tmdbApiKey } from '@kinoshelf/provider-tmdb';
 import type { Database } from 'better-sqlite3';
 
 const ONBOARDING_STEPS = ['tmdb', 'server', 'destination', 'source'] as const;
@@ -33,7 +34,7 @@ export interface OnboardingFacts {
 function detected(facts: OnboardingFacts): Record<OnboardingStepId, boolean> {
   const { config, env, hasWork } = facts;
   return {
-    tmdb: (env.TMDB_API_KEY ?? '').trim() !== '' || config.apiKey?.tmdb !== undefined,
+    tmdb: tmdbApiKey(env, config) !== undefined,
     server: config.notify?.plex !== undefined || config.notify?.jellyfin !== undefined,
     // The destinations are the libraries organized in place; the source is an arrival folder.
     destination: destinationRoots(config).length > 0,

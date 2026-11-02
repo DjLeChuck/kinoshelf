@@ -1,5 +1,5 @@
 import { stat } from 'node:fs/promises';
-import { join, resolve } from 'node:path';
+import { resolve } from 'node:path';
 import type { Database } from 'better-sqlite3';
 import {
   analyze,
@@ -11,7 +11,7 @@ import {
   type Config,
   type MetadataProvider,
 } from '@kinoshelf/core';
-import { SqliteHttpCache, TmdbProvider } from '@kinoshelf/provider-tmdb';
+import { SqliteHttpCache, tmdbFromEnv } from '@kinoshelf/provider-tmdb';
 import type { Job, ProcessedJob } from './jobs.js';
 import type { ProgressTracker } from './progress.js';
 
@@ -108,17 +108,11 @@ export function makeProvider(deps: ProcessorDeps, language: string): MetadataPro
   if (deps.createProvider) {
     return deps.createProvider({ language });
   }
-  const apiKey = (deps.env.TMDB_API_KEY ?? deps.config.apiKey?.tmdb ?? '').trim();
-  if (!apiKey) {
-    throw new KinoshelfError('config.tmdb-key-missing', {
-      path: join(deps.configDir, 'config.yaml'),
-    });
-  }
-  const baseUrl = (deps.env.KINOSHELF_TMDB_URL ?? '').trim();
-  return new TmdbProvider({
-    apiKey,
+  return tmdbFromEnv({
+    env: deps.env,
+    config: deps.config,
+    configDir: deps.configDir,
     language,
     cache: new SqliteHttpCache(deps.database),
-    ...(baseUrl !== '' && { baseUrl }),
   });
 }

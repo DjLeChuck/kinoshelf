@@ -5,6 +5,7 @@ import {
   type Profile,
   type TemplateVariables,
 } from '@kinoshelf/core';
+import { tmdbKeyFromEnv } from '@kinoshelf/provider-tmdb';
 import type { Database } from 'better-sqlite3';
 import type { FastifyInstance } from 'fastify';
 import { ApiError } from './api-error.js';
@@ -99,7 +100,7 @@ export function registerSettingsRoutes(api: FastifyInstance, ctx: SettingsContex
       },
     },
     async (request) => {
-      if (request.body.tmdb?.apiKey !== undefined && (ctx.env.TMDB_API_KEY ?? '').trim() !== '') {
+      if (request.body.tmdb?.apiKey !== undefined && tmdbKeyFromEnv(ctx.env) !== undefined) {
         // The variable wins at every start and at every lookup: a key saved here would be dead.
         throw new ApiError(409, 'settings.tmdb-key-from-env');
       }

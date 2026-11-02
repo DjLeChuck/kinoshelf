@@ -19,7 +19,7 @@ import {
   type Config,
   type MetadataProvider,
 } from '@kinoshelf/core';
-import { SqliteHttpCache, TmdbProvider, type HttpCache } from '@kinoshelf/provider-tmdb';
+import { SqliteHttpCache, tmdbFromEnv, type HttpCache } from '@kinoshelf/provider-tmdb';
 import { CliError } from './errors.js';
 import {
   createTranslator,
@@ -92,13 +92,13 @@ function makeProvider(context: Context, language: string, cache: HttpCache): Met
   if (context.deps.createProvider) {
     return context.deps.createProvider({ language, cache });
   }
-  const apiKey = (context.deps.env.TMDB_API_KEY ?? context.config.apiKey?.tmdb ?? '').trim();
-  if (!apiKey) {
-    throw new KinoshelfError('config.tmdb-key-missing', {
-      path: join(context.configDir, 'config.yaml'),
-    });
-  }
-  return new TmdbProvider({ apiKey, language, cache });
+  return tmdbFromEnv({
+    env: context.deps.env,
+    config: context.config,
+    configDir: context.configDir,
+    language,
+    cache,
+  });
 }
 
 /** `scan` and `process` share everything but the right to write. */
