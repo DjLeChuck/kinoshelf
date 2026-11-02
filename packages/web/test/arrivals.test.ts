@@ -211,6 +211,18 @@ describe('groupReleases', () => {
     ]);
   });
 
+  it('keeps the same folder sent twice as two groups, one per job', () => {
+    const groups = groupReleases([
+      { ...file('a', '/d/Pack'), jobId: 'j1' },
+      { ...file('b', '/d/Pack'), jobId: 'j2' },
+      { ...file('c', '/d/Pack'), jobId: 'j1' },
+    ]);
+    expect(groups.map((g) => [g.name, g.files.map((f) => f.id)])).toEqual([
+      ['Pack', ['a', 'c']],
+      ['Pack', ['b']],
+    ]);
+  });
+
   it('makes a group of its own of a file without a release', () => {
     expect(groupReleases([file('a', null)]).map((g) => g.name)).toEqual(['a.mkv']);
   });

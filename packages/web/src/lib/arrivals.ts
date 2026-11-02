@@ -106,12 +106,20 @@ export interface ReleaseGroup {
   readonly others: readonly { readonly cluster: number; readonly files: readonly Arrival[] }[];
 }
 
-/** Groups what the arrivals list returns by release, keeping the order of first appearance. */
+/**
+ * Groups what the arrivals list returns by release, keeping the order of first appearance. A
+ * release is a folder within one job, as the server pages them: the same folder sent twice is two
+ * jobs, validated apart.
+ */
 export function groupReleases(items: readonly Arrival[]): ReleaseGroup[] {
-  const groups = new Map<string, { files: Arrival[]; others: Map<number, Arrival[]> }>();
+  const groups = new Map<
+    string,
+    { folder: string; files: Arrival[]; others: Map<number, Arrival[]> }
+  >();
   for (const item of items) {
-    const key = item.release ?? item.path;
-    const group = groups.get(key) ?? { files: [], others: new Map<number, Arrival[]>() };
+    const folder = item.release ?? item.path;
+    const key = `${item.jobId}|${folder}`;
+    const group = groups.get(key) ?? { folder, files: [], others: new Map<number, Arrival[]>() };
     if (item.cluster === 0) {
       group.files.push(item);
     } else {
@@ -119,9 +127,9 @@ export function groupReleases(items: readonly Arrival[]): ReleaseGroup[] {
     }
     groups.set(key, group);
   }
-  return [...groups].map(([key, { files, others }]) => ({
+  return [...groups].map(([key, { folder, files, others }]) => ({
     key,
-    name: releaseName(key),
+    name: releaseName(folder),
     files,
     others: [...others]
       .sort(([a], [b]) => a - b)
