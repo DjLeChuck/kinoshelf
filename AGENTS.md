@@ -145,9 +145,9 @@ format follows the Kodi wiki's templates, saved pages are not in the repository)
   where the profile wants it becomes `ready` with only `write-file`/`download` operations (the
   CLI says "already named as the profile wants"). Files already there are left out of the plan
   rather than reported as skipped, so a rescan of a complete library stays `in-place`.
-- **The web shows them.** A scan row lists what its plan writes (`extras` of `GET /api/jobs/{id}/files`:
-  `nfo` for a `write-file`, `image` for a `download`, shown as "Also writes: movie.nfo, …"), a dry run
-  counts them apart from the ones already there, and a batch's detail lists what was written
+- **The web shows them.** A library item says which of its NFO and images are there (`nfo`, `poster`,
+  `fanart` of `GET /api/libraries/{id}/items`), a dry run counts them apart from the ones already
+  there, and a batch's detail lists what was written
   (`extras` of `GET /api/batches/{id}`, from the journal's `generated` and `downloaded` entries).
 - Not done: no certification (`<mpaa>`), no collection overview, no episode `uniqueid`.
 
@@ -174,17 +174,38 @@ refuses to delete a library an arrival folder points at (`library.in-use`). Ther
   fall back to the defaults. A typed library has one root for both kinds (a stray series in a
   movie library would be laid out in place; the plan shows it).
 - **Scan**: `POST /api/libraries/:id/scan` queues a job on the whole source (409
-  `library.scan-in-progress`). `GET /api/jobs/:id/files?tab=rename|ambiguous|unrecognized|compliant|conflict`
-  pages the analysis; counts are what is left to do (a transferred file leaves its tab). A batch runs
-  through `POST /api/plans/:id/execute` with `entries` (also `dryRun`); only the `rename` tab is
-  selectable, the others go through the validation queue.
+  `library.scan-in-progress`). The scan's files are read from the snapshot below
+  (`GET /api/libraries/:id/items`), not from the job. A batch runs through
+  `POST /api/plans/:id/execute` with `entries` (also `dryRun`); only the files to rename are
+  selectable, the others go through the arrivals or the review filter.
+- **Arrivals** (`GET /api/arrivals`, `?state=review|unrecognized`): what the arrival folders (and paths
+  sent by hand, which belong to none) hold that needs a human; a library organized in place never
+  lands there. `POST /api/entries/:id/{match,preview,ignore}` settle a file. The destination of an
+  arrival is the library of its kind in the folder's `into` (the first of its type for a path sent
+  by hand), unless `libraryId` picks another one of the work's kind (422 `library.wrong-type`): it is
+  stored on the file (`job_entries.destination_library_id`, migration 013), not on the job, and the
+  file is planned, executed and written to the snapshot with **that library's profile and root**
+  (the mode stays the folder's). A job whose files go to several libraries is executed as one plan
+  per library under one batch. `rememberDestination` ties the work to the library
+  (`work_destinations`, `GET`/`DELETE /api/work-destinations`): `Service.route` then plans each
+  later file of the work, matched with confidence, for that library when its job is stored, and a
+  file left unmatched keeps waiting. A library deleted since is ignored: the default applies.
 - **Snapshot** (`library_items`, server migration 012, `library-items.ts`): what a typed library holds,
   as its last scan saw it (title, year, tmdb id, state, presence of NFO / poster / fanart, entry id).
   Replaced as a whole when a scan of the whole source ends, then patched by path after a transfer,
   an undo or a manual match, so listing never reads the disk nor asks TMDB. `GET
 /api/libraries/:id/items` lists it (filters `review|rename|unrecognized|missing-nfo|missing-artwork`,
   `q`, paging, counts); `/items/:itemId` adds the work's details and `ffprobe`. An arrival folder
-  has no snapshot. `work_destinations` (migration 011) is created, not used yet.
+  has no snapshot; what an arrival sends to a typed library is added to that library's rows once
+  transferred.
+- **Scan progress** (`progress.ts`): `GET /api/jobs`, `GET /api/jobs/:id` and the `scan` of
+  `GET /api/libraries/:id/items` carry `progress` (`phase` discover|identify|plan, `found`, `done`,
+  `total`, `current`, `idleSeconds`) while an analysis runs, `null` otherwise. It lives in the
+  server's memory (`ProgressTracker`), never in the database: a restart runs the job again from 0.
+  `idleSeconds` is the server's clock, so the web can say "still running" past a minute without
+  trusting the browser's. Every change emits the payload-less `jobs` event, at most twice a second.
+  The core reports through `discoverVideos`' `onFound`, and `analyze`'s `onProgress` (with the file)
+  and `onPlanning`.
 - **ffprobe** (`probe.ts`): `ProbeQueue` fills `video`, `audio`, `size`, `mtime`, `probed_at` in the
   background, only while the job queue is idle (the runner's `idle` hook wakes it), and rebuilds from
   the rows without `probed_at` at startup. A page's probe jumps the line; a row whose size and date

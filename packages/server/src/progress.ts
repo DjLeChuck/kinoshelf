@@ -1,0 +1,122 @@
+/** Where an analysis is: looking for videos, matching them, or building the plan. */
+export type ScanPhase = 'discover' | 'identify' | 'plan';
+
+/** What a client shows of a running analysis. */
+export interface ScanProgress {
+  readonly phase: ScanPhase;
+  /** Videos found so far (the total while `identify` and `plan`). */
+  readonly found: number;
+  readonly done: number;
+  readonly total: number;
+  /** The last file matched, relative to the scanned folder when it can be. */
+  readonly current: string | null;
+  /** Seconds since anything moved: the client says "still running" past a minute. */
+  readonly idleSeconds: number;
+}
+
+interface State {
+  phase: ScanPhase;
+  found: number;
+  done: number;
+  total: number;
+  current: string | null;
+  movedAt: number;
+}
+
+/** At most this often a change is announced: a scan of thousands of files must not flood clients. */
+export const NOTIFY_INTERVAL_MS = 500;
+
+/**
+ * The progress of the analyses, kept in the memory of the server and never in the database: it
+ * only means something while the job runs, and a restart runs the job again from the start. The
+ * idle time is computed here, so it does not depend on the clock of the browser.
+ */
+export class ProgressTracker {
+  private readonly states = new Map<string, State>();
+  private lastNotified = 0;
+  private timer: NodeJS.Timeout | undefined;
+
+  constructor(
+    /** Tells the clients something moved (the `jobs` topic, with no payload). */
+    private readonly notify: () => void,
+    private readonly now: () => number = Date.now,
+  ) {}
+
+  start(jobId: string): void {
+    this.states.set(jobId, {
+      phase: 'discover',
+      found: 0,
+      done: 0,
+      total: 0,
+      current: null,
+      movedAt: this.now(),
+    });
+    this.changed();
+  }
+
+  found(jobId: string, found: number): void {
+    this.update(jobId, { found, total: found });
+  }
+
+  /** The walk is over: every video is known, none is matched yet. */
+  discovered(jobId: string, total: number): void {
+    this.update(jobId, { phase: 'identify', found: total, done: 0, total });
+  }
+
+  identified(jobId: string, done: number, total: number, current: string): void {
+    this.update(jobId, { phase: 'identify', found: total, done, total, current });
+  }
+
+  planning(jobId: string): void {
+    this.update(jobId, { phase: 'plan' });
+  }
+
+  finish(jobId: string): void {
+    this.states.delete(jobId);
+  }
+
+  of(jobId: string): ScanProgress | undefined {
+    const state = this.states.get(jobId);
+    return (
+      state && {
+        phase: state.phase,
+        found: state.found,
+        done: state.done,
+        total: state.total,
+        current: state.current,
+        idleSeconds: Math.floor((this.now() - state.movedAt) / 1000),
+      }
+    );
+  }
+
+  /** Stops a pending announcement, for a clean shutdown. */
+  close(): void {
+    clearTimeout(this.timer);
+    this.timer = undefined;
+  }
+
+  private update(jobId: string, change: Partial<State>): void {
+    const state = this.states.get(jobId);
+    if (!state) {
+      return;
+    }
+    Object.assign(state, change, { movedAt: this.now() });
+    this.changed();
+  }
+
+  /** Leading and trailing: the first change is told at once, the ones after it once per interval. */
+  private changed(): void {
+    const wait = this.lastNotified + NOTIFY_INTERVAL_MS - this.now();
+    if (wait <= 0) {
+      this.lastNotified = this.now();
+      this.notify();
+      return;
+    }
+    this.timer ??= setTimeout(() => {
+      this.timer = undefined;
+      this.lastNotified = this.now();
+      this.notify();
+    }, wait);
+    this.timer.unref();
+  }
+}

@@ -36,18 +36,20 @@ interface LibraryBody {
   scanning: boolean;
 }
 
-interface FilesBody {
-  tab: string;
-  total: number;
-  counts: Record<string, number>;
-  files: {
-    id: string;
-    path: string;
-    classification: string;
-    destination: string | null;
-    score: number | null;
-  }[];
+interface EntryBody {
+  id: string;
+  path: string;
+  classification: string;
+  resolution: string | null;
+  destination: string | null;
+  candidates: { score: number }[];
 }
+
+/** The files of a scan in one classification (what a transfer has settled is left out). */
+const entriesOf = async (h: Harness, jobId: string, classification: string): Promise<EntryBody[]> =>
+  (await h.request('GET', `/api/jobs/${jobId}/entries?classification=${classification}`))
+    .json<EntryBody[]>()
+    .filter((entry) => entry.resolution === null || entry.resolution === 'failed');
 
 /** A server with a real config.yaml, since libraries live there. */
 async function served(yaml = '') {
@@ -277,29 +279,16 @@ describe('scanning a library', () => {
       },
     });
 
-    const rename = (
-      await h.request('GET', `/api/jobs/${jobId}/files?tab=rename`)
-    ).json<FilesBody>();
-    expect(rename).toMatchObject({
-      tab: 'rename',
-      total: 2,
-      counts: { rename: 2, unrecognized: 1, ambiguous: 0, compliant: 0, renamed: 0 },
-    });
-    const dune = rename.files.find((f) => f.path.endsWith('Dune.2021.1080p.mkv'));
+    const rename = await entriesOf(h, jobId, 'to-rename');
+    expect(rename).toHaveLength(2);
+    const dune = rename.find((f) => f.path.endsWith('Dune.2021.1080p.mkv'));
     expect(dune?.destination).toBe(
       join(target, 'Dune (2021) [tmdbid-438631]', 'Dune (2021) [tmdbid-438631].mkv'),
     );
-    expect(dune?.score).toBeGreaterThan(0);
+    expect(dune?.candidates[0]?.score).toBeGreaterThan(0);
 
-    const page = (
-      await h.request('GET', `/api/jobs/${jobId}/files?tab=rename&limit=1&offset=1`)
-    ).json<FilesBody>();
-    expect(page.files).toHaveLength(1);
-    expect(page.total).toBe(2);
-    const unknown = (
-      await h.request('GET', `/api/jobs/${jobId}/files?tab=unrecognized`)
-    ).json<FilesBody>();
-    expect(unknown.files.map((f) => f.path)).toEqual([join(source, 'Mystery.Home.Video.mkv')]);
+    const unknown = await entriesOf(h, jobId, 'unrecognized');
+    expect(unknown.map((f) => f.path)).toEqual([join(source, 'Mystery.Home.Video.mkv')]);
 
     // The library reports the scan, and what is left to do follows the transfers.
     const library = (await h.request('GET', '/api/libraries'))
@@ -317,9 +306,13 @@ describe('scanning a library', () => {
     const run = await h.request('POST', `/api/plans/${jobId}/execute`, { entries: [chosen] });
     expect(run.statusCode).toBe(202);
     await h.app.jobs.idle();
-    const after = (await h.request('GET', `/api/jobs/${jobId}/files?tab=rename`)).json<FilesBody>();
-    expect(after.counts).toMatchObject({ rename: 1, renamed: 1 });
-    expect(after.files.map((f) => f.path)).toEqual([join(source, 'Alien.1979.mkv')]);
+    expect((await entriesOf(h, jobId, 'to-rename')).map((f) => f.path)).toEqual([
+      join(source, 'Alien.1979.mkv'),
+    ]);
+    const settled = (await h.request('GET', '/api/libraries'))
+      .json<LibraryBody[]>()
+      .find((l) => l.id === 'downloads');
+    expect(settled?.lastScan?.counts).toMatchObject({ rename: 1, renamed: 1 });
     expect(
       await readFile(
         join(target, 'Dune (2021) [tmdbid-438631]', 'Dune (2021) [tmdbid-438631].mkv'),
@@ -344,14 +337,14 @@ describe('scanning a library', () => {
       settings: { mode: string; profile: string };
     }>();
     expect(job.settings).toMatchObject({ mode: 'move', profile: 'plex' });
-    const compliant = (
-      await h.request('GET', `/api/jobs/${jobId}/files?tab=compliant`)
-    ).json<FilesBody>();
-    expect(compliant.files.map((f) => f.path)).toEqual([
+    const compliant = await entriesOf(h, jobId, 'compliant');
+    expect(compliant.map((f) => f.path)).toEqual([
       join(root, 'Alien (1979) {tmdb-348}', 'Alien (1979) {tmdb-348}.mkv'),
     ]);
-    expect(compliant.files[0]?.destination).toBe(compliant.files[0]?.path);
-    expect(compliant.counts).toMatchObject({ compliant: 1, rename: 1 });
+    const home = (await h.request('GET', '/api/libraries'))
+      .json<LibraryBody[]>()
+      .find((l) => l.id === 'home');
+    expect(home?.lastScan?.counts).toMatchObject({ compliant: 1, rename: 1 });
   });
 
   it('refuses a second scan while one is queued or running', async () => {
@@ -405,12 +398,6 @@ describe('scanning a library', () => {
       queued: 1,
       lastScan: { status: expect.stringMatching(/^(queued|running)$/) as string, finishedAt: null },
     });
-    // The files of a scan are not there until it is done.
-    const early = await h.request(
-      'GET',
-      `/api/jobs/${first.json<{ id: string }>().id}/files?tab=rename`,
-    );
-    expect(early.statusCode).toBe(409);
 
     release();
     await h.app.jobs.idle();

@@ -442,7 +442,9 @@ export function itemOf(
   matched?: Candidate,
 ): LibraryItem {
   const kind = kindOf(entry);
-  const best = matched ?? (entry.item ? entry.candidates[0] : undefined);
+  // The work the file is planned for, among the candidates the entry keeps.
+  const best =
+    matched ?? entry.candidates.find((candidate) => candidate.id.id === entry.item?.externalId.id);
   return {
     libraryId,
     path: entry.path,
@@ -522,6 +524,7 @@ export class LibrarySnapshot {
     const library = this.libraryOf(this.deps.jobs.get(jobId));
     const profile = await this.profileOf(jobId);
     if (!library || !profile) {
+      await this.arrived(done);
       return;
     }
     for (const { entry, results } of done) {
@@ -539,6 +542,51 @@ export class LibrarySnapshot {
       );
       const path = main ? main.operation.destination : row.path;
       this.settle(row, path, written, 'present');
+    }
+  }
+
+  /**
+   * Videos that came from an arrival folder: each one that went through is now a row of the typed
+   * library whose folder holds it, with what was written beside it. The library is told by where
+   * the video landed, since a file's destination can be chosen one by one.
+   */
+  private async arrived(
+    done: readonly { readonly entry: Entry; readonly results: readonly OperationResult[] }[],
+  ): Promise<void> {
+    const config = this.deps.config();
+    const now = new Date().toISOString();
+    for (const { entry, results } of done) {
+      const main = results.find(
+        (r) => r.operation.type === 'transfer' && r.operation.role === 'main',
+      );
+      const path = main?.status === 'done' ? main.operation.destination : undefined;
+      const library =
+        path === undefined
+          ? undefined
+          : config.libraries?.find(
+              ({ type, source }) => type !== undefined && path.startsWith(`${source}/`),
+            );
+      if (path === undefined || !library) {
+        continue;
+      }
+      const profile = await loadProfile(library.profile ?? config.profile ?? 'plex');
+      const row = itemOf(entry, profile, library.id, now);
+      const failed = new Set<Writable>(
+        results
+          .filter((r) => r.operation.type !== 'transfer' && r.status === 'failed')
+          .flatMap((r) => fileKind(profile, r.operation.destination) ?? []),
+      );
+      // Everything the plan wrote is there now, unless it failed; the video itself was moved.
+      const present = (name: Writable): Presence => (row[name] === null ? null : !failed.has(name));
+      const next = { nfo: present('nfo'), poster: present('poster'), fanart: present('fanart') };
+      this.deps.store.put({
+        ...row,
+        ...next,
+        path,
+        state: Object.values(next).some((value) => value === false) ? 'incomplete' : 'ok',
+        entryId: null,
+        scanJobId: null,
+      });
     }
   }
 

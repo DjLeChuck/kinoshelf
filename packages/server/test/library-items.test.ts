@@ -116,7 +116,7 @@ describe('the snapshot of a library', () => {
     const row = store.get('films', mystery);
     expect(row?.state).toBe('unrecognized');
 
-    const matched = await h.request('POST', `/api/queue/${row?.entryId ?? ''}/match`, {
+    const matched = await h.request('POST', `/api/entries/${row?.entryId ?? ''}/match`, {
       kind: 'movie',
       id: { provider: 'tmdb', id: 438631 },
       title: 'Dune',

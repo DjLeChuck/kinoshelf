@@ -201,6 +201,13 @@ export const SERVER_MIGRATIONS: readonly { readonly name: string; readonly sql: 
       CREATE INDEX library_items_state ON library_items (library_id, state);
     `,
   },
+  {
+    // Where an arrival goes when the user (or a remembered work) picked a library for it: NULL is
+    // the default destination of the job. It belongs to the file, not to the job, whose settings
+    // stay what the analysis used.
+    name: 'server:013-entry-destination',
+    sql: 'ALTER TABLE job_entries ADD COLUMN destination_library_id TEXT;',
+  },
 ];
 
 /** Opens the single SQLite file of the config directory, shared with the CLI and the cache. */

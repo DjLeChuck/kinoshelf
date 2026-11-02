@@ -212,6 +212,7 @@ export const fr: Record<keyof typeof en, string> = {
   'error.library.scan-in-progress':
     'Une analyse de cette bibliothèque est déjà en attente ou en cours.',
   'error.library.source-taken': 'La bibliothèque « {name} » lit déjà ce dossier.',
+  'error.library.wrong-type': 'La bibliothèque « {name} » ne contient pas ce type d’œuvre.',
   'error.queue.entry-not-found': 'Ce fichier n’est plus dans la file.',
   'error.queue.entry-resolved': 'Ce fichier a déjà été traité ({resolution}).',
   'error.request.invalid': 'La requête a été refusée : {detail}',
@@ -225,6 +226,7 @@ export const fr: Record<keyof typeof en, string> = {
   'error.settings.webhook-url-required': 'Un nouveau webhook a besoin d’une URL.',
   'error.watch.not-configured':
     'Aucun dossier n’est surveillé. Configurez-en un dans les réglages.',
+  'error.work-destination.not-found': 'Cette destination mémorisée n’existe pas.',
   'web.skip-to-content': 'Aller au contenu',
   'web.nav.label': 'Navigation principale',
   'web.nav.home': 'Accueil',

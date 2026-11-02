@@ -24,6 +24,7 @@ import {
   type LibraryItem,
   type LibraryItemStore,
 } from './library-items.js';
+import type { ProgressTracker } from './progress.js';
 import type { JobRunner } from './runner.js';
 import {
   errorSchema,
@@ -33,6 +34,7 @@ import {
   libraryPatchSchema,
   librarySchema,
   paging,
+  progressSchema,
 } from './schemas.js';
 import type { ConfigStore } from './settings.js';
 
@@ -49,6 +51,7 @@ export interface LibraryContext {
   ) => Promise<MovieDetails | SeriesDetails | null>;
   readonly events: EventBus;
   readonly runner: JobRunner;
+  readonly progress: ProgressTracker;
   /** Shapes a job like `GET /api/jobs/{id}`. */
   readonly presentJob: (job: ReturnType<JobStore['create']>) => unknown;
 }
@@ -405,10 +408,12 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
               scan: {
                 type: 'object',
                 nullable: true,
-                required: ['jobId', 'status'],
+                required: ['jobId', 'status', 'progress'],
                 properties: {
                   jobId: { type: 'string', format: 'uuid' },
                   status: { type: 'string', enum: ['queued', 'running'] },
+                  /** Where the analysis is; null while it waits its turn. */
+                  progress: progressSchema,
                 },
               },
               counts: {
@@ -457,7 +462,13 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
         // A scan that found nothing leaves no row, yet it did end.
         scannedAt:
           items.scannedAt(library.id) ?? (last?.status === 'done' ? last.finishedAt : null),
-        scan: running ? { jobId: running.id, status: running.status } : null,
+        scan: running
+          ? {
+              jobId: running.id,
+              status: running.status,
+              progress: ctx.progress.of(running.id) ?? null,
+            }
+          : null,
         counts: items.counts(library.id),
         total: page.total,
         items: page.items.map(presentItem),

@@ -71,6 +71,25 @@ export const executionSchema = {
   },
 } as const;
 
+/** Where a running analysis is; held in memory, so absent once it ends (or before it starts). */
+export const progressSchema = {
+  type: 'object',
+  nullable: true,
+  required: ['phase', 'found', 'done', 'total', 'current', 'idleSeconds'],
+  properties: {
+    phase: { type: 'string', enum: ['discover', 'identify', 'plan'] },
+    /** Videos found so far. */
+    found: { type: 'integer' },
+    /** Files matched, out of `total` (known once the walk of the folder is over). */
+    done: { type: 'integer' },
+    total: { type: 'integer' },
+    /** The last file matched, relative to the folder. */
+    current: { type: 'string', nullable: true },
+    /** Seconds since anything moved, for a message such as "still running". */
+    idleSeconds: { type: 'integer' },
+  },
+} as const;
+
 export const jobSchema = {
   type: 'object',
   required: [
@@ -86,6 +105,7 @@ export const jobSchema = {
     'execution',
     'summary',
     'settings',
+    'progress',
   ],
   properties: {
     id: { type: 'string', format: 'uuid' },
@@ -101,6 +121,7 @@ export const jobSchema = {
     /** The latest transfer of this job (an `apply` job queues its own). */
     execution: { ...executionSchema, nullable: true },
     summary: { ...summarySchema, nullable: true },
+    progress: progressSchema,
     /** What the plan was built with; only an analysis that finished has it. */
     settings: {
       type: 'object',
@@ -688,65 +709,94 @@ export const scanCountsSchema = {
   properties: Object.fromEntries([...scanTabs, 'renamed'].map((tab) => [tab, { type: 'integer' }])),
 } as const;
 
-export const scanFilesSchema = {
+export const arrivalsSchema = {
   type: 'object',
-  required: ['tab', 'total', 'counts', 'files'],
+  required: ['total', 'sources', 'items'],
   properties: {
-    tab: { type: 'string', enum: scanTabs },
-    total: { type: 'integer', description: 'Files in this tab, for paging.' },
-    counts: scanCountsSchema,
-    files: {
+    total: { type: 'integer', description: 'Files of this filter, for paging and the badge.' },
+    sources: {
+      type: 'array',
+      items: {
+        type: 'object',
+        required: ['id', 'name', 'path'],
+        properties: { id: { type: 'string' }, name: { type: 'string' }, path: { type: 'string' } },
+      },
+    },
+    items: {
       type: 'array',
       items: {
         type: 'object',
         required: [
           'id',
+          'jobId',
           'path',
-          'classification',
+          'release',
+          'state',
+          'kind',
           'resolution',
+          'createdAt',
+          'sourceId',
           'destination',
-          'score',
-          'title',
+          'destinationOptions',
           'reason',
           'candidates',
+          'plannedPath',
           'conflicts',
-          'extras',
           'error',
         ],
         properties: {
-          id: {
-            type: 'string',
-            format: 'uuid',
-            description: 'Also what `entries` of an execution takes.',
-          },
+          id: { type: 'string', format: 'uuid', description: 'The entry: `/api/entries/{id}/…`.' },
+          jobId: { type: 'string', format: 'uuid' },
           path: { type: 'string' },
-          classification: { type: 'string', enum: CLASSIFICATIONS },
-          resolution: entrySchema.properties.resolution,
-          /** Where the video goes (`rename`); its own path once `compliant`; null otherwise. */
-          destination: { type: 'string', nullable: true },
-          /** Score of the best candidate (0-100), null when there is none. */
-          score: { type: 'number', nullable: true },
-          /** What the file name says, for a row without a candidate. */
-          title: { type: 'string', nullable: true },
-          reason: entrySchema.properties.reason,
-          candidates: entrySchema.properties.candidates,
-          conflicts: entrySchema.properties.conflicts,
-          /** The NFO and images the plan writes beside the video, none when the profile has none. */
-          extras: {
+          release: { type: 'string', description: 'The name of the file.' },
+          state: { type: 'string', enum: ['review', 'unrecognized'] },
+          kind: { type: 'string', enum: ['movie', 'series'], nullable: true },
+          /** The picture size the name announces (`2160p`), null when it says none. */
+          resolution: { type: 'string', nullable: true },
+          createdAt: { type: 'string', format: 'date-time', nullable: true },
+          /** The arrival folder it came from; null for a path sent by hand. */
+          sourceId: { type: 'string', nullable: true },
+          destination: {
+            type: 'object',
+            required: ['libraryId', 'remembered'],
+            properties: {
+              libraryId: { type: 'string', nullable: true },
+              /** The work was tied to this library by "Remember for this work". */
+              remembered: { type: 'boolean' },
+            },
+          },
+          /** The libraries it could go to: its kind's, or all of them when the kind is unknown. */
+          destinationOptions: {
             type: 'array',
             items: {
               type: 'object',
-              required: ['type', 'destination'],
-              properties: {
-                type: { type: 'string', enum: ['nfo', 'image'] },
-                destination: { type: 'string' },
-              },
+              required: ['id', 'name'],
+              properties: { id: { type: 'string' }, name: { type: 'string' } },
             },
           },
+          reason: entrySchema.properties.reason,
+          candidates: entrySchema.properties.candidates,
+          /** Where the video goes once matched; null while nothing is chosen. */
+          plannedPath: { type: 'string', nullable: true },
+          /** What stops it from going there. */
+          conflicts: entrySchema.properties.conflicts,
           error: entrySchema.properties.error,
         },
       },
     },
+  },
+} as const;
+
+export const workDestinationSchema = {
+  type: 'object',
+  required: ['kind', 'tmdbId', 'libraryId', 'library', 'createdAt'],
+  properties: {
+    kind: { type: 'string', enum: ['movie', 'series'] },
+    tmdbId: { type: 'integer' },
+    libraryId: { type: 'string' },
+    /** The library's name; null if it no longer exists. */
+    library: { type: 'string', nullable: true },
+    createdAt: { type: 'string', format: 'date-time' },
   },
 } as const;
 

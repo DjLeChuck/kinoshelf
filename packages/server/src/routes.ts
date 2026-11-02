@@ -1,10 +1,13 @@
+import { basename } from 'node:path';
 import type { Candidate, MovieCandidate, PlanItem, SeriesCandidate } from '@kinoshelf/core';
 import type { FastifyInstance } from 'fastify';
-import { SCAN_TABS, type Entry, type EntryStore, type ScanTab } from './entries.js';
+import type { Entry, EntryStore } from './entries.js';
+import { resolutionOf } from './library-items.js';
 import type { EventBus } from './events.js';
 import type { ExecutionStore } from './executions.js';
 import type { History } from './history.js';
 import type { Job, JobStore } from './jobs.js';
+import type { ProgressTracker } from './progress.js';
 import type { JobRunner } from './runner.js';
 import {
   batchDetailSchema,
@@ -12,6 +15,8 @@ import {
   candidateSchema,
   classificationValues,
   aliasSchema,
+  arrivalsSchema,
+  workDestinationSchema,
   entrySchema,
   matchResultSchema,
   errorSchema,
@@ -22,10 +27,10 @@ import {
   notificationTestSchema,
   paging,
   previewSchema,
-  scanFilesSchema,
   undoSchema,
 } from './schemas.js';
 import type { AliasStore } from './aliases.js';
+import type { WorkDestinationStore } from './work-destinations.js';
 import type { Notifier } from './notify/notifier.js';
 import type { Service } from './service.js';
 
@@ -34,11 +39,13 @@ export interface RouteContext {
   readonly entries: EntryStore;
   readonly executions: ExecutionStore;
   readonly aliases: AliasStore;
+  readonly workDestinations: WorkDestinationStore;
   readonly service: Service;
   readonly runner: JobRunner;
   readonly notifier: Notifier;
   readonly events: EventBus;
   readonly history: History;
+  readonly progress: ProgressTracker;
 }
 
 interface Paging {
@@ -105,37 +112,29 @@ function presentEntry(entry: Entry): unknown {
   };
 }
 
-/** The metadata files a plan writes beside the video: an NFO is generated, an image downloaded. */
-interface PlannedExtra {
-  readonly type: 'nfo' | 'image';
-  readonly destination: string;
-}
-
-function plannedExtras(item: PlanItem | null): PlannedExtra[] {
-  return (item?.operations ?? []).flatMap((op): PlannedExtra[] => {
-    if (op.type === 'write-file') {
-      return [{ type: 'nfo', destination: op.destination }];
-    }
-    return op.type === 'download' ? [{ type: 'image', destination: op.destination }] : [];
-  });
-}
-
-/** One row of a scan: what the file is called now, where it goes, how sure the match is. */
-function presentScanRow(entry: Entry): unknown {
+/** One file of an arrival: what it is called, how sure the match is, where it would go. */
+function presentArrival(entry: Entry, service: Service, jobs: JobStore): unknown {
+  const job = jobs.get(entry.jobId);
+  const destination = service.destinationOf(entry);
   const plan = presentPlan(entry.item);
+  const kind =
+    entry.parsed.kind === 'movie' ? 'movie' : entry.parsed.kind === 'episode' ? 'series' : null;
   return {
     id: entry.id,
+    jobId: entry.jobId,
     path: entry.path,
-    classification: entry.classification,
-    resolution: entry.resolution,
-    // An organized file is where it should be.
-    destination: entry.classification === 'compliant' ? entry.path : plan.destination,
-    score: entry.candidates[0]?.score ?? null,
-    title: entry.parsed.title ?? null,
+    release: basename(entry.path),
+    state: entry.classification === 'unrecognized' ? 'unrecognized' : 'review',
+    kind,
+    resolution: resolutionOf(entry.path),
+    createdAt: job?.createdAt ?? null,
+    sourceId: job?.libraryId ?? null,
+    destination,
+    destinationOptions: service.destinationOptions(entry).map(({ id, name }) => ({ id, name })),
     reason: entry.reason,
     candidates: entry.candidates,
+    plannedPath: plan.destination,
     conflicts: plan.conflicts,
-    extras: plannedExtras(entry.item),
     error: entry.error,
   };
 }
@@ -150,21 +149,34 @@ const emptyBodyByDefault = (
   done();
 };
 
-/** A job as the API shows it: its row, a count of its files, its latest transfer, its settings. */
+/** A job as the API shows it: its row, a count of its files, its latest transfer, its settings, its progress. */
 export function jobPresenter(
-  ctx: Pick<RouteContext, 'jobs' | 'entries' | 'executions'>,
+  ctx: Pick<RouteContext, 'jobs' | 'entries' | 'executions' | 'progress'>,
 ): (job: Job) => unknown {
   return (job) => ({
     ...job,
     summary: job.status === 'done' ? ctx.entries.summary(job.id) : null,
     execution: ctx.executions.latestOf(job.id) ?? null,
     settings: ctx.jobs.settings(job.id) ?? null,
+    // Only while it runs: in memory, never stored.
+    progress: ctx.progress.of(job.id) ?? null,
   });
 }
 
 /** Thin HTTP layer: validate, call the store or the service, shape the answer. */
 export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
-  const { jobs, entries, executions, aliases, service, runner, notifier, events, history } = ctx;
+  const {
+    jobs,
+    entries,
+    executions,
+    aliases,
+    workDestinations,
+    service,
+    runner,
+    notifier,
+    events,
+    history,
+  } = ctx;
   const presentJob = jobPresenter(ctx);
   const idParams = { type: 'object', properties: { id: { type: 'string' } } } as const;
   const dryRunBody = {
@@ -267,66 +279,39 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
     },
   );
 
-  api.get<{ Params: { id: string }; Querystring: Paging & { tab: ScanTab } }>(
-    '/api/jobs/:id/files',
+  api.get<{ Querystring: Paging & { state?: 'review' | 'unrecognized' } }>(
+    '/api/arrivals',
     {
       schema: {
-        summary: 'The files of a scan, by tab',
+        summary: 'Files that wait for a destination or a choice',
         description:
-          'The four views of a finished scan (plus `conflict`, a match whose target cannot be ' +
-          'used): `rename` (matched with confidence, still to transfer), `ambiguous` (candidates ' +
-          'to choose from), `unrecognized`, `compliant` (already named as the profile wants). A ' +
-          'file leaves its tab once handled. `counts` gives every tab, for the tab labels. ' +
-          'Transfer some of the `rename` files with `POST /api/plans/{id}/execute` and their `id`s ' +
-          'in `entries`; ambiguous ones are settled with `POST /api/queue/{id}/match`. 409 ' +
-          '`job.not-done` until the analysis finished.',
-        params: idParams,
+          'What the arrival folders (and paths sent by hand) hold that Kinoshelf could not settle ' +
+          'alone: `review` (candidates to choose from, a conflict, a failed transfer) and ' +
+          '`unrecognized`. Each file says where it would go (`destination`, a remembered work ' +
+          'winning over the default) and the libraries it could go to instead. `total` counts ' +
+          'every file of the filter, for the badge of the navigation.',
         querystring: {
           type: 'object',
-          required: ['tab'],
-          properties: { tab: { type: 'string', enum: SCAN_TABS }, ...paging },
+          properties: { state: { type: 'string', enum: ['review', 'unrecognized'] }, ...paging },
         },
-        response: { 200: scanFilesSchema, 401: errorSchema, 404: errorSchema, 409: errorSchema },
+        response: { 200: arrivalsSchema, 401: errorSchema },
       },
     },
-    (request, reply) => {
-      const job = jobs.get(request.params.id);
-      if (!job) {
-        return reply.code(404).send({ error: { code: 'job.not-found' } });
-      }
-      if (job.status !== 'done') {
-        return reply
-          .code(409)
-          .send({ error: { code: 'job.not-done', params: { status: job.status } } });
-      }
-      const { tab, limit, offset } = request.query;
-      const counts = entries.tabCounts(job.id);
+    (request) => {
+      const { state, limit, offset } = request.query;
+      const sources = service.arrivalFolders();
+      const page = entries.arrivals({
+        arrivalIds: sources.map(({ id }) => id),
+        ...(state && { state }),
+        limit: limit ?? 50,
+        offset: offset ?? 0,
+      });
       return {
-        tab,
-        total: counts[tab],
-        counts,
-        files: entries
-          .listTab(job.id, tab, { limit: limit ?? 50, offset: offset ?? 0 })
-          .map(presentScanRow),
+        total: page.total,
+        sources: sources.map(({ id, name, source }) => ({ id, name, path: source })),
+        items: page.entries.map((entry) => presentArrival(entry, service, jobs)),
       };
     },
-  );
-
-  api.get<{ Querystring: Paging }>(
-    '/api/queue',
-    {
-      schema: {
-        summary: 'Files waiting for a human decision',
-        description:
-          'Ambiguous, unrecognized and conflicting files, and files whose transfer failed.',
-        querystring: { type: 'object', properties: paging },
-        response: { 200: { type: 'array', items: entrySchema }, 401: errorSchema },
-      },
-    },
-    (request) =>
-      entries
-        .queue({ limit: request.query.limit ?? 50, offset: request.query.offset ?? 0 })
-        .map(presentEntry),
   );
 
   api.get<{
@@ -357,8 +342,11 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
     (request) => service.search(request.query),
   );
 
-  api.post<{ Params: { id: string }; Body: CandidateBody & { remember?: boolean } }>(
-    '/api/queue/:id/match',
+  api.post<{
+    Params: { id: string };
+    Body: CandidateBody & { remember?: boolean; libraryId?: string; rememberDestination?: boolean };
+  }>(
+    '/api/entries/:id/match',
     {
       schema: {
         summary: 'Validate a match',
@@ -367,13 +355,18 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
           'The file ends up `to-rename`, or in `conflict` if its target cannot be used. Unless ' +
           '`remember` is false, the title of the file is tied to the candidate: later scans match ' +
           'it alone, and the files waiting in the queue under that title are matched too (an ' +
-          'episode the work does not have stays in the queue). `rematched` counts those other files.',
+          'episode the work does not have stays in the queue). `rematched` counts those other files. ' +
+          "`libraryId` sends the file to that library (of the work's kind) rather than to the " +
+          'default one, for this file only; with `rememberDestination`, every later file of the ' +
+          'work goes there alone. Without `libraryId`, a destination remembered for the work wins.',
         params: idParams,
         body: {
           ...matchBodySchema,
           properties: {
             ...matchBodySchema.properties,
             remember: { type: 'boolean', description: 'Defaults to true' },
+            libraryId: { type: 'string' },
+            rememberDestination: { type: 'boolean', description: 'Defaults to false' },
           },
         },
         response: { 200: matchResultSchema, 401: errorSchema, 404: errorSchema, 409: errorSchema },
@@ -383,34 +376,48 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
       const { entry, rematched } = await service.match(
         request.params.id,
         toCandidate(request.body),
-        { ...(request.body.remember !== undefined && { remember: request.body.remember }) },
+        {
+          ...(request.body.remember !== undefined && { remember: request.body.remember }),
+          ...(request.body.libraryId !== undefined && { libraryId: request.body.libraryId }),
+          ...(request.body.rememberDestination !== undefined && {
+            rememberDestination: request.body.rememberDestination,
+          }),
+        },
       );
       events.emit('queue', 'settings');
       return { ...(presentEntry(entry) as object), rematched };
     },
   );
 
-  api.post<{ Params: { id: string }; Body: CandidateBody }>(
-    '/api/queue/:id/preview',
+  api.post<{ Params: { id: string }; Body: CandidateBody & { libraryId?: string } }>(
+    '/api/entries/:id/preview',
     {
       schema: {
         summary: 'Where a file would go with a candidate',
         description:
           'Plans the file like `match` does, and records nothing: the destination, and the ' +
-          'conflicts that would send it back to the queue.',
+          'conflicts that would send it back to the queue. `libraryId` previews the destination ' +
+          'in that library instead of the default one.',
         params: idParams,
-        body: matchBodySchema,
+        body: {
+          ...matchBodySchema,
+          properties: { ...matchBodySchema.properties, libraryId: { type: 'string' } },
+        },
         response: { 200: previewSchema, 401: errorSchema, 404: errorSchema, 409: errorSchema },
       },
     },
     async (request) => {
-      const item = await service.preview(request.params.id, toCandidate(request.body));
+      const item = await service.preview(
+        request.params.id,
+        toCandidate(request.body),
+        request.body.libraryId,
+      );
       return presentPlan(item);
     },
   );
 
   api.post<{ Params: { id: string } }>(
-    '/api/queue/:id/ignore',
+    '/api/entries/:id/ignore',
     {
       schema: {
         summary: 'Set a file aside',
@@ -545,6 +552,51 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
     (request, reply) => {
       if (!aliases.remove(request.params.id)) {
         return reply.code(404).send({ error: { code: 'alias.not-found' } });
+      }
+      events.emit('settings');
+      return reply.code(204).send();
+    },
+  );
+
+  api.get(
+    '/api/work-destinations',
+    {
+      schema: {
+        summary: 'The works Kinoshelf sends to a library alone',
+        description:
+          'What "Remember for this work" taught: a work tied to the library its files go to. ' +
+          'A library that no longer exists is listed as such (`library` is null): its works go ' +
+          'back to the default destination.',
+        response: { 200: { type: 'array', items: workDestinationSchema }, 401: errorSchema },
+      },
+    },
+    () =>
+      workDestinations.list().map((stored) => ({
+        ...stored,
+        library: service.libraryName(stored.libraryId) ?? null,
+      })),
+  );
+
+  api.delete<{ Params: { kind: 'movie' | 'series'; tmdbId: number } }>(
+    '/api/work-destinations/:kind/:tmdbId',
+    {
+      schema: {
+        summary: 'Forget where a work goes',
+        description: 'Its next files follow the default destination again.',
+        params: {
+          type: 'object',
+          required: ['kind', 'tmdbId'],
+          properties: {
+            kind: { type: 'string', enum: ['movie', 'series'] },
+            tmdbId: { type: 'integer' },
+          },
+        },
+        response: { 204: { type: 'null' }, 401: errorSchema, 404: errorSchema },
+      },
+    },
+    (request, reply) => {
+      if (!workDestinations.remove(request.params.kind, request.params.tmdbId)) {
+        return reply.code(404).send({ error: { code: 'work-destination.not-found' } });
       }
       events.emit('settings');
       return reply.code(204).send();

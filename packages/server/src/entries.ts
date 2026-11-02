@@ -40,6 +40,8 @@ export interface Entry {
   readonly item: PlanItem | null;
   readonly error: StoredError | null;
   readonly batchId: string | null;
+  /** The library an arrival was sent to by hand or by a remembered work; null: the default one. */
+  readonly destinationLibraryId: string | null;
 }
 
 export type JobSummary = Record<Classification, number>;
@@ -71,19 +73,19 @@ interface EntryRow {
   item: string | null;
   error: string | null;
   batch_id: string | null;
+  destination_library_id: string | null;
 }
 
 const COLUMNS =
-  'id, job_id, path, classification, resolution, parsed, outcome, item, error, batch_id';
+  'id, job_id, path, classification, resolution, parsed, outcome, item, error, batch_id, destination_library_id';
 
 /** Candidates kept per file: the runner-ups a human needs, a few kilobytes less than all of them. */
 const KEPT_CANDIDATES = 4;
 
-/** Waiting for a human: nothing decided, or an execution that failed. */
-const IN_QUEUE =
-  "((classification IN ('ambiguous', 'unrecognized', 'conflict') AND resolution IS NULL) OR resolution = 'failed')";
-
-const compact = ({ candidate, score }: ScoredCandidate): StoredCandidate => ({
+const compact = ({
+  candidate,
+  score,
+}: Pick<ScoredCandidate, 'candidate' | 'score'>): StoredCandidate => ({
   kind: candidate.kind,
   id: candidate.id,
   title: candidate.title,
@@ -117,6 +119,7 @@ function toEntry(row: EntryRow): Entry {
     item: row.item === null ? null : (JSON.parse(row.item) as PlanItem),
     error: row.error === null ? null : (JSON.parse(row.error) as StoredError),
     batchId: row.batch_id,
+    destinationLibraryId: row.destination_library_id,
   };
 }
 
@@ -165,16 +168,6 @@ export class EntryStore {
       .map(toEntry);
   }
 
-  /** Files of a scan in one of its tabs, in scan order. */
-  listTab(jobId: string, tab: ScanTab, options: { limit: number; offset: number }): Entry[] {
-    return this.database
-      .prepare<[string, number, number], EntryRow>(
-        `SELECT ${COLUMNS} FROM job_entries WHERE job_id = ? AND ${TAB_FILTERS[tab]} ORDER BY seq LIMIT ? OFFSET ?`,
-      )
-      .all(jobId, options.limit, options.offset)
-      .map(toEntry);
-  }
-
   /** What each tab of a scan holds, and how many files it already transferred. */
   tabCounts(jobId: string): ScanCounts {
     const counts = { renamed: 0 } as ScanCounts;
@@ -195,13 +188,49 @@ export class EntryStore {
     return counts;
   }
 
-  queue(options: { limit: number; offset: number }): Entry[] {
-    return this.database
-      .prepare<[number, number], EntryRow>(
-        `SELECT ${COLUMNS} FROM job_entries WHERE ${IN_QUEUE} ORDER BY seq LIMIT ? OFFSET ?`,
+  /**
+   * Files of the arrival folders (and of jobs sent by hand, which belong to none) that wait for a
+   * human: a file to choose a work for, or one whose transfer failed. A scan of a library
+   * organized in place never lands here: what it holds is already where it lives.
+   */
+  arrivals(options: {
+    arrivalIds: readonly string[];
+    state?: 'review' | 'unrecognized';
+    limit: number;
+    offset: number;
+  }): { total: number; entries: Entry[] } {
+    const marks = options.arrivalIds.map(() => '?').join(', ');
+    const review =
+      "((classification IN ('ambiguous', 'conflict') AND resolution IS NULL) OR resolution = 'failed')";
+    const unrecognized = "(classification = 'unrecognized' AND resolution IS NULL)";
+    const state =
+      options.state === 'review'
+        ? review
+        : options.state === 'unrecognized'
+          ? unrecognized
+          : `(${review} OR ${unrecognized})`;
+    const where = `${state} AND job_id IN (
+      SELECT id FROM jobs WHERE library_id IS NULL${marks ? ` OR library_id IN (${marks})` : ''})`;
+    const total =
+      this.database
+        .prepare<string[], { total: number }>(
+          `SELECT COUNT(*) AS total FROM job_entries WHERE ${where}`,
+        )
+        .get(...options.arrivalIds)?.total ?? 0;
+    const entries = this.database
+      .prepare<(string | number)[], EntryRow>(
+        `SELECT ${COLUMNS} FROM job_entries WHERE ${where} ORDER BY seq LIMIT ? OFFSET ?`,
       )
-      .all(options.limit, options.offset)
+      .all(...options.arrivalIds, options.limit, options.offset)
       .map(toEntry);
+    return { total, entries };
+  }
+
+  /** Where a file goes once transferred, chosen by hand or remembered; null: the default. */
+  setDestination(id: string, libraryId: string | null): void {
+    this.database
+      .prepare('UPDATE job_entries SET destination_library_id = ? WHERE id = ?')
+      .run(libraryId, id);
   }
 
   /** Files matched and not transferred yet (a failed attempt may be retried). */
@@ -248,13 +277,43 @@ export class EntryStore {
     return summary;
   }
 
-  /** A human chose a candidate: the file is re-planned and leaves the queue (or hits a conflict). */
-  setMatch(id: string, classification: Classification, item: PlanItem): void {
-    this.database
-      .prepare(
-        'UPDATE job_entries SET classification = ?, item = ?, resolution = NULL, error = NULL WHERE id = ?',
-      )
-      .run(classification, JSON.stringify(item), id);
+  /**
+   * A human chose a candidate: the file is re-planned and leaves the queue (or hits a conflict).
+   * The chosen work is kept first among the candidates, since a search may have found it outside
+   * what the scan proposed and its title is what the library will show.
+   */
+  setMatch(
+    id: string,
+    classification: Classification,
+    item: PlanItem,
+    chosen?: Pick<ScoredCandidate, 'candidate' | 'score'>,
+  ): void {
+    this.database.transaction(() => {
+      this.database
+        .prepare(
+          'UPDATE job_entries SET classification = ?, item = ?, resolution = NULL, error = NULL WHERE id = ?',
+        )
+        .run(classification, JSON.stringify(item), id);
+      const row = chosen
+        ? this.database
+            .prepare<[string], { outcome: string }>('SELECT outcome FROM job_entries WHERE id = ?')
+            .get(id)
+        : undefined;
+      if (chosen && row) {
+        const outcome = JSON.parse(row.outcome) as {
+          reason?: string;
+          candidates: StoredCandidate[];
+        };
+        const kept = outcome.candidates.find((c) => c.id.id === chosen.candidate.id.id);
+        const candidates = [
+          { ...compact(chosen), ...(kept && { score: kept.score }) },
+          ...outcome.candidates.filter((c) => c.id.id !== chosen.candidate.id.id),
+        ].slice(0, KEPT_CANDIDATES);
+        this.database
+          .prepare('UPDATE job_entries SET outcome = ? WHERE id = ?')
+          .run(JSON.stringify({ ...outcome, candidates }), id);
+      }
+    })();
   }
 
   resolve(

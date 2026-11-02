@@ -54,8 +54,8 @@ curl -X POST localhost:8484/api/jobs -H "Authorization: Bearer $KEY" \
 A job analyzes a file or a folder (parse, match, plan). Without `apply` nothing is written: read
 the result with `GET /api/jobs/{id}/entries`, then run `POST /api/plans/{id}/execute` (with
 `{"dryRun": true}` to see what would be done). With `apply`, the files matched with confidence are
-transferred in one batch and the others wait in the validation queue (`GET /api/queue`), where
-`POST /api/queue/{id}/match` picks a candidate found with `GET /api/search` and remembers the file's
+transferred in one batch and the others wait among the arrivals (`GET /api/arrivals`), where
+`POST /api/entries/{id}/match` picks a candidate found with `GET /api/search` and remembers the file's
 title, so later scans (and the files already waiting under that title) match it alone. Every batch can be
 undone with `POST /api/batches/{id}/undo`. Transfers are queued, survive a crash and resume at the
 next start.

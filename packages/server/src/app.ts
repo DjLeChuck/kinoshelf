@@ -6,6 +6,8 @@ import Fastify, { type FastifyInstance } from 'fastify';
 import { ApiError } from './api-error.js';
 import { hasApiKey, isValidApiKey } from './auth.js';
 import { AliasStore } from './aliases.js';
+import { ProgressTracker } from './progress.js';
+import { WorkDestinationStore } from './work-destinations.js';
 import { EntryStore } from './entries.js';
 import { EventBus, registerEventRoutes } from './events.js';
 import { ExecutionStore } from './executions.js';
@@ -90,10 +92,15 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     ajv: { customOptions: { removeAdditional: false } },
   });
   const events = new EventBus();
+  // Where each analysis is, told to the clients at most twice a second (see `ProgressTracker`).
+  const progress = new ProgressTracker(() => {
+    events.emit('jobs');
+  });
   const entries = new EntryStore(options.database);
   const executions = new ExecutionStore(options.database);
   const jobs = new JobStore(options.database, entries, executions);
   const aliases = new AliasStore(options.database);
+  const workDestinations = new WorkDestinationStore(options.database);
   const journal = options.journal?.(options.database) ?? new SqliteJournal(options.database);
   const items = new LibraryItemStore(options.database);
   const snapshot = new LibrarySnapshot({
@@ -109,6 +116,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     executions,
     journal,
     aliases,
+    workDestinations,
     snapshot,
   });
   const history = new History(journal, executions, jobs);
@@ -147,10 +155,12 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
   const runner = new JobRunner(
     jobs,
     executions,
-    options.processor ?? createProcessor(options),
+    options.processor ?? createProcessor({ ...options, progress }),
     (execution) => service.run(execution),
     {
       scanned: async (job) => {
+        // Before the snapshot and the notification: a file goes to the library its work is tied to.
+        await service.route(job);
         await snapshot.scanned(job);
         if (job.libraryId) {
           probes.enqueue(job.libraryId);
@@ -224,6 +234,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
   });
   app.addHook('onClose', async () => {
     clearInterval(purgeTimer);
+    progress.close();
     watcher.stop();
     await watcher.idle();
     await runner.stop();
@@ -348,7 +359,8 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
       details: (kind, id) => service.details(kind, id),
       events,
       runner,
-      presentJob: jobPresenter({ jobs, entries, executions }),
+      presentJob: jobPresenter({ jobs, entries, executions, progress }),
+      progress,
     });
     registerWatchRoutes(api, watcher);
     registerImageRoutes(api, {
@@ -363,11 +375,13 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
       entries,
       executions,
       aliases,
+      workDestinations,
       service,
       runner,
       notifier,
       events,
       history,
+      progress,
     });
     done();
   });

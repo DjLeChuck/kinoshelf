@@ -52,7 +52,7 @@ async function setup(options: { detailsFail?: boolean } = {}) {
 describe('metadata files in the validation queue', () => {
   it('plans the NFO of a file a human matched', async () => {
     const { h, destination, jobId, entryId } = await setup();
-    const matched = await h.request('POST', `/api/queue/${entryId}/match`, DUNE);
+    const matched = await h.request('POST', `/api/entries/${entryId}/match`, DUNE);
     expect(matched.statusCode).toBe(200);
 
     const dry = await h.request('POST', `/api/plans/${jobId}/execute`, { dryRun: true });
@@ -65,28 +65,23 @@ describe('metadata files in the validation queue', () => {
 
   it('still previews when the details cannot be fetched, but refuses to match', async () => {
     const { destination, h, entryId } = await setup({ detailsFail: true });
-    const preview = await h.request('POST', `/api/queue/${entryId}/preview`, DUNE);
+    const preview = await h.request('POST', `/api/entries/${entryId}/preview`, DUNE);
     expect(preview.statusCode).toBe(200);
     expect(preview.json<{ destination: string }>().destination).toBe(
       join(destination, 'Dune (2021)', 'Dune (2021).mkv'),
     );
 
-    const matched = await h.request('POST', `/api/queue/${entryId}/match`, DUNE);
+    const matched = await h.request('POST', `/api/entries/${entryId}/match`, DUNE);
     expect(matched.statusCode).toBeGreaterThanOrEqual(500);
     // Nothing was recorded: the file is still waiting for a decision.
-    const waiting = (await h.request('GET', '/api/queue')).json<{ id: string }[]>();
-    expect(waiting.map((e) => e.id)).toEqual([entryId]);
+    const waiting = (await h.request('GET', '/api/arrivals')).json<{ items: { id: string }[] }>();
+    expect(waiting.items.map((e) => e.id)).toEqual([entryId]);
   });
 
-  it('lists the planned NFO beside a file of the scan, then the written one in its batch', async () => {
+  it('lists the NFO written for a file a human matched in its batch', async () => {
     const { h, destination, jobId, entryId } = await setup();
-    await h.request('POST', `/api/queue/${entryId}/match`, DUNE);
+    await h.request('POST', `/api/entries/${entryId}/match`, DUNE);
     const nfo = join(destination, 'Dune (2021)', 'movie.nfo');
-
-    const scan = await h.request('GET', `/api/jobs/${jobId}/files?tab=rename`);
-    expect(scan.json<{ files: { extras: unknown[] }[] }>().files[0]?.extras).toEqual([
-      { type: 'nfo', destination: nfo },
-    ]);
 
     const execution = (await h.request('POST', `/api/plans/${jobId}/execute`)).json<{
       id: string;

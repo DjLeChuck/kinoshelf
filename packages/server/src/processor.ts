@@ -14,6 +14,7 @@ import {
 import { SqliteHttpCache, TmdbProvider } from '@kinoshelf/provider-tmdb';
 import { AliasStore } from './aliases.js';
 import type { Job, ProcessedJob } from './jobs.js';
+import type { ProgressTracker } from './progress.js';
 
 export interface ProcessorDeps {
   readonly config: Config;
@@ -22,6 +23,8 @@ export interface ProcessorDeps {
   readonly env: Readonly<Record<string, string | undefined>>;
   /** Replaces TMDB, for tests. */
   readonly createProvider?: (options: { language: string }) => MetadataProvider;
+  /** Told where each analysis is; none for the CLI and the tests that do not look. */
+  readonly progress?: ProgressTracker;
 }
 
 /**
@@ -30,47 +33,67 @@ export interface ProcessorDeps {
  */
 export function createProcessor(deps: ProcessorDeps): (job: Job) => Promise<ProcessedJob> {
   return async (job) => {
-    let isFile: boolean;
+    deps.progress?.start(job.id);
     try {
-      isFile = (await stat(job.path)).isFile();
-    } catch {
-      throw new KinoshelfError('discover.not-found', { path: job.path });
+      return await process(deps, job);
+    } finally {
+      deps.progress?.finish(job.id);
     }
+  };
+}
 
-    // The library's own profile, mode, threshold and destinations over the global ones. A release
-    // its watched folder submitted is read against the library's source: the in-place case
-    // (source = destination) must not depend on which sub-folder arrived. A library removed since
-    // the job was queued leaves the global settings.
-    const library = deps.config.libraries?.find(({ id }) => id === job.libraryId);
-    const settings = await resolveSettings(
-      library ? libraryOverrides(library, deps.config.libraries ?? []) : {},
-      deps.config,
-      {
-        source: library ? library.source : job.path,
-        sourceIsFile: library ? false : isFile,
-        defaultToSource: false,
-        defaultMetadataLanguage: deps.config.locale === 'fr' ? 'fr' : 'en-US',
-      },
-    );
+async function process(deps: ProcessorDeps, job: Job): Promise<ProcessedJob> {
+  let isFile: boolean;
+  try {
+    isFile = (await stat(job.path)).isFile();
+  } catch {
+    throw new KinoshelfError('discover.not-found', { path: job.path });
+  }
 
-    const analysis = await analyze(await discoverVideos(job.path), {
-      parser: new GuessitParser(),
-      provider: makeProvider(deps, settings.metadataLanguage),
-      profile: settings.profile,
-      destinationRoot: settings.destinations,
+  // The library's own profile, mode, threshold and destinations over the global ones. A release
+  // its watched folder submitted is read against the library's source: the in-place case
+  // (source = destination) must not depend on which sub-folder arrived. A library removed since
+  // the job was queued leaves the global settings.
+  const library = deps.config.libraries?.find(({ id }) => id === job.libraryId);
+  const settings = await resolveSettings(
+    library ? libraryOverrides(library, deps.config.libraries ?? []) : {},
+    deps.config,
+    {
+      source: library ? library.source : job.path,
+      sourceIsFile: library ? false : isFile,
+      defaultToSource: false,
+      defaultMetadataLanguage: deps.config.locale === 'fr' ? 'fr' : 'en-US',
+    },
+  );
+
+  const progress = deps.progress;
+  const files = await discoverVideos(job.path, undefined, (found) => {
+    progress?.found(job.id, found);
+  });
+  progress?.discovered(job.id, files.length);
+  const analysis = await analyze(files, {
+    parser: new GuessitParser(),
+    provider: makeProvider(deps, settings.metadataLanguage),
+    profile: settings.profile,
+    destinationRoot: settings.destinations,
+    mode: settings.mode,
+    // What a validation taught applies to every later scan.
+    aliases: new AliasStore(deps.database),
+    onProgress: (done, total, file) => {
+      progress?.identified(job.id, done, total, file.displayPath);
+    },
+    onPlanning: () => {
+      progress?.planning(job.id);
+    },
+    ...(settings.threshold !== undefined && { matching: { threshold: settings.threshold } }),
+  });
+  return {
+    analysis,
+    settings: {
+      profile: library?.profile ?? deps.config.profile ?? 'plex',
       mode: settings.mode,
-      // What a validation taught applies to every later scan.
-      aliases: new AliasStore(deps.database),
-      ...(settings.threshold !== undefined && { matching: { threshold: settings.threshold } }),
-    });
-    return {
-      analysis,
-      settings: {
-        profile: library?.profile ?? deps.config.profile ?? 'plex',
-        mode: settings.mode,
-        destinationRoot: settings.destinations,
-      },
-    };
+      destinationRoot: settings.destinations,
+    },
   };
 }
 

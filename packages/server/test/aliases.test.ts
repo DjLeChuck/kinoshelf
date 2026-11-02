@@ -50,7 +50,7 @@ describe('remembered titles', () => {
     const { named } = await scan(h, ['Duna.2021.1080p.mkv']);
     expect((await h.request('GET', '/api/aliases')).json()).toEqual([]);
 
-    await h.request('POST', `/api/queue/${named('Duna.2021.1080p.mkv').id}/match`, DUNE);
+    await h.request('POST', `/api/entries/${named('Duna.2021.1080p.mkv').id}/match`, DUNE);
 
     const aliases = (await h.request('GET', '/api/aliases')).json<AliasBody[]>();
     expect(aliases).toHaveLength(1);
@@ -71,7 +71,7 @@ describe('remembered titles', () => {
       'Mystery.Home.Video.mkv',
     ]);
 
-    await h.request('POST', `/api/queue/${named('Duna.2021.1080p.mkv').id}/match`, DUNE);
+    await h.request('POST', `/api/entries/${named('Duna.2021.1080p.mkv').id}/match`, DUNE);
 
     expect(await classificationOf(h, jobId, 'Duna.2021.720p.mkv')).toBe('to-rename');
     expect(await classificationOf(h, jobId, 'Duna.1984.mkv')).toBe('unrecognized');
@@ -89,7 +89,7 @@ describe('remembered titles', () => {
 
     const matched = await h.request(
       'POST',
-      `/api/queue/${named('Duna.2021.1080p.mkv').id}/match`,
+      `/api/entries/${named('Duna.2021.1080p.mkv').id}/match`,
       DUNE,
     );
     expect(matched.json<{ rematched: number }>().rematched).toBe(2);
@@ -100,14 +100,14 @@ describe('remembered titles', () => {
     const { named } = await scan(h, ['Duna.2021.1080p.mkv', 'Duna.2021.720p.mkv']);
     const declined = await h.request(
       'POST',
-      `/api/queue/${named('Duna.2021.1080p.mkv').id}/match`,
+      `/api/entries/${named('Duna.2021.1080p.mkv').id}/match`,
       { ...DUNE, remember: false },
     );
     expect(declined.json<{ rematched: number }>().rematched).toBe(0);
 
     const alone = await h.request(
       'POST',
-      `/api/queue/${named('Duna.2021.720p.mkv').id}/match`,
+      `/api/entries/${named('Duna.2021.720p.mkv').id}/match`,
       DUNE,
     );
     expect(alone.json<{ rematched: number }>().rematched).toBe(0);
@@ -123,7 +123,7 @@ describe('remembered titles', () => {
 
     const first = await h.request(
       'POST',
-      `/api/queue/${named('Duna.2021.1080p.mkv').id}/match`,
+      `/api/entries/${named('Duna.2021.1080p.mkv').id}/match`,
       DUNE,
     );
     expect(first.json<{ rematched: number }>().rematched).toBe(0);
@@ -133,7 +133,7 @@ describe('remembered titles', () => {
   it('lets a later scan match the title alone', async () => {
     const h = await harness();
     const first = await scan(h, ['Duna.2021.1080p.mkv']);
-    await h.request('POST', `/api/queue/${first.named('Duna.2021.1080p.mkv').id}/match`, DUNE);
+    await h.request('POST', `/api/entries/${first.named('Duna.2021.1080p.mkv').id}/match`, DUNE);
 
     const later = await scan(h, ['Duna.2021.2160p.mkv']);
     expect(await classificationOf(h, later.jobId, 'Duna.2021.2160p.mkv')).toBe('to-rename');
@@ -143,7 +143,7 @@ describe('remembered titles', () => {
     const h = await harness();
     const { jobId, named } = await scan(h, ['Duna.2021.1080p.mkv', 'Duna.2021.720p.mkv']);
 
-    await h.request('POST', `/api/queue/${named('Duna.2021.1080p.mkv').id}/match`, {
+    await h.request('POST', `/api/entries/${named('Duna.2021.1080p.mkv').id}/match`, {
       ...DUNE,
       remember: false,
     });
@@ -155,14 +155,14 @@ describe('remembered titles', () => {
   it('does not remember a film chosen for a file read as an episode', async () => {
     const h = await harness();
     const { named } = await scan(h, ['Duna.S01E02.1080p.mkv']);
-    await h.request('POST', `/api/queue/${named('Duna.S01E02.1080p.mkv').id}/match`, DUNE);
+    await h.request('POST', `/api/entries/${named('Duna.S01E02.1080p.mkv').id}/match`, DUNE);
     expect((await h.request('GET', '/api/aliases')).json()).toEqual([]);
   });
 
   it('forgets a title on request, so the next scan reads it afresh', async () => {
     const h = await harness();
     const first = await scan(h, ['Duna.2021.1080p.mkv']);
-    await h.request('POST', `/api/queue/${first.named('Duna.2021.1080p.mkv').id}/match`, DUNE);
+    await h.request('POST', `/api/entries/${first.named('Duna.2021.1080p.mkv').id}/match`, DUNE);
     const [alias] = (await h.request('GET', '/api/aliases')).json<AliasBody[]>();
 
     expect((await h.request('DELETE', `/api/aliases/${alias?.id ?? 0}`)).statusCode).toBe(204);
@@ -176,7 +176,7 @@ describe('remembered titles', () => {
   it('keeps the latest choice when a title is tied twice', async () => {
     const h = await harness();
     const { named } = await scan(h, ['Duna.2021.1080p.mkv', 'Alien.1979.mkv']);
-    await h.request('POST', `/api/queue/${named('Duna.2021.1080p.mkv').id}/match`, DUNE);
+    await h.request('POST', `/api/entries/${named('Duna.2021.1080p.mkv').id}/match`, DUNE);
     // The first file left the queue; a second file with the same key is tied to another film.
     const again = await scan(h, ['Duna.2021.720p.mkv']);
     expect(

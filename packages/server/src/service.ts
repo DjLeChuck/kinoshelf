@@ -12,6 +12,7 @@ import {
   type Classification,
   type ErrorInfo,
   type Journal,
+  type LibraryConfig,
   type MetadataProvider,
   type MovieDetails,
   type SeriesDetails,
@@ -24,10 +25,11 @@ import {
 } from '@kinoshelf/core';
 import { ApiError } from './api-error.js';
 import type { AliasStore } from './aliases.js';
-import type { EntryStore, Entry, StoredError } from './entries.js';
+import type { EntryStore, Entry, StoredCandidate, StoredError } from './entries.js';
 import type { Execution, ExecutionStore } from './executions.js';
 import type { Job, JobStore, PlanSettings } from './jobs.js';
 import type { LibrarySnapshot } from './library-items.js';
+import type { WorkDestinationStore } from './work-destinations.js';
 import type { ExecutionOutcome, OutcomeFile } from './notify/message.js';
 import { makeProvider, type ProcessorDeps } from './processor.js';
 
@@ -81,6 +83,7 @@ export interface ServiceDeps extends ProcessorDeps {
   readonly executions: ExecutionStore;
   readonly journal: Journal;
   readonly aliases: AliasStore;
+  readonly workDestinations: WorkDestinationStore;
   /** What each library holds, kept in step with what is matched, transferred and undone. */
   readonly snapshot: LibrarySnapshot;
 }
@@ -122,11 +125,16 @@ export class Service {
   async match(
     entryId: string,
     candidate: Candidate,
-    options: { remember?: boolean } = {},
+    options: { remember?: boolean; libraryId?: string; rememberDestination?: boolean } = {},
   ): Promise<MatchResult> {
     const entry = this.pendingEntry(entryId);
-    const item = await this.planWith(entry, candidate);
-    this.deps.entries.setMatch(entry.id, classify(item), item);
+    const libraryId = this.chosenLibrary(entry, candidate, options.libraryId);
+    const item = await this.planWith(entry, candidate, { libraryId });
+    this.deps.entries.setMatch(entry.id, classify(item), item, { candidate, score: 100 });
+    this.deps.entries.setDestination(entry.id, libraryId);
+    if (options.rememberDestination && libraryId !== null) {
+      this.deps.workDestinations.remember(candidate.kind, candidate.id.id, libraryId);
+    }
     await this.deps.snapshot.matched(this.require(entry.id), candidate);
     const rematched = (options.remember ?? true) ? await this.remember(entry, candidate) : 0;
     return { entry: this.require(entry.id), rematched };
@@ -194,7 +202,7 @@ export class Service {
         }
         const item = await this.planWith(other, outcome.best.candidate);
         const classification = classify(item);
-        entries.setMatch(other.id, classification, item);
+        entries.setMatch(other.id, classification, item, outcome.best);
         if (classification !== 'conflict') {
           rematched++;
         }
@@ -231,9 +239,9 @@ export class Service {
   private async planWith(
     entry: Entry,
     candidate: Candidate,
-    options: { lenient?: boolean } = {},
+    options: { lenient?: boolean; libraryId?: string | null } = {},
   ): Promise<PlanItem> {
-    const settings = this.settingsOf(entry.jobId);
+    const settings = this.settingsFor(entry, options.libraryId);
     const profile = await loadProfile(settings.profile);
     const provider = this.provider();
     const loader = new MetadataLoader({ provider, profile });
@@ -259,9 +267,130 @@ export class Service {
   }
 
   /** Where the file would go with this candidate, without recording anything. */
-  async preview(entryId: string, candidate: Candidate): Promise<PlanItem> {
+  async preview(entryId: string, candidate: Candidate, libraryId?: string): Promise<PlanItem> {
     const entry = this.pendingEntry(entryId);
-    return this.planWith(entry, candidate, { lenient: true });
+    return this.planWith(entry, candidate, {
+      lenient: true,
+      libraryId: this.chosenLibrary(entry, candidate, libraryId),
+    });
+  }
+
+  /**
+   * Where a file of an arrival goes by default, and whether a remembered work decided it. An
+   * arrival is told by its job: one of an arrival folder (its `into`), or sent by hand, which
+   * goes to the first library of its kind. `null` for a file of a library organized in place
+   * (it stays where it is) or one whose kind is unknown.
+   */
+  destinationOf(entry: Entry): { libraryId: string | null; remembered: boolean } {
+    const chosen = this.typedLibrary(entry.destinationLibraryId);
+    const work = entry.item?.externalId;
+    const kind = kindOf(entry);
+    const remembered =
+      chosen !== undefined &&
+      work !== undefined &&
+      kind !== null &&
+      this.deps.workDestinations.find(kind, work.id) === chosen.id;
+    return { libraryId: (chosen ?? this.defaultLibrary(entry))?.id ?? null, remembered };
+  }
+
+  /** A library's name by id; `undefined` once it is gone. */
+  libraryName(id: string): string | undefined {
+    return this.deps.config.libraries?.find((library) => library.id === id)?.name;
+  }
+
+  /** The arrival folders: where files wait for a destination. */
+  arrivalFolders(): LibraryConfig[] {
+    return (this.deps.config.libraries ?? []).filter(({ into }) => into !== undefined);
+  }
+
+  /** The libraries a file could go to: the typed ones of its kind, all of them if it has none. */
+  destinationOptions(entry: Entry): LibraryConfig[] {
+    const kind = kindOf(entry);
+    return (this.deps.config.libraries ?? []).filter(
+      ({ type }) => type !== undefined && (kind === null || type === kind),
+    );
+  }
+
+  /**
+   * Arrivals whose work the user asked to remember go to its library alone: a job of an arrival
+   * folder (or sent by hand) is looked at once stored, and each file already matched with
+   * confidence is planned again for that library (its profile, its root). Files that are not
+   * matched keep waiting: their choice is for a human.
+   */
+  async route(job: Job): Promise<void> {
+    const library = this.deps.config.libraries?.find(({ id }) => id === job.libraryId);
+    if (library?.type !== undefined) {
+      return;
+    }
+    for (const entry of this.deps.entries.executable(job.id)) {
+      const kind = kindOf(entry);
+      const best = entry.candidates[0];
+      const id = entry.item?.externalId.id;
+      if (kind === null || id === undefined || best?.id.id !== id) {
+        continue;
+      }
+      const target = this.typedLibrary(this.deps.workDestinations.find(kind, id));
+      const planned = target ?? this.defaultLibrary(entry);
+      if (!planned || planned.type !== kind) {
+        continue;
+      }
+      // Planned again also when the default library has a profile of its own: the analysis used
+      // the global one, and the names must follow the library they end up in. A file that cannot
+      // be (the provider is down) keeps its plan: the default destination is still a good one.
+      try {
+        const item = await this.planWith(entry, toCandidate(best), { libraryId: planned.id });
+        this.deps.entries.setMatch(entry.id, classify(item), item);
+        if (target) {
+          this.deps.entries.setDestination(entry.id, target.id);
+        }
+      } catch {
+        continue;
+      }
+    }
+  }
+
+  private typedLibrary(id: string | null | undefined): LibraryConfig | undefined {
+    return id == null
+      ? undefined
+      : this.deps.config.libraries?.find((library) => library.id === id && library.type);
+  }
+
+  /**
+   * Where an arrival goes by default. A file of a library organized in place is not an arrival:
+   * what its scan planned stands.
+   */
+  private defaultLibrary(entry: Entry): LibraryConfig | undefined {
+    const kind = kindOf(entry);
+    const libraries = this.deps.config.libraries ?? [];
+    const job = this.deps.jobs.get(entry.jobId);
+    const from = libraries.find(({ id }) => id === job?.libraryId);
+    if (kind === null || from?.type !== undefined) {
+      return undefined;
+    }
+    const id = from?.into?.[kind];
+    return id === undefined
+      ? libraries.find(({ type }) => type === kind)
+      : libraries.find((library) => library.id === id);
+  }
+
+  /** The library a human or a remembered work picks for a candidate, checked against its kind. */
+  private chosenLibrary(entry: Entry, candidate: Candidate, asked?: string): string | null {
+    if (asked !== undefined) {
+      const library = this.deps.config.libraries?.find(({ id }) => id === asked);
+      if (!library) {
+        throw new ApiError(404, 'library.not-found');
+      }
+      if (library.type !== candidate.kind) {
+        throw new ApiError(422, 'library.wrong-type', { name: library.name });
+      }
+      return library.id;
+    }
+    const remembered = this.typedLibrary(
+      this.deps.workDestinations.find(candidate.kind, candidate.id.id),
+    );
+    const current = this.typedLibrary(entry.destinationLibraryId);
+    const chosen = [remembered, current].find((library) => library?.type === candidate.kind);
+    return chosen?.id ?? null;
   }
 
   ignore(entryId: string): Entry {
@@ -271,16 +400,20 @@ export class Service {
 
   /** What a transfer of the job would do, checked against the disk, with nothing written. */
   async dryRun(jobId: string, entryIds?: readonly string[]): Promise<ExecutionReport> {
-    const { plan, entryOfItem } = await this.prepare(jobId, entryIds);
-    const batch = await executePlan(plan, { journal: this.deps.journal, dryRun: true });
-    return {
-      batchId: batch.batchId,
-      dryRun: true,
-      items: batch.items.map((result) => ({
-        entryId: entryOfItem.get(result.itemId)?.id ?? result.itemId,
-        results: result.results.map(report),
-      })),
-    };
+    const groups = await this.prepare(jobId, entryIds);
+    const items: ExecutionReport['items'][number][] = [];
+    let batchId = '';
+    for (const { plan, entryOfItem } of groups) {
+      const batch = await executePlan(plan, { journal: this.deps.journal, dryRun: true });
+      batchId ||= batch.batchId;
+      items.push(
+        ...batch.items.map((result) => ({
+          entryId: entryOfItem.get(result.itemId)?.id ?? result.itemId,
+          results: result.results.map(report),
+        })),
+      );
+    }
+    return { batchId, dryRun: true, items };
   }
 
   /**
@@ -300,10 +433,7 @@ export class Service {
    * after a crash the execution only has what is left to do.
    */
   async run(execution: Execution): Promise<ExecutionOutcome> {
-    const { plan, entryOfItem } = await this.prepare(
-      execution.jobId,
-      execution.entryIds ?? undefined,
-    );
+    const groups = await this.prepare(execution.jobId, execution.entryIds ?? undefined);
     // A resumed execution keeps its batch: what it did before the crash and what it does now are
     // one batch in the journal, so one undo reverts them all.
     const batchId = execution.batchId ?? randomUUID();
@@ -315,22 +445,16 @@ export class Service {
     let failed = 0;
     const files: OutcomeFile[] = [];
     const settled: { entry: Entry; results: readonly OperationResult[] }[] = [];
-    await executePlan(plan, {
-      journal: this.deps.journal,
-      batchId,
-      onItem: (result) => {
-        const entry = entryOfItem.get(result.itemId);
-        if (!entry) {
-          return;
-        }
-        const status = this.settle(entry, result.results, batchId);
-        settled.push({ entry, results: result.results });
+    for (const { plan, entryOfItem } of groups) {
+      await this.transferGroup(plan, entryOfItem, batchId, (entry, results) => {
+        const status = this.settle(entry, results, batchId);
+        settled.push({ entry, results });
         if (status === 'done') {
           done++;
         } else {
           failed++;
         }
-        const main = result.results.find(
+        const main = results.find(
           (r) => r.operation.type === 'transfer' && r.operation.role === 'main',
         );
         files.push({
@@ -340,35 +464,73 @@ export class Service {
           status,
           ...(status === 'failed' && { error: main?.error ?? { code: 'main-not-done' } }),
         });
-      },
-    });
+      });
+    }
     await this.deps.snapshot.transferred(execution.jobId, settled);
     return { summary: { done, failed }, files };
   }
 
-  /** The plan of a job: its matched files not transferred yet, optionally only some of them. */
+  private async transferGroup(
+    plan: Plan,
+    entryOfItem: ReadonlyMap<string, Entry>,
+    batchId: string,
+    settle: (entry: Entry, results: readonly OperationResult[]) => void,
+  ): Promise<void> {
+    await executePlan(plan, {
+      journal: this.deps.journal,
+      batchId,
+      onItem: (result) => {
+        const entry = entryOfItem.get(result.itemId);
+        if (entry) {
+          settle(entry, result.results);
+        }
+      },
+    });
+  }
+
+  /**
+   * The plans of a job: its matched files not transferred yet, optionally only some of them. A
+   * plan has one profile and one root, so files bound for different libraries make different
+   * plans (executed under one batch). There is always at least one, possibly empty.
+   */
   private async prepare(
     jobId: string,
     entryIds?: readonly string[],
-  ): Promise<{ plan: Plan; entryOfItem: Map<string, Entry> }> {
+  ): Promise<{ plan: Plan; entryOfItem: Map<string, Entry> }[]> {
     const job = this.requireDoneJob(jobId);
     const selected = entryIds && new Set(entryIds);
     const entries = this.deps.entries
       .executable(jobId)
-      .filter((entry) => !selected || selected.has(entry.id));
+      .filter((entry) => entry.item && (!selected || selected.has(entry.id)));
 
-    const settings = this.settingsOf(jobId);
-    const profile = await loadProfile(settings.profile);
-    const plan: Plan = {
-      id: job.id,
-      createdAt: new Date().toISOString(),
-      profileId: profile.id,
-      destinationRoot: settings.destinationRoot,
-      mode: settings.mode,
-      items: entries.flatMap((entry) => (entry.item ? [entry.item] : [])),
-    };
-    const entryOfItem = new Map(entries.flatMap((e) => (e.item ? [[e.item.id, e] as const] : [])));
-    return { plan, entryOfItem };
+    const groups = new Map<string, { settings: PlanSettings; entries: Entry[] }>();
+    for (const entry of entries) {
+      const settings = this.settingsFor(entry);
+      const key = JSON.stringify(settings);
+      const group = groups.get(key) ?? { settings, entries: [] };
+      group.entries.push(entry);
+      groups.set(key, group);
+    }
+    if (groups.size === 0) {
+      groups.set('', { settings: this.settingsOf(jobId), entries: [] });
+    }
+    return Promise.all(
+      [...groups.values()].map(async ({ settings, entries: members }, index) => {
+        const profile = await loadProfile(settings.profile);
+        const plan: Plan = {
+          id: index === 0 ? job.id : `${job.id}#${String(index + 1)}`,
+          createdAt: new Date().toISOString(),
+          profileId: profile.id,
+          destinationRoot: settings.destinationRoot,
+          mode: settings.mode,
+          items: members.flatMap((entry) => (entry.item ? [entry.item] : [])),
+        };
+        const entryOfItem = new Map(
+          members.flatMap((entry) => (entry.item ? [[entry.item.id, entry] as const] : [])),
+        );
+        return { plan, entryOfItem };
+      }),
+    );
   }
 
   private requireDoneJob(jobId: string): Job {
@@ -454,6 +616,25 @@ export class Service {
     return entry;
   }
 
+  /**
+   * How a file is planned and transferred: what its job used, except where it goes. A file sent
+   * to a library (by hand, by a remembered work, or by default for an arrival) takes that
+   * library's profile and root; the mode stays the one of its source.
+   */
+  private settingsFor(entry: Entry, libraryId?: string | null): PlanSettings {
+    const base = this.settingsOf(entry.jobId);
+    const library =
+      this.typedLibrary(libraryId ?? entry.destinationLibraryId) ?? this.defaultLibrary(entry);
+    if (!library) {
+      return base;
+    }
+    return {
+      profile: library.profile ?? this.deps.config.profile ?? 'plex',
+      mode: base.mode,
+      destinationRoot: library.source,
+    };
+  }
+
   private settingsOf(jobId: string): PlanSettings {
     const settings = this.deps.jobs.settings(jobId);
     if (!settings) {
@@ -469,4 +650,20 @@ function classify(item: PlanItem): Classification {
     : item.status === 'in-place'
       ? 'compliant'
       : 'conflict';
+}
+
+const kindOf = (entry: Pick<Entry, 'parsed'>): 'movie' | 'series' | null =>
+  entry.parsed.kind === 'movie' ? 'movie' : entry.parsed.kind === 'episode' ? 'series' : null;
+
+/** What the planner reads of a candidate the queue kept: title, year and id. */
+function toCandidate(stored: StoredCandidate): Candidate {
+  return {
+    kind: stored.kind,
+    id: stored.id,
+    title: stored.title,
+    originalTitle: stored.originalTitle,
+    alternativeTitles: [],
+    ...(stored.year !== undefined && { year: stored.year }),
+    ...(stored.posterPath !== undefined && { posterPath: stored.posterPath }),
+  };
 }

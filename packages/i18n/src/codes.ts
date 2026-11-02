@@ -44,6 +44,7 @@ export const API_ERROR_CODES = [
   'library.not-typed',
   'library.scan-in-progress',
   'library.source-taken',
+  'library.wrong-type',
   'queue.entry-not-found',
   'queue.entry-resolved',
   'request.invalid',
@@ -55,6 +56,7 @@ export const API_ERROR_CODES = [
   'settings.webhook-not-found',
   'settings.webhook-url-required',
   'watch.not-configured',
+  'work-destination.not-found',
 ] as const;
 
 export type ApiErrorCode = (typeof API_ERROR_CODES)[number];
