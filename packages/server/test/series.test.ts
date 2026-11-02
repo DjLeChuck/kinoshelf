@@ -1,3 +1,4 @@
+import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { loadConfig } from '@kinoshelf/core';
 import type { MetadataProvider, SeasonInfo, SeriesDetails } from '@kinoshelf/core';
@@ -380,5 +381,88 @@ describe('an episode that arrives', () => {
       .json<{ path: string; destination: string }[]>()
       .filter((entry) => entry.path.endsWith('Severance.S01E03.1080p.mkv'));
     expect(episode?.destination.startsWith(roots.anime)).toBe(true);
+  });
+});
+
+const SHOW_PROFILE = `
+id: show-files-test
+name: Show files test
+episodeRangeSeparator: '-e'
+templates:
+  movieFolder: '{title} ({year})'
+  movieFile: '{title} ({year})'
+  seriesFolder: '{title}'
+  seasonFolder: 'Season {season:02}'
+  episodeFile: '{title} - s{season:02}e{episode:02}'
+nfo: { format: kodi, movie: movie.nfo, episode: '{file}.nfo', series: tvshow.nfo }
+artwork:
+  - { kind: poster, name: poster.jpg }
+  - { kind: fanart, name: fanart.jpg }
+  - { kind: season-poster, name: poster.jpg }
+filesystem: { forbidden: posix, replacement: '', maxSegmentBytes: 255 }
+`;
+
+describe('the files of a show and of its seasons', () => {
+  it('are looked for on the disk after a scan, and again when it changes', async () => {
+    const profile = join(await makeDir(), 'show-files.yaml');
+    await writeFile(profile, SHOW_PROFILE);
+    const root = await makeDir();
+    const show = join(root, 'Severance');
+    await put(join(show, 'Season 01', 'Severance - s01e01.mkv'));
+    await put(join(show, 'Season 02', 'Severance - s02e01.mkv'));
+    await put(join(show, 'tvshow.nfo'), '<tvshow/>');
+    await put(join(show, 'poster.jpg'), 'image');
+    await put(join(show, 'Season 01', 'poster.jpg'), 'image');
+    const h = await harness({
+      config: {
+        libraries: [
+          { id: 'films', name: 'Films', source: await makeDir(), type: 'movie' },
+          { id: 'shows', name: 'Shows', source: root, type: 'series', profile },
+        ],
+      },
+      createProvider: () => provider(),
+    });
+    const scan = async (): Promise<void> => {
+      await h.request('POST', '/api/libraries/shows/scan');
+      await h.app.jobs.idle();
+      await h.app.seriesFiles.idle();
+    };
+    const listed = async () =>
+      (await h.request('GET', '/api/libraries/shows/shows')).json<{
+        items: { nfo: boolean | null; poster: boolean | null; fanart: boolean | null }[];
+      }>().items[0];
+    const seasonPosters = async () =>
+      (await h.request('GET', '/api/libraries/shows/shows/95396'))
+        .json<{ seasons: { season: number; poster: boolean | null }[] }>()
+        // The specials hold no file here: nothing to say of them.
+        .seasons.filter(({ season }) => season > 0)
+        .map(({ season, poster }) => [season, poster]);
+
+    // Not looked at yet before the first scan ends: nothing is claimed.
+    await scan();
+    expect(await listed()).toMatchObject({ nfo: true, poster: true, fanart: false });
+    // The season poster is a season's own file, not the show's.
+    expect(await seasonPosters()).toEqual([
+      [1, true],
+      [2, false],
+    ]);
+
+    await put(join(show, 'fanart.jpg'), 'image');
+    await put(join(show, 'Season 02', 'poster.jpg'), 'image');
+    await scan();
+    expect(await listed()).toMatchObject({ fanart: true });
+    expect(await seasonPosters()).toEqual([
+      [1, true],
+      [2, true],
+    ]);
+  });
+
+  it('are not claimed for a show whose videos are not in place yet', async () => {
+    const { h } = await scanned();
+    await h.app.seriesFiles.idle();
+    const [row] = (await h.request('GET', '/api/libraries/shows/shows')).json<{
+      items: { nfo: boolean | null; poster: boolean | null; fanart: boolean | null }[];
+    }>().items;
+    expect(row).toMatchObject({ nfo: null, poster: null, fanart: null });
   });
 });

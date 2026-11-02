@@ -897,9 +897,22 @@ export const libraryItemSchema = {
   },
 } as const;
 
+const presenceDescription = (file: string): string =>
+  `${file} is on the disk. \`null\`: the profile does not write it, or no scan or change has looked yet.`;
+
 export const showSchema = {
   type: 'object',
-  required: ['tmdbId', 'title', 'year', 'seasons', 'episodes', 'missing'],
+  required: [
+    'tmdbId',
+    'title',
+    'year',
+    'seasons',
+    'episodes',
+    'missing',
+    'nfo',
+    'poster',
+    'fanart',
+  ],
   properties: {
     tmdbId: { type: 'integer' },
     title: { type: 'string', nullable: true },
@@ -911,16 +924,32 @@ export const showSchema = {
       nullable: true,
       description: 'Aired episodes no file holds, as last counted; `null` until it was.',
     },
+    nfo: { type: 'boolean', nullable: true, description: presenceDescription('`tvshow.nfo`') },
+    poster: {
+      type: 'boolean',
+      nullable: true,
+      description: presenceDescription('The show poster'),
+    },
+    fanart: {
+      type: 'boolean',
+      nullable: true,
+      description: presenceDescription('The show fanart'),
+    },
   },
 } as const;
 
 export const seasonSchema = {
   type: 'object',
-  required: ['season', 'name', 'posterPath', 'missing', 'episodes'],
+  required: ['season', 'name', 'posterPath', 'poster', 'missing', 'episodes'],
   properties: {
     season: { type: 'integer', description: '0 is the specials.' },
     name: { type: 'string', nullable: true },
     posterPath: { type: 'string', nullable: true },
+    poster: {
+      type: 'boolean',
+      nullable: true,
+      description: presenceDescription('The season poster'),
+    },
     missing: { type: 'integer', description: 'Always 0 for the specials.' },
     episodes: {
       type: 'array',

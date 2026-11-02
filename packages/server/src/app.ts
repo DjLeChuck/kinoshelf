@@ -23,6 +23,7 @@ import { registerFsRoutes } from './fs-routes.js';
 import { registerLibraryRoutes } from './library-routes.js';
 import { jobPresenter, registerRoutes } from './routes.js';
 import { Completeness, CompletenessStore } from './completeness.js';
+import { SeriesFiles, SeriesFilesStore } from './series-files.js';
 import { ffprobe, ProbeQueue, type Prober } from './probe.js';
 import { LibraryItemStore, LibrarySnapshot } from './library-items.js';
 import { JobRunner, type JobProcessor } from './runner.js';
@@ -48,6 +49,8 @@ declare module 'fastify' {
     probes: ProbeQueue;
     /** Counts the missing episodes of the shows in the background; tests await `completeness.idle()`. */
     completeness: Completeness;
+    /** Looks for the NFO and images of the shows in the background; tests await `seriesFiles.idle()`. */
+    seriesFiles: SeriesFiles;
     /** The folder watcher; tests await `watcher.idle()`. */
     watcher: FolderWatcher;
   }
@@ -113,6 +116,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     store: items,
     changed: (libraryId) => {
       completeness.touch(libraryId);
+      seriesFiles.touch(libraryId);
     },
   });
   const service = new Service({
@@ -166,6 +170,19 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     busy: () => runner.busy,
     onError: (error) => {
       app.log.warn(error, 'Could not count the missing episodes of a show');
+    },
+  });
+  const seriesFilesStore = new SeriesFilesStore(options.database);
+  // Looks for the files of a show and of a season once a library's rows change.
+  const seriesFiles = new SeriesFiles({
+    config: () => options.config,
+    items,
+    store: seriesFilesStore,
+    onError: (error) => {
+      app.log.warn(error, 'Could not look for the files of a show');
+    },
+    refreshed: () => {
+      events.emit('history');
     },
   });
   const runner = new JobRunner(
@@ -223,6 +240,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
   app.decorate('jobs', runner);
   app.decorate('probes', probes);
   app.decorate('completeness', completeness);
+  app.decorate('seriesFiles', seriesFiles);
   app.decorate('watcher', watcher);
   app.decorate('notifier', notifier);
 
@@ -241,6 +259,9 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     );
     probes.rebuild(typed);
     completeness.rebuild(typed);
+    typed.forEach((id) => {
+      seriesFiles.touch(id);
+    });
     watcher.configure(watcherSettings(options.config));
     if (options.retentionDays) {
       purge();
@@ -258,6 +279,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     watcher.stop();
     await watcher.idle();
     await runner.stop();
+    await seriesFiles.idle();
     await probes.stop();
     await completeness.stop();
     await notifier.idle();
@@ -378,6 +400,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
       items,
       probes,
       completeness,
+      seriesFiles: seriesFilesStore,
       batch: {
         dryRun: (jobId, entryIds) => service.dryRun(jobId, entryIds),
         enqueue: (jobId, entryIds) => service.enqueue(jobId, entryIds),

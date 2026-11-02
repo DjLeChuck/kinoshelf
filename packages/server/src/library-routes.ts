@@ -11,6 +11,7 @@ import {
 } from '@kinoshelf/core';
 import type { FastifyInstance } from 'fastify';
 import { ApiError } from './api-error.js';
+import type { SeriesFilesStore } from './series-files.js';
 import { compare, missingOf, type Completeness, type EpisodeReport } from './completeness.js';
 import type { Execution } from './executions.js';
 import type { ProbeQueue } from './probe.js';
@@ -53,6 +54,7 @@ export interface LibraryContext {
   readonly probes: ProbeQueue;
   /** The missing episodes of a show, counted on opening it (and in the background otherwise). */
   readonly completeness: Completeness;
+  readonly seriesFiles: SeriesFilesStore;
   /** Plans and queues the transfers of a scan's files (see `POST /api/plans/{id}/execute`). */
   readonly batch: {
     readonly dryRun: (jobId: string, entryIds: readonly string[]) => Promise<ExecutionReport>;
@@ -736,6 +738,7 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
           season: season.season,
           name: season.name,
           posterPath: season.posterPath?.replace(/^\//, '') ?? null,
+          poster: ctx.seriesFiles.get(library.id, tmdbId, season.season)?.poster ?? null,
           missing: season.missing,
           episodes: season.episodes.map(presentEpisode),
         })),

@@ -335,9 +335,12 @@ export class LibraryItemStore {
         COUNT(DISTINCT i.season) AS seasons,
         SUM(CASE WHEN i.episode IS NULL THEN 1
                  ELSE COALESCE(i.episode_end, i.episode) - i.episode + 1 END) AS episodes,
-        MAX(c.missing) AS missing
+        MAX(c.missing) AS missing,
+        MAX(f.nfo) AS nfo, MAX(f.poster) AS poster, MAX(f.fanart) AS fanart
       FROM library_items i
       LEFT JOIN series_completeness c ON c.library_id = i.library_id AND c.tmdb_id = i.tmdb_id
+      LEFT JOIN series_files f
+        ON f.library_id = i.library_id AND f.tmdb_id = i.tmdb_id AND f.season = -1
       WHERE ${where} GROUP BY i.tmdb_id ${having}`;
     const total =
       this.database
@@ -355,6 +358,9 @@ export class LibraryItemStore {
         seasons: row.seasons,
         episodes: row.episodes,
         missing: row.missing,
+        nfo: flag(row.nfo),
+        poster: flag(row.poster),
+        fanart: flag(row.fanart),
       })),
     };
   }
@@ -421,6 +427,10 @@ export interface ShowRow {
   readonly episodes: number;
   /** Aired episodes no file holds, as last counted; `null` until it was. */
   readonly missing: number | null;
+  /** The show's own files (`tvshow.nfo`, poster, fanart); `null`: not written, or not looked at. */
+  readonly nfo: Presence;
+  readonly poster: Presence;
+  readonly fanart: Presence;
 }
 
 interface ShowQuery {
@@ -430,6 +440,9 @@ interface ShowQuery {
   seasons: number;
   episodes: number;
   missing: number | null;
+  nfo: number | null;
+  poster: number | null;
+  fanart: number | null;
 }
 
 /** A LIKE pattern that matches the text itself, `%` and `_` included. */

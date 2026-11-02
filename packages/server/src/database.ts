@@ -227,6 +227,23 @@ export const SERVER_MIGRATIONS: readonly { readonly name: string; readonly sql: 
       );
     `,
   },
+  {
+    // Which files of a show (`tvshow.nfo`, poster, fanart) and of a season (poster) are on the disk,
+    // looked at after a scan or a change. `season` is -1 for the show's own files; NULL means the
+    // profile writes no such file. Disposable: a missing row means "not looked at yet".
+    name: 'server:015-series-files',
+    sql: `
+      CREATE TABLE series_files (
+        library_id TEXT NOT NULL,
+        tmdb_id INTEGER NOT NULL,
+        season INTEGER NOT NULL,
+        nfo INTEGER,
+        poster INTEGER,
+        fanart INTEGER,
+        PRIMARY KEY (library_id, tmdb_id, season)
+      );
+    `,
+  },
 ];
 
 /** Opens the single SQLite file of the config directory, shared with the CLI and the cache. */
