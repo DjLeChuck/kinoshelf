@@ -270,6 +270,18 @@ export const SERVER_MIGRATIONS: readonly { readonly name: string; readonly sql: 
     name: 'server:018-drop-work-destinations',
     sql: 'DROP TABLE work_destinations;',
   },
+  {
+    // Lookups that read whole tables until now: the batch of an execution (the history), the rows
+    // of a show (counting its missing episodes), the rows of a scan (forgetting replaced scans),
+    // and the counts of a job's files by state.
+    name: 'server:019-lookup-indexes',
+    sql: `
+      CREATE INDEX executions_batch ON executions (batch_id);
+      CREATE INDEX library_items_show ON library_items (library_id, tmdb_id);
+      CREATE INDEX library_items_scan ON library_items (scan_job_id);
+      CREATE INDEX job_entries_state ON job_entries (job_id, classification, resolution);
+    `,
+  },
 ];
 
 /** Opens the single SQLite file of the config directory, shared with the CLI and the cache. */
