@@ -78,6 +78,7 @@ export const en = {
   'unrecognized.no-candidates': 'nothing found on TMDB',
 
   'report.none': 'No video files found.',
+  'report.unreadable': 'Left out a folder that cannot be read: {path}',
   'report.analyzed': 'Video files analyzed: {count} · profile {profile} · mode {mode}',
   'report.destination': 'Destination: {destination}',
   'report.destinations': 'Destinations: movies {movies} · series {series}',

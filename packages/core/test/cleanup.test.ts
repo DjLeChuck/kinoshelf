@@ -155,6 +155,27 @@ describe('cleanupStaleTemporaryFiles', () => {
     expect(found.map((f) => f.path).sort()).toEqual([deep, other].sort());
   });
 
+  it.skipIf(process.getuid?.() === 0)(
+    'passes over a folder it cannot read instead of failing',
+    async () => {
+      const lib = await makeDir();
+      const found = await put(join(lib, TEMP));
+      const closed = join(lib, 'lost+found');
+      await put(join(closed, 'x'));
+      await chmod(closed, 0o000);
+      try {
+        const result = await cleanupStaleTemporaryFiles([lib], {
+          olderThanHours: 1,
+          dryRun: true,
+          now: later(2),
+        });
+        expect(result.map((f) => f.path)).toEqual([found]);
+      } finally {
+        await chmod(closed, 0o755);
+      }
+    },
+  );
+
   it('reports a file it cannot remove and goes on', async () => {
     const lib = await makeDir();
     const locked = join(lib, 'locked');

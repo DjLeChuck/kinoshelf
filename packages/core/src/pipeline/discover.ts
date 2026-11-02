@@ -52,10 +52,28 @@ export interface DiscoveredFile {
 export interface DiscoverOptions {
   /** The scanned folder holds releases side by side: each child is one (a loose file is its own). */
   readonly splitReleases?: boolean;
+  /**
+   * Told of a folder under the root that could not be read (`lost+found` owned by root), which is
+   * left out: one such folder must not fail the scan of a whole library. The root itself still does.
+   */
+  readonly onUnreadable?: (path: string, error: unknown) => void;
 }
 
-async function* walk(directory: string): AsyncGenerator<string> {
-  const entries = await readdir(directory, { withFileTypes: true });
+async function* walk(
+  directory: string,
+  onUnreadable: DiscoverOptions['onUnreadable'],
+  isRoot = true,
+): AsyncGenerator<string> {
+  let entries;
+  try {
+    entries = await readdir(directory, { withFileTypes: true });
+  } catch (error) {
+    if (isRoot) {
+      throw error;
+    }
+    onUnreadable?.(directory, error);
+    return;
+  }
   for (const entry of entries.sort((a, b) => a.name.localeCompare(b.name))) {
     // Hidden entries include our own `.kinoshelf-tmp` files, which must never be picked up.
     if (entry.name.startsWith('.')) {
@@ -63,7 +81,8 @@ async function* walk(directory: string): AsyncGenerator<string> {
     }
     const path = join(directory, entry.name);
     if (entry.isDirectory()) {
-      yield* walk(path); // Symbolic links are not followed: no loops, no escaping the root.
+      // Symbolic links are not followed: no loops, no escaping the root.
+      yield* walk(path, onUnreadable, false);
     } else if (entry.isFile()) {
       yield path;
     }
@@ -86,12 +105,13 @@ export async function discoverVideos(
     throw new KinoshelfError('discover.not-found', { path: root });
   }
 
-  const isVideo = (path: string): boolean =>
-    extensions.includes(extname(path).slice(1).toLowerCase()) && !isSample(path);
   const base = info.isDirectory() ? root : dirname(root);
+  // A sample is judged below the scanned root: a library kept under `/srv/samples` is not one.
+  const isVideo = (path: string): boolean =>
+    extensions.includes(extname(path).slice(1).toLowerCase()) && !isSample(relative(base, path));
   const paths: string[] = [];
   if (info.isDirectory()) {
-    for await (const path of walk(root)) {
+    for await (const path of walk(root, options.onUnreadable)) {
       if (isVideo(path)) {
         paths.push(path);
         onFound?.(paths.length);

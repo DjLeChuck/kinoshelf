@@ -132,7 +132,11 @@ async function runPipeline(
       settings.metadataLanguage,
       new SqliteHttpCache(database),
     );
-    const files = await discoverVideos(source);
+    const files = await discoverVideos(source, undefined, undefined, {
+      onUnreadable: (path) => {
+        deps.io.err(t('report.unreadable', { path }));
+      },
+    });
     const analysis = await analyze(files, {
       parser: new GuessitParser(),
       provider,

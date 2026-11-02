@@ -24,6 +24,8 @@ export interface ProcessorDeps {
   readonly createProvider?: (options: { language: string }) => MetadataProvider;
   /** Told where each analysis is; none for the CLI and the tests that do not look. */
   readonly progress?: ProgressTracker;
+  /** Told of a folder a scan had to leave out because it could not be read. */
+  readonly onUnreadable?: (path: string, error: unknown) => void;
 }
 
 /**
@@ -75,7 +77,7 @@ async function process(deps: ProcessorDeps, job: Job): Promise<ProcessedJob> {
     (found) => {
       progress?.found(job.id, found);
     },
-    { splitReleases },
+    { splitReleases, ...(deps.onUnreadable && { onUnreadable: deps.onUnreadable }) },
   );
   progress?.discovered(job.id, files.length);
   const analysis = await analyze(files, {

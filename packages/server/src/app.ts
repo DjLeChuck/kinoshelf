@@ -182,7 +182,14 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
   const runner = new JobRunner(
     jobs,
     executions,
-    options.processor ?? createProcessor({ ...options, progress }),
+    options.processor ??
+      createProcessor({
+        ...options,
+        progress,
+        onUnreadable: (path, error) => {
+          app.log.warn(error, `Left out a folder that cannot be read: ${path}`);
+        },
+      }),
     (execution) => service.run(execution),
     {
       scanned: async (job) => {

@@ -93,12 +93,18 @@ async function staleInfo(
   return { sizeBytes: stats.size, ageHours: (now - stats.ctimeMs) / HOUR_MS };
 }
 
-/** Candidates by name only; real symlinks and special files are skipped by `Dirent`. */
-async function findTemporaryFiles(root: string): Promise<string[]> {
+/**
+ * Candidates by name only; real symlinks and special files are skipped by `Dirent`. A folder
+ * below the root that cannot be read (`lost+found`) holds nothing of ours and is passed over.
+ */
+async function findTemporaryFiles(root: string, isRoot = true): Promise<string[]> {
   let entries;
   try {
     entries = await readdir(root, { withFileTypes: true });
   } catch (error) {
+    if (!isRoot) {
+      return [];
+    }
     const code = error instanceof Error && 'code' in error ? error.code : undefined;
     throw code === 'ENOENT' || code === 'ENOTDIR'
       ? new KinoshelfError('discover.not-found', { path: root })
@@ -108,7 +114,7 @@ async function findTemporaryFiles(root: string): Promise<string[]> {
   for (const entry of entries) {
     const path = join(root, entry.name);
     if (entry.isDirectory()) {
-      found.push(...(await findTemporaryFiles(path)));
+      found.push(...(await findTemporaryFiles(path, false)));
     } else if (entry.isFile() && isTemporaryName(entry.name)) {
       found.push(path);
     }

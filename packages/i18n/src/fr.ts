@@ -79,6 +79,7 @@ export const fr: Record<keyof typeof en, string> = {
   'unrecognized.no-candidates': 'rien trouvé sur TMDB',
 
   'report.none': 'Aucun fichier vidéo trouvé.',
+  'report.unreadable': 'Dossier illisible laissé de côté : {path}',
   'report.analyzed': 'Fichiers vidéo analysés : {count} · profil {profile} · mode {mode}',
   'report.destination': 'Destination : {destination}',
   'report.destinations': 'Destinations : films {movies} · séries {series}',

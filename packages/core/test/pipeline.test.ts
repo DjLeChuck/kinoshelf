@@ -1,4 +1,4 @@
-import { mkdir, symlink } from 'node:fs/promises';
+import { chmod, mkdir, symlink } from 'node:fs/promises';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
@@ -46,6 +46,34 @@ describe('discoverVideos', () => {
       'Sampler.2020.mkv',
     ]);
   });
+
+  it('judges samples below the scanned root only', async () => {
+    const root = join(await makeDir(), 'samples', 'Movies');
+    await put(join(root, 'Film (2016)', 'Film.2016.1080p.mkv'));
+    expect((await discoverVideos(root)).map((f) => f.displayPath)).toEqual([
+      join('Film (2016)', 'Film.2016.1080p.mkv'),
+    ]);
+  });
+
+  // Root ignores directory permissions: the folder would be readable.
+  it.skipIf(process.getuid?.() === 0)(
+    'leaves out a folder it cannot read and says so, instead of failing the scan',
+    async () => {
+      const root = await makeDir();
+      await put(join(root, 'Film.mp4'));
+      await mkdir(join(root, 'lost+found'), { mode: 0o000 });
+      const unreadable: string[] = [];
+      try {
+        const found = await discoverVideos(root, undefined, undefined, {
+          onUnreadable: (path) => unreadable.push(path),
+        });
+        expect(found.map((f) => f.displayPath)).toEqual(['Film.mp4']);
+      } finally {
+        await chmod(join(root, 'lost+found'), 0o755);
+      }
+      expect(unreadable).toEqual([join(root, 'lost+found')]);
+    },
+  );
 
   it.each([
     ['sample.avi', true],
