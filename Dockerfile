@@ -35,7 +35,8 @@ RUN apk add --no-cache binutils && strip --strip-unneeded -o /out-node /usr/loca
 
 # Alpine alone: the node:alpine image adds npm, yarn and corepack, which the runtime does not use.
 FROM alpine:3.24
-RUN apk add --no-cache libstdc++ su-exec
+# `ffmpeg` is there for its `ffprobe` (a video's codec and audio tracks); Kinoshelf never encodes.
+RUN apk add --no-cache libstdc++ su-exec ffmpeg
 COPY docker/entrypoint.sh /usr/local/bin/docker-entrypoint
 COPY --from=node /out-node /usr/local/bin/node
 COPY --from=build /out /app

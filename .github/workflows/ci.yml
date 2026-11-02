@@ -15,6 +15,8 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
+      # `ffprobe` is read for real in a test: it generates a short clip, then probes it.
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
       - run: pnpm install --frozen-lockfile
       - run: pnpm format:check
       - run: pnpm lint

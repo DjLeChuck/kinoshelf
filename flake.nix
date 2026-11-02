@@ -23,6 +23,7 @@
             pkgs.python3 # native build of better-sqlite3 when no prebuilt binary exists
             pkgs.gnumake
             pkgs.gcc
+            pkgs.ffmpeg-headless # `ffprobe`: codec, audio and size of a video, and a file to probe in tests
           ];
           # Browsers for the end-to-end tests (`pnpm test:e2e`). The npm `@playwright/test`
           # must be the version of this package: bump them together.
