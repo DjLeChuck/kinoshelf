@@ -437,6 +437,9 @@ export const activitySchema = {
   },
 } as const;
 
+/** Where a notification goes: plain web addresses only, never `file:`, `ftp:` or the like. */
+const httpUrl = { type: 'string', format: 'uri', pattern: '^https?://' } as const;
+
 export const paging = {
   limit: { type: 'integer', minimum: 1, maximum: 200, default: 50 },
   offset: { type: 'integer', minimum: 0, default: 0 },
@@ -619,7 +622,7 @@ export const settingsPatchSchema = {
       required: ['url'],
       additionalProperties: false,
       properties: {
-        url: { type: 'string', format: 'uri' },
+        url: httpUrl,
         section: nullable({ type: 'integer', minimum: 1 }),
         token: nullable({ type: 'string', minLength: 1 }),
         paths: nullable(pathMappings),
@@ -630,7 +633,7 @@ export const settingsPatchSchema = {
       required: ['url'],
       additionalProperties: false,
       properties: {
-        url: { type: 'string', format: 'uri' },
+        url: httpUrl,
         token: nullable({ type: 'string', minLength: 1 }),
         paths: nullable(pathMappings),
       },
@@ -642,7 +645,7 @@ export const settingsPatchSchema = {
         additionalProperties: false,
         properties: {
           id: { type: 'string' },
-          url: { type: 'string', format: 'uri' },
+          url: httpUrl,
           format: nullable({ type: 'string', enum: webhookFormats }),
           on: nullable({
             type: 'array',

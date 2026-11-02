@@ -81,6 +81,19 @@ describe('loadConfig', () => {
     }
   });
 
+  it('takes only web addresses for notifications and media servers', async () => {
+    const dir = await makeDir();
+    for (const yaml of [
+      'notify:\n  webhooks:\n    - url: file:///etc/passwd\n',
+      'notify:\n  plex:\n    url: ftp://nas:21\n',
+    ]) {
+      await put(join(dir, 'config.yaml'), yaml);
+      await expect(loadConfig(dir)).rejects.toMatchObject({ info: { code: 'config.invalid' } });
+    }
+    await put(join(dir, 'config.yaml'), 'notify:\n  jellyfin:\n    url: https://jf.lan:8920\n');
+    expect((await loadConfig(dir)).notify?.jellyfin?.url).toBe('https://jf.lan:8920');
+  });
+
   it('reads the notification targets and the media server keys', async () => {
     const dir = await makeDir();
     await put(

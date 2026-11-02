@@ -220,6 +220,13 @@ describe('PATCH /api/settings', () => {
     const rejected = await h.patch({ plex: { url: 'not a url' } });
     expect(rejected.statusCode).toBe(400);
     expect(await h.file()).toBe('mode: copy\n');
+
+    // Only web addresses: a notification never reads a local file or speaks another protocol.
+    for (const url of ['file:///etc/passwd', 'ftp://nas/hook', 'gopher://x:70/']) {
+      expect((await h.patch({ webhooks: [{ url }] })).statusCode).toBe(400);
+      expect((await h.patch({ jellyfin: { url } })).statusCode).toBe(400);
+    }
+    expect(await h.file()).toBe('mode: copy\n');
   });
 
   it('keeps the token of Plex when only its URL changes, and sets a new one', async () => {

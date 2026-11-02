@@ -80,6 +80,8 @@ export async function deliver(
         headers: request.headers,
         ...(request.body !== undefined && { body: request.body }),
         signal: AbortSignal.timeout(options.timeoutMs ?? DEFAULT_TIMEOUT_MS),
+        // Not followed: a redirect would carry the token and the custom headers to another host.
+        redirect: 'manual',
       });
       const text = await response.text();
       last = {

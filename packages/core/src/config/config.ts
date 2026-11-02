@@ -6,6 +6,9 @@ import { isMap, parse, parseDocument, type Document } from 'yaml';
 import { z } from 'zod';
 import { errnoCode, KinoshelfError } from '../errors.js';
 
+/** A web address: a notification or a media server is never reached through `file:` or `ftp:`. */
+const httpUrl = z.url({ protocol: /^https?$/ });
+
 const pathMappingSchema = z.strictObject({
   /** A folder as Kinoshelf sees it… */
   from: z.string().min(1),
@@ -14,14 +17,14 @@ const pathMappingSchema = z.strictObject({
 });
 
 const mediaServerSchema = z.strictObject({
-  url: z.url(),
+  url: httpUrl,
   /** Only when the media server sees the folders under other paths than Kinoshelf. */
   paths: z.array(pathMappingSchema).optional(),
 });
 
 const webhookSchema = z.strictObject({
   /** Secrets often live in it (Discord, Gotify's `?token=`): never logged in full. */
-  url: z.url(),
+  url: httpUrl,
   /** `generic` posts Kinoshelf's own JSON; the others speak the service's own format. */
   format: z.enum(['generic', 'gotify', 'ntfy', 'discord']).optional(),
   /** What this target hears about. Default: `transferred` and `failed`. */

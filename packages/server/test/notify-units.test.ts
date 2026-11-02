@@ -156,6 +156,16 @@ describe('deliver', () => {
     };
   };
 
+  it('does not follow a redirect, which would carry the token to another host', async () => {
+    const seen: (RequestInit | undefined)[] = [];
+    const fetchMock = ((_: unknown, init?: RequestInit) => {
+      seen.push(init);
+      return Promise.resolve(response(204));
+    }) as typeof fetch;
+    await deliver(request, { fetch: fetchMock, sleep: sleeps().sleep });
+    expect(seen[0]).toMatchObject({ redirect: 'manual' });
+  });
+
   it('succeeds at once on a 2xx', async () => {
     const fetchMock = vi.fn(() => Promise.resolve(response(204)));
     const { sleep, calls } = sleeps();
