@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { basename, dirname } from 'node:path';
+import { basename, dirname, extname } from 'node:path';
 import {
   libraryProfile,
   companionKindOf,
@@ -593,6 +593,18 @@ function itemOf(
  * never has to scan again to be right. A library that is an arrival folder has no snapshot (what
  * lands in it is waiting to go elsewhere).
  */
+/**
+ * The videos a written file belongs to: the one it is named after (`<video>.nfo`), else every
+ * video of its folder (`movie.nfo`, `poster.jpg`: a movie folder holds one movie).
+ */
+function beside(rows: readonly LibraryItem[], written: string): readonly LibraryItem[] {
+  const name = basename(written);
+  const named = rows.filter((row) => name.startsWith(`${stemOf(row.path)}.`));
+  return named.length > 0 ? named : rows;
+}
+
+const stemOf = (path: string): string => basename(path, extname(path));
+
 /** The typed library a file sits in, if any. */
 const typedLibraryHolding = (config: Config, path: string): LibraryConfig | undefined =>
   config.libraries?.find(
@@ -756,8 +768,12 @@ export class LibrarySnapshot {
       }
       if (entry.kind === 'transfer') {
         const row = this.deps.store.get(library.id, entry.destination);
-        if (row) {
+        if (row && isInside(entry.source, library.source)) {
           this.settle(row, entry.source, new Set(), 'gone');
+        } else if (row) {
+          // Back in an arrival folder (or a copy's name gone): the library no longer holds it.
+          this.deps.store.remove(library.id, entry.destination);
+          this.deps.changed?.(library.id);
         }
         continue;
       }
@@ -765,7 +781,10 @@ export class LibrarySnapshot {
       if (kind === undefined) {
         continue;
       }
-      for (const row of this.deps.store.inFolder(library.id, dirname(entry.destination))) {
+      for (const row of beside(
+        this.deps.store.inFolder(library.id, dirname(entry.destination)),
+        entry.destination,
+      )) {
         this.settle(row, row.path, new Set<Writable>([kind]), 'gone');
       }
     }

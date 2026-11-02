@@ -517,7 +517,17 @@ export class Service {
     }
     // Marked undone only when nothing failed: otherwise the files stay as they were.
     if (!options.dryRun && journal.isUndone(batchId)) {
-      await this.deps.snapshot.undone(journal.entriesOf(batchId));
+      // A file the undo kept where it was (the last copy, an original place taken since) stays
+      // in the library.
+      const kept = new Set(
+        result.entries
+          .filter(
+            ({ status, error }) =>
+              status === 'skipped' && error?.code !== 'undo.destination-missing',
+          )
+          .map(({ entry }) => entry.id),
+      );
+      await this.deps.snapshot.undone(journal.entriesOf(batchId).filter(({ id }) => !kept.has(id)));
       entries.reopenBatch(batchId);
     }
     return {

@@ -3,7 +3,15 @@ import Database from 'better-sqlite3';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { migrated } from '../src/database.js';
-import { LibraryItemStore, itemId, type LibraryItem } from '../src/library-items.js';
+import type { JournalEntry } from '@kinoshelf/core';
+import type { EntryStore } from '../src/entries.js';
+import type { JobStore } from '../src/jobs.js';
+import {
+  LibraryItemStore,
+  LibrarySnapshot,
+  itemId,
+  type LibraryItem,
+} from '../src/library-items.js';
 import { cleanup, harness, makeDir, put } from './harness.js';
 
 afterEach(cleanup);
@@ -132,6 +140,43 @@ describe('the snapshot of a library', () => {
       year: 2021,
       nfo: false,
     });
+  });
+
+  it('follows an arrival copied in, and keeps it when an undo cannot remove the last copy', async () => {
+    const downloads = await makeDir();
+    const films = await makeDir();
+    const download = await put(join(downloads, 'Dune.2021.mkv'), 'dune');
+    const h = await harness({
+      config: {
+        libraries: [
+          { id: 'films', name: 'Films', source: films, type: 'movie' },
+          { id: 'shows', name: 'Shows', source: await makeDir(), type: 'series' },
+          {
+            id: 'dl',
+            name: 'Downloads',
+            source: downloads,
+            into: { movie: 'films', series: 'shows' },
+          },
+        ],
+      },
+    });
+    const store = new LibraryItemStore(h.database);
+    const jobId = (await h.request('POST', '/api/libraries/dl/scan')).json<{ id: string }>().id;
+    await h.app.jobs.idle();
+    const execution = (await h.request('POST', `/api/plans/${jobId}/execute`)).json<{
+      id: string;
+    }>();
+    await h.app.jobs.idle();
+    const [copied] = store.all('films');
+    expect(copied?.path).toMatch(/Dune \(2021\).*\.mkv$/);
+
+    // The download was deleted after seeding: the copy in the library is the only one left.
+    await rm(download);
+    const { batchId } = (await h.request('GET', `/api/executions/${execution.id}`)).json<{
+      batchId: string;
+    }>();
+    expect((await h.request('POST', `/api/batches/${batchId}/undo`)).statusCode).toBe(200);
+    expect(store.all('films').map(({ path }) => path)).toEqual([copied?.path]);
   });
 
   it('is not kept for an arrival folder', async () => {
@@ -476,6 +521,94 @@ describe('the lookups of the item store', () => {
     expect(store.ofShow('shows', 1).map(({ path }) => path)).toEqual([
       '/lib/A/1.mkv',
       '/lib/A/2.mkv',
+    ]);
+  });
+});
+
+describe('the snapshot after an undo', () => {
+  const row = (path: string, extra: Partial<LibraryItem> = {}): LibraryItem => ({
+    libraryId: 'shows',
+    path,
+    kind: 'series',
+    tmdbId: 1,
+    title: 'Show',
+    year: null,
+    season: 1,
+    episode: 1,
+    episodeEnd: null,
+    state: 'ok',
+    nfo: true,
+    poster: null,
+    fanart: null,
+    entryId: null,
+    scanJobId: null,
+    scannedAt: '2026-11-02T00:00:00.000Z',
+    ...extra,
+  });
+  const journal = (extra: Partial<JournalEntry> & Pick<JournalEntry, 'destination'>) =>
+    ({
+      id: 'j',
+      batchId: 'b',
+      kind: 'transfer',
+      source: '/elsewhere/x.mkv',
+      mode: 'copy',
+      at: 'x',
+      createdDirectories: [],
+      ...extra,
+    }) as JournalEntry;
+  const setup = () => {
+    const store = new LibraryItemStore(migrated(new Database(':memory:')));
+    const snapshot = new LibrarySnapshot({
+      config: () => ({
+        libraries: [
+          { id: 'shows', name: 'Shows', source: '/lib', type: 'series', profile: 'jellyfin' },
+          { id: 'dl', name: 'Downloads', source: '/dl', into: { movie: 'shows', series: 'shows' } },
+        ],
+      }),
+      jobs: {} as JobStore,
+      entries: {} as EntryStore,
+      store,
+    });
+    return { store, snapshot };
+  };
+
+  it('forgets a video that went back to an arrival folder', async () => {
+    const { store, snapshot } = setup();
+    store.put(row('/lib/Show/Season 01/Show S01E01.mkv'));
+    await snapshot.undone([
+      journal({
+        source: '/dl/Show.S01E01.mkv',
+        destination: '/lib/Show/Season 01/Show S01E01.mkv',
+      }),
+    ]);
+    expect(store.all('shows')).toEqual([]);
+  });
+
+  it('moves a video renamed in place back to where it was, to rename again', async () => {
+    const { store, snapshot } = setup();
+    store.put(row('/lib/Show/Season 01/Show S01E01.mkv'));
+    await snapshot.undone([
+      journal({
+        mode: 'move',
+        source: '/lib/Show.S01E01.mkv',
+        destination: '/lib/Show/Season 01/Show S01E01.mkv',
+      }),
+    ]);
+    expect(store.all('shows').map(({ path, state }) => ({ path, state }))).toEqual([
+      { path: '/lib/Show.S01E01.mkv', state: 'rename' },
+    ]);
+  });
+
+  it('marks only the episode whose NFO went as lacking one', async () => {
+    const { store, snapshot } = setup();
+    store.put(row('/lib/Show/Season 01/Show S01E01.mkv'));
+    store.put(row('/lib/Show/Season 01/Show S01E02.mkv', { episode: 2 }));
+    await snapshot.undone([
+      journal({ kind: 'generated', destination: '/lib/Show/Season 01/Show S01E02.nfo' }),
+    ]);
+    expect(store.all('shows').map(({ episode, nfo }) => ({ episode, nfo }))).toEqual([
+      { episode: 1, nfo: true },
+      { episode: 2, nfo: false },
     ]);
   });
 });
