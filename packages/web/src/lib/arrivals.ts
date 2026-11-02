@@ -32,7 +32,9 @@ export interface Arrival {
   readonly file: string;
   /** The folder (or file) it came in: files sharing it are validated together. */
   readonly release: string | null;
-  /** Set aside from its release (another series than the rest of the folder), validated alone. */
+  /** Which series of the folder: 0 is the main one, 1 and up the others set apart from it. */
+  readonly cluster: number;
+  /** Another series than the main one of its folder (`cluster` above 0). */
   readonly detached: boolean;
   readonly state: 'review' | 'unrecognized';
   readonly kind: 'movie' | 'series' | null;
@@ -100,24 +102,30 @@ export interface ReleaseGroup {
   readonly name: string;
   /** Files validated together; the first one stands for the group. */
   readonly files: readonly Arrival[];
-  /** Other series found in the same folder: listed under the release, linked to it. */
-  readonly detached: readonly Arrival[];
+  /** Other series found in the same folder, one group each: listed under the release, linked to it. */
+  readonly others: readonly { readonly cluster: number; readonly files: readonly Arrival[] }[];
 }
 
 /** Groups what the arrivals list returns by release, keeping the order of first appearance. */
 export function groupReleases(items: readonly Arrival[]): ReleaseGroup[] {
-  const groups = new Map<string, { files: Arrival[]; detached: Arrival[] }>();
+  const groups = new Map<string, { files: Arrival[]; others: Map<number, Arrival[]> }>();
   for (const item of items) {
     const key = item.release ?? item.path;
-    const group = groups.get(key) ?? { files: [], detached: [] };
-    (item.detached ? group.detached : group.files).push(item);
+    const group = groups.get(key) ?? { files: [], others: new Map<number, Arrival[]>() };
+    if (item.cluster === 0) {
+      group.files.push(item);
+    } else {
+      group.others.set(item.cluster, [...(group.others.get(item.cluster) ?? []), item]);
+    }
     groups.set(key, group);
   }
-  return [...groups].map(([key, { files, detached }]) => ({
+  return [...groups].map(([key, { files, others }]) => ({
     key,
     name: releaseName(key),
     files,
-    detached,
+    others: [...others]
+      .sort(([a], [b]) => a - b)
+      .map(([cluster, clusterFiles]) => ({ cluster, files: clusterFiles })),
   }));
 }
 

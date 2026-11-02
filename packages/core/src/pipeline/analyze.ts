@@ -10,7 +10,7 @@ import type { Profile } from '../types/profile.js';
 import type { Candidate, MetadataProvider } from '../types/provider.js';
 import type { DiscoveredFile } from './discover.js';
 import { MetadataLoader } from './metadata.js';
-import { isTitledEpisode, voteRelease } from './release.js';
+import { clusterRelease, isTitledEpisode } from './release.js';
 
 /**
  * - `compliant`: already where the profile wants it.
@@ -24,10 +24,11 @@ export type Classification = 'compliant' | 'to-rename' | 'conflict' | 'ambiguous
 export interface AnalysisEntry {
   readonly file: DiscoveredFile;
   /**
-   * Set aside from the episodes of its release: its title is not the one most of them carry
-   * (another series dropped in the same folder). Matched on its own, but still of that release.
+   * Which series of its release it belongs to: 0 for the one most episodes name, 1 and up for
+   * the other series dropped in the same folder (matched among themselves, validated apart, and
+   * still of that release). Always 0 for anything but a titled episode.
    */
-  readonly detached: boolean;
+  readonly cluster: number;
   readonly parsed: ParsedMedia;
   readonly outcome: MatchOutcome;
   readonly classification: Classification;
@@ -74,18 +75,11 @@ async function mapLimited<T, R>(
   return results;
 }
 
-/** The vote of a release, in terms of indexes into the analyzed files. */
-function voteMembers(
-  members: readonly number[],
-  parsedFiles: readonly ParsedMedia[],
-): { agree: number[]; detached: number[] } {
-  const { agree, detached } = voteRelease(
-    members.map((index) => parsedFiles[index] as ParsedMedia),
+/** The series of a release, as groups of indexes into the analyzed files; the main one first. */
+function clustersOf(members: readonly number[], parsedFiles: readonly ParsedMedia[]): number[][] {
+  return clusterRelease(members.map((index) => parsedFiles[index] as ParsedMedia)).map((cluster) =>
+    cluster.map((position) => members[position] as number),
   );
-  return {
-    agree: agree.map((position) => members[position] as number),
-    detached: detached.map((position) => members[position] as number),
-  };
 }
 
 /** Episodes grouped by release; everything else (movies, loose files) is left out. */
@@ -103,38 +97,28 @@ function episodeReleases(
 }
 
 /**
- * What is matched together: the files of a release that agree on a series are one unit (one search,
- * one choice), every other file is a unit of its own, detached episodes included.
+ * What is matched together: the files of a release that name one series are one unit (one search,
+ * one choice), every other file is a unit of its own. `clusterOf` numbers the series of a release,
+ * 0 for the main one.
  */
 function matchingUnits(
   files: readonly DiscoveredFile[],
   parsedFiles: readonly ParsedMedia[],
-): number[][] {
-  const grouped = new Set<number>();
+): { units: number[][]; clusterOf: Map<number, number> } {
+  const clusterOf = new Map<number, number>();
   const units: number[][] = [];
   for (const members of episodeReleases(files, parsedFiles)) {
-    const { agree } = voteMembers(members, parsedFiles);
-    units.push(agree);
-    agree.forEach((index) => grouped.add(index));
+    clustersOf(members, parsedFiles).forEach((cluster, number) => {
+      units.push(cluster);
+      cluster.forEach((index) => clusterOf.set(index, number));
+    });
   }
   files.forEach((_file, index) => {
-    if (!grouped.has(index)) {
+    if (!clusterOf.has(index)) {
       units.push([index]);
     }
   });
-  return units;
-}
-
-/** Indexes of the episodes set aside from their release by the vote. */
-function detachedFiles(
-  files: readonly DiscoveredFile[],
-  parsedFiles: readonly ParsedMedia[],
-): Set<number> {
-  return new Set(
-    episodeReleases(files, parsedFiles).flatMap(
-      (members) => voteMembers(members, parsedFiles).detached,
-    ),
-  );
+  return { units, clusterOf };
 }
 
 /**
@@ -162,7 +146,7 @@ export async function analyze(
     ...options.parser.parse(file.parserPath),
     path: file.path,
   }));
-  const units = matchingUnits(files, parsedFiles);
+  const { units, clusterOf } = matchingUnits(files, parsedFiles);
   const outcomes = new Array<MatchOutcome>(files.length);
   await mapLimited(units, concurrency, async (unit) => {
     const flat =
@@ -174,10 +158,9 @@ export async function analyze(
       options.onProgress?.(++done, files.length, files[index] as DiscoveredFile);
     });
   });
-  const detached = detachedFiles(files, parsedFiles);
   const matched = files.map((file, index) => ({
     file,
-    detached: detached.has(index),
+    cluster: clusterOf.get(index) ?? 0,
     parsed: parsedFiles[index] as ParsedMedia,
     outcome: outcomes[index] as MatchOutcome,
   }));

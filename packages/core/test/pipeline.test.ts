@@ -129,15 +129,16 @@ describe('releases', () => {
     expect(new Set(whole.map((f) => f.release))).toEqual(new Set([root]));
   });
 
-  it('matches the episodes of a folder together, and sets aside the one of another show', async () => {
+  it('matches the episodes of a folder together, and the ones of another show among themselves', async () => {
     const src = await makeDir();
     await put(join(src, 'Pack', 'Odd.Show.S01E01.mkv'));
     await put(join(src, 'Pack', 'Odd.Show.S01E02.mkv'));
     await put(join(src, 'Pack', 'Odd.Show.S01E03.mkv'));
     await put(join(src, 'Pack', 'Other.Thing.S01E01.mkv'));
+    await put(join(src, 'Pack', 'Other.Thing.S01E02.mkv'));
     const provider = new FakeProvider(
       [series(1, 'Odd Show', 2010), series(2, 'Other Thing', 2012)],
-      { '1:1': season(1, [1, 2, 3]), '2:1': season(1, [1]) },
+      { '1:1': season(1, [1, 2, 3]), '2:1': season(1, [1, 2]) },
       (query, candidate) => query.title.split(' ')[0] === candidate.title.split(' ')[0],
     );
 
@@ -146,10 +147,12 @@ describe('releases', () => {
     expect(provider.calls.filter((c) => c.method === 'searchSeries')).toHaveLength(2);
     const byName = (name: string) => result.entries.find((e) => e.file.displayPath.includes(name));
     expect(byName('Odd.Show.S01E02')).toMatchObject({
-      detached: false,
+      cluster: 0,
       classification: 'to-rename',
     });
-    expect(byName('Other.Thing')).toMatchObject({ detached: true, classification: 'to-rename' });
+    // The two episodes of the other show are one group: one search for both.
+    expect(byName('Other.Thing.S01E01')).toMatchObject({ cluster: 1, classification: 'to-rename' });
+    expect(byName('Other.Thing.S01E02')).toMatchObject({ cluster: 1, classification: 'to-rename' });
     expect(new Set(result.entries.map((e) => e.file.release)).size).toBe(1);
   });
 
@@ -163,9 +166,9 @@ describe('releases', () => {
         q.title.startsWith(c.title.slice(0, 4)),
       ),
     );
-    expect(result.entries.map((e) => [e.detached, e.classification])).toEqual([
-      [false, 'to-rename'],
-      [false, 'to-rename'],
+    expect(result.entries.map((e) => [e.cluster, e.classification])).toEqual([
+      [0, 'to-rename'],
+      [0, 'to-rename'],
     ]);
   });
 });

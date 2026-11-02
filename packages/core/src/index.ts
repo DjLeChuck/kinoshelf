@@ -59,6 +59,7 @@ export {
   type Classification,
 } from './pipeline/analyze.js';
 export {
+  clusterRelease,
   isTitledEpisode,
   SAME_SERIES_SIMILARITY,
   sameSeries,

@@ -44,7 +44,9 @@ export interface Entry {
   readonly destinationLibraryId: string | null;
   /** The folder (or file) it came in; episodes of one release are validated together. */
   readonly release: string | null;
-  /** An episode set aside from its release: another title than the rest of the folder. */
+  /** Which series of the release it is: 0 for the main one, 1 and up for the others in the folder. */
+  readonly cluster: number;
+  /** An episode of another series than the folder's main one. */
   readonly detached: boolean;
 }
 
@@ -79,11 +81,11 @@ interface EntryRow {
   batch_id: string | null;
   destination_library_id: string | null;
   release: string | null;
-  detached: number;
+  cluster: number;
 }
 
 const COLUMNS =
-  'id, job_id, path, classification, resolution, parsed, outcome, item, error, batch_id, destination_library_id, release, detached';
+  'id, job_id, path, classification, resolution, parsed, outcome, item, error, batch_id, destination_library_id, release, cluster';
 
 /** Candidates kept per file: the runner-ups a human needs, a few kilobytes less than all of them. */
 const KEPT_CANDIDATES = 4;
@@ -127,7 +129,8 @@ function toEntry(row: EntryRow): Entry {
     batchId: row.batch_id,
     destinationLibraryId: row.destination_library_id,
     release: row.release,
-    detached: row.detached === 1,
+    cluster: row.cluster,
+    detached: row.cluster > 0,
   };
 }
 
@@ -137,7 +140,7 @@ export class EntryStore {
 
   insertAll(jobId: string, entries: readonly AnalysisEntry[]): void {
     const insert = this.database.prepare(
-      `INSERT INTO job_entries (id, job_id, path, classification, parsed, outcome, item, release, detached)
+      `INSERT INTO job_entries (id, job_id, path, classification, parsed, outcome, item, release, cluster)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     );
     this.database.transaction(() => {
@@ -151,7 +154,7 @@ export class EntryStore {
           JSON.stringify(outcomeOf(entry)),
           entry.item ? JSON.stringify(entry.item) : null,
           entry.file.release,
-          entry.detached ? 1 : 0,
+          entry.cluster,
         );
       }
     })();
@@ -250,21 +253,21 @@ export class EntryStore {
   }
 
   /**
-   * The other episodes validated along with this one: same job, same release, none set aside, none
-   * handled yet. Empty for a movie or a detached episode, which are validated alone.
+   * The other episodes validated along with this one: same job, same release, same series of the
+   * folder, none handled yet. Empty for anything but an episode.
    */
   releaseMates(entry: Entry): Entry[] {
-    if (entry.release === null || entry.detached || entry.parsed.kind !== 'episode') {
+    if (entry.release === null || entry.parsed.kind !== 'episode') {
       return [];
     }
     return this.database
-      .prepare<[string, string, string], EntryRow>(
+      .prepare<[string, string, string, number], EntryRow>(
         `SELECT ${COLUMNS} FROM job_entries
-         WHERE job_id = ? AND release = ? AND id != ? AND detached = 0
+         WHERE job_id = ? AND release = ? AND id != ? AND cluster = ?
            AND resolution IS NULL AND classification != 'compliant'
          ORDER BY seq`,
       )
-      .all(entry.jobId, entry.release, entry.id)
+      .all(entry.jobId, entry.release, entry.id, entry.cluster)
       .map(toEntry)
       .filter((other) => other.parsed.kind === 'episode');
   }

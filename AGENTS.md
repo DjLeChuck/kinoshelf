@@ -89,12 +89,16 @@ contains no player-specific rule.
   `analyze`, the episodes of a release vote on the series title (normalized, first seen wins a tie):
   those that agree go to `Matcher.matchRelease`, which makes **one** search and scores each file on
   those candidates (its season, episode and year still count), choosing the work once on the average
-  score; a file that does not fit the choice (a season TMDB lacks) goes to review alone. Episodes with
-  another title are **detached** (`AnalysisEntry.detached`, `job_entries.release`/`detached`, migration
-  016): matched on their own, but still of that release, and the UI lists them under it. Movies are
-  never grouped. Validating (`POST /api/entries/:id/match`) a non-detached episode applies the choice
-  to the release's other pending episodes (`followers` in the answer; `onlyThis` limits it to one);
-  `ignore` does the same. There are no aliases and no "remember this title": correct the release once.
+  score; a file that does not fit the choice (a season TMDB lacks) goes to review alone. The vote is
+  `voteRelease` (`pipeline/release.ts`): titles at least `SAME_SERIES_SIMILARITY` alike are one series,
+  unless both carry a different country (`The.Office.US`/`UK`). It is held again on the episodes left
+  out (`clusterRelease`), so a folder holding several series gives **clusters**: 0 is the one most
+  episodes name, 1 and up the others (`AnalysisEntry.cluster`, `job_entries.release`/`cluster`,
+  migrations 016 and 017). Each cluster is matched and validated as a whole; the UI lists the other
+  clusters under the release (`detached`, linked to it). Movies are never grouped. Validating
+  (`POST /api/entries/:id/match`) an episode applies the choice to the other pending episodes of its
+  cluster (`followers` in the answer; `onlyThis` limits it to one); `ignore` does the same. There are
+  no aliases and no "remember this title": correct the release once.
 - **Path picker** (`GET /api/fs?path=…[&files=yaml]`): the settings browse the server's disk for the
   destination folders and a custom profile, since a browser cannot see it (and in Docker only
   mounted folders exist). It lists sub-folders (and YAML files when asked), names only, hidden

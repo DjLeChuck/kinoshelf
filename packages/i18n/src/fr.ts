@@ -547,9 +547,9 @@ export const fr: Record<keyof typeof en, string> = {
   'web.queue.validated.followed':
     'Transfert lancé pour {name}. {count, plural, one {# autre fichier de la release suit} other {# autres fichiers de la release suivent}}.',
   'web.queue.detached':
-    'Cet épisode porte un autre titre que le reste de « {release} » : il a été mis à part et se valide seul.',
+    'Cet épisode relève d’une autre série que le reste de « {release} » : il a été mis à part et se valide à part.',
   'web.queue.release-scope':
-    'Ce choix s’applique aux {count} fichiers de cette release (hors épisodes mis à part).',
+    'Ce choix s’applique aux {count} fichiers de cette série dans ce dossier.',
   'web.arrivals.files': '{count} fichiers',
   'web.arrivals.detached': 'Mis à part',
   'web.arrivals.detached.from': 'lié à « {release} »',

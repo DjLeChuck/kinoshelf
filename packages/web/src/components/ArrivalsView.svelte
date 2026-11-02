@@ -39,14 +39,25 @@
 
   const groups = $derived(groupReleases(page?.items ?? []));
   const open = $derived(
-    page?.items.find(({ id }) => id === chosen) ?? groups[0]?.files[0] ?? groups[0]?.detached[0],
+    page?.items.find(({ id }) => id === chosen) ??
+      groups[0]?.files[0] ??
+      groups[0]?.others[0]?.files[0],
   );
-  /** The files that go along with the open one: its release's, none when it was set aside. */
+  /** The files that go along with the open one: those of its series in the release. */
   const siblings = $derived(
-    open && !open.detached
-      ? (groups.find((group) => group.files.some(({ id }) => id === open.id))?.files.length ?? 1)
+    open
+      ? (page?.items.filter(
+          ({ release, cluster }) => release === open.release && cluster === open.cluster,
+        ).length ?? 1)
       : 1,
   );
+
+  /** Whether the open file is of the same series of the same release. */
+  function inSeriesOfOpen(arrival: Arrival): boolean {
+    return (
+      open !== undefined && open.release === arrival.release && open.cluster === arrival.cluster
+    );
+  }
 
   async function load(): Promise<void> {
     try {
@@ -154,33 +165,39 @@
                 </span>
               </button>
             {/if}
-            {#if group.detached.length > 0}
+            {#if group.others.length > 0}
               <ul
                 class="detached"
                 aria-label={t('web.arrivals.detached.label', { release: group.name })}
               >
-                {#each group.detached as arrival (arrival.id)}
-                  {@const status = statusOf(arrival)}
-                  <li>
-                    <button
-                      type="button"
-                      class:current={open?.id === arrival.id}
-                      aria-current={open?.id === arrival.id ? 'true' : undefined}
-                      onclick={() => {
-                        chosen = arrival.id;
-                        notice = undefined;
-                      }}
-                    >
-                      <span class="mono release">{arrival.file}</span>
-                      <span class="meta">
-                        <span class="chip chip-neutral">{t('web.arrivals.detached')}</span>
-                        <span class="chip {STATUS_CHIP[status]}">{t(STATUS_LABEL[status])}</span>
-                        <span class="muted"
-                          >{t('web.arrivals.detached.from', { release: group.name })}</span
-                        >
-                      </span>
-                    </button>
-                  </li>
+                {#each group.others as other (other.cluster)}
+                  {@const arrival = other.files[0]}
+                  {#if arrival}
+                    {@const status = statusOf(arrival)}
+                    <li>
+                      <button
+                        type="button"
+                        class:current={inSeriesOfOpen(arrival)}
+                        aria-current={inSeriesOfOpen(arrival) ? 'true' : undefined}
+                        onclick={() => {
+                          chosen = arrival.id;
+                          notice = undefined;
+                        }}
+                      >
+                        <span class="mono release">{arrival.file}</span>
+                        <span class="meta">
+                          <span class="chip chip-neutral">{t('web.arrivals.detached')}</span>
+                          <span class="chip {STATUS_CHIP[status]}">{t(STATUS_LABEL[status])}</span>
+                          {#if other.files.length > 1}<span class="muted"
+                              >{t('web.arrivals.files', { count: other.files.length })}</span
+                            >{/if}
+                          <span class="muted"
+                            >{t('web.arrivals.detached.from', { release: group.name })}</span
+                          >
+                        </span>
+                      </button>
+                    </li>
+                  {/if}
                 {/each}
               </ul>
             {/if}

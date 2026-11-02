@@ -10,6 +10,7 @@ interface EntryBody {
   classification: string;
   resolution: string | null;
   release: string | null;
+  cluster: number;
   detached: boolean;
 }
 
@@ -28,6 +29,7 @@ async function scan(h: Harness) {
     'Pack/Zorp.S01E02.mkv',
     'Pack/Zorp.S01E03.mkv',
     'Pack/Quux.S01E01.mkv',
+    'Pack/Quux.S01E02.mkv',
   ]) {
     await put(join(source, name));
   }
@@ -53,10 +55,13 @@ describe('validating a release', () => {
     expect(new Set(all.map((e) => e.release)).size).toBe(1);
     expect(all.filter((e) => e.detached).map((e) => e.path.split('/').pop())).toEqual([
       'Quux.S01E01.mkv',
+      'Quux.S01E02.mkv',
     ]);
+    // The other show is one group of its own, not two strays.
+    expect(new Set(all.filter((e) => e.detached).map((e) => e.cluster))).toEqual(new Set([1]));
   });
 
-  it('applies one choice to the whole release, detached episodes excepted', async () => {
+  it('applies one choice to the series of the release, not to the other one', async () => {
     const h = await harness();
     const { named } = await scan(h);
 
@@ -70,6 +75,19 @@ describe('validating a release', () => {
     expect((await named('Zorp.S01E02.mkv')).classification).toBe('to-rename');
     expect((await named('Zorp.S01E03.mkv')).classification).toBe('to-rename');
     expect((await named('Quux.S01E01.mkv')).classification).toBe('unrecognized');
+  });
+
+  it('validates the other show of the folder as a group of its own', async () => {
+    const h = await harness();
+    const { named } = await scan(h);
+    const response = await h.request(
+      'POST',
+      `/api/entries/${(await named('Quux.S01E01.mkv')).id}/match`,
+      { ...ZORP, id: { provider: 'tmdb', id: 78 }, title: 'Quux' },
+    );
+    expect(response.json<{ followers: string[] }>().followers).toHaveLength(1);
+    expect((await named('Quux.S01E02.mkv')).classification).toBe('to-rename');
+    expect((await named('Zorp.S01E01.mkv')).classification).toBe('unrecognized');
   });
 
   it('leaves the rest of the release alone when asked', async () => {
@@ -87,7 +105,7 @@ describe('validating a release', () => {
     const h = await harness();
     const { named } = await scan(h);
     await h.request('POST', `/api/entries/${(await named('Quux.S01E01.mkv')).id}/ignore`);
-    expect((await named('Quux.S01E01.mkv')).resolution).toBe('ignored');
+    expect((await named('Quux.S01E02.mkv')).resolution).toBe('ignored');
     expect((await named('Zorp.S01E01.mkv')).resolution).toBeNull();
 
     await h.request('POST', `/api/entries/${(await named('Zorp.S01E01.mkv')).id}/ignore`);
@@ -117,8 +135,8 @@ describe('validating a release', () => {
       items: { file: string }[];
     }>();
     // The folder of four files fills the first page whole.
-    expect(first.items).toHaveLength(4);
-    expect(first.total).toBe(5);
+    expect(first.items).toHaveLength(5);
+    expect(first.total).toBe(6);
     const second = (await h.request('GET', '/api/arrivals?limit=1&offset=1')).json<{
       items: { file: string }[];
     }>();

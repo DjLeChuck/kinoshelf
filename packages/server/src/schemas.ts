@@ -215,6 +215,7 @@ export const entrySchema = {
     'error',
     'batchId',
     'release',
+    'cluster',
     'detached',
   ],
   properties: {
@@ -262,6 +263,7 @@ export const entrySchema = {
     error: { ...errorInfo, nullable: true },
     batchId: { type: 'string', nullable: true },
     release: { type: 'string', nullable: true },
+    cluster: { type: 'integer' },
     detached: { type: 'boolean' },
   },
 } as const;
@@ -751,6 +753,7 @@ export const arrivalsSchema = {
           'path',
           'file',
           'release',
+          'cluster',
           'detached',
           'state',
           'kind',
@@ -774,12 +777,16 @@ export const arrivalsSchema = {
             type: 'string',
             nullable: true,
             description:
-              'The folder (or file) it came in. Files sharing it are validated together; a ' +
-              'detached one is listed with them but validated alone.',
+              'The folder (or file) it came in. A series of that folder is validated as one: ' +
+              'the files sharing `release` and `cluster`.',
+          },
+          cluster: {
+            type: 'integer',
+            description: 'Which series of the folder: 0 is the main one, 1 and up are the others.',
           },
           detached: {
             type: 'boolean',
-            description: 'Set aside from its release: another series than the rest of the folder.',
+            description: 'Another series than the main one of the folder (`cluster` above 0).',
           },
           state: { type: 'string', enum: ['review', 'unrecognized'] },
           kind: { type: 'string', enum: ['movie', 'series'], nullable: true },

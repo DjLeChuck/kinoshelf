@@ -23,7 +23,7 @@
     ondone,
   }: {
     entry: Arrival;
-    /** Files validated together with this one: its release's (1 for a movie or a detached file). */
+    /** Files validated together with this one: its release's (1 for a movie or a lone episode). */
     siblings?: number;
     /** The file left the list (transferred or set aside): what to tell the user. */
     ondone: (message: string) => void;
@@ -172,7 +172,9 @@
 
   /** What the panel calls the file: its release when several files go along, its own name else. */
   function label(arrival: Arrival, count: number): string {
-    return count > 1 && arrival.release ? releaseName(arrival.release) : arrival.file;
+    return count > 1 && !arrival.detached && arrival.release
+      ? releaseName(arrival.release)
+      : arrival.file;
   }
 </script>
 
@@ -197,7 +199,8 @@
     <p class="alert" role="note">
       {t('web.queue.detached', { release: entry.release ? releaseName(entry.release) : '' })}
     </p>
-  {:else if siblings > 1}
+  {/if}
+  {#if siblings > 1}
     <p class="alert" role="note">{t('web.queue.release-scope', { count: siblings })}</p>
   {/if}
 

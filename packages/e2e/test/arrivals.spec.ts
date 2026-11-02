@@ -177,7 +177,9 @@ test('sets a series folder aside once, and shows the episode of another show set
   await expect(aside.getByText('linked to “Sev.Pack.1080p”')).toBeVisible();
 
   await page.getByRole('button', { name: /^Sev\.Pack\.1080p/ }).click();
-  await expect(page.getByText('applies to the 2 files of this release')).toBeVisible();
+  await expect(
+    page.getByText('applies to the 2 files of this series in this folder'),
+  ).toBeVisible();
   // Setting the release aside takes its two files along (a transfer would fill the series
   // library that another test counts).
   await page.getByRole('button', { name: 'Ignore' }).click();

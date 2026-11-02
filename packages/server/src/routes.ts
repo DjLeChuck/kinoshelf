@@ -109,6 +109,7 @@ function presentEntry(entry: Entry): unknown {
     error: entry.error,
     batchId: entry.batchId,
     release: entry.release,
+    cluster: entry.cluster,
     detached: entry.detached,
   };
 }
@@ -126,6 +127,7 @@ function presentArrival(entry: Entry, service: Service, jobs: JobStore): unknown
     path: entry.path,
     file: basename(entry.path),
     release: entry.release,
+    cluster: entry.cluster,
     detached: entry.detached,
     state: entry.classification === 'unrecognized' ? 'unrecognized' : 'review',
     kind,
@@ -381,8 +383,8 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
         description:
           'Plans the file with a candidate returned by `GET /api/search`; it overrides the score. ' +
           'The file ends up `to-rename`, or in `conflict` if its target cannot be used. For ' +
-          'a series, the other episodes of the same release follow the choice (not the ones set ' +
-          'aside, `detached`, nor with `onlyThis`); `followers` lists them. ' +
+          'a series, the other episodes of the same release follow the choice (the ones of ' +
+          'the same `cluster`, not with `onlyThis`); `followers` lists them. ' +
           "`libraryId` sends the file to that library (of the work's kind) rather than to the " +
           'default one, for this file only; with `rememberDestination`, every later file of the ' +
           'work goes there alone. Without `libraryId`, a destination remembered for the work wins.',

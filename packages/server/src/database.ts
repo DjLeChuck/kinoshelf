@@ -256,6 +256,15 @@ export const SERVER_MIGRATIONS: readonly { readonly name: string; readonly sql: 
       DROP TABLE title_aliases;
     `,
   },
+  {
+    // A folder may hold several series: `cluster` numbers them (0 is the one most episodes name,
+    // the others were `detached`), so a validation applies to a whole series of the release.
+    name: 'server:017-release-clusters',
+    sql: `
+      ALTER TABLE job_entries ADD COLUMN cluster INTEGER NOT NULL DEFAULT 0;
+      ALTER TABLE job_entries DROP COLUMN detached;
+    `,
+  },
 ];
 
 /** Opens the single SQLite file of the config directory, shared with the CLI and the cache. */

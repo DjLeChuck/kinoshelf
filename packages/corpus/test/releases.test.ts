@@ -1,4 +1,4 @@
-import { GuessitParser, isTitledEpisode, voteRelease } from '@kinoshelf/core';
+import { GuessitParser, isTitledEpisode, clusterRelease } from '@kinoshelf/core';
 import { describe, expect, it } from 'vitest';
 import { loadEntries } from '../src/entries.js';
 
@@ -29,6 +29,6 @@ describe('release vote on real folders', async () => {
   it.each(releases)('keeps the episodes of %s together', (_folder, files) => {
     const parsed = files.map(({ path }) => parser.parse(path)).filter(isTitledEpisode);
     expect(parsed.length).toBeGreaterThan(1);
-    expect(voteRelease(parsed).detached.map((i) => parsed[i]?.path)).toEqual([]);
+    expect(clusterRelease(parsed)).toHaveLength(1);
   });
 });

@@ -529,9 +529,9 @@ export const en = {
   'web.queue.validated.followed':
     'Transfer started for {name}. {count, plural, one {# other file of the release follows} other {# other files of the release follow}}.',
   'web.queue.detached':
-    'This episode carries another title than the rest of “{release}”: it was set apart and is validated on its own.',
+    'This episode names another series than the rest of “{release}”: it was set apart and is validated apart.',
   'web.queue.release-scope':
-    'This choice applies to the {count} files of this release (set-aside episodes excepted).',
+    'This choice applies to the {count} files of this series in this folder.',
   'web.arrivals.files': '{count} files',
   'web.arrivals.detached': 'Set apart',
   'web.arrivals.detached.from': 'linked to “{release}”',

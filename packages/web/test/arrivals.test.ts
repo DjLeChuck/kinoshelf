@@ -21,6 +21,7 @@ const arrival = (over: Partial<Arrival> = {}): Arrival => ({
   path: '/downloads/Dune.2021.1080p/Dune.2021.1080p.mkv',
   file: 'Dune.2021.1080p.mkv',
   release: '/downloads/Dune.2021.1080p',
+  cluster: 0,
   detached: false,
   state: 'review',
   kind: 'movie',
@@ -180,20 +181,40 @@ describe('titleGuess', () => {
 });
 
 describe('groupReleases', () => {
-  const file = (id: string, release: string | null, detached = false): Arrival =>
-    arrival({ id, path: `/d/${id}.mkv`, file: `${id}.mkv`, release, detached });
+  const file = (id: string, release: string | null, cluster = 0): Arrival =>
+    arrival({
+      id,
+      path: `/d/${id}.mkv`,
+      file: `${id}.mkv`,
+      release,
+      cluster,
+      detached: cluster > 0,
+    });
 
-  it('groups by release, keeps the order, and lists the detached apart', () => {
+  it('groups by release, keeps the order, and lists each other series apart', () => {
     const groups = groupReleases([
       file('a', '/d/Pack'),
       file('b', '/d/Pack'),
-      file('x', '/d/Pack', true),
+      file('x', '/d/Pack', 1),
+      file('y', '/d/Pack', 2),
+      file('z', '/d/Pack', 1),
       file('c', '/d/Other'),
     ]);
     expect(
-      groups.map((g) => [g.name, g.files.map((f) => f.id), g.detached.map((f) => f.id)]),
+      groups.map((g) => [
+        g.name,
+        g.files.map((f) => f.id),
+        g.others.map((o) => [o.cluster, o.files.map((f) => f.id)]),
+      ]),
     ).toEqual([
-      ['Pack', ['a', 'b'], ['x']],
+      [
+        'Pack',
+        ['a', 'b'],
+        [
+          [1, ['x', 'z']],
+          [2, ['y']],
+        ],
+      ],
       ['Other', ['c'], []],
     ]);
   });

@@ -51,3 +51,19 @@ export function voteRelease(episodes: readonly ParsedMedia[]): {
   });
   return { agree, detached };
 }
+
+/**
+ * Every series a release holds, as groups of indexes into `episodes`: the one most episodes name
+ * first, then the vote is held again on those left out, and so on. Every episode lands in exactly
+ * one group, so a folder of eight episodes of another show is one group, not eight strays.
+ */
+export function clusterRelease(episodes: readonly ParsedMedia[]): number[][] {
+  const clusters: number[][] = [];
+  let rest = episodes.map((_, index) => index);
+  while (rest.length > 0) {
+    const { agree, detached } = voteRelease(rest.map((index) => episodes[index] as ParsedMedia));
+    clusters.push(agree.map((position) => rest[position] as number));
+    rest = detached.map((position) => rest[position] as number);
+  }
+  return clusters;
+}
