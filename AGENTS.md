@@ -219,10 +219,11 @@ refuses to delete a library an arrival folder points at (`library.in-use`). Ther
   stored on the file (`job_entries.destination_library_id`, migration 013), not on the job, and the
   file is planned, executed and written to the snapshot with **that library's profile and root**
   (the mode stays the folder's). A job whose files go to several libraries is executed as one plan
-  per library under one batch. `rememberDestination` ties the work to the library
-  (`work_destinations`, `GET`/`DELETE /api/work-destinations`, listed and forgotten in the settings; the work's `title`/`year` come from the libraries' snapshot, `null` before any library holds it): `Service.route` then plans each
-  later file of the work, matched with confidence, for that library when its job is stored, and a
-  file left unmatched keeps waiting. A library deleted since is ignored: the default applies.
+  per library under one batch. Nothing is remembered about a work: `libraryId` is for that file (and
+  the release mates that follow it), and the next arrival of the same work takes its folder's `into`
+  again (`work_destinations` was dropped, server migration 018). Once a job is stored,
+  `Service.planArrivals` plans each file matched with confidence again for the library it goes to
+  (the analysis used the global profile); a file left unmatched keeps waiting.
 - **The router reads the query** (`lib/router.svelte.ts`: `router.path` is the path alone, `router.query` the
   `?query`, `router.setQuery` changes it in place, with no history entry). The state filter of a library and of
   Arrivals is `?state=…` (`oneOf` drops a value the filter does not know). The open tree of a series is too: `?open=<tmdb ids>` for the

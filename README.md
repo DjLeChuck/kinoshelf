@@ -55,8 +55,7 @@ A job analyzes a file or a folder (parse, match, plan). Without `apply` nothing 
 the result with `GET /api/jobs/{id}/entries`, then run `POST /api/plans/{id}/execute` (with
 `{"dryRun": true}` to see what would be done). With `apply`, the files matched with confidence are
 transferred in one batch and the others wait among the arrivals (`GET /api/arrivals`), where
-`POST /api/entries/{id}/match` picks a candidate found with `GET /api/search` and remembers the file's
-title, so later scans (and the files already waiting under that title) match it alone. Every batch can be
+`POST /api/entries/{id}/match` picks a candidate found with `GET /api/search` (for a series, the other episodes of the same release follow). Every batch can be
 undone with `POST /api/batches/{id}/undo`. Transfers are queued, survive a crash and resume at the
 next start.
 
@@ -178,14 +177,14 @@ API key: the browser keeps a session cookie for 7 days, so the key itself is not
   **Refresh** open a preview first; nothing is written until you confirm, and an existing file is
   never overwritten. Arrivals hold the files Kinoshelf could not place with confidence, with their
   TMDB candidates and score, a manual search and the destination a choice would give: **Validate**
-  sends the file to the library you pick (and can remember that for the work), **Ignore** sets it
+  sends the file to the library you pick, **Ignore** sets it
   aside.
 - **History.** Every transfer as a batch with its files, and the analyses that are waiting or
   failed, with their cause and a way to send them again. Analyses that finished and moved nothing
   are hidden until you ask for them. **Undo** shows what would be restored, then asks for
   confirmation; a file moved or replaced since is left alone.
 - **Settings.** The TMDB key, languages, output profile, file mode, threshold, your libraries and
-  arrival folders, remembered titles and destinations, Plex, Jellyfin, webhooks (with a test) and the API key. They are saved in `config.yaml` and apply
+  arrival folders, Plex, Jellyfin, webhooks (with a test) and the API key. They are saved in `config.yaml` and apply
   at once, without a restart. Secrets are never shown again.
 
 The screens update by themselves when a job ends or a file is validated elsewhere. Posters come
