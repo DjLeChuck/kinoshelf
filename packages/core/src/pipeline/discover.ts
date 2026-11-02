@@ -1,5 +1,5 @@
 import { readdir, stat } from 'node:fs/promises';
-import { basename, dirname, extname, join, relative, resolve } from 'node:path';
+import { basename, dirname, extname, join, relative, resolve, sep } from 'node:path';
 import { KinoshelfError } from '../errors.js';
 
 export const VIDEO_EXTENSIONS: readonly string[] = [
@@ -41,6 +41,17 @@ export interface DiscoveredFile {
    * `Show/Season 1/e01.mkv` keeps `Show` even when scanning the `Show` folder directly.
    */
   readonly parserPath: string;
+  /**
+   * Absolute path of the release the video belongs to: a download is handled as a whole, not file
+   * by file. A folder directly under the scanned root when the root holds releases
+   * (`splitReleases`), the scanned folder itself otherwise, and the file alone when given one.
+   */
+  readonly release: string;
+}
+
+export interface DiscoverOptions {
+  /** The scanned folder holds releases side by side: each child is one (a loose file is its own). */
+  readonly splitReleases?: boolean;
 }
 
 async function* walk(directory: string): AsyncGenerator<string> {
@@ -65,6 +76,7 @@ export async function discoverVideos(
   extensions: readonly string[] = VIDEO_EXTENSIONS,
   /** Told how many videos were found so far, while the walk goes on (a big library takes a while). */
   onFound?: (found: number) => void,
+  options: DiscoverOptions = {},
 ): Promise<DiscoveredFile[]> {
   const root = resolve(input);
   let info;
@@ -90,9 +102,21 @@ export async function discoverVideos(
     onFound?.(1);
   }
 
+  const releaseOf = (path: string): string => {
+    if (!info.isDirectory()) {
+      return path;
+    }
+    if (!options.splitReleases) {
+      return root;
+    }
+    const [first] = relative(root, path).split(sep);
+    return first === undefined ? path : join(root, first);
+  };
+
   return paths.map((path) => ({
     path,
     displayPath: info.isDirectory() ? relative(root, path) : basename(path),
     parserPath: relative(dirname(base), path),
+    release: releaseOf(path),
   }));
 }

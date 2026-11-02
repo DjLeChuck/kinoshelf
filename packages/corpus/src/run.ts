@@ -1,11 +1,4 @@
-import {
-  GuessitParser,
-  Matcher,
-  StaticAliases,
-  type MatchOutcome,
-  type MetadataProvider,
-  type ParsedMedia,
-} from '@kinoshelf/core';
+import { GuessitParser, Matcher, type MatchOutcome, type MetadataProvider } from '@kinoshelf/core';
 import { DEFAULT_LANGUAGE, type CorpusEntry } from './entries.js';
 
 /**
@@ -55,21 +48,6 @@ function judge(entry: CorpusEntry, actual: Actual): Verdict {
   return right ? 'pass' : 'wrong-match';
 }
 
-/** What the user would have taught Kinoshelf by validating this entry's file, if it says so. */
-export function aliasesOf(entry: CorpusEntry, parsed: ParsedMedia): StaticAliases | undefined {
-  if (!entry.alias || parsed.title === undefined) {
-    return undefined;
-  }
-  return new StaticAliases([
-    {
-      kind: entry.alias.kind,
-      title: parsed.title,
-      ...(parsed.year !== undefined && { year: parsed.year }),
-      id: { provider: 'tmdb', id: entry.alias.tmdb },
-    },
-  ]);
-}
-
 /** `providerFor` gives the provider for a metadata language; each is built once. */
 export async function runCorpus(
   providerFor: (language: string) => MetadataProvider,
@@ -82,13 +60,10 @@ export async function runCorpus(
   for (const entry of entries) {
     const language = entry.language ?? DEFAULT_LANGUAGE;
     const parsed = parser.parse(entry.path);
-    const aliases = aliasesOf(entry, parsed);
-    let matcher = aliases ? undefined : matchers.get(language);
+    let matcher = matchers.get(language);
     if (!matcher) {
-      matcher = new Matcher(providerFor(language), {}, aliases);
-      if (!aliases) {
-        matchers.set(language, matcher);
-      }
+      matcher = new Matcher(providerFor(language));
+      matchers.set(language, matcher);
     }
     const outcome = await matcher.match(parsed);
     const scored =

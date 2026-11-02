@@ -1,6 +1,6 @@
-import type { AliasLookup } from '../matching/aliases.js';
 import { Matcher } from '../matching/matcher.js';
 import type { MatchingConfig } from '../matching/config.js';
+import { normalizeTitle } from '../matching/title-similarity.js';
 import { createPlan, type PlanInput } from '../planning/planner.js';
 import type { MatchOutcome } from '../types/matching.js';
 import type { ParsedMedia } from '../types/media.js';
@@ -23,6 +23,11 @@ export type Classification = 'compliant' | 'to-rename' | 'conflict' | 'ambiguous
 
 export interface AnalysisEntry {
   readonly file: DiscoveredFile;
+  /**
+   * Set aside from the episodes of its release: its title is not the one most of them carry
+   * (another series dropped in the same folder). Matched on its own, but still of that release.
+   */
+  readonly detached: boolean;
   readonly parsed: ParsedMedia;
   readonly outcome: MatchOutcome;
   readonly classification: Classification;
@@ -42,8 +47,6 @@ export interface AnalyzeOptions {
   readonly destinationRoot: DestinationRoots;
   readonly mode: TransferMode;
   readonly matching?: Partial<MatchingConfig>;
-  /** Titles a human already tied to a work. */
-  readonly aliases?: AliasLookup;
   readonly sidecarExtensions?: readonly string[];
   /** Files matched at the same time (each may issue several provider requests). */
   readonly concurrency?: number;
@@ -71,6 +74,89 @@ async function mapLimited<T, R>(
   return results;
 }
 
+/** The series name an episode carries, spelled alike however the release writes it. */
+const seriesKey = (parsed: ParsedMedia): string | undefined =>
+  parsed.kind === 'episode' && parsed.title?.trim() ? normalizeTitle(parsed.title) : undefined;
+
+/**
+ * Episodes of one release (a folder) split by the title most of them carry: the first value is the
+ * indexes of the files that follow it, the second those that do not. Ties go to the title seen
+ * first, so the result does not depend on a race.
+ */
+function voteRelease(
+  members: readonly number[],
+  parsedFiles: readonly ParsedMedia[],
+): { agree: number[]; detached: number[] } {
+  const counts = new Map<string, number>();
+  for (const index of members) {
+    const key = seriesKey(parsedFiles[index] as ParsedMedia) as string;
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  let winner = '';
+  let most = 0;
+  for (const [key, count] of counts) {
+    if (count > most) {
+      winner = key;
+      most = count;
+    }
+  }
+  const agree: number[] = [];
+  const detached: number[] = [];
+  for (const index of members) {
+    (seriesKey(parsedFiles[index] as ParsedMedia) === winner ? agree : detached).push(index);
+  }
+  return { agree, detached };
+}
+
+/** Episodes grouped by release; everything else (movies, loose files) is left out. */
+function episodeReleases(
+  files: readonly DiscoveredFile[],
+  parsedFiles: readonly ParsedMedia[],
+): number[][] {
+  const groups = new Map<string, number[]>();
+  files.forEach((file, index) => {
+    if (seriesKey(parsedFiles[index] as ParsedMedia) !== undefined) {
+      groups.set(file.release, [...(groups.get(file.release) ?? []), index]);
+    }
+  });
+  return [...groups.values()];
+}
+
+/**
+ * What is matched together: the files of a release that agree on a series are one unit (one search,
+ * one choice), every other file is a unit of its own, detached episodes included.
+ */
+function matchingUnits(
+  files: readonly DiscoveredFile[],
+  parsedFiles: readonly ParsedMedia[],
+): number[][] {
+  const grouped = new Set<number>();
+  const units: number[][] = [];
+  for (const members of episodeReleases(files, parsedFiles)) {
+    const { agree } = voteRelease(members, parsedFiles);
+    units.push(agree);
+    agree.forEach((index) => grouped.add(index));
+  }
+  files.forEach((_file, index) => {
+    if (!grouped.has(index)) {
+      units.push([index]);
+    }
+  });
+  return units;
+}
+
+/** Indexes of the episodes set aside from their release by the vote. */
+function detachedFiles(
+  files: readonly DiscoveredFile[],
+  parsedFiles: readonly ParsedMedia[],
+): Set<number> {
+  return new Set(
+    episodeReleases(files, parsedFiles).flatMap(
+      (members) => voteRelease(members, parsedFiles).detached,
+    ),
+  );
+}
+
 /**
  * parse → match → plan, for a set of files. Reads the disk and the provider, writes nothing.
  * Provider failures (bad key, network) abort the analysis; what was fetched stays cached by
@@ -80,7 +166,7 @@ export async function analyze(
   files: readonly DiscoveredFile[],
   options: AnalyzeOptions,
 ): Promise<Analysis> {
-  const matcher = new Matcher(options.provider, options.matching, options.aliases);
+  const matcher = new Matcher(options.provider, options.matching);
   let done = 0;
 
   // Same language as matching: the provider's own default when none is given.
@@ -91,14 +177,30 @@ export async function analyze(
   });
   const concurrency = options.concurrency ?? 4;
 
-  const matched = await mapLimited(files, concurrency, async (file) => {
-    // The parser reads context from the relative path; everything after that uses the
-    // absolute one.
-    const parsed: ParsedMedia = { ...options.parser.parse(file.parserPath), path: file.path };
-    const outcome = await matcher.match(parsed);
-    options.onProgress?.(++done, files.length, file);
-    return { file, parsed, outcome };
+  // The parser reads context from the relative path; everything after that uses the absolute one.
+  const parsedFiles = files.map((file): ParsedMedia => ({
+    ...options.parser.parse(file.parserPath),
+    path: file.path,
+  }));
+  const units = matchingUnits(files, parsedFiles);
+  const outcomes = new Array<MatchOutcome>(files.length);
+  await mapLimited(units, concurrency, async (unit) => {
+    const flat =
+      unit.length === 1
+        ? [await matcher.match(parsedFiles[unit[0] as number] as ParsedMedia)]
+        : await matcher.matchRelease(unit.map((index) => parsedFiles[index] as ParsedMedia));
+    unit.forEach((index, position) => {
+      outcomes[index] = flat[position] as MatchOutcome;
+      options.onProgress?.(++done, files.length, files[index] as DiscoveredFile);
+    });
   });
+  const detached = detachedFiles(files, parsedFiles);
+  const matched = files.map((file, index) => ({
+    file,
+    detached: detached.has(index),
+    parsed: parsedFiles[index] as ParsedMedia,
+    outcome: outcomes[index] as MatchOutcome,
+  }));
 
   // Everything is fetched before anything is planned: a provider failure aborts the analysis
   // instead of leaving a plan whose files lack their NFO.

@@ -6,11 +6,6 @@ TMDB responses (`data/recordings.json`), so CI needs no key. It runs with `pnpm 
 - `data/corpus.json`: entries `{ path, language?, note?, expect }`. `expect` is `matched` (this
   tmdb id, kind, and for a series this season and these episodes) or `review` (a human must
   decide). `language` is the TMDB metadata language (`fr` for a French library, default `en-US`).
-- An entry may carry `"alias": {"tmdb": 2370, "kind": "series"}`: the file's title is then tied to
-  that work, as if a human had validated it in the queue and the server had remembered it. The
-  file must match that work (unless its season or episode does not exist there). Pair it with an
-  entry of the same title without `alias` that expects `review`, and one with an episode the work
-  lacks, so the corpus shows what the alias changes and what it does not vouch for.
 - `data/baseline.json`: the lowest acceptable pass rate. A ratchet: raise it when the rate
   improves, never lower it without saying why in the PR.
 - Gates (`test/corpus.test.ts`): **zero wrong automatic matches** (a file renamed to the wrong
@@ -115,3 +110,5 @@ harder entries and nothing regressed; write the reason here.
   S01E16 and a year as a season; an apostrophe is a word break in `d'Amélie` and nothing in
   `Hell's`; a series' year in a folder name is unreliable (first release, local release, a guess);
   TMDB's season numbering differs from the one in many libraries.
+- 1 to 1: aliases were removed (a release is validated as a whole), so the entry that needed one
+  went with them: 285 of 285.

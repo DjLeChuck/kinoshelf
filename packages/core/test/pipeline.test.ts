@@ -72,7 +72,12 @@ describe('discoverVideos', () => {
     const dir = join(await makeDir(), 'Movies');
     const path = await put(join(dir, 'Dune.2021.mkv'));
     expect(await discoverVideos(path)).toEqual([
-      { path, displayPath: 'Dune.2021.mkv', parserPath: join('Movies', 'Dune.2021.mkv') },
+      {
+        path,
+        displayPath: 'Dune.2021.mkv',
+        parserPath: join('Movies', 'Dune.2021.mkv'),
+        release: path,
+      },
     ]);
   });
 
@@ -96,6 +101,72 @@ describe('discoverVideos', () => {
       (error: unknown) =>
         error instanceof KinoshelfError && error.info.code === 'discover.not-found',
     );
+  });
+});
+
+describe('releases', () => {
+  const analyzeSource = async (src: string, provider: FakeProvider) =>
+    analyze(await discoverVideos(src, undefined, undefined, { splitReleases: true }), {
+      parser: new GuessitParser(),
+      provider,
+      profile: await loadBundledProfile('plex'),
+      destinationRoot: await makeDir(),
+      mode: 'copy',
+    });
+
+  it('tells the release of a file: the folder under the root, the root, or the file', async () => {
+    const root = await makeDir();
+    await put(join(root, 'Show.S01', 'Season 1', 'e01.mkv'));
+    await put(join(root, 'Show.S01', 'e02.mkv'));
+    await put(join(root, 'Film.2020.mkv'));
+    const split = await discoverVideos(root, undefined, undefined, { splitReleases: true });
+    expect(split.map((f) => f.release)).toEqual([
+      join(root, 'Film.2020.mkv'),
+      join(root, 'Show.S01'),
+      join(root, 'Show.S01'),
+    ]);
+    const whole = await discoverVideos(root);
+    expect(new Set(whole.map((f) => f.release))).toEqual(new Set([root]));
+  });
+
+  it('matches the episodes of a folder together, and sets aside the one of another show', async () => {
+    const src = await makeDir();
+    await put(join(src, 'Pack', 'Odd.Show.S01E01.mkv'));
+    await put(join(src, 'Pack', 'Odd.Show.S01E02.mkv'));
+    await put(join(src, 'Pack', 'Odd.Show.S01E03.mkv'));
+    await put(join(src, 'Pack', 'Other.Thing.S01E01.mkv'));
+    const provider = new FakeProvider(
+      [series(1, 'Odd Show', 2010), series(2, 'Other Thing', 2012)],
+      { '1:1': season(1, [1, 2, 3]), '2:1': season(1, [1]) },
+      (query, candidate) => query.title.split(' ')[0] === candidate.title.split(' ')[0],
+    );
+
+    const result = await analyzeSource(src, provider);
+
+    expect(provider.calls.filter((c) => c.method === 'searchSeries')).toHaveLength(2);
+    const byName = (name: string) => result.entries.find((e) => e.file.displayPath.includes(name));
+    expect(byName('Odd.Show.S01E02')).toMatchObject({
+      detached: false,
+      classification: 'to-rename',
+    });
+    expect(byName('Other.Thing')).toMatchObject({ detached: true, classification: 'to-rename' });
+    expect(new Set(result.entries.map((e) => e.file.release)).size).toBe(1);
+  });
+
+  it('does not group movies: each is its own', async () => {
+    const src = await makeDir();
+    await put(join(src, 'Box', 'Dune.2021.mkv'));
+    await put(join(src, 'Box', 'Casablanca.1942.mkv'));
+    const result = await analyzeSource(
+      src,
+      new FakeProvider([movie(1, 'Dune', 2021), movie(2, 'Casablanca', 1942)], {}, (q, c) =>
+        q.title.startsWith(c.title.slice(0, 4)),
+      ),
+    );
+    expect(result.entries.map((e) => [e.detached, e.classification])).toEqual([
+      [false, 'to-rename'],
+      [false, 'to-rename'],
+    ]);
   });
 });
 

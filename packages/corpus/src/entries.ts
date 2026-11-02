@@ -28,7 +28,6 @@ const entrySchema = z.strictObject({
    * this file is tied to this work, whatever TMDB calls it. The file must then match it, unless its
    * season or episode does not exist there.
    */
-  alias: z.strictObject({ tmdb: z.number().int(), kind: z.enum(['movie', 'series']) }).optional(),
   expect: expectation,
 });
 

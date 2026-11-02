@@ -1,7 +1,6 @@
 import type { MatchOutcome, ScoredCandidate } from '../types/matching.js';
 import type { ParsedMedia } from '../types/media.js';
 import type { Candidate, MetadataProvider, SearchQuery, SeasonInfo } from '../types/provider.js';
-import type { AliasLookup } from './aliases.js';
 import { DEFAULT_MATCHING_CONFIG, type MatchingConfig } from './config.js';
 import { candidateKey, scoreCandidates } from './score.js';
 import { candidateTitleSimilarity, titleReadings } from './title-similarity.js';
@@ -10,11 +9,9 @@ import { candidateTitleSimilarity, titleReadings } from './title-similarity.js';
 export class Matcher {
   private readonly config: MatchingConfig;
 
-  /** `aliases`: titles a human already tied to a work; the file is read as that work. */
   constructor(
     private readonly provider: MetadataProvider,
     config: Partial<MatchingConfig> = {},
-    private readonly aliases?: AliasLookup,
   ) {
     this.config = { ...DEFAULT_MATCHING_CONFIG, ...config };
   }
@@ -24,15 +21,61 @@ export class Matcher {
       return { status: 'unrecognized', reason: 'no-title' };
     }
 
-    const candidates =
-      (await this.aliased(parsed, parsed.title)) ?? (await this.search(parsed, parsed.title));
+    const candidates = await this.search(parsed, parsed.title);
     if (candidates.length === 0) {
       return { status: 'unrecognized', reason: 'no-candidates' };
     }
+    return this.decide(await this.rank(parsed, candidates));
+  }
 
+  /**
+   * The episodes of one release, which all name the same series: one search for the lot, then each
+   * file is scored against the same candidates (its season, episode and year still count). The
+   * work is chosen once, on the average score over the files, and every file is judged against that
+   * choice: a file whose score for it is too low (a season the work does not have) goes to review
+   * alone. Outcomes follow the order of `files`.
+   */
+  async matchRelease(files: readonly ParsedMedia[]): Promise<MatchOutcome[]> {
+    const lead = files.find((file) => file.title !== undefined && file.title.trim() !== '');
+    if (lead?.title === undefined) {
+      return files.map(() => ({ status: 'unrecognized', reason: 'no-title' }));
+    }
+    const candidates = await this.search(lead, lead.title);
+    if (candidates.length === 0) {
+      return files.map(() => ({ status: 'unrecognized', reason: 'no-candidates' }));
+    }
+
+    const ranked = await Promise.all(
+      files.map((file) => (file.title?.trim() ? this.rank(file, candidates) : Promise.resolve([]))),
+    );
+    const totals = new Map<string, number>();
+    for (const scored of ranked) {
+      for (const { candidate, score } of scored) {
+        const key = candidateKey(candidate);
+        totals.set(key, (totals.get(key) ?? 0) + score);
+      }
+    }
+    const [chosen] = [...totals].sort((a, b) => b[1] - a[1]).map(([key]) => key);
+
+    return ranked.map((scored): MatchOutcome => {
+      if (scored.length === 0) {
+        return { status: 'unrecognized', reason: 'no-title' };
+      }
+      // The choice leads, whatever this file alone would have preferred.
+      const pick = scored.find(({ candidate }) => candidateKey(candidate) === chosen);
+      return this.decide(pick ? [pick, ...scored.filter((other) => other !== pick)] : scored);
+    });
+  }
+
+  private async rank(
+    parsed: ParsedMedia,
+    candidates: readonly Candidate[],
+  ): Promise<ScoredCandidate[]> {
     const seasons = await this.lookUpSeasons(parsed, candidates);
-    const scored = scoreCandidates(parsed, candidates, seasons, this.config);
+    return scoreCandidates(parsed, candidates, seasons, this.config);
+  }
 
+  private decide(scored: readonly ScoredCandidate[]): MatchOutcome {
     const [best, ...others] = scored as [ScoredCandidate, ...ScoredCandidate[]];
     if (best.score >= this.config.threshold) {
       return { status: 'matched', best, others };
@@ -41,38 +84,6 @@ export class Matcher {
       status: 'ambiguous',
       candidates: scored.slice(0, this.config.maxAmbiguousCandidates),
     };
-  }
-
-  /**
-   * The work a human tied to this title, looked up by id and nothing else: the choice was made, so
-   * it is not weighed against search results. It is still scored, so a season or an episode the
-   * work does not have, or a year that disagrees, sends the file to review. `undefined` when there
-   * is no alias, or the provider no longer knows the work.
-   */
-  private async aliased(parsed: ParsedMedia, title: string): Promise<Candidate[] | undefined> {
-    // Ids in the names are their own hint (see `knownIds`); an unknown kind cannot tell which
-    // alias is meant.
-    if (!this.aliases || parsed.kind === 'unknown' || parsed.knownIds?.length) {
-      return undefined;
-    }
-    const kind = parsed.kind === 'episode' ? 'series' : 'movie';
-    const id = this.aliases.find({
-      kind,
-      title,
-      ...(parsed.year !== undefined && { year: parsed.year }),
-    });
-    if (!id) {
-      return undefined;
-    }
-    const language = this.config.language;
-    const found =
-      kind === 'movie'
-        ? await this.provider.getMovie(id, language)
-        : await this.provider.getSeries(id, language);
-    // The file's own title becomes one the work answers to: that is what the alias says.
-    return found
-      ? [{ ...found, alternativeTitles: [...found.alternativeTitles, title] }]
-      : undefined;
   }
 
   /** Title + year first; a second search without the year when the first finds nothing. */

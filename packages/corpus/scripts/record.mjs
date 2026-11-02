@@ -9,7 +9,6 @@ import { fileURLToPath } from 'node:url';
 import { format, resolveConfig } from 'prettier';
 import { TmdbProvider } from '@kinoshelf/provider-tmdb';
 import { Matcher, GuessitParser } from '@kinoshelf/core';
-import { aliasesOf } from '../dist/run.js';
 
 const key = process.env.TMDB_API_KEY ?? '';
 if (!key) {
@@ -56,7 +55,7 @@ const recording = async (input, init) => {
         })),
       });
     }
-    // A work looked up by id (an alias) is one record shaped like a search result.
+    // A work looked up by id is one record shaped like a search result.
     if (/^\/3\/(movie|tv)\/\d+$/.test(url.pathname) && response.status === 200) {
       const keep = url.pathname.startsWith('/3/movie')
         ? ['id', 'title', 'original_title', 'release_date', 'poster_path', 'popularity']
@@ -117,11 +116,6 @@ for (const entry of entries) {
     providers.set(language, new TmdbProvider({ apiKey: key, fetch: recording, language }));
   }
   const parsed = parser.parse(entry.path);
-  const aliases = aliasesOf(entry, parsed);
-  if (aliases) {
-    await new Matcher(providers.get(language), {}, aliases).match(parsed);
-    continue;
-  }
   if (!matchers.has(language)) {
     matchers.set(language, new Matcher(providers.get(language)));
   }
