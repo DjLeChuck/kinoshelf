@@ -441,11 +441,11 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
               },
               counts: {
                 type: 'object',
-                required: ['all', ...ITEM_FILTERS, 'missing-episodes'],
+                required: ['all', ...ITEM_FILTERS, 'missing-episodes', 'missing-show-files'],
                 description:
-                  '`missing-episodes` counts shows (a series library only), the others files.',
+                  '`missing-episodes` and `missing-show-files` count shows (a series library only), the others files.',
                 properties: Object.fromEntries(
-                  ['all', ...ITEM_FILTERS, 'missing-episodes'].map((key) => [
+                  ['all', ...ITEM_FILTERS, 'missing-episodes', 'missing-show-files'].map((key) => [
                     key,
                     { type: 'integer' },
                   ]),
@@ -597,7 +597,13 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
 
   api.get<{
     Params: { id: string };
-    Querystring: { q?: string; missing?: boolean; limit?: number; offset?: number };
+    Querystring: {
+      q?: string;
+      missing?: boolean;
+      incomplete?: boolean;
+      limit?: number;
+      offset?: number;
+    };
   }>(
     '/api/libraries/:id/shows',
     {
@@ -608,13 +614,15 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
           '/api/libraries/{id}/items`, filtered by state). `missing` is the number of aired ' +
           'episodes no file holds, as last counted: `null` until it was (it is counted on ' +
           'opening a show, and in the background when no job runs), never by this request. ' +
-          '`missing=true` keeps the shows that lack some. 409 `library.not-series` for a movie library.',
+          '`missing=true` keeps the shows that lack some; `incomplete=true` those lacking a file the profile ' +
+          'writes for the show or a season (`tvshow.nfo`, an image: see `nfo`, `poster`, `fanart`). 409 `library.not-series` for a movie library.',
         params: idParams,
         querystring: {
           type: 'object',
           properties: {
             q: { type: 'string', minLength: 1 },
             missing: { type: 'boolean' },
+            incomplete: { type: 'boolean' },
             ...paging,
           },
         },
@@ -635,10 +643,11 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
     },
     (request) => {
       const library = seriesLibrary(request.params.id);
-      const { q, missing, limit, offset } = request.query;
+      const { q, missing, incomplete, limit, offset } = request.query;
       return items.shows(library.id, {
         ...(q && { query: q }),
         ...(missing && { missing }),
+        ...(incomplete && { incomplete }),
         limit: limit ?? 50,
         offset: offset ?? 0,
       });

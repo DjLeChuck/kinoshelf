@@ -438,8 +438,20 @@ describe('the files of a show and of its seasons', () => {
         .seasons.filter(({ season }) => season > 0)
         .map(({ season, poster }) => [season, poster]);
 
+    const incomplete = async () =>
+      (await h.request('GET', '/api/libraries/shows/shows?incomplete=true')).json<{
+        total: number;
+      }>().total;
+    const counted = async () =>
+      (await h.request('GET', '/api/libraries/shows/items')).json<{
+        counts: Record<string, number>;
+      }>().counts['missing-show-files'];
+
     // Not looked at yet before the first scan ends: nothing is claimed.
     await scan();
+    // No fanart, and no poster for the second season: the show is incomplete, counted as one.
+    expect(await incomplete()).toBe(1);
+    expect(await counted()).toBe(1);
     expect(await listed()).toMatchObject({ nfo: true, poster: true, fanart: false });
     // The season poster is a season's own file, not the show's.
     expect(await seasonPosters()).toEqual([
@@ -455,6 +467,8 @@ describe('the files of a show and of its seasons', () => {
       [1, true],
       [2, true],
     ]);
+    expect(await incomplete()).toBe(0);
+    expect(await counted()).toBe(0);
   });
 
   it('are not claimed for a show whose videos are not in place yet', async () => {

@@ -310,6 +310,11 @@ export class LibraryItemStore {
       limit: 1,
       offset: 0,
     }).total;
+    counts['missing-show-files'] = this.shows(libraryId, {
+      incomplete: true,
+      limit: 1,
+      offset: 0,
+    }).total;
     return counts;
   }
 
@@ -319,11 +324,25 @@ export class LibraryItemStore {
    */
   shows(
     libraryId: string,
-    options: { query?: string; missing?: boolean; limit: number; offset: number },
+    options: {
+      query?: string;
+      missing?: boolean;
+      /** Only the shows lacking a file of their own (`tvshow.nfo`, an image) or of a season. */
+      incomplete?: boolean;
+      limit: number;
+      offset: number;
+    },
   ): { total: number; items: ShowRow[] } {
     const where = [
       "i.library_id = ? AND i.kind = 'series' AND i.tmdb_id IS NOT NULL",
       ...(options.query ? ["lower(i.title) LIKE ? ESCAPE '\\'"] : []),
+      // A season's row only ever carries its poster, so one check covers the show and its seasons.
+      ...(options.incomplete
+        ? [
+            `EXISTS (SELECT 1 FROM series_files m WHERE m.library_id = i.library_id
+               AND m.tmdb_id = i.tmdb_id AND (m.nfo = 0 OR m.poster = 0 OR m.fanart = 0))`,
+          ]
+        : []),
     ].join(' AND ');
     const having = options.missing ? 'HAVING MAX(c.missing) > 0' : '';
     const params: (string | number)[] = [
@@ -416,7 +435,10 @@ const FILTER_SQL: Record<ItemFilter, string> = {
   'missing-artwork': '(poster = 0 OR fanart = 0)',
 };
 
-export type ItemCounts = Record<ItemFilter | 'all' | 'missing-episodes', number>;
+export type ItemCounts = Record<
+  ItemFilter | 'all' | 'missing-episodes' | 'missing-show-files',
+  number
+>;
 
 /** A show of a series library, with what its files make of it. */
 export interface ShowRow {
