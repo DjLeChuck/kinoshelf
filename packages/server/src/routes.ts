@@ -11,8 +11,8 @@ import type { Job, JobStore } from './jobs.js';
 import type { ProgressTracker } from './progress.js';
 import type { JobRunner } from './runner.js';
 import {
+  activitySchema,
   batchDetailSchema,
-  batchSummarySchema,
   candidateSchema,
   classificationValues,
   aliasSchema,
@@ -516,20 +516,38 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
     },
   );
 
-  api.get<{ Querystring: Paging }>(
-    '/api/batches',
+  api.get<{ Querystring: Paging & { all?: boolean } }>(
+    '/api/history',
     {
       schema: {
-        summary: 'List executed batches, newest first',
+        summary: 'Batches and jobs in one list, newest first',
         description:
-          'Every batch of the journal, and the executions that moved nothing (`failed`). A batch ' +
-          'made by the CLI is listed too, without an origin.',
-        querystring: { type: 'object', properties: paging },
-        response: { 200: { type: 'array', items: batchSummarySchema }, 401: errorSchema },
+          'A batch is a line of its own (the CLI makes some too, without a job); a job is one only ' +
+          'when it has no batch yet: still waiting, running, or failed. A job that finished and ' +
+          'moved nothing is `routine`: left out unless `all` is set, and never deleted by that.',
+        querystring: {
+          type: 'object',
+          properties: { ...paging, all: { type: 'boolean', default: false } },
+        },
+        response: {
+          200: {
+            type: 'object',
+            required: ['total', 'items'],
+            properties: {
+              total: { type: 'integer', description: 'Lines of the chosen view, before paging.' },
+              items: { type: 'array', items: activitySchema },
+            },
+          },
+          401: errorSchema,
+        },
       },
     },
     (request) =>
-      history.list({ limit: request.query.limit ?? 50, offset: request.query.offset ?? 0 }),
+      history.activity({
+        all: request.query.all ?? false,
+        limit: request.query.limit ?? 50,
+        offset: request.query.offset ?? 0,
+      }),
   );
 
   api.get<{ Params: { id: string } }>(

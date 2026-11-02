@@ -382,8 +382,9 @@ describe('POST /api/libraries/:id/execute', () => {
     expect(store.get('films', alien)).toMatchObject({ state: 'ok', nfo: true });
 
     // One batch, in the history.
-    const batches = (await h.request('GET', '/api/batches')).json<unknown[]>();
-    expect(batches).toHaveLength(1);
+    const history = (await h.request('GET', '/api/history')).json<{ items: { kind: string }[] }>();
+    expect(history.items).toHaveLength(1);
+    expect(history.items[0]?.kind).toBe('batch');
   });
 
   it('completes an item alone, and leaves the others as they were', async () => {

@@ -1,7 +1,7 @@
 import type { Journal, JournalBatch, TransferMode } from '@kinoshelf/core';
 import type { StoredError } from './entries.js';
 import type { Execution, ExecutionStore } from './executions.js';
-import type { JobStore } from './jobs.js';
+import type { JobStatus, JobStore } from './jobs.js';
 
 /**
  * `done`: something was transferred; `undone`: it was reverted; `failed`: the execution moved
@@ -49,6 +49,27 @@ export interface BatchDetail extends BatchSummary {
   readonly extras: readonly BatchExtra[];
 }
 
+/** One line of the history: a batch, or a job that has none (one that is still waiting or that failed). */
+export interface Activity {
+  /** The batch id for a batch, the job id for a job: the two never collide (UUIDs). */
+  readonly id: string;
+  readonly kind: 'batch' | 'job';
+  readonly at: string;
+  readonly status: BatchStatus | JobStatus;
+  /** What was submitted; `null` for a batch made by the CLI. */
+  readonly path: string | null;
+  readonly libraryId: string | null;
+  readonly operations: number;
+  readonly failed: number;
+  readonly modes: readonly TransferMode[];
+  readonly error: StoredError | null;
+  /**
+   * A job that finished and moved nothing: an analysis whose files wait in Arrivals or sit in an
+   * organized library. It stays in the database and in `all`, but a default view leaves it out.
+   */
+  readonly routine: boolean;
+}
+
 export class History {
   constructor(
     private readonly journal: Journal,
@@ -58,16 +79,73 @@ export class History {
 
   /** Journal batches and the executions that moved nothing, the most recent first. */
   list(options: { limit: number; offset: number }): BatchSummary[] {
+    return this.batches().slice(options.offset, options.offset + options.limit);
+  }
+
+  /**
+   * Batches and jobs in one list, the most recent first. A job that has a batch is not listed on
+   * its own (its batch is its line, and says where it came from); `all` keeps the jobs that
+   * finished without moving anything, which a default view hides.
+   */
+  activity(options: { all: boolean; limit: number; offset: number }): {
+    total: number;
+    items: Activity[];
+  } {
+    const batched = new Set(
+      this.executions.finishedWithBatch().map((execution) => execution.jobId),
+    );
+    const lines = [
+      ...this.batches().map((batch): Activity => ({
+        id: batch.id,
+        kind: 'batch',
+        at: batch.at,
+        status: batch.status,
+        path: batch.origin?.path ?? null,
+        libraryId: (batch.origin && this.jobs.get(batch.origin.jobId)?.libraryId) ?? null,
+        operations: batch.operations,
+        failed: batch.failed,
+        modes: batch.modes,
+        error: batch.error,
+        routine: false,
+      })),
+      ...this.jobs
+        .all()
+        .filter((job) => !batched.has(job.id))
+        .map((job): Activity => {
+          const mode = this.jobs.settings(job.id)?.mode;
+          return {
+            id: job.id,
+            kind: 'job',
+            at: job.finishedAt ?? job.createdAt,
+            status: job.status,
+            path: job.path,
+            libraryId: job.libraryId,
+            operations: 0,
+            failed: 0,
+            modes: mode ? [mode] : [],
+            error: job.error,
+            routine: job.status === 'done' && this.executions.latestOf(job.id) === undefined,
+          };
+        }),
+    ]
+      .filter((line) => options.all || !line.routine)
+      .sort((a, b) => b.at.localeCompare(a.at));
+    return {
+      total: lines.length,
+      items: lines.slice(options.offset, options.offset + options.limit),
+    };
+  }
+
+  private batches(): BatchSummary[] {
     const journaled = this.journal.batches();
     const known = new Set(journaled.map((batch) => batch.batchId));
     const failed = this.executions
       .finishedWithBatch()
       .filter((execution) => execution.batchId !== null && !known.has(execution.batchId));
-    const all = [
+    return [
       ...journaled.map((batch) => this.summarize(batch)),
       ...failed.map((execution) => this.summarizeFailed(execution)),
     ].sort((a, b) => b.at.localeCompare(a.at));
-    return all.slice(options.offset, options.offset + options.limit);
   }
 
   get(id: string): BatchDetail | undefined {

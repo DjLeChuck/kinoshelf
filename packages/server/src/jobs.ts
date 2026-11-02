@@ -97,6 +97,14 @@ export class JobStore {
       .map(toJob);
   }
 
+  /** Every job, newest first: the history merges them with the batches, so it pages in memory. */
+  all(): Job[] {
+    return this.database
+      .prepare<[], JobRow>(`SELECT ${COLUMNS} FROM jobs ORDER BY seq DESC`)
+      .all()
+      .map(toJob);
+  }
+
   /** Jobs of a library not finished yet (a scan, or releases its folder submitted). */
   pendingOf(libraryId: string): number {
     return (

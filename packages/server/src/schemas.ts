@@ -378,12 +378,6 @@ const batchProperties = {
 
 const batchRequired = ['id', 'at', 'status', 'operations', 'modes', 'failed', 'origin', 'error'];
 
-export const batchSummarySchema = {
-  type: 'object',
-  required: batchRequired,
-  properties: batchProperties,
-} as const;
-
 export const batchDetailSchema = {
   type: 'object',
   required: [...batchRequired, 'items', 'extras'],
@@ -414,6 +408,48 @@ export const batchDetailSchema = {
           error: { ...errorInfo, nullable: true },
         },
       },
+    },
+  },
+} as const;
+
+/** A line of the history: a batch, or a job that has none. */
+export const activitySchema = {
+  type: 'object',
+  required: [
+    'id',
+    'kind',
+    'at',
+    'status',
+    'path',
+    'libraryId',
+    'operations',
+    'failed',
+    'modes',
+    'error',
+    'routine',
+  ],
+  properties: {
+    id: {
+      type: 'string',
+      description: '`GET /api/batches/{id}` for a `batch`, `GET /api/jobs/{id}` for a `job`.',
+    },
+    kind: { type: 'string', enum: ['batch', 'job'] },
+    at: { type: 'string', format: 'date-time' },
+    status: { type: 'string', enum: ['queued', 'running', 'done', 'undone', 'failed'] },
+    path: {
+      type: 'string',
+      nullable: true,
+      description: 'What was submitted; absent for the CLI.',
+    },
+    libraryId: { type: 'string', nullable: true },
+    operations: { type: 'integer' },
+    failed: { type: 'integer' },
+    modes: { type: 'array', items: { type: 'string', enum: ['copy', 'hardlink', 'move'] } },
+    error: { ...errorInfo, nullable: true },
+    routine: {
+      type: 'boolean',
+      description:
+        'A job that finished and moved nothing: only listed with `all`, never deleted by it.',
     },
   },
 } as const;
