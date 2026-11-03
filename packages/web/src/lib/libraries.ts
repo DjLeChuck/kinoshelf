@@ -71,7 +71,7 @@ export const libraryApi: LibraryApi = {
 };
 
 // The web does not import the core. `THRESHOLD_DEFAULT` mirrors `DEFAULT_THRESHOLD` (core,
-// `matching/config.ts`; change both). The form offers 50 and up, narrower than the
+// `matching/config.ts`; a server test holds them equal). The form offers 50 and up, narrower than the
 // API's 0 to 100: below 50 a match is a guess, and the config file still allows it.
 export const THRESHOLD_MIN = 50;
 export const THRESHOLD_MAX = 100;

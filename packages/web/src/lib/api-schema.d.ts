@@ -4060,7 +4060,8 @@ export interface paths {
                             entries: {
                                 source: string;
                                 destination: string;
-                                mode: string;
+                                /** @enum {string} */
+                                mode: "copy" | "hardlink" | "move";
                                 /** @enum {string} */
                                 status: "undone" | "skipped" | "failed";
                                 error: {

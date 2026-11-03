@@ -27,7 +27,7 @@ export {
   type TemplateVariables,
 } from './profiles/template.js';
 export { GuessitParser, type GuessitParserOptions } from './parsing/guessit-parser.js';
-export { type MatchingConfig, type ScoreWeights } from './matching/config.js';
+export { DEFAULT_THRESHOLD, type MatchingConfig, type ScoreWeights } from './matching/config.js';
 export { Matcher } from './matching/matcher.js';
 export { titleSimilarity } from './matching/title-similarity.js';
 export {

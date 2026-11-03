@@ -3,11 +3,11 @@
 // on the server side breaks `svelte-check` here instead of a page at run time. Nothing is
 // exported or run.
 import type { paths } from './api-schema.js';
-import type { Arrival, ArrivalPage } from './arrivals.js';
-import type { Activity, JobDetail } from './history.js';
+import type { Arrival, ArrivalPage, Preview } from './arrivals.js';
+import type { Activity, BatchDetail, JobDetail, UndoReport } from './history.js';
 import type { Settings } from './settings.js';
 import type { Library } from './libraries.js';
-import type { ItemDetail, ItemsPage, Show, ShowDetail } from './library-items.js';
+import type { ItemDetail, ItemsPage, RunReport, Show, ShowDetail } from './library-items.js';
 
 type Json<R> = R extends { content: { 'application/json': infer B } } ? B : never;
 /** The 200 body of `GET path`. */
@@ -16,6 +16,15 @@ type Got<P extends keyof paths> = paths[P] extends { get: { responses: { 200: in
   : never;
 
 // `never` (a path that is not there, a response without a body) fits anything: refuse it.
+/** The body of `POST path` answered with `status`. */
+type Posted<P extends keyof paths, S extends number> = paths[P] extends {
+  post: { responses: infer R };
+}
+  ? S extends keyof R
+    ? Json<R[S]>
+    : never
+  : never;
+
 type Fits<Sent, Read> = [Sent] extends [never] ? false : [Sent] extends [Read] ? true : false;
 type Expect<T extends true> = T;
 
@@ -30,4 +39,8 @@ export type Contract = [
   Expect<Fits<Got<'/api/libraries/{id}/items/{itemId}'>, ItemDetail>>,
   Expect<Fits<Got<'/api/libraries/{id}/shows'>['items'][number], Show>>,
   Expect<Fits<Got<'/api/libraries/{id}/shows/{tmdbId}'>, ShowDetail>>,
+  Expect<Fits<Got<'/api/batches/{id}'>, BatchDetail>>,
+  Expect<Fits<Posted<'/api/libraries/{id}/execute', 200>, RunReport>>,
+  Expect<Fits<Posted<'/api/entries/{id}/preview', 200>, Preview>>,
+  Expect<Fits<Posted<'/api/batches/{id}/undo', 200>, UndoReport>>,
 ];

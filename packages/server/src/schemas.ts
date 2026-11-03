@@ -326,7 +326,7 @@ export const undoSchema = {
         properties: {
           source: { type: 'string' },
           destination: { type: 'string' },
-          mode: { type: 'string' },
+          mode: { type: 'string', enum: ['copy', 'hardlink', 'move'] },
           status: { type: 'string', enum: ['undone', 'skipped', 'failed'] },
           error: { ...errorInfo, nullable: true },
         },
