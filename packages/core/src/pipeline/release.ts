@@ -35,19 +35,41 @@ export function voteRelease(episodes: readonly ParsedMedia[]): {
   agree: number[];
   detached: number[];
 } {
+  // Only the title and the country take part, and a folder repeats them: the vote is held between
+  // the distinct readings (in order of appearance), each weighed by how many episodes carry it,
+  // instead of between every pair of episodes.
+  const readings: { parsed: ParsedMedia; count: number }[] = [];
+  const readingOf = new Map<string, number>();
+  const kinds = episodes.map((episode) => {
+    const key = JSON.stringify([episode.title ?? '', episode.country ?? null]);
+    let index = readingOf.get(key);
+    if (index === undefined) {
+      index = readings.length;
+      readingOf.set(key, index);
+      readings.push({ parsed: episode, count: 0 });
+    }
+    (readings[index] as { count: number }).count += 1;
+    return index;
+  });
   let winner = 0;
   let most = -1;
-  episodes.forEach((reading, index) => {
-    const support = episodes.filter((other) => sameSeries(reading, other)).length;
+  readings.forEach((reading, index) => {
+    const support = readings.reduce(
+      (total, other) => total + (sameSeries(reading.parsed, other.parsed) ? other.count : 0),
+      0,
+    );
     if (support > most) {
       winner = index;
       most = support;
     }
   });
+  const follows = readings.map((reading) =>
+    sameSeries((readings[winner] as { parsed: ParsedMedia }).parsed, reading.parsed),
+  );
   const agree: number[] = [];
   const detached: number[] = [];
-  episodes.forEach((episode, index) => {
-    (sameSeries(episodes[winner] as ParsedMedia, episode) ? agree : detached).push(index);
+  kinds.forEach((reading, index) => {
+    (follows[reading] ? agree : detached).push(index);
   });
   return { agree, detached };
 }

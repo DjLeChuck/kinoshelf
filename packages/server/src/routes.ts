@@ -108,9 +108,13 @@ export function presentEntry(entry: Entry): unknown {
 }
 
 /** One file of an arrival: what it is called, how sure the match is, where it would go. */
-function presentArrival(entry: Entry, service: Service, jobs: JobStore): unknown {
-  const job = jobs.get(entry.jobId);
-  const destination = service.destinationOf(entry);
+function presentArrival(
+  entry: Entry,
+  service: Service,
+  jobOf: (id: string) => Job | undefined,
+): unknown {
+  const job = jobOf(entry.jobId);
+  const destination = service.destinationOf(entry, job);
   const plan = presentPlan(entry.item);
   const kind = workKindOf(entry);
   return {
@@ -246,6 +250,14 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
     },
     (request) => {
       const { state, limit, offset } = request.query;
+      // The files of a page share a handful of jobs: each is read once.
+      const known = new Map<string, Job | undefined>();
+      const jobOf = (id: string): Job | undefined => {
+        if (!known.has(id)) {
+          known.set(id, jobs.get(id));
+        }
+        return known.get(id);
+      };
       const sources = service.arrivalFolders();
       const page = entries.arrivals({
         arrivalIds: sources.map(({ id }) => id),
@@ -256,7 +268,7 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
       return {
         total: page.total,
         sources: sources.map(({ id, name, source }) => ({ id, name, path: source })),
-        items: page.entries.map((entry) => presentArrival(entry, service, jobs)),
+        items: page.entries.map((entry) => presentArrival(entry, service, jobOf)),
       };
     },
   );
@@ -282,7 +294,7 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
       if (!entry) {
         throw new ApiError(404, 'queue.entry-not-found');
       }
-      return presentArrival(entry, service, jobs);
+      return presentArrival(entry, service, (id) => jobs.get(id));
     },
   );
 

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { clusterRelease, voteRelease, type ParsedMedia } from '../src/index.js';
+import { sameSeries } from '../src/pipeline/release.js';
 
 const episode = (title: string, extra: Partial<ParsedMedia> = {}): ParsedMedia => ({
   path: `${title}.mkv`,
@@ -81,5 +82,51 @@ describe('clusterRelease', () => {
     const titles = ['A one', 'B two', 'C three', 'A one', 'D four', 'C three'];
     const clusters = clusterRelease(titles.map((title) => episode(title)));
     expect(clusters.flat().sort()).toEqual([0, 1, 2, 3, 4, 5]);
+  });
+});
+
+describe('voteRelease on a large folder', () => {
+  // The vote as it was held before readings were weighed: every episode against every other.
+  const pairwise = (episodes: readonly ParsedMedia[]) => {
+    let winner = 0;
+    let most = -1;
+    episodes.forEach((reading, index) => {
+      const support = episodes.filter((other) => sameSeries(reading, other)).length;
+      if (support > most) {
+        winner = index;
+        most = support;
+      }
+    });
+    const agree: number[] = [];
+    const detached: number[] = [];
+    episodes.forEach((one, index) => {
+      (sameSeries(episodes[winner] as ParsedMedia, one) ? agree : detached).push(index);
+    });
+    return { agree, detached };
+  };
+
+  it('gives the same vote as comparing every pair', () => {
+    const titles = ['Friends', 'Friend', 'Lost', 'Lost Girl', 'The Office', 'Dark'];
+    const countries = [undefined, 'US', 'UK'];
+    let seed = 7;
+    const next = (): number => (seed = (seed * 1103515245 + 12345) % 2 ** 31);
+    for (let round = 0; round < 50; round += 1) {
+      const episodes = Array.from({ length: 1 + (next() % 30) }, () =>
+        episode(titles[next() % titles.length] as string, {
+          country: countries[next() % countries.length] as string,
+        }),
+      );
+      expect(voteRelease(episodes)).toEqual(pairwise(episodes));
+    }
+  });
+
+  it('votes on a thousand episodes without comparing them all', () => {
+    const episodes = Array.from({ length: 2000 }, (_, n) =>
+      episode(n % 500 === 0 ? 'Other' : 'Long Running Show'),
+    );
+    const started = performance.now();
+    const vote = voteRelease(episodes);
+    expect(vote.detached).toHaveLength(4);
+    expect(performance.now() - started).toBeLessThan(500);
   });
 });

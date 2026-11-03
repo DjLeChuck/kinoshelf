@@ -88,6 +88,24 @@ const placed = (item: LibraryItem): boolean =>
   item.tmdbId !== null &&
   (item.state === 'ok' || item.state === 'incomplete');
 
+type Found = { tmdbId: number; season: number | null; files: SeriesFilesRow };
+
+/** Shows looked at at once: enough to hide a share's latency, few enough not to flood it. */
+const LOOKUPS_AT_ONCE = 16;
+
+/** `task` over `items`, `size` at a time, results in order. */
+async function inBatches<T, R>(
+  items: readonly T[],
+  size: number,
+  task: (item: T) => Promise<R>,
+): Promise<R[]> {
+  const results: R[] = [];
+  for (let start = 0; start < items.length; start += size) {
+    results.push(...(await Promise.all(items.slice(start, start + size).map(task))));
+  }
+  return results;
+}
+
 export interface SeriesFilesDeps {
   readonly config: () => Config;
   readonly items: LibraryItemStore;
@@ -151,10 +169,7 @@ export class SeriesFiles {
     this.deps.refreshed?.(libraryId);
   }
 
-  private async look(
-    libraryId: string,
-    profile: Profile,
-  ): Promise<{ tmdbId: number; season: number | null; files: SeriesFilesRow }[]> {
+  private async look(libraryId: string, profile: Profile): Promise<Found[]> {
     // Without a folder of its own a show shares every name with the others: nothing to tell.
     if (profile.templates.seriesFolder === '') {
       return [];
@@ -178,29 +193,24 @@ export class SeriesFiles {
 
     const has = async (dir: string, name: string | undefined): Promise<Presence> =>
       name === undefined ? null : await exists(join(dir, name));
-    const rows: { tmdbId: number; season: number | null; files: SeriesFilesRow }[] = [];
-    for (const [tmdbId, show] of shows) {
-      rows.push({
-        tmdbId,
-        season: null,
-        files: {
-          nfo: await has(show.dir, names.nfo),
-          poster: await has(show.dir, names.poster),
-          fanart: await has(show.dir, names.fanart),
-        },
-      });
-      for (const [season, dir] of show.seasons) {
-        rows.push({
+    // On a network share each `access` is a round trip: the shows are looked at side by side.
+    const perShow = await inBatches([...shows], LOOKUPS_AT_ONCE, async ([tmdbId, show]) => {
+      const [nfo, poster, fanart] = await Promise.all([
+        has(show.dir, names.nfo),
+        has(show.dir, names.poster),
+        has(show.dir, names.fanart),
+      ]);
+      const own: Found = { tmdbId, season: null, files: { nfo, poster, fanart } };
+      const seasons = await Promise.all(
+        [...show.seasons].map(async ([season, dir]): Promise<Found> => ({
           tmdbId,
           season,
-          files: {
-            nfo: null,
-            poster: await has(dir, names.seasonPoster(season)),
-            fanart: null,
-          },
-        });
-      }
-    }
+          files: { nfo: null, poster: await has(dir, names.seasonPoster(season)), fanart: null },
+        })),
+      );
+      return [own, ...seasons];
+    });
+    const rows = perShow.flat();
     return rows;
   }
 }

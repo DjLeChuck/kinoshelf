@@ -90,7 +90,9 @@ function episodeReleases(
   const groups = new Map<string, number[]>();
   files.forEach((file, index) => {
     if (isTitledEpisode(parsedFiles[index] as ParsedMedia)) {
-      groups.set(file.release, [...(groups.get(file.release) ?? []), index]);
+      const group = groups.get(file.release) ?? [];
+      group.push(index);
+      groups.set(file.release, group);
     }
   });
   return [...groups.values()];

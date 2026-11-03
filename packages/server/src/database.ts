@@ -292,6 +292,12 @@ export const SERVER_MIGRATIONS: readonly { readonly name: string; readonly sql: 
       CREATE INDEX library_items_item ON library_items (library_id, item_id);
     `,
   },
+  {
+    // The watcher asks which paths under a folder were already submitted: a range on this index
+    // instead of reading every job.
+    name: 'server:021-jobs-path',
+    sql: 'CREATE INDEX jobs_path ON jobs (path);',
+  },
 ];
 
 /** Opens the single SQLite file of the config directory, shared with the CLI and the cache. */

@@ -120,11 +120,18 @@
   }
 
   // The parent's search box and filter come through the props: read again when they change.
+  // Not on `settleCount`: it moves each time the parent reloads, and the tree already follows the
+  // same events by itself. Not on the first run either: `refetchOn` below reads it once.
+  let mounted = false;
   $effect(() => {
-    const wanted = { query, only, settleCount };
+    const [wantedQuery, wantedOnly] = [query, only];
     untrack(() => {
+      if (!mounted) {
+        mounted = true;
+        return;
+      }
       limit = PAGE_SIZE;
-      void load(wanted);
+      void load({ query: wantedQuery, only: wantedOnly, settleCount });
     });
   });
 

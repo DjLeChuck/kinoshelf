@@ -1,6 +1,6 @@
 <script lang="ts">
   import { messageOf } from '../lib/errors.js';
-  import { untrack } from 'svelte';
+  import { onDestroy, untrack } from 'svelte';
   import { refetchOn } from '../lib/events.svelte.js';
   import { locale, t } from '../lib/i18n.svelte.js';
   import { formatDate } from '../lib/history.js';
@@ -28,6 +28,8 @@
 
   let { library }: { library: Library } = $props();
 
+  const SEARCH_PAUSE_MS = 250;
+
   const STATE_CHIP: Record<ItemState, string> = {
     review: 'chip-warn',
     rename: 'chip-neutral',
@@ -39,6 +41,19 @@
   let page = $state<ItemsPage | undefined>(undefined);
   let failure = $state<unknown>(undefined);
   let query = $state('');
+  /** What the box held when typing paused: a request per keystroke would be a request per letter. */
+  let searched = $state('');
+  let typing: ReturnType<typeof setTimeout> | undefined;
+  function search(): void {
+    clearTimeout(typing);
+    typing = setTimeout(() => {
+      searched = query;
+      refilter();
+    }, SEARCH_PAUSE_MS);
+  }
+  onDestroy(() => {
+    clearTimeout(typing);
+  });
   let limit = $state(PAGE_SIZE);
   let chosen = $state<string | undefined>(undefined);
   let notice = $state<string | undefined>(undefined);
@@ -88,7 +103,7 @@
       const answer = await libraryItems.page(library.id, {
         state:
           filter === 'missing-episodes' || filter === 'missing-show-files' ? undefined : filter,
-        q: query,
+        q: searched,
         limit: tree ? 1 : limit,
       });
       if (ticket === latest) {
@@ -228,14 +243,14 @@
       placeholder={t('web.library.search')}
       aria-label={t('web.library.search')}
       bind:value={query}
-      oninput={refilter}
+      oninput={search}
     />
 
     {#if tree}
       <ShowsTree
         libraryId={library.id}
         writes={page.library.writes}
-        {query}
+        query={searched}
         only={filter === 'missing-episodes' || filter === 'missing-show-files' ? filter : undefined}
         settleCount={page.counts.review + page.counts.unrecognized}
         onsettled={(message: string) => {

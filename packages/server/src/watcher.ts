@@ -283,19 +283,19 @@ export class FolderWatcher {
 
   private knownFiles(folder: string): Set<string> {
     const rows = this.deps.database
-      .prepare<[string], { path: string; size: number; mtime_ms: number }>(
-        "SELECT path, size, mtime_ms FROM watched_files WHERE path LIKE ? ESCAPE '\\'",
+      .prepare<[string, string], { path: string; size: number; mtime_ms: number }>(
+        'SELECT path, size, mtime_ms FROM watched_files WHERE path >= ? AND path < ?',
       )
-      .all(`${escapeLike(folder)}/%`);
+      .all(...below(folder));
     return new Set(rows.map((row) => `${row.path}\0${row.size}\0${row.mtime_ms}`));
   }
 
   private queuedPaths(folder: string): Set<string> {
     const rows = this.deps.database
-      .prepare<[string], { path: string }>(
-        "SELECT DISTINCT path FROM jobs WHERE path LIKE ? ESCAPE '\\'",
+      .prepare<[string, string], { path: string }>(
+        'SELECT DISTINCT path FROM jobs WHERE path >= ? AND path < ?',
       )
-      .all(`${escapeLike(folder)}/%`);
+      .all(...below(folder));
     return new Set(rows.map((row) => row.path));
   }
 
@@ -315,10 +315,10 @@ export class FolderWatcher {
   private forget(folder: string, present: readonly VideoFile[]): void {
     const here = new Set(present.map(key));
     const rows = this.deps.database
-      .prepare<[string], { path: string; size: number; mtime_ms: number }>(
-        "SELECT path, size, mtime_ms FROM watched_files WHERE path LIKE ? ESCAPE '\\'",
+      .prepare<[string, string], { path: string; size: number; mtime_ms: number }>(
+        'SELECT path, size, mtime_ms FROM watched_files WHERE path >= ? AND path < ?',
       )
-      .all(`${escapeLike(folder)}/%`);
+      .all(...below(folder));
     const drop = this.deps.database.prepare(
       'DELETE FROM watched_files WHERE path = ? AND size = ? AND mtime_ms = ?',
     );
@@ -334,7 +334,11 @@ export class FolderWatcher {
 
 const key = (file: VideoFile): string => `${file.path}\0${file.size}\0${file.mtimeMs}`;
 
-const escapeLike = (value: string): string => value.replace(/[\\%_]/g, (c) => `\\${c}`);
+/**
+ * The bounds of the paths under `folder`: a range an index can serve, unlike `LIKE` (which also
+ * ignores case). `0` is the character right after `/`.
+ */
+const below = (folder: string): [string, string] => [`${folder}/`, `${folder}0`];
 
 /**
  * Releases under `folder`, or `undefined` when it cannot be read. Hidden entries and symbolic
@@ -351,11 +355,15 @@ async function collect(folder: string): Promise<Map<string, Release> | undefined
   return releases;
 }
 
+/** Files stat-ed at once: a share answers each one slowly, but it answers several together. */
+const STATS_AT_ONCE = 32;
+
 async function walk(
   root: string,
   directory: string,
   releases: Map<string, Release>,
 ): Promise<void> {
+  const videos: { release: Release; path: string }[] = [];
   for (const entry of await readdir(directory, { withFileTypes: true })) {
     if (entry.name.startsWith('.')) {
       continue;
@@ -379,13 +387,24 @@ async function walk(
     if (INCOMPLETE_EXTENSIONS.includes(extension)) {
       release.incomplete = true;
     } else if (VIDEO_EXTENSIONS.includes(extension) && !isSample(path)) {
-      try {
-        const info = await stat(path);
-        release.videos.push({ path, size: info.size, mtimeMs: Math.trunc(info.mtimeMs) });
-      } catch {
-        // Gone between the listing and the stat: the next scan will tell.
-        release.incomplete = true;
-      }
+      videos.push({ release, path });
+    }
+  }
+  for (let start = 0; start < videos.length; start += STATS_AT_ONCE) {
+    const infos = await Promise.all(
+      videos.slice(start, start + STATS_AT_ONCE).map(async ({ release, path }) => {
+        try {
+          const info = await stat(path);
+          return { release, path, size: info.size, mtimeMs: Math.trunc(info.mtimeMs) };
+        } catch {
+          // Gone between the listing and the stat: the next scan will tell.
+          release.incomplete = true;
+          return undefined;
+        }
+      }),
+    );
+    for (const info of infos) {
+      info?.release.videos.push({ path: info.path, size: info.size, mtimeMs: info.mtimeMs });
     }
   }
 }

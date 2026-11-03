@@ -275,9 +275,9 @@ export class Service {
    * goes to the first library of its kind. `null` for a file of a library organized in place
    * (it stays where it is) or one whose kind is unknown.
    */
-  destinationOf(entry: Entry): { libraryId: string | null } {
+  destinationOf(entry: Entry, job?: Job): { libraryId: string | null } {
     const chosen = this.typedLibrary(entry.destinationLibraryId);
-    return { libraryId: (chosen ?? this.defaultLibrary(entry))?.id ?? null };
+    return { libraryId: (chosen ?? this.defaultLibrary(entry, job))?.id ?? null };
   }
 
   /** The arrival folders: where files wait for a destination. */
@@ -336,10 +336,12 @@ export class Service {
    * Where an arrival goes by default. A file of a library organized in place is not an arrival:
    * what its scan planned stands.
    */
-  private defaultLibrary(entry: Entry): LibraryConfig | undefined {
+  private defaultLibrary(
+    entry: Entry,
+    job = this.deps.jobs.get(entry.jobId),
+  ): LibraryConfig | undefined {
     const kind = kindOf(entry);
     const libraries = this.deps.config.libraries ?? [];
-    const job = this.deps.jobs.get(entry.jobId);
     const from = libraries.find(({ id }) => id === job?.libraryId);
     if (kind === null || from?.type !== undefined) {
       return undefined;
