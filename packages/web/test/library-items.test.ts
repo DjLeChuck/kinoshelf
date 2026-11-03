@@ -43,6 +43,7 @@ describe('scanPercent', () => {
     expect(scanPercent(progress({ total: 0 }))).toBeUndefined();
     expect(scanPercent(progress())).toBe(25);
     expect(scanPercent(progress({ done: 100 }))).toBe(100);
+    expect(scanPercent(progress({ phase: 'plan', done: 100 }))).toBeUndefined();
   });
 });
 

@@ -321,6 +321,7 @@ export const en = {
   'web.library.progress.plan': 'Planning',
   'web.library.progress.waiting': 'Waiting for its turn…',
   'web.library.progress.transfer': 'Waiting for a transfer to end: {done} of {total} files done',
+  'web.library.progress.planning': 'Fetching the details of each work and building the plan…',
   'web.library.progress.found':
     '{count, plural, one {# video found} other {# videos found}} so far',
   'web.library.progress.done': '{done} of {total} identified',

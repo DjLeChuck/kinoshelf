@@ -341,9 +341,12 @@ export const libraryItems = {
     }>(`/api/jobs/${jobId}`),
 };
 
-/** Whole percent of the identification, once the walk of the folder has told how many files. */
+/**
+ * Whole percent of the identification, once the walk of the folder has told how many files. The
+ * planning that follows (details fetched for every work) has no count: the bar must not sit at 100%.
+ */
 export function scanPercent(progress: ScanProgress | null): number | undefined {
-  return progress && progress.phase !== 'discover' && progress.total > 0
+  return progress?.phase === 'identify' && progress.total > 0
     ? Math.min(100, Math.floor((progress.done / progress.total) * 100))
     : undefined;
 }

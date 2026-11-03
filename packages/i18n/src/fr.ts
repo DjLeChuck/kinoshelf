@@ -336,6 +336,8 @@ export const fr: Record<keyof typeof en, string> = {
   'web.library.progress.waiting': 'En attente de son tour…',
   'web.library.progress.transfer':
     'En attente de la fin d’un transfert : {done} fichiers sur {total} traités',
+  'web.library.progress.planning':
+    'Récupération des détails de chaque œuvre et construction du plan…',
   'web.library.progress.found':
     '{count, plural, one {# vidéo trouvée} other {# vidéos trouvées}} pour l’instant',
   'web.library.progress.done': '{done} sur {total} identifiés',
