@@ -551,7 +551,7 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
     },
     async (request) => {
       const library = find(store.config, request.params.id);
-      const item = items.all(library.id).find(({ path }) => itemId(path) === request.params.itemId);
+      const [item] = items.byItemIds(library.id, [request.params.itemId]);
       if (!item) {
         throw new ApiError(404, 'library.item-not-found');
       }
@@ -788,8 +788,7 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
       if (library.type === undefined) {
         throw new ApiError(409, 'library.not-typed');
       }
-      const chosen = new Set(request.body.items);
-      const rows = items.all(library.id).filter((row) => chosen.has(itemId(row.path)));
+      const rows = items.byItemIds(library.id, request.body.items);
       const skipped = new Set(request.body.items);
       // What the scan planned, by the job that scanned it: its entries are what can still run.
       const byJob = new Map<string, string[]>();

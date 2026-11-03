@@ -312,8 +312,13 @@ export class EntryStore {
     classification: Classification,
     item: PlanItem,
     chosen?: Pick<ScoredCandidate, 'candidate' | 'score'>,
+    /** The library the file is bound for, written in the same transaction. */
+    destination?: { libraryId: string | null },
   ): void {
     this.database.transaction(() => {
+      if (destination) {
+        this.setDestination(id, destination.libraryId);
+      }
       this.database
         .prepare(
           'UPDATE job_entries SET classification = ?, item = ?, resolution = NULL, error = NULL WHERE id = ?',

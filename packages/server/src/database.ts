@@ -282,6 +282,16 @@ export const SERVER_MIGRATIONS: readonly { readonly name: string; readonly sql: 
       CREATE INDEX job_entries_state ON job_entries (job_id, classification, resolution);
     `,
   },
+  {
+    // The id the web uses for a row (a hash of its path), stored so that one item is found by an
+    // index rather than by hashing the whole library. Rows from before carry none until the store
+    // fills it in on the first lookup (SQLite has no sha1).
+    name: 'server:020-item-id',
+    sql: `
+      ALTER TABLE library_items ADD COLUMN item_id TEXT;
+      CREATE INDEX library_items_item ON library_items (library_id, item_id);
+    `,
+  },
 ];
 
 /** Opens the single SQLite file of the config directory, shared with the CLI and the cache. */

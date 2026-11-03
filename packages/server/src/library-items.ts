@@ -77,6 +77,9 @@ interface Row {
 const COLUMNS =
   'library_id, path, kind, tmdb_id, title, year, season, episode, episode_end, state, nfo, poster, fanart, entry_id, scan_job_id, scanned_at';
 
+/** The columns a row is written with: `item_id` is derived from the path, never read back. */
+const WRITTEN_COLUMNS = `${COLUMNS}, item_id`;
+
 interface ProbeRow {
   path: string;
   video: string | null;
@@ -109,6 +112,7 @@ const valuesOf = (item: LibraryItem): (string | number | null)[] => [
   item.entryId,
   item.scanJobId,
   item.scannedAt,
+  itemId(item.path),
 ];
 
 const toItem = (row: Row): LibraryItem => ({
@@ -178,8 +182,8 @@ export class LibraryItemStore {
         .prepare('DELETE FROM library_items WHERE library_id = ? AND path = ?')
         .run(libraryId, to);
       this.database
-        .prepare('UPDATE library_items SET path = ? WHERE library_id = ? AND path = ?')
-        .run(to, libraryId, from);
+        .prepare('UPDATE library_items SET path = ?, item_id = ? WHERE library_id = ? AND path = ?')
+        .run(to, itemId(to), libraryId, from);
     })();
   }
 
@@ -230,9 +234,9 @@ export class LibraryItemStore {
   private putStatement(): Statement {
     return this.database.prepare(
       // An upsert, not a replacement: what ffprobe learned of the file is not the scan's to erase.
-      `INSERT INTO library_items (${COLUMNS})
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-       ON CONFLICT (library_id, path) DO UPDATE SET ${COLUMNS.split(', ')
+      `INSERT INTO library_items (${WRITTEN_COLUMNS})
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT (library_id, path) DO UPDATE SET ${WRITTEN_COLUMNS.split(', ')
          .slice(2)
          .map((column) => `${column} = excluded.${column}`)
          .join(', ')}`,
@@ -278,6 +282,39 @@ export class LibraryItemStore {
       )
       .all(libraryId)
       .map(toItem);
+  }
+
+  /** The rows with these ids (as the web names them), in path order. */
+  byItemIds(libraryId: string, ids: readonly string[]): LibraryItem[] {
+    this.fillItemIds(libraryId);
+    return this.database
+      .prepare<[string, string], Row>(
+        `SELECT ${COLUMNS} FROM library_items
+         WHERE library_id = ? AND item_id IN (SELECT value FROM json_each(?))
+         ORDER BY path`,
+      )
+      .all(libraryId, JSON.stringify(ids))
+      .map(toItem);
+  }
+
+  /** Rows saved before `item_id` existed get theirs, once. */
+  private fillItemIds(libraryId: string): void {
+    const missing = this.database
+      .prepare<[string], { path: string }>(
+        'SELECT path FROM library_items WHERE library_id = ? AND item_id IS NULL',
+      )
+      .all(libraryId);
+    if (missing.length === 0) {
+      return;
+    }
+    const set = this.database.prepare(
+      'UPDATE library_items SET item_id = ? WHERE library_id = ? AND path = ?',
+    );
+    this.database.transaction(() => {
+      for (const { path } of missing) {
+        set.run(itemId(path), libraryId, path);
+      }
+    })();
   }
 
   /** The files of one show of a series library, by path. */

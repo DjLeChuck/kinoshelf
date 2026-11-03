@@ -513,6 +513,29 @@ describe('the lookups of the item store', () => {
       '/lib/A/2.mkv',
     ]);
   });
+
+  it('finds rows by the id the web uses, also those saved before it was stored', () => {
+    const database = migrated(new Database(':memory:'));
+    const store = new LibraryItemStore(database);
+    for (const path of ['/lib/A/1.mkv', '/lib/A/2.mkv', '/lib/B/1.mkv']) {
+      store.put(row(path));
+    }
+    store.put(row('/lib/A/1.mkv', { libraryId: 'other' }));
+    // A row from before the column existed.
+    database.prepare("UPDATE library_items SET item_id = NULL WHERE path = '/lib/A/2.mkv'").run();
+
+    const found = store.byItemIds('shows', [
+      itemId('/lib/A/2.mkv'),
+      itemId('/lib/B/1.mkv'),
+      'unknown',
+    ]);
+    expect(found.map(({ path }) => path)).toEqual(['/lib/A/2.mkv', '/lib/B/1.mkv']);
+
+    // A row that moved is found by its new id only.
+    store.rename('shows', '/lib/B/1.mkv', '/lib/B/2.mkv');
+    expect(store.byItemIds('shows', [itemId('/lib/B/1.mkv')])).toEqual([]);
+    expect(store.byItemIds('shows', [itemId('/lib/B/2.mkv')])).toHaveLength(1);
+  });
 });
 
 describe('the snapshot after an undo', () => {

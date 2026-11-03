@@ -167,8 +167,13 @@ export class Service {
       ...(profiles && { profiles }),
     });
     const classification = classify(item);
-    this.deps.entries.setMatch(entry.id, classification, item, { candidate, score: 100 });
-    this.deps.entries.setDestination(entry.id, libraryId);
+    this.deps.entries.setMatch(
+      entry.id,
+      classification,
+      item,
+      { candidate, score: 100 },
+      { libraryId },
+    );
     await this.deps.snapshot.matched(this.require(entry.id), candidate);
     return classification;
   }
