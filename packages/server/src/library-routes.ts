@@ -325,6 +325,7 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
       if (request.body.source !== undefined && request.body.source !== previous.source) {
         // What the old folder held is not what the new one holds: the next scan tells.
         items.forget(id);
+        ctx.completeness.forget(id);
       }
       return present(updated as LibraryConfig);
     },
@@ -358,6 +359,7 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
       });
       // A library made again under the same name gets the same id: it starts empty.
       items.forget(id);
+      ctx.completeness.forget(id);
       return reply.code(204).send();
     },
   );

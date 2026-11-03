@@ -135,6 +135,13 @@ const toItem = (row: Row): LibraryItem => ({
 });
 
 /** What a library holds, in the database: a snapshot, not a second source of truth for the disk. */
+interface ShowFilter {
+  query?: string;
+  missing?: boolean;
+  /** Only the shows lacking a file of their own (`tvshow.nfo`, an image) or of a season. */
+  incomplete?: boolean;
+}
+
 export class LibraryItemStore {
   constructor(private readonly database: Database) {}
 
@@ -376,16 +383,8 @@ export class LibraryItemStore {
       counts[filter] = count(` AND ${FILTER_SQL[filter]}`);
     }
     // Counted in shows, not files: it is the list of shows that this filter narrows.
-    counts['missing-episodes'] = this.shows(libraryId, {
-      missing: true,
-      limit: 1,
-      offset: 0,
-    }).total;
-    counts['missing-show-files'] = this.shows(libraryId, {
-      incomplete: true,
-      limit: 1,
-      offset: 0,
-    }).total;
+    counts['missing-episodes'] = this.countShows(libraryId, { missing: true });
+    counts['missing-show-files'] = this.countShows(libraryId, { incomplete: true });
     return counts;
   }
 
@@ -395,15 +394,34 @@ export class LibraryItemStore {
    */
   shows(
     libraryId: string,
-    options: {
-      query?: string;
-      missing?: boolean;
-      /** Only the shows lacking a file of their own (`tvshow.nfo`, an image) or of a season. */
-      incomplete?: boolean;
-      limit: number;
-      offset: number;
-    },
+    options: ShowFilter & { limit: number; offset: number },
   ): { total: number; items: ShowRow[] } {
+    const { grouped, params } = this.groupedShows(libraryId, options);
+    const total = this.countShows(libraryId, options);
+    const rows = this.database
+      .prepare<unknown[], ShowQuery>(`${grouped} ORDER BY lower(title), tmdb_id LIMIT ? OFFSET ?`)
+      .all(...params, options.limit, options.offset);
+    return {
+      total,
+      items: rows.map((row) => ({
+        tmdbId: row.tmdb_id,
+        title: row.title,
+        year: row.year,
+        seasons: row.seasons,
+        episodes: row.episodes,
+        missing: row.missing,
+        nfo: flag(row.nfo),
+        poster: flag(row.poster),
+        fanart: flag(row.fanart),
+      })),
+    };
+  }
+
+  /** The query of the shows, one row each, and its parameters. */
+  private groupedShows(
+    libraryId: string,
+    options: ShowFilter,
+  ): { grouped: string; params: (string | number)[] } {
     const where = [
       "i.library_id = ? AND i.kind = 'series' AND i.tmdb_id IS NOT NULL",
       ...(options.query ? ["lower(i.title) LIKE ? ESCAPE '\\'"] : []),
@@ -432,27 +450,17 @@ export class LibraryItemStore {
       LEFT JOIN series_files f
         ON f.library_id = i.library_id AND f.tmdb_id = i.tmdb_id AND f.season = -1
       WHERE ${where} GROUP BY i.tmdb_id ${having}`;
-    const total =
+    return { grouped, params };
+  }
+
+  /** How many shows a filter keeps; the count alone, without reading a page of them. */
+  private countShows(libraryId: string, options: ShowFilter): number {
+    const { grouped, params } = this.groupedShows(libraryId, options);
+    return (
       this.database
         .prepare<unknown[], { total: number }>(`SELECT COUNT(*) AS total FROM (${grouped})`)
-        .get(...params)?.total ?? 0;
-    const rows = this.database
-      .prepare<unknown[], ShowQuery>(`${grouped} ORDER BY lower(title), tmdb_id LIMIT ? OFFSET ?`)
-      .all(...params, options.limit, options.offset);
-    return {
-      total,
-      items: rows.map((row) => ({
-        tmdbId: row.tmdb_id,
-        title: row.title,
-        year: row.year,
-        seasons: row.seasons,
-        episodes: row.episodes,
-        missing: row.missing,
-        nfo: flag(row.nfo),
-        poster: flag(row.poster),
-        fanart: flag(row.fanart),
-      })),
-    };
+        .get(...params)?.total ?? 0
+    );
   }
 
   /** When the snapshot was last replaced by a scan; `null` for a library never scanned. */

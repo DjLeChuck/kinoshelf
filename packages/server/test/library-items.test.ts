@@ -514,6 +514,20 @@ describe('the lookups of the item store', () => {
     ]);
   });
 
+  it('reads a page of a library in order without sorting the whole of it', () => {
+    const database = migrated(new Database(':memory:'));
+    const plan = database
+      .prepare(
+        `EXPLAIN QUERY PLAN SELECT path FROM library_items WHERE library_id = ?
+         ORDER BY lower(COALESCE(title, path)), path LIMIT 50 OFFSET 0`,
+      )
+      .all('shows')
+      .map((step) => (step as { detail: string }).detail)
+      .join('\n');
+    expect(plan).toContain('library_items_order');
+    expect(plan).not.toContain('TEMP B-TREE');
+  });
+
   it('finds rows by the id the web uses, also those saved before it was stored', () => {
     const database = migrated(new Database(':memory:'));
     const store = new LibraryItemStore(database);

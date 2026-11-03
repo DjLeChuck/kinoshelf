@@ -87,7 +87,7 @@ export class History {
   /** Whether anything was ever transferred or tried, from the server or the CLI. */
   hasBatch(): boolean {
     // An execution that moved nothing has a job, which the caller counts already.
-    return this.journal.lastBatchId() !== null || this.journal.batches().length > 0;
+    return this.journal.hasBatches();
   }
 
   /**

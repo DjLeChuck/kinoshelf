@@ -35,6 +35,10 @@ export class MemoryJournal implements Journal {
     );
   }
 
+  hasBatches(): boolean {
+    return this.batches().length > 0;
+  }
+
   batches(): readonly JournalBatch[] {
     const byBatch = new Map<string, { entry: JournalEntry; undone: boolean; index: number }[]>();
     this.entries.forEach((stored, index) => {

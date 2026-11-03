@@ -116,6 +116,12 @@ export class SqliteJournal implements Journal {
     );
   }
 
+  hasBatches(): boolean {
+    return (
+      this.db.select({ id: journalEntries.id }).from(journalEntries).limit(1).get() !== undefined
+    );
+  }
+
   batches(): readonly JournalBatch[] {
     return this.summaries()
       .groupBy(journalEntries.batchId)

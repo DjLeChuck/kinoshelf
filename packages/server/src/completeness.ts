@@ -176,6 +176,16 @@ export class Completeness {
     this.kick();
   }
 
+  /** A library left (deleted, or pointed elsewhere): what was waiting for it would count nothing. */
+  forget(libraryId: string): void {
+    this.dirty.delete(libraryId);
+    for (const [key, wanted] of this.waiting) {
+      if (wanted.libraryId === libraryId) {
+        this.waiting.delete(key);
+      }
+    }
+  }
+
   /** Queues the shows of a library whose count is missing or out of date. */
   enqueue(libraryId: string): void {
     this.collect(libraryId);

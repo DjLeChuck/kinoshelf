@@ -104,12 +104,15 @@
         shows = answer;
         settling = pages.flatMap((page) => page.items);
         settleTotal = pages.reduce((sum, page) => sum + page.total, 0);
-        details = {
-          ...details,
-          ...Object.fromEntries(
-            fresh.filter((entry): entry is [number, ShowDetail] => entry[1] !== null),
-          ),
-        };
+        // Only what is open is kept: a closed show is read again when it opens.
+        details = Object.fromEntries(
+          Object.entries({
+            ...details,
+            ...Object.fromEntries(
+              fresh.filter((entry): entry is [number, ShowDetail] => entry[1] !== null),
+            ),
+          }).filter(([id]) => opened.includes(Number(id))),
+        );
         failure = undefined;
       }
     } catch (error) {

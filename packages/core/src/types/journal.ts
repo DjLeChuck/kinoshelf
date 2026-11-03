@@ -80,6 +80,8 @@ export interface Journal {
   markUndone(batchId: string, entryIds?: readonly string[]): void;
   /** Ids of the entries of the batch already reverted. */
   undoneEntryIds(batchId: string): ReadonlySet<string>;
+  /** Whether anything was ever journaled, without summing up the batches. */
+  hasBatches(): boolean;
   /** Every batch, the most recent first. */
   batches(): readonly JournalBatch[];
   /** One batch, without summing up the others; `undefined` for an unknown id. */

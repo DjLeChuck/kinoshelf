@@ -298,6 +298,13 @@ export const SERVER_MIGRATIONS: readonly { readonly name: string; readonly sql: 
     name: 'server:021-jobs-path',
     sql: 'CREATE INDEX jobs_path ON jobs (path);',
   },
+  {
+    // The list of a library is ordered by title (or path for a file nobody recognized): an index on
+    // that very expression lets a page read the first rows instead of sorting the whole library.
+    name: 'server:022-items-order',
+    sql: `CREATE INDEX library_items_order
+      ON library_items (library_id, lower(COALESCE(title, path)), path);`,
+  },
 ];
 
 /** Opens the single SQLite file of the config directory, shared with the CLI and the cache. */
