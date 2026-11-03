@@ -36,7 +36,12 @@ export {
   showFileNames,
   type CompanionKind,
 } from './planning/companions.js';
-export { createPlan, type PlanInput, type PlannerOptions } from './planning/planner.js';
+export {
+  createPlan,
+  selectItems,
+  type PlanInput,
+  type PlannerOptions,
+} from './planning/planner.js';
 export { type Sidecar } from './planning/sidecars.js';
 export { executePlan, type ExecuteOptions } from './execution/executor.js';
 export { MemoryJournal } from './journal/memory-journal.js';

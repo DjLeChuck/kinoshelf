@@ -18,6 +18,8 @@ export interface WriteFileOperation {
   readonly type: 'write-file';
   readonly destination: string;
   readonly content: string;
+  /** A file of the show or of a season, not of this video (see `selectItems`). */
+  readonly shared?: true;
 }
 
 /** Downloads an image (artwork). */
@@ -25,6 +27,8 @@ export interface DownloadOperation {
   readonly type: 'download';
   readonly url: string;
   readonly destination: string;
+  /** A file of the show or of a season, not of this video (see `selectItems`). */
+  readonly shared?: true;
 }
 
 /** A disk operation. Nothing runs without a validated plan. */

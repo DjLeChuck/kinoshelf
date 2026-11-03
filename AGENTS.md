@@ -172,8 +172,10 @@ format follows the Kodi wiki's templates, saved pages are not in the repository)
   nor sends the video back to the queue. A `.nfo` the user already had travels as a sidecar and
   wins over the generated one. A movie written flat (no folder) gets no fixed-name file
   (`movie.nfo`, `poster.jpg`), which every movie would share.
-- **Show-level files** (`tvshow.nfo`, the show's poster and fanart) come with every episode; the
-  planner keeps the first one of the batch (`shareCompanions`).
+- **Show-level files** (`tvshow.nfo`, the show's poster and fanart, a season's poster) come with
+  every episode, marked `shared`; the planner keeps the first one of the batch (`shareCompanions`).
+  Running only some items (`selectItems`, the server's `prepare`) hands them from an episode left out
+  to a chosen one whose video lies in the same folder, so a partial selection still writes them.
 - **Journal and undo**: entries have a `kind` (`transfer`, `generated`, `downloaded`;
   `core:002-journal-kind`). Each entry keeps the destination's size and date as written
   (`identity`, `core:003-journal-identity`): a file that differs since (a poster the user replaced, an

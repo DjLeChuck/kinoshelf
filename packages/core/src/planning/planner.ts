@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { lstat, stat } from 'node:fs/promises';
-import { dirname, join, resolve, sep } from 'node:path';
+import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { KinoshelfError } from '../errors.js';
 import { nearestExistingDevice } from '../execution/fs-ops.js';
 import { renderProfileTemplate, type TemplateVariables } from '../profiles/template.js';
@@ -219,6 +219,54 @@ async function planItem(input: PlanInput, options: PlannerOptions, id: string): 
  * Files about a whole show (`tvshow.nfo`, its poster) come with each of its episodes: only the
  * first item to ask for one keeps it. Case-insensitive, like the destination check.
  */
+/**
+ * The items to run when only some of a plan's are chosen. `shareCompanions` gave a show's own
+ * files (and a season's poster) to the first episode wanting them; when that episode is left out,
+ * they go to the first chosen one whose video lies in the same folder, so a partial selection still
+ * writes them. One that nobody chosen lives under stays out: it is not this selection's to write.
+ */
+export function selectItems(items: readonly PlanItem[], chosen: ReadonlySet<string>): PlanItem[] {
+  const picked = items.filter((item) => chosen.has(item.id));
+  const held = new Set(
+    picked.flatMap((item) => item.operations.map((op) => op.destination.toLowerCase())),
+  );
+  const adopted = new Map<string, Operation[]>();
+  for (const item of items) {
+    if (chosen.has(item.id) || item.status !== 'ready') {
+      continue;
+    }
+    for (const operation of item.operations) {
+      const key = operation.destination.toLowerCase();
+      if (operation.type === 'transfer' || operation.shared !== true || held.has(key)) {
+        continue;
+      }
+      const folder = dirname(operation.destination);
+      const heir = picked.find(
+        (candidate) => candidate.status === 'ready' && isInside(videoOf(candidate), folder),
+      );
+      if (heir) {
+        held.add(key);
+        adopted.set(heir.id, [...(adopted.get(heir.id) ?? []), operation]);
+      }
+    }
+  }
+  return picked.map((item) => {
+    const extra = adopted.get(item.id);
+    return extra ? { ...item, operations: [...item.operations, ...extra] } : item;
+  });
+}
+
+/** Where an item's video ends up: its transfer's destination, or where it already is. */
+function videoOf(item: PlanItem): string {
+  const main = item.operations.find((op) => op.type === 'transfer' && op.role === 'main');
+  return main?.destination ?? item.parsed.path;
+}
+
+function isInside(path: string, folder: string): boolean {
+  const rest = relative(folder, path);
+  return rest !== '' && !rest.startsWith('..') && !isAbsolute(rest);
+}
+
 function shareCompanions(items: readonly PlanItem[]): PlanItem[] {
   const claimed = new Set<string>();
   return items.map((item) => {

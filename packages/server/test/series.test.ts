@@ -1,4 +1,4 @@
-import { writeFile } from 'node:fs/promises';
+import { access, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { loadConfig } from '@kinoshelf/core';
 import type { MetadataProvider, SeasonInfo, SeriesDetails } from '@kinoshelf/core';
@@ -8,6 +8,12 @@ import { LibraryItemStore, type LibraryItem } from '../src/library-items.js';
 import { cleanup, fakeProvider, harness, makeDir, put } from './harness.js';
 
 afterEach(cleanup);
+
+const exists = (path: string): Promise<boolean> =>
+  access(path).then(
+    () => true,
+    () => false,
+  );
 
 const SHOW = { provider: 'tmdb', id: 95396 };
 
@@ -455,5 +461,39 @@ describe('the files of a show and of its seasons', () => {
       items: { nfo: boolean | null; poster: boolean | null; fanart: boolean | null }[];
     }>().items;
     expect(row).toMatchObject({ nfo: null, poster: null, fanart: null });
+  });
+});
+
+describe('refreshing some episodes of a show', () => {
+  it('writes the show’s own files even when the episode carrying them is left out', async () => {
+    const profile = join(await makeDir(), 'show-files.yaml');
+    await writeFile(profile, SHOW_PROFILE);
+    const root = await makeDir();
+    const show = join(root, 'Severance');
+    await put(join(show, 'Season 01', 'Severance - s01e01.mkv'));
+    const second = await put(join(show, 'Season 01', 'Severance - s01e02.mkv'));
+    const h = await harness({
+      config: {
+        libraries: [
+          { id: 'films', name: 'Films', source: await makeDir(), type: 'movie' },
+          { id: 'shows', name: 'Shows', source: root, type: 'series', profile },
+        ],
+      },
+      createProvider: () => provider(),
+    });
+    await h.request('POST', '/api/libraries/shows/scan');
+    await h.app.jobs.idle();
+    const { items } = (await h.request('GET', '/api/libraries/shows/items')).json<{
+      items: { id: string; path: string }[];
+    }>();
+    const chosen = items.find(({ path }) => path === second)?.id ?? '';
+
+    const run = await h.request('POST', '/api/libraries/shows/execute', { items: [chosen] });
+    expect(run.statusCode).toBe(202);
+    await h.app.jobs.idle();
+    expect(await exists(join(show, 'tvshow.nfo'))).toBe(true);
+    expect(await exists(join(show, 'Season 01', 'Severance - s01e02.nfo'))).toBe(true);
+    // The other episode's own NFO is not this selection's.
+    expect(await exists(join(show, 'Season 01', 'Severance - s01e01.nfo'))).toBe(false);
   });
 });

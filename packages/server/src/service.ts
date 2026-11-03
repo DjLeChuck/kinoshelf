@@ -8,6 +8,7 @@ import {
   type LoadedMetadata,
   executePlan,
   undoBatch,
+  selectItems,
   type Candidate,
   type Classification,
   type ErrorInfo,
@@ -453,10 +454,24 @@ export class Service {
     entryIds?: readonly string[],
   ): Promise<{ plan: Plan; entryOfItem: Map<string, Entry> }[]> {
     const job = this.requireDoneJob(jobId);
+    const executable = this.deps.entries.executable(jobId);
     const selected = entryIds && new Set(entryIds);
-    const entries = this.deps.entries
-      .executable(jobId)
-      .filter((entry) => entry.item && (!selected || selected.has(entry.id)));
+    // A show's files ride on one episode of the plan: left out, it hands them to a chosen one.
+    const items = selected
+      ? new Map(
+          selectItems(
+            executable.flatMap((entry) => (entry.item ? [entry.item] : [])),
+            new Set(executable.filter((e) => selected.has(e.id)).flatMap((e) => e.item?.id ?? [])),
+          ).map((item) => [item.id, item]),
+        )
+      : undefined;
+    const entries = executable.flatMap((entry) => {
+      if (!entry.item || (selected && !selected.has(entry.id))) {
+        return [];
+      }
+      const item = items?.get(entry.item.id) ?? entry.item;
+      return [item === entry.item ? entry : { ...entry, item }];
+    });
 
     const groups = new Map<string, { settings: PlanSettings; entries: Entry[] }>();
     for (const entry of entries) {

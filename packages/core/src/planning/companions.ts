@@ -51,11 +51,14 @@ export function companionOperations(
     companionName(profile, template, variables);
 
   const operations: Operation[] = [];
-  const write = (folders: readonly string[], name: string, content: string): void => {
+  // A series' own files and a season's poster belong to no single episode.
+  const shared = details.kind === 'series';
+  const write = (folders: readonly string[], name: string, content: string, own = false) => {
     operations.push({
       type: 'write-file',
       destination: join(place.root, ...folders, name),
       content,
+      ...(shared && !own && { shared: true as const }),
     });
   };
   const download = (folders: readonly string[], name: string, path: string, size: ImageSize) => {
@@ -64,6 +67,7 @@ export function companionOperations(
         type: 'download',
         url: imageUrl(path, size),
         destination: join(place.root, ...folders, name),
+        ...(shared && { shared: true as const }),
       });
     }
   };
@@ -103,6 +107,7 @@ export function companionOperations(
           [...place.workFolders, ...place.seasonFolders],
           render(nfo.episode, { file: place.stem }),
           renderEpisodeNfo(details, episodes, nfoOptions),
+          true,
         );
       }
     }

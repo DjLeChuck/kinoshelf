@@ -7,6 +7,7 @@ import {
   loadBundledProfile,
   MemoryJournal,
   parseProfile,
+  selectItems,
   type PlanInput,
   type PlanItem,
   type MovieDetails,
@@ -505,6 +506,90 @@ describe('createPlan: NFO and artwork', () => {
     expect(companions(items[1]).map((op) => op.destination)).toEqual([
       join(show, 'Season 01', 'The Bear - s01e02.nfo'),
     ]);
+  });
+
+  describe('a selection that leaves out the episode carrying the show files', () => {
+    async function threeEpisodes() {
+      const [src, lib] = [await makeDir(), await makeDir()];
+      const files = await Promise.all(['a', 'b', 'c'].map((n) => put(join(src, `${n}.mkv`))));
+      const { items } = await planWith(
+        [
+          { parsed: parsedEpisode(files[0] ?? '', 1, [1]), candidate: bear, details: bearDetails },
+          { parsed: parsedEpisode(files[1] ?? '', 1, [2]), candidate: bear, details: bearDetails },
+          { parsed: parsedEpisode(files[2] ?? '', 2, [1]), candidate: bear, details: bearDetails },
+        ],
+        lib,
+      );
+      const ids = items.map((item) => item.id);
+      return { lib, items, show: join(lib, 'The Bear (2022)'), ids };
+    }
+    const names = (item: PlanItem | undefined) =>
+      companions(item).map((op) => op.destination.split('/').slice(-2).join('/'));
+
+    it('marks only the show’s and the seasons’ files as shared', async () => {
+      const { items } = await threeEpisodes();
+      const shared = items.flatMap((item) => companions(item).filter((op) => op.shared));
+      expect(shared.map((op) => op.destination.split('/').at(-1)).sort()).toEqual([
+        'fanart.jpg',
+        'poster.jpg',
+        'season01-poster.jpg',
+        'season02-poster.jpg',
+        'tvshow.nfo',
+      ]);
+    });
+
+    it('hands them to a chosen episode under the same folder', async () => {
+      const { items, ids } = await threeEpisodes();
+      const [second, third] = selectItems(items, new Set([ids[1] ?? '', ids[2] ?? '']));
+
+      expect(names(second)).toEqual([
+        'Season 01/The Bear - s01e02.nfo',
+        'The Bear (2022)/tvshow.nfo',
+        'The Bear (2022)/poster.jpg',
+        'The Bear (2022)/fanart.jpg',
+        'Season 01/season01-poster.jpg',
+      ]);
+      expect(names(third)).toEqual([
+        'Season 02/The Bear - s02e01.nfo',
+        'Season 02/season02-poster.jpg',
+      ]);
+    });
+
+    it('leaves out a season poster no chosen episode lives beside', async () => {
+      const { items, ids } = await threeEpisodes();
+      const [third] = selectItems(items, new Set([ids[2] ?? '']));
+      expect(names(third)).not.toContain('Season 01/season01-poster.jpg');
+      expect(names(third)).toContain('The Bear (2022)/tvshow.nfo');
+    });
+
+    it('changes nothing when the episode carrying them is chosen', async () => {
+      const { items, ids } = await threeEpisodes();
+      expect(selectItems(items, new Set([ids[0] ?? '', ids[2] ?? '']))).toEqual([
+        items[0],
+        items[2],
+      ]);
+    });
+
+    it('writes them when the selection runs', async () => {
+      const { items, ids, show } = await threeEpisodes();
+      await executePlan(
+        {
+          id: 'p',
+          createdAt: '',
+          profileId: 'kodi',
+          destinationRoot: show,
+          mode: 'copy',
+          items: selectItems(items, new Set([ids[1] ?? ''])),
+        },
+        { journal: new MemoryJournal(), fetchImage: () => Promise.resolve(new Uint8Array([1])) },
+      );
+      expect((await readdir(show)).sort()).toEqual([
+        'Season 01',
+        'fanart.jpg',
+        'poster.jpg',
+        'tvshow.nfo',
+      ]);
+    });
   });
 
   it('puts every episode of a double file in its NFO', async () => {
