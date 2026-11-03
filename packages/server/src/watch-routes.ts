@@ -5,25 +5,8 @@ import type { FolderWatcher } from './watcher.js';
 
 const statusSchema = {
   type: 'object',
-  required: ['enabled', 'mode', 'folders', 'pending', 'lastScanAt'],
-  properties: {
-    enabled: { type: 'boolean' },
-    mode: { type: 'string', enum: ['events', 'poll'] },
-    folders: {
-      type: 'array',
-      items: {
-        type: 'object',
-        required: ['path', 'libraryId', 'available'],
-        properties: {
-          path: { type: 'string' },
-          libraryId: { type: 'string', nullable: true },
-          available: { type: 'boolean' },
-        },
-      },
-    },
-    pending: { type: 'integer', description: 'Releases still being written or settling.' },
-    lastScanAt: { type: 'string', nullable: true },
-  },
+  required: ['enabled'],
+  properties: { enabled: { type: 'boolean', description: 'At least one library is watched.' } },
 } as const;
 
 /** What the watcher is doing, and the manual "check now" for when a person knows better. */
@@ -32,11 +15,11 @@ export function registerWatchRoutes(api: FastifyInstance, watcher: FolderWatcher
     '/api/watch',
     {
       schema: {
-        summary: 'State of the watched folders',
+        summary: 'Whether any folder is watched',
         response: { 200: statusSchema, 401: errorSchema },
       },
     },
-    () => watcher.status(),
+    () => ({ enabled: watcher.status().enabled }),
   );
 
   api.post(
@@ -51,14 +34,10 @@ export function registerWatchRoutes(api: FastifyInstance, watcher: FolderWatcher
         response: {
           200: {
             type: 'object',
-            required: ['submitted', 'pending', 'known'],
+            required: ['submitted', 'pending'],
             properties: {
               submitted: { type: 'integer' },
-              pending: { type: 'integer' },
-              known: {
-                type: 'integer',
-                description: 'Releases an earlier scan already submitted.',
-              },
+              pending: { type: 'integer', description: 'Releases still being written.' },
             },
           },
           401: errorSchema,

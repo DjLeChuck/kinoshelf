@@ -66,11 +66,6 @@ export interface ScanProgress {
 
 export interface ItemsPage {
   readonly library: {
-    readonly id: string;
-    readonly name: string;
-    readonly type: 'movie' | 'series';
-    readonly path: string;
-    readonly profile: string;
     readonly writes: { readonly nfo: boolean; readonly artwork: boolean };
   };
   /** `null` until a scan of the source has ended. */

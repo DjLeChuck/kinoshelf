@@ -98,7 +98,6 @@ export const jobSchema = {
     'libraryId',
     'status',
     'apply',
-    'createdAt',
     'startedAt',
     'finishedAt',
     'error',
@@ -114,7 +113,6 @@ export const jobSchema = {
     libraryId: { type: 'string', nullable: true },
     status: { type: 'string', enum: ['queued', 'running', 'done', 'failed'] },
     apply: { type: 'boolean' },
-    createdAt: { type: 'string', format: 'date-time' },
     startedAt: { type: 'string', format: 'date-time', nullable: true },
     finishedAt: { type: 'string', format: 'date-time', nullable: true },
     error: { ...errorInfo, nullable: true },
@@ -404,7 +402,6 @@ export const activitySchema = {
     'at',
     'status',
     'path',
-    'libraryId',
     'operations',
     'failed',
     'modes',
@@ -424,7 +421,6 @@ export const activitySchema = {
       nullable: true,
       description: 'What was submitted; absent for the CLI.',
     },
-    libraryId: { type: 'string', nullable: true },
     operations: { type: 'integer' },
     failed: { type: 'integer' },
     modes: { type: 'array', items: { type: 'string', enum: ['copy', 'hardlink', 'move'] } },
@@ -541,7 +537,7 @@ export const settingsSchema = {
       type: 'array',
       items: {
         type: 'object',
-        required: ['id', 'target', 'format', 'on', 'headerNames'],
+        required: ['id', 'target', 'format', 'on'],
         properties: {
           id: { type: 'string', description: 'Names this webhook in a `PATCH`.' },
           target: {
@@ -550,16 +546,14 @@ export const settingsSchema = {
           },
           format: { type: 'string', enum: webhookFormats },
           on: { type: 'array', items: { type: 'string', enum: webhookEvents } },
-          headerNames: { type: 'array', items: { type: 'string' } },
         },
       },
     },
     watch: {
       type: 'object',
       nullable: true,
-      required: ['folders', 'settleSeconds', 'pollSeconds', 'apply'],
+      required: ['settleSeconds', 'pollSeconds', 'apply'],
       properties: {
-        folders: { type: 'array', items: { type: 'string' } },
         settleSeconds: { type: 'integer', nullable: true },
         pollSeconds: { type: 'integer', nullable: true },
         apply: { type: 'boolean' },
@@ -762,13 +756,11 @@ export const arrivalsSchema = {
           'state',
           'kind',
           'resolution',
-          'createdAt',
           'sourceId',
           'destination',
           'destinationOptions',
           'reason',
           'candidates',
-          'plannedPath',
           'conflicts',
           'error',
         ],
@@ -796,7 +788,6 @@ export const arrivalsSchema = {
           kind: { type: 'string', enum: ['movie', 'series'], nullable: true },
           /** The picture size the name announces (`2160p`), null when it says none. */
           resolution: { type: 'string', nullable: true },
-          createdAt: { type: 'string', format: 'date-time', nullable: true },
           /** The arrival folder it came from; null for a path sent by hand. */
           sourceId: { type: 'string', nullable: true },
           destination: {
@@ -817,8 +808,6 @@ export const arrivalsSchema = {
           },
           reason: entrySchema.properties.reason,
           candidates: entrySchema.properties.candidates,
-          /** Where the video goes once matched; null while nothing is chosen. */
-          plannedPath: { type: 'string', nullable: true },
           /** What stops it from going there. */
           conflicts: entrySchema.properties.conflicts,
           error: entrySchema.properties.error,

@@ -33,10 +33,8 @@ export interface Settings {
     readonly target: string;
     readonly format: WebhookFormat;
     readonly on: readonly WebhookEvent[];
-    readonly headerNames: readonly string[];
   }[];
   readonly watch: {
-    readonly folders: readonly string[];
     readonly settleSeconds: number | null;
     readonly pollSeconds: number | null;
     readonly apply: boolean;

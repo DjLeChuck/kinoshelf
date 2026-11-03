@@ -58,7 +58,6 @@ export interface Activity {
   readonly status: BatchStatus | JobStatus;
   /** What was submitted; `null` for a batch made by the CLI. */
   readonly path: string | null;
-  readonly libraryId: string | null;
   readonly operations: number;
   readonly failed: number;
   readonly modes: readonly TransferMode[];
@@ -122,7 +121,6 @@ export class History {
         at: batch.at,
         status: batch.status,
         path: batch.origin?.path ?? null,
-        libraryId: (batch.origin && lookups.jobs.get(batch.origin.jobId)?.libraryId) ?? null,
         operations: batch.operations,
         failed: batch.failed,
         modes: batch.modes,
@@ -139,7 +137,6 @@ export class History {
             at: job.finishedAt ?? job.createdAt,
             status: job.status,
             path: job.path,
-            libraryId: job.libraryId,
             operations: 0,
             failed: 0,
             modes: mode ? [mode] : [],

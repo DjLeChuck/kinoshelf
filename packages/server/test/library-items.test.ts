@@ -221,13 +221,7 @@ describe('GET /api/libraries/:id/items', () => {
   it('lists the snapshot with its counts, by title', async () => {
     const { h, root, dune, alien } = await scanned();
     const body = await list(h);
-    expect(body.library).toMatchObject({
-      id: 'films',
-      type: 'movie',
-      path: root,
-      profile: 'kodi-test',
-      writes: { nfo: true, artwork: false },
-    });
+    expect(body.library).toEqual({ writes: { nfo: true, artwork: false } });
     expect(body.scannedAt).toEqual(expect.any(String));
     expect(body.scan).toBeNull();
     expect(body.counts).toEqual({

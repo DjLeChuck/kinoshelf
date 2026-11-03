@@ -419,13 +419,8 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
             properties: {
               library: {
                 type: 'object',
-                required: ['id', 'name', 'type', 'path', 'profile', 'writes'],
+                required: ['writes'],
                 properties: {
-                  id: { type: 'string' },
-                  name: { type: 'string' },
-                  type: { type: 'string', enum: ['movie', 'series'] },
-                  path: { type: 'string' },
-                  profile: { type: 'string', description: 'The id of the profile that applies.' },
                   writes: {
                     type: 'object',
                     required: ['nfo', 'artwork'],
@@ -485,14 +480,7 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
       const last = jobs.lastScan(library.id, library.source);
       const running = last?.status === 'queued' || last?.status === 'running' ? last : undefined;
       return {
-        library: {
-          id: library.id,
-          name: library.name,
-          type: library.type,
-          path: library.source,
-          profile: profile.id,
-          writes: profileWrites(profile, library.type),
-        },
+        library: { writes: profileWrites(profile, library.type) },
         // A scan that found nothing leaves no row, yet it did end.
         scannedAt:
           items.scannedAt(library.id) ?? (last?.status === 'done' ? last.finishedAt : null),

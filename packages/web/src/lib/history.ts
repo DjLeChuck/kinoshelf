@@ -14,7 +14,6 @@ export interface Activity {
   readonly at: string;
   readonly status: BatchStatus | JobStatus;
   readonly path: string | null;
-  readonly libraryId: string | null;
   readonly operations: number;
   readonly failed: number;
   readonly modes: readonly Mode[];
@@ -30,7 +29,6 @@ export interface JobDetail {
   readonly libraryId: string | null;
   readonly status: JobStatus;
   readonly apply: boolean;
-  readonly createdAt: string;
   readonly startedAt: string | null;
   readonly finishedAt: string | null;
   readonly error: ErrorBody | null;

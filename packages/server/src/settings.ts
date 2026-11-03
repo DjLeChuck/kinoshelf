@@ -95,13 +95,11 @@ export function presentSettings(config: Config, env: Env): unknown {
       target: redactUrl(webhook.url),
       format: webhook.format ?? 'generic',
       on: webhook.on ?? ['transferred', 'failed'],
-      headerNames: Object.keys(webhook.headers ?? {}),
     })),
-    // `folders` is derived (the sources of the watched libraries) and read-only here.
+    // Shown once a library is watched, even with no setting of its own yet.
     watch:
       config.watch || watchedFolders(config).length > 0
         ? {
-            folders: watchedFolders(config),
             settleSeconds: config.watch?.settleSeconds ?? null,
             pollSeconds: config.watch?.pollSeconds ?? null,
             apply: config.watch?.apply ?? false,

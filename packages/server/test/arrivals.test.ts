@@ -20,7 +20,6 @@ interface Arrival {
   sourceId: string | null;
   destination: { libraryId: string | null };
   destinationOptions: { id: string; name: string }[];
-  plannedPath: string | null;
 }
 
 interface Arrivals {
@@ -93,7 +92,6 @@ describe('GET /api/arrivals', () => {
       state: 'unrecognized',
       resolution: '2160p',
       sourceId: 'downloads',
-      plannedPath: null,
       kind: 'movie',
       destination: { libraryId: 'films' },
     });

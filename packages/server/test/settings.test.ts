@@ -22,7 +22,7 @@ interface SettingsBody {
   locale: string | null;
   plex: { url: string; section: number | null; tokenConfigured: boolean } | null;
   jellyfin: { url: string; tokenConfigured: boolean } | null;
-  webhooks: { id: string; target: string; format: string; on: string[]; headerNames: string[] }[];
+  webhooks: { id: string; target: string; format: string; on: string[] }[];
   processing: { profile: string | null; mode: string | null; threshold: number | null };
   apiKey: { source: string | null };
 }
@@ -110,7 +110,6 @@ notify:
         target: 'https://discord.com/…',
         format: 'discord',
         on: ['transferred', 'failed'],
-        headerNames: ['Authorization'],
       },
     ]);
     expect(body.apiKey.source).toBe('database');
@@ -154,7 +153,6 @@ describe('presentSettings', () => {
     for (const secret of secrets) {
       expect(shown).not.toContain(secret);
     }
-    expect(shown).toContain('Authorization');
   });
 });
 

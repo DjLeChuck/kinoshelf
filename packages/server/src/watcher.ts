@@ -60,15 +60,12 @@ export interface WatchStatus {
   readonly folders: readonly FolderStatus[];
   /** Releases seen but not yet submitted: still being written, or settling. */
   readonly pending: number;
-  readonly lastScanAt: string | null;
 }
 
 export interface ScanResult {
   /** Jobs created by this scan. */
   readonly submitted: number;
   readonly pending: number;
-  /** Releases seen again that an earlier scan already submitted. */
-  readonly known: number;
 }
 
 export interface WatcherDeps {
@@ -113,7 +110,6 @@ export class FolderWatcher {
   private chain: Promise<unknown> = Promise.resolve();
   private available = new Map<string, boolean>();
   private pending = 0;
-  private lastScanAt: string | null = null;
 
   constructor(private readonly deps: WatcherDeps) {}
 
@@ -148,7 +144,6 @@ export class FolderWatcher {
         available: this.available.get(path) ?? false,
       })),
       pending: this.pending,
-      lastScanAt: this.lastScanAt,
     };
   }
 
@@ -216,22 +211,19 @@ export class FolderWatcher {
     const config = this.config;
     let submitted = 0;
     let pending = 0;
-    let known = 0;
     if (config) {
       for (const folder of config.folders) {
         const result = await this.scanFolder(folder, config, force);
         submitted += result.submitted;
         pending += result.pending;
-        known += result.known;
       }
     }
     this.pending = pending;
-    this.lastScanAt = new Date(this.now()).toISOString();
     // Files still settling are not announced by any event: look again once they might be done.
     if (pending > 0 && !this.polling) {
       this.schedule(Math.max(5, config?.settleSeconds ?? DEFAULT_SETTLE_SECONDS) * 1000);
     }
-    return { submitted, pending, known };
+    return { submitted, pending };
   }
 
   private now(): number {
@@ -247,7 +239,7 @@ export class FolderWatcher {
     this.available.set(folder, releases !== undefined);
     // An unreadable folder says nothing about what is in it: keep what was recorded.
     if (!releases) {
-      return { submitted: 0, pending: 0, known: 0 };
+      return { submitted: 0, pending: 0 };
     }
 
     const settleMs = (config.settleSeconds ?? DEFAULT_SETTLE_SECONDS) * 1000;
@@ -258,7 +250,6 @@ export class FolderWatcher {
     const queued = force ? this.queuedPaths(folder) : undefined;
     let submitted = 0;
     let pending = 0;
-    let remembered = 0;
     const seen: VideoFile[] = [];
 
     for (const release of releases.values()) {
@@ -269,10 +260,6 @@ export class FolderWatcher {
           (queued !== undefined && !queued.has(release.path) && !queued.has(file.path)),
       );
       if (fresh.length === 0) {
-        // A folder with only samples or an NFO has nothing to be known for.
-        if (release.videos.length > 0) {
-          remembered++;
-        }
         continue;
       }
       const settled = release.videos.every((file) => now - file.mtimeMs >= settleMs);
@@ -291,7 +278,7 @@ export class FolderWatcher {
     }
 
     this.forget(folder, seen);
-    return { submitted, pending, known: remembered };
+    return { submitted, pending };
   }
 
   private knownFiles(folder: string): Set<string> {

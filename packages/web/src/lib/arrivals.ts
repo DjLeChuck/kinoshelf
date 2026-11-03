@@ -39,7 +39,6 @@ export interface Arrival {
   readonly state: 'review' | 'unrecognized';
   readonly kind: 'movie' | 'series' | null;
   readonly resolution: string | null;
-  readonly createdAt: string | null;
   /** The arrival folder it came from; `null` for a path sent by hand or a file of a library. */
   readonly sourceId: string | null;
   readonly destination: { readonly libraryId: string | null };
@@ -47,7 +46,6 @@ export interface Arrival {
   readonly destinationOptions: readonly { readonly id: string; readonly name: string }[];
   readonly reason: string | null;
   readonly candidates: readonly Candidate[];
-  readonly plannedPath: string | null;
   readonly conflicts: readonly ConflictBody[];
   readonly error: ErrorBody | null;
 }

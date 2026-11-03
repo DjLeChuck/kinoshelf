@@ -51,11 +51,11 @@ describe('FolderWatcher', () => {
     await age(await put(join(release, 'dune.mkv')), SETTLE + 1);
     await age(await put(join(release, 'extras.mkv')), 5);
 
-    expect(await watcher.scan()).toEqual({ submitted: 0, pending: 1, known: 0 });
+    expect(await watcher.scan()).toEqual({ submitted: 0, pending: 1 });
     expect(submitted).toEqual([]);
 
     await age(join(release, 'extras.mkv'), SETTLE + 1);
-    expect(await watcher.scan()).toEqual({ submitted: 1, pending: 0, known: 0 });
+    expect(await watcher.scan()).toEqual({ submitted: 1, pending: 0 });
     expect(submitted).toEqual([{ path: release, apply: false }]);
 
     await watcher.scan();
@@ -75,17 +75,17 @@ describe('FolderWatcher', () => {
     await age(await put(join(release, 'dune.mkv.!qB')), SETTLE + 1);
     await age(await put(join(release, 'dune.mkv')), SETTLE + 1);
 
-    expect(await watcher.scan({ force: true })).toEqual({ submitted: 0, pending: 1, known: 0 });
+    expect(await watcher.scan({ force: true })).toEqual({ submitted: 0, pending: 1 });
     await rm(join(release, 'dune.mkv.!qB'));
-    expect(await watcher.scan({ force: true })).toEqual({ submitted: 1, pending: 0, known: 0 });
+    expect(await watcher.scan({ force: true })).toEqual({ submitted: 1, pending: 0 });
     expect(submitted).toHaveLength(1);
   });
 
   it('skips the settling time when forced, for someone who knows it is done', async () => {
     const { folder, submitted, watcher } = await setup();
     await age(await put(join(folder, 'Dune.2021', 'dune.mkv')), 1);
-    expect(await watcher.scan()).toEqual({ submitted: 0, pending: 1, known: 0 });
-    expect(await watcher.scan({ force: true })).toEqual({ submitted: 1, pending: 0, known: 0 });
+    expect(await watcher.scan()).toEqual({ submitted: 0, pending: 1 });
+    expect(await watcher.scan({ force: true })).toEqual({ submitted: 1, pending: 0 });
     expect(submitted).toHaveLength(1);
   });
 
@@ -100,12 +100,12 @@ describe('FolderWatcher', () => {
     database
       .prepare("INSERT INTO jobs (id, path, status, created_at) VALUES ('a', ?, 'done', '')")
       .run(file);
-    expect(await watcher.scan({ force: true })).toEqual({ submitted: 0, pending: 0, known: 1 });
+    expect(await watcher.scan({ force: true })).toEqual({ submitted: 0, pending: 0 });
 
     // History cleared: the file is remembered but unreachable, unless asked for.
     database.prepare('DELETE FROM jobs').run();
-    expect(await watcher.scan()).toEqual({ submitted: 0, pending: 0, known: 1 });
-    expect(await watcher.scan({ force: true })).toEqual({ submitted: 1, pending: 0, known: 0 });
+    expect(await watcher.scan()).toEqual({ submitted: 0, pending: 0 });
+    expect(await watcher.scan({ force: true })).toEqual({ submitted: 1, pending: 0 });
     expect(submitted).toHaveLength(2);
   });
 
@@ -163,7 +163,7 @@ describe('FolderWatcher', () => {
     await age(await put(join(folder, 'Dune.2021', 'Sample', 'sample.mkv')), SETTLE + 1);
     await age(await put(join(folder, 'Dune.2021', '.hidden.mkv')), SETTLE + 1);
     await age(await put(join(folder, 'Dune.2021', 'dune.nfo')), SETTLE + 1);
-    expect(await watcher.scan()).toEqual({ submitted: 0, pending: 0, known: 0 });
+    expect(await watcher.scan()).toEqual({ submitted: 0, pending: 0 });
   });
 
   it('submits what was there before it started', async () => {
@@ -207,7 +207,7 @@ describe('FolderWatcher', () => {
     const { folder, submitted, watcher } = await setup();
     watcher.configure(undefined);
     await age(await put(join(folder, 'Dune.2021.mkv')), SETTLE + 1);
-    expect(await watcher.scan()).toEqual({ submitted: 0, pending: 0, known: 0 });
+    expect(await watcher.scan()).toEqual({ submitted: 0, pending: 0 });
     expect(submitted).toEqual([]);
     expect(watcher.status().enabled).toBe(false);
   });
@@ -244,7 +244,7 @@ describe('the watch API', () => {
 
     const scan = await h.request('POST', '/api/watch/scan');
     expect(scan.statusCode).toBe(200);
-    expect(scan.json()).toEqual({ submitted: 1, pending: 0, known: 0 });
+    expect(scan.json()).toEqual({ submitted: 1, pending: 0 });
     await h.app.jobs.idle();
     const jobs = new JobStore(
       h.database,
@@ -281,17 +281,12 @@ describe('the watch API', () => {
     await h.request('PATCH', '/api/libraries/films', { watch: true });
     const response = await patch({ watch: { pollSeconds: 3600, apply: true } });
     expect(response.json<{ watch: unknown }>().watch).toEqual({
-      folders: [folder],
       settleSeconds: null,
       pollSeconds: 3600,
       apply: true,
     });
     expect(await readFile(join(configDir, 'config.yaml'), 'utf8')).toContain('apply: true');
-    expect((await h.request('GET', '/api/watch')).json()).toMatchObject({
-      enabled: true,
-      mode: 'poll',
-      folders: [{ path: folder, libraryId: 'films', available: true }],
-    });
+    expect((await h.request('GET', '/api/watch')).json()).toEqual({ enabled: true });
 
     // `folders` is no longer a setting: libraries own it.
     expect((await patch({ watch: { folders: [folder] } })).statusCode).toBe(400);

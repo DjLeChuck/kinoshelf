@@ -124,13 +124,11 @@ function presentArrival(entry: Entry, service: Service, jobs: JobStore): unknown
     state: entry.classification === 'unrecognized' ? 'unrecognized' : 'review',
     kind,
     resolution: resolutionOf(entry.path),
-    createdAt: job?.createdAt ?? null,
     sourceId: job?.libraryId ?? null,
     destination,
     destinationOptions: service.destinationOptions(entry).map(({ id, name }) => ({ id, name })),
     reason: entry.reason,
     candidates: entry.candidates,
-    plannedPath: plan.destination,
     conflicts: plan.conflicts,
     error: entry.error,
   };
