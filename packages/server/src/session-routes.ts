@@ -1,5 +1,6 @@
 import type { Database } from 'better-sqlite3';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
+import { AttemptLimiter } from './attempts.js';
 import { generateApiKey, hasApiKey, isValidApiKey, setApiKey } from './auth.js';
 import { isLocalHost } from './local-host.js';
 import { errorSchema } from './schemas.js';
@@ -55,6 +56,7 @@ export function registerSessionRoutes(
   database: Database,
   /** Host names the first-launch key may be created through, besides the local ones. */
   allowed: readonly string[] = [],
+  attempts: AttemptLimiter = new AttemptLimiter(),
 ): void {
   app.get(
     '/api/session',
@@ -130,16 +132,29 @@ export function registerSessionRoutes(
           additionalProperties: false,
           properties: { apiKey: { type: 'string', minLength: 1 } },
         },
-        response: { 200: sessionSchema, 401: errorSchema, 503: errorSchema },
+        response: { 200: sessionSchema, 401: errorSchema, 429: errorSchema, 503: errorSchema },
       },
     },
     (request, reply) => {
       if (!hasApiKey(database)) {
         return reply.code(503).send({ error: { code: 'auth.not-configured' } });
       }
-      if (!sameOrigin(request) || !isValidApiKey(database, request.body.apiKey)) {
+      if (!sameOrigin(request)) {
         return reply.code(401).send({ error: { code: 'auth.unauthorized' } });
       }
+      const wait = attempts.waitFor(request.ip);
+      if (wait > 0) {
+        return reply
+          .code(429)
+          .header('retry-after', String(wait))
+          .send({ error: { code: 'auth.too-many-attempts', params: { seconds: wait } } });
+      }
+      if (!isValidApiKey(database, request.body.apiKey)) {
+        attempts.failed(request.ip);
+        request.log.warn({ ip: request.ip }, 'Refused a sign-in with a wrong API key');
+        return reply.code(401).send({ error: { code: 'auth.unauthorized' } });
+      }
+      attempts.succeeded(request.ip);
       const token = createSession(database);
       void reply.header(
         'set-cookie',

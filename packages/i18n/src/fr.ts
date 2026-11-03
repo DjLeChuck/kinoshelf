@@ -200,6 +200,8 @@ export const fr: Record<keyof typeof en, string> = {
   'error.batch.already-undone': 'Ce lot a déjà été annulé.',
   'error.fs.not-a-directory': '{path} est un fichier, pas un dossier.',
   'error.fs.not-absolute': 'Un chemin doit être absolu (il commence par /).',
+  'error.auth.too-many-attempts':
+    'Trop de clés erronées depuis cette adresse. Réessayez dans {seconds} secondes.',
   'error.fs.not-found': 'Aucun dossier à {path}.',
   'error.events.too-many':
     'Trop de pages suivent le serveur en ce moment. Fermez un onglet et réessayez.',

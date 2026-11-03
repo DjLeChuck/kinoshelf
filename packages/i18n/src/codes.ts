@@ -24,6 +24,7 @@ export type ServerErrorCode = (typeof SERVER_ERROR_CODES)[number];
 /** Codes the REST API answers with, which the web UI turns into text. */
 export const API_ERROR_CODES = [
   'auth.not-configured',
+  'auth.too-many-attempts',
   'auth.unauthorized',
   'batch.already-undone',
   'batch.not-found',

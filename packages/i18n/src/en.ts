@@ -193,6 +193,8 @@ export const en = {
   'error.batch.already-undone': 'This batch was already undone.',
   'error.fs.not-a-directory': '{path} is a file, not a folder.',
   'error.fs.not-absolute': 'A path must be absolute (it starts with /).',
+  'error.auth.too-many-attempts':
+    'Too many wrong keys from this address. Try again in {seconds} seconds.',
   'error.fs.not-found': 'No folder at {path}.',
   'error.events.too-many': 'Too many pages follow the server right now. Close a tab and retry.',
   'error.fs.system-folder': '{path} is a system folder: Kinoshelf does not analyze it.',

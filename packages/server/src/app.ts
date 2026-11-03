@@ -37,6 +37,7 @@ import { registerWatchRoutes } from './watch-routes.js';
 import { FolderWatcher, watcherSettings } from './watcher.js';
 import { registerWeb } from './web.js';
 import { allowedHosts } from './local-host.js';
+import { AttemptLimiter } from './attempts.js';
 import { registerSessionRoutes, sameOrigin, sessionToken } from './session-routes.js';
 
 declare module 'fastify' {
@@ -385,7 +386,9 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
 
   app.get('/api/openapi.json', { schema: { hide: true } }, () => app.swagger());
 
-  registerSessionRoutes(app, options.database, allowedHosts(options.env));
+  // Wrong keys, per address, whether typed on the sign-in page or sent as a Bearer token.
+  const attempts = new AttemptLimiter();
+  registerSessionRoutes(app, options.database, allowedHosts(options.env), attempts);
 
   await app.register((api, _options, done) => {
     api.addHook('onRequest', (request, reply, done) => {
@@ -395,9 +398,22 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
         return;
       }
       const match = /^Bearer (.+)$/.exec(request.headers.authorization ?? '');
-      if (match?.[1] && isValidApiKey(options.database, match[1])) {
-        done();
-        return;
+      if (match?.[1]) {
+        const wait = attempts.waitFor(request.ip);
+        if (wait > 0) {
+          void reply
+            .code(429)
+            .header('retry-after', String(wait))
+            .send({ error: { code: 'auth.too-many-attempts', params: { seconds: wait } } });
+          return;
+        }
+        if (isValidApiKey(options.database, match[1])) {
+          attempts.succeeded(request.ip);
+          done();
+          return;
+        }
+        attempts.failed(request.ip);
+        request.log.warn({ ip: request.ip }, 'Refused a request with a wrong API key');
       }
       // A browser session is only honored with the cookie's own safeguards: a write must come
       // from the UI's origin.

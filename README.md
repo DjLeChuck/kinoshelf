@@ -44,7 +44,9 @@ On a first launch with no key, the web UI's sign-in page can create it for you (
 sign in with it), when the server is reached by a local name: an IP address, `localhost`, a name
 without a dot or ending in `.local`, `.lan`, `.home.arpa` or `.internal` (add others to
 `KINOSHELF_ALLOWED_HOSTS`). A page on the internet could otherwise point a name of its own at your
-server and take the key first. The commands below do the same without a browser. Behind a reverse proxy, set `KINOSHELF_TRUST_PROXY` to its address: otherwise
+server and take the key first. The commands below do the same without a browser. An address that
+gives ten wrong keys within ten minutes (sign-in or `Bearer`) is refused with a 429 until those ten
+minutes are over. Behind a reverse proxy, set `KINOSHELF_TRUST_PROXY` to its address: otherwise
 every request seems to come from the proxy, and the server sees neither the browser's host name nor
 HTTPS.
 
