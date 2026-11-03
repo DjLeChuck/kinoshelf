@@ -61,11 +61,16 @@
   let picked = $state<readonly string[]>([]);
   let running = $state<'rename' | 'refresh' | undefined>(undefined);
 
-  const pickedItems = $derived((page?.items ?? []).filter(({ id }) => picked.includes(id)));
+  const pickedIds = $derived(new Set(picked));
+  const pickedItems = $derived((page?.items ?? []).filter(({ id }) => pickedIds.has(id)));
   const split = $derived(partition(pickedItems));
   const toRun = $derived.by(() => {
     const mode = running;
-    return mode === undefined ? [] : pickedItems.filter(({ id }) => split[mode].includes(id));
+    if (mode === undefined) {
+      return [];
+    }
+    const wanted = new Set(split[mode]);
+    return pickedItems.filter(({ id }) => wanted.has(id));
   });
 
   function pick(id: string, on: boolean): void {
@@ -312,7 +317,7 @@
                         aria-label={t('web.library.run.select', {
                           name: item.title ?? item.path.split('/').pop() ?? '',
                         })}
-                        checked={picked.includes(item.id)}
+                        checked={pickedIds.has(item.id)}
                         onchange={(event) => {
                           pick(item.id, event.currentTarget.checked);
                         }}

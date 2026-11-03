@@ -151,7 +151,9 @@ export function groupReleases(items: readonly Arrival[]): ReleaseGroup[] {
     if (item.cluster === 0) {
       group.files.push(item);
     } else {
-      group.others.set(item.cluster, [...(group.others.get(item.cluster) ?? []), item]);
+      const files = group.others.get(item.cluster) ?? [];
+      files.push(item);
+      group.others.set(item.cluster, files);
     }
     groups.set(key, group);
   }

@@ -82,8 +82,10 @@ export interface Journal {
   undoneEntryIds(batchId: string): ReadonlySet<string>;
   /** Whether anything was ever journaled, without summing up the batches. */
   hasBatches(): boolean;
-  /** Every batch, the most recent first. */
-  batches(): readonly JournalBatch[];
+  /** The most recent batches (all of them without a `limit`), by the time they started. */
+  batches(limit?: number): readonly JournalBatch[];
+  /** How many batches there are, without summing them up. */
+  countBatches(): number;
   /** One batch, without summing up the others; `undefined` for an unknown id. */
   batch(batchId: string): JournalBatch | undefined;
 }

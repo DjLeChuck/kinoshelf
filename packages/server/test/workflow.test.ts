@@ -281,7 +281,8 @@ describe('a transfer in progress', () => {
           },
           undoneEntryIds: (batchId) => real.undoneEntryIds(batchId),
           hasBatches: () => real.hasBatches(),
-          batches: () => real.batches(),
+          batches: (limit) => real.batches(limit),
+          countBatches: () => real.countBatches(),
           batch: (batchId) => real.batch(batchId),
         };
       },

@@ -139,6 +139,19 @@ describe('GET /api/history', () => {
     expect((await list(h, '?limit=1')).map((b) => b.id)).toEqual([second.batchId]);
     expect((await list(h, '?limit=1&offset=1')).map((b) => b.id)).toEqual([first.batchId]);
   });
+
+  it('counts the batches the page does not read', async () => {
+    const h = await harness();
+    await run(h);
+    await run(h);
+    await run(h);
+    const page = (await h.request('GET', '/api/history?limit=1')).json<{
+      total: number;
+      items: unknown[];
+    }>();
+    expect(page.items).toHaveLength(1);
+    expect(page.total).toBe(3);
+  });
 });
 
 describe('GET /api/batches/:id', () => {

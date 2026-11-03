@@ -114,22 +114,24 @@ function behavesLikeAJournal(name: string, make: () => Journal | Promise<Journal
       journal.record(entry('d', 'b1', { mode: 'hardlink', at: '2026-10-28T09:06:00.000Z' }));
       journal.markUndone('b2');
 
-      expect(journal.batches()).toEqual([
-        {
-          batchId: 'b1',
-          at: '2026-10-28T09:00:00.000Z',
-          operations: 3,
-          modes: ['copy', 'hardlink'],
-          undone: false,
-        },
-        {
-          batchId: 'b2',
-          at: '2026-10-28T10:00:00.000Z',
-          operations: 1,
-          modes: ['move'],
-          undone: true,
-        },
-      ]);
+      const b1 = {
+        batchId: 'b1',
+        at: '2026-10-28T09:00:00.000Z',
+        operations: 3,
+        modes: ['copy', 'hardlink'],
+        undone: false,
+      };
+      const b2 = {
+        batchId: 'b2',
+        at: '2026-10-28T10:00:00.000Z',
+        operations: 1,
+        modes: ['move'],
+        undone: true,
+      };
+      // By when a batch started: b1 went on after b2 began, and is still the older one.
+      expect(journal.batches()).toEqual([b2, b1]);
+      expect(journal.batches(1)).toEqual([b2]);
+      expect(journal.countBatches()).toBe(2);
     });
 
     it('reports the batch of the most recent entry as the last one', async () => {

@@ -122,12 +122,20 @@ export class SqliteJournal implements Journal {
     );
   }
 
-  batches(): readonly JournalBatch[] {
-    return this.summaries()
+  batches(limit?: number): readonly JournalBatch[] {
+    const query = this.summaries()
       .groupBy(journalEntries.batchId)
-      .orderBy(desc(sql`max(${journalEntries.seq})`))
-      .all()
-      .map(toBatch);
+      .orderBy(desc(sql`min(${journalEntries.at})`), desc(sql`max(${journalEntries.seq})`));
+    return (limit === undefined ? query.all() : query.limit(limit).all()).map(toBatch);
+  }
+
+  countBatches(): number {
+    return (
+      this.db
+        .select({ total: sql<number>`count(distinct ${journalEntries.batchId})` })
+        .from(journalEntries)
+        .get()?.total ?? 0
+    );
   }
 
   batch(batchId: string): JournalBatch | undefined {

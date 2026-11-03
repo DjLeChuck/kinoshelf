@@ -114,8 +114,11 @@ export class History {
     };
     const batched = new Set(withBatch.filter(isFinished).map((execution) => execution.jobId));
     const executed = this.executions.jobsWithExecution();
+    // A line of the page is one of the newest of its own kind: only that many batches are read.
+    const wanted = options.offset + options.limit;
+    const journaled = this.journal.batches(wanted);
     const lines = [
-      ...this.batches(lookups).map((batch): Activity => ({
+      ...this.batches(lookups, journaled).map((batch): Activity => ({
         id: batch.id,
         kind: 'batch',
         at: batch.at,
@@ -147,18 +150,21 @@ export class History {
     ]
       .filter((line) => options.all || !line.routine)
       .sort((a, b) => b.at.localeCompare(a.at));
+    // Batches left unread would all be listed (none is routine), so they only add to the count.
+    const unread = this.journal.countBatches() - journaled.length;
     return {
-      total: lines.length,
+      total: lines.length + unread,
       items: lines.slice(options.offset, options.offset + options.limit),
     };
   }
 
-  private batches(lookups: Lookups): BatchSummary[] {
-    const journaled = this.journal.batches();
-    const known = new Set(journaled.map((batch) => batch.batchId));
+  private batches(lookups: Lookups, journaled: readonly JournalBatch[]): BatchSummary[] {
+    // A finished execution whose batch the journal does not hold: it failed before writing.
     const failed = [...lookups.executions.values()].filter(
       (execution) =>
-        isFinished(execution) && execution.batchId !== null && !known.has(execution.batchId),
+        isFinished(execution) &&
+        execution.batchId !== null &&
+        this.journal.batch(execution.batchId) === undefined,
     );
     return [
       ...journaled.map((batch) =>

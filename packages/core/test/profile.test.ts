@@ -1,4 +1,4 @@
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, utimes, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -270,4 +270,25 @@ describe('bundled profiles', () => {
       );
     },
   );
+});
+
+describe('loadProfileFile: parsed once', () => {
+  it('serves a profile again until its file changes', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'kinoshelf-profile-'));
+    try {
+      const file = join(directory, 'mine.yaml');
+      const text = await readFile(plexUrl, 'utf8');
+      await writeFile(file, text);
+      const first = await loadProfileFile(file);
+      expect(await loadProfileFile(file)).toBe(first);
+
+      await writeFile(file, text.replace(/^name: .*$/m, 'name: Edited'));
+      await utimes(file, new Date(), new Date(Date.now() + 5000));
+      const edited = await loadProfileFile(file);
+      expect(edited).not.toBe(first);
+      expect(edited.name).toBe('Edited');
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
 });

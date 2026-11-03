@@ -127,7 +127,15 @@ export function parseProfile(yamlText: string): Profile {
 /** A profile is a few dozen lines; anything much bigger is not one. */
 const MAX_PROFILE_BYTES = 64 * 1024;
 
+/**
+ * Profiles already parsed. A file the user can edit is checked by its size and date on each call
+ * (one `stat`, instead of reading and parsing it for every request); a shipped one never changes.
+ */
+const parsed = new Map<string, { stamp: string; profile: Profile }>();
+const MAX_CACHED_PROFILES = 64;
+
 export async function loadProfileFile(path: string | URL): Promise<Profile> {
+  let stamp = 'shipped';
   if (typeof path === 'string') {
     // Only a regular YAML file of a sane size is read: not a device (`/dev/zero` never ends), a
     // FIFO, or a large file of something else.
@@ -135,8 +143,19 @@ export async function loadProfileFile(path: string | URL): Promise<Profile> {
     if (!info?.isFile() || info.size > MAX_PROFILE_BYTES || !/\.ya?ml$/i.test(path)) {
       throw new KinoshelfError('profile.not-a-file', { path, max: MAX_PROFILE_BYTES / 1024 });
     }
+    stamp = `${String(info.size)}:${String(info.mtimeMs)}`;
   }
-  return parseProfile(await readFile(path, 'utf8'));
+  const key = String(path);
+  const known = parsed.get(key);
+  if (known?.stamp === stamp) {
+    return known.profile;
+  }
+  const profile = parseProfile(await readFile(path, 'utf8'));
+  if (parsed.size >= MAX_CACHED_PROFILES) {
+    parsed.clear();
+  }
+  parsed.set(key, { stamp, profile });
+  return profile;
 }
 
 // Same depth from `src/profiles` and `dist/profiles`: the YAML files ship next to the code.

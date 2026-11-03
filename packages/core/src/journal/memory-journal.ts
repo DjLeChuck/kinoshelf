@@ -39,16 +39,22 @@ export class MemoryJournal implements Journal {
     return this.batches().length > 0;
   }
 
-  batches(): readonly JournalBatch[] {
+  countBatches(): number {
+    return this.batches().length;
+  }
+
+  batches(limit?: number): readonly JournalBatch[] {
     const byBatch = new Map<string, { entry: JournalEntry; undone: boolean; index: number }[]>();
     this.entries.forEach((stored, index) => {
       const { batchId } = stored.entry;
       byBatch.set(batchId, [...(byBatch.get(batchId) ?? []), { ...stored, index }]);
     });
-    // Most recent first, by the latest operation of each batch (as the SQLite journal does).
+    // Most recent first, by when a batch started, then by its latest operation (as the SQLite
+    // journal does).
     const latest = (stored: { index: number }[]): number => stored[stored.length - 1]?.index ?? 0;
+    const started = (stored: { entry: JournalEntry }[]): string => stored[0]?.entry.at ?? '';
     return [...byBatch.entries()]
-      .sort(([, a], [, b]) => latest(b) - latest(a))
+      .sort(([, a], [, b]) => started(b).localeCompare(started(a)) || latest(b) - latest(a))
       .map(([batchId, stored]) => ({
         batchId,
         at: stored[0]?.entry.at ?? '',
@@ -57,7 +63,8 @@ export class MemoryJournal implements Journal {
           ...new Set(stored.flatMap((s) => (s.entry.kind === 'transfer' ? [s.entry.mode] : []))),
         ],
         undone: stored.every((s) => s.undone),
-      }));
+      }))
+      .slice(0, limit);
   }
 
   batch(batchId: string): JournalBatch | undefined {

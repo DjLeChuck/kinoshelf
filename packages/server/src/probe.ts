@@ -18,7 +18,11 @@ export interface Probe {
  * Reads a file. Rejects when the file cannot be read, with `unavailable` set when `ffprobe` itself
  * is not there (nothing was learned, so nothing should be remembered).
  */
-export type Prober = (path: string) => Promise<Probe>;
+/** `stamp` is the size and date the caller just read: the file is not stat-ed a second time. */
+export type Prober = (
+  path: string,
+  stamp?: { readonly size: number; readonly mtimeMs: number },
+) => Promise<Probe>;
 
 export class ProbeUnavailableError extends Error {
   constructor() {
@@ -54,8 +58,8 @@ export function summarize(output: string, file: { size: number; mtime: number })
 
 const TIMEOUT_MS = 30_000;
 
-export const ffprobe: Prober = async (path) => {
-  const info = await stat(path);
+export const ffprobe: Prober = async (path, stamp) => {
+  const info = stamp ?? (await stat(path));
   const output = await new Promise<string>((resolve, reject) => {
     execFile(
       'ffprobe',
@@ -184,7 +188,7 @@ export class ProbeQueue {
       if (known?.probedAt && known.size === info.size && known.mtime === Math.floor(info.mtimeMs)) {
         return known;
       }
-      const probe = await prober(path);
+      const probe = await prober(path, info);
       store.setProbe(libraryId, path, probe);
       return probe;
     } catch (error) {
