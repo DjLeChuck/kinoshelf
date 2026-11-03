@@ -15,12 +15,15 @@ Identifies video files (movies, series) **already on disk**, renames them to mat
 conventions (Plex, Jellyfin) and writes their metadata (NFO, artwork). A web-native equivalent of
 tinyMediaManager and a companion to Radarr/Sonarr: it never downloads anything.
 
-> **Status: v0.3**: the headless core, the CLI, the REST server, the Docker image and the web UI
-> (validation queue, history, settings) work. There is no folder watcher yet: a script or a
-> scheduled call submits the files (see [Server](#server)). Browsing the library, scanning a whole
-> library from the browser and several libraries are planned (the UI shows them as “coming soon”).
+> **Status: work in progress, no stable release yet.** The core, the CLI, the REST server, the
+> Docker image and the web UI (libraries, arrivals, history, settings) all work, as do the folder
+> watcher and the NFO and artwork writers for Plex and Jellyfin. The recommended way to run it is the
+> [Docker image](#docker); the CLI below is the same core without the server.
 
-## Usage (v0.1, from source)
+## Command line
+
+The CLI ships in the Docker image (`docker compose exec kinoshelf kinoshelf …`); outside Docker it is
+built from source (see [Development](#development)).
 
 ```sh
 export TMDB_API_KEY=...            # your own key, from themoviedb.org
@@ -234,6 +237,10 @@ With Nix: `nix develop` (or direnv). Otherwise: Node.js 22 and pnpm.
 pnpm install
 pnpm typecheck && pnpm lint && pnpm test
 ```
+
+To run the CLI or the server from the sources, build once (`pnpm build`) and call the compiled
+entry points: `node packages/cli/dist/main.js scan <folder>` and
+`node packages/server/dist/main.js` (`make dev-server` does the build and starts the server).
 
 `pnpm test` includes the matching corpus. The web UI is tested in a real browser with Playwright,
 against the real server and a fake TMDB: `pnpm test:e2e` (the Nix shell provides the browsers; elsewhere

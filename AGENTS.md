@@ -5,18 +5,18 @@ renames them for a media player (Plex, Jellyfin) and writes their metadata (NFO,
 
 ## Where we are
 
-v0.1 (core, CLI and matching corpus) and v0.2 (REST server, notifications, multi-arch Docker image)
-are done, and so is getting downloads in (see "Getting downloads in" below). The web UI (v0.3) is being
-simplified to three entries: Libraries, History and Settings. A welcome shows at `/` on the first
+The core, the CLI, the matching corpus, the REST server, the notifications and the multi-arch Docker
+image are done, and so is getting downloads in (see "Getting downloads in" below). The web UI has three
+entries: Libraries, History and Settings. A welcome shows at `/` on the first
 launch (`GET`/`PATCH /api/onboarding`, server migration 009) and the app then opens on Libraries. The
 libraries (organized in place, arrival folders) are configured in the Settings, with a server-side
 path picker. The Libraries page has a tab per typed library (list read from the snapshot, filters,
 scan progress, the page of an item) and an Arrivals tab (`/arrivals`) where a file is validated:
 candidate, destination library. A series library reads as a tree (show, season,
 episode) with its missing episodes. Items are renamed and refreshed from the page (a preview first). The History merges batches and
-jobs in one list (see "History" below). A series is validated as a release, not file by file. v1.0 is under way: the NFO and artwork
-writers and the `jellyfin` and `plex-nfo` profiles are built (see "NFO and artwork" below), metadata
-included for a library that is already organized.
+jobs in one list (see "History" below). A series is validated as a release, not file by file. The NFO
+and artwork writers and the `jellyfin` and `plex-nfo` profiles are built (see "NFO and artwork"
+below), metadata included for a library that is already organized. No stable release is tagged yet.
 
 Backlog, not built: skipping samples by size (today only by name: `sample.*`, a `Sample` folder);
 reading completion from a download client's own API (see "Getting downloads in").
@@ -133,6 +133,17 @@ contains no player-specific rule.
 - **The first key** (`POST /api/setup/api-key`, while none exists) is only made through a local host
   name (IP, `localhost`, no dot, `.local`/`.lan`/`.home.arpa`/`.internal`, or
   `KINOSHELF_ALLOWED_HOSTS`): a DNS-rebinding page sends its own domain as both `Origin` and `Host`.
+- **Exposed server** (`app.ts`, `attempts.ts`, `web.ts`): everything under `/api` needs the key, the
+  OpenAPI document included (only `/health` and the sign-in/setup routes are public). An address with
+  ten wrong keys in ten minutes gets a 429 (`auth.too-many-attempts`), a right key included: that is
+  per `request.ip`, so behind a proxy `KINOSHELF_TRUST_PROXY` must name it, or everyone shares one
+  count. `X-Forwarded-*` is believed only from that proxy; the origin and first-key host checks read
+  `request.host`. The page's content security policy forbids anything foreign (the e2e `csp` spec
+  fails on a violation): never load a script, style or image from another origin.
+- **The web's API types** are written by hand and held against the server's: `packages/server/test/api-types.test.ts`
+  generates `packages/web/src/lib/api-schema.d.ts` from the route schemas (`UPDATE_API_TYPES=1 pnpm test`
+  rewrites it) and `web/src/lib/api-contract.ts` fails `svelte-check` when a hand-written type no longer
+  accepts what the server sends. Change a response field on both sides, then regenerate.
 - **The welcome page** (`/`, until the setup is left): the TMDB key is tested as soon as it is
   entered and dropped if TMDB refuses it; the destination step creates the first two libraries (a movies folder and a series folder, organized in place), the last step an arrival folder pointing at them (watched, or scanned once). Any job counts as work, so the setup ends even when that job failed: the History
   then lists the analyses in progress and the failed ones with their cause (`GET /api/history`), a
