@@ -231,7 +231,7 @@ describe('readArrivals', () => {
     const page = await readArrivals(3, (limit, offset) => {
       asked.push([limit, offset]);
       return Promise.resolve({
-        total: 3,
+        total: 6,
         sources: [],
         items: releases.slice(offset, offset + Math.min(limit, 2)).flat(),
       });

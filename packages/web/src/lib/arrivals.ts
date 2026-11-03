@@ -127,7 +127,8 @@ export async function readArrivals(
   const first = await read(Math.min(releases, MAX_RELEASES), 0);
   const items = [...first.items];
   let seen = count(first.items);
-  while (seen < releases && seen < first.total) {
+  // `total` counts files, `releases` and the offset count releases: compare each to its own unit.
+  while (seen < releases && items.length < first.total) {
     const next = await read(Math.min(releases - seen, MAX_RELEASES), seen);
     if (next.items.length === 0) {
       break;

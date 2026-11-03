@@ -208,7 +208,7 @@
             {/if}
           </li>
         {/each}
-        {#if page.total > groups.length}
+        {#if page.total > page.items.length}
           <li>
             <button
               type="button"
@@ -216,7 +216,7 @@
               onclick={() => {
                 releases += PAGE;
                 void load();
-              }}>{t('web.library.more', { shown: groups.length, total: page.total })}</button
+              }}>{t('web.library.more', { shown: page.items.length, total: page.total })}</button
             >
           </li>
         {/if}
