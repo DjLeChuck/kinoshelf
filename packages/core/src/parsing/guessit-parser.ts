@@ -33,6 +33,12 @@ const text = (value: unknown): string | undefined =>
   typeof value === 'string' && value.trim() !== '' ? value : undefined;
 const count = (value: unknown): number | undefined =>
   typeof value === 'number' && Number.isFinite(value) ? value : undefined;
+/** Season and episode numbers: a conflicting reading may hand back text or a fraction, which is no number of ours. */
+const numbers = (value: unknown): readonly number[] =>
+  toList(value).flatMap((entry) => {
+    const found = count(entry);
+    return found !== undefined && Number.isInteger(found) ? [found] : [];
+  });
 // An explicit marker that a number is a season/episode: `S02E05`, `2x05`, `Season 2`, `Épisode 5`.
 const EPISODE_MARKER =
   /s\d+\s*[-.]?\s*e\d+|\b\d{1,2}x\d{2,3}\b|saison|season|[ée]pisode|\bep?\s?\d/i;
@@ -135,7 +141,7 @@ export class GuessitParser implements Parser {
     // 2049`), so the file is a movie. Any other could equally be an absolute episode number
     // (`Dragon Ball 116`), which cannot be told from S01E16: the type is left unknown.
     const base = fileName[0] ?? '';
-    const [seasonList, episodeList] = [toList(guess.season), toList(guess.episode)];
+    const [seasonList, episodeList] = [numbers(guess.season), numbers(guess.episode)];
     let numbersAreAmbiguous = false;
     // A "season" between 1900 and 2099 is a year (`Mulan 2 (...) (2004)` reads as S2004E02).
     const seasonIsYear =
@@ -165,8 +171,8 @@ export class GuessitParser implements Parser {
       }
     }
 
-    const seasons = toList(guess.season);
-    const episodes = [...new Set(toList(guess.episode))].sort((a, b) => a - b);
+    const seasons = numbers(guess.season);
+    const episodes = [...new Set(numbers(guess.episode))].sort((a, b) => a - b);
     const season = seasons.length === 1 ? seasons[0] : undefined;
     const extension = extname(path).slice(1).toLowerCase();
     const languages = toList(guess.language).flatMap((l) => languageCode(l) ?? []);

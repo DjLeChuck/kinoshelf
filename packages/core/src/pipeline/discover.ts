@@ -1,4 +1,4 @@
-import { readdir, stat } from 'node:fs/promises';
+import { lstat, readdir, stat } from 'node:fs/promises';
 import { basename, dirname, extname, join, relative, resolve, sep } from 'node:path';
 import { KinoshelfError } from '../errors.js';
 
@@ -103,6 +103,12 @@ export async function discoverVideos(
     info = await stat(root);
   } catch {
     throw new KinoshelfError('discover.not-found', { path: root });
+  }
+
+  // A link to a file is skipped like the links met while walking a folder: moving it would carry
+  // the link, not the video, and leave a dangling one at the destination.
+  if (!info.isDirectory() && (await lstat(root)).isSymbolicLink()) {
+    return [];
   }
 
   const base = info.isDirectory() ? root : dirname(root);

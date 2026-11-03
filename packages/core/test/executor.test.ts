@@ -1,5 +1,5 @@
 import { existsSync } from 'node:fs';
-import { lstat, readdir, readFile, rm, stat, utimes } from 'node:fs/promises';
+import { chmod, lstat, readdir, readFile, rm, stat, utimes } from 'node:fs/promises';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
@@ -337,6 +337,22 @@ describe('executePlan: failures and dry run', () => {
     expect(batch.items.map((i) => i.results[0]?.status)).toEqual(['failed', 'done']);
     expect(journal.entriesOf(batch.batchId)).toHaveLength(1);
   });
+
+  it.skipIf(process.getuid?.() === 0)(
+    'takes back the folders it made when the copy then fails',
+    async () => {
+      const { root, source, plan, journal } = await setup('copy');
+      // Readable enough to be planned, not to be copied.
+      await chmod(source, 0o000);
+      try {
+        const batch = await run(plan, journal);
+        expect(statuses(batch)).toEqual(['failed']);
+        expect(await readdir(root)).toEqual([]);
+      } finally {
+        await chmod(source, 0o644);
+      }
+    },
+  );
 
   it('writes nothing in a dry run, yet reports what would happen', async () => {
     const { root, source, plan, journal } = await setup('move');

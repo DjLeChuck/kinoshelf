@@ -17,6 +17,7 @@ import {
   copyAtomic,
   describeFsError,
   ensureDirectory,
+  removeEmptyDirectories,
   exists,
   hardlinkFile,
   moveFile,
@@ -90,8 +91,9 @@ async function transfer(operation: TransferOperation, dryRun: boolean): Promise<
     return { status: 'done' };
   }
 
+  let createdDirectories: string[] = [];
   try {
-    const createdDirectories = await ensureDirectory(dirname(operation.destination));
+    createdDirectories = await ensureDirectory(dirname(operation.destination));
     switch (operation.mode) {
       case 'copy':
         await copyAtomic(operation.source, operation.destination);
@@ -105,6 +107,7 @@ async function transfer(operation: TransferOperation, dryRun: boolean): Promise<
     }
     return { status: 'done', createdDirectories };
   } catch (error) {
+    await removeEmptyDirectories(createdDirectories);
     if (error instanceof KinoshelfError && error.info.code === 'destination.exists') {
       return { status: 'skipped', error: error.info };
     }
@@ -162,11 +165,13 @@ async function createFile(
     }
   }
 
+  let createdDirectories: string[] = [];
   try {
-    const createdDirectories = await ensureDirectory(dirname(destination));
+    createdDirectories = await ensureDirectory(dirname(destination));
     await writeAtomic(destination, data);
     return { status: 'done', createdDirectories };
   } catch (error) {
+    await removeEmptyDirectories(createdDirectories);
     if (error instanceof KinoshelfError && error.info.code === 'destination.exists') {
       return { status: 'skipped', error: error.info };
     }

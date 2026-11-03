@@ -20,10 +20,36 @@ export function finalizeSegment(segment: string, rules: FilesystemRules, reserve
   const limit = Math.max(1, rules.maxSegmentBytes - reserveBytes);
   let result = segment.replace(/^[.\s]+/, '');
 
-  // Truncate on code point boundaries so multi-byte characters are never cut in half.
-  while (Buffer.byteLength(result, 'utf8') > limit) {
-    result = Array.from(result).slice(0, -1).join('');
+  if (Buffer.byteLength(result, 'utf8') > limit) {
+    // The id the player matches on (`{tmdb-603}`, `[tmdbid-603]`) closes the name: it is the part
+    // that must survive, so the title before it gives way.
+    const tag = TRAILING_ID.exec(result)?.[0] ?? '';
+    const room = limit - Buffer.byteLength(tag, 'utf8');
+    result =
+      room > 0
+        ? `${cut(result.slice(0, result.length - tag.length), room)}${tag}`
+        : cut(result, limit);
   }
 
-  return rules.forbidden === 'windows' ? result.replace(/[. ]+$/, '') : result.trimEnd();
+  result = rules.forbidden === 'windows' ? result.replace(/[. ]+$/, '') : result.trimEnd();
+  return rules.forbidden === 'windows' ? unreserved(result) : result;
+}
+
+const TRAILING_ID = /\s*[{[][a-z]+-\d+[}\]]$/i;
+
+/** Cuts on code point boundaries so multi-byte characters are never cut in half. */
+function cut(text: string, bytes: number): string {
+  let result = text;
+  while (Buffer.byteLength(result, 'utf8') > bytes) {
+    result = Array.from(result).slice(0, -1).join('');
+  }
+  return result;
+}
+
+// Names Windows reserves for devices, with or without an extension (`CON.mkv` is still `CON`).
+const RESERVED = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(\..*)?$/i;
+
+/** A reserved device name cannot be created on a Windows filesystem: an underscore makes it one. */
+function unreserved(segment: string): string {
+  return RESERVED.test(segment) ? `_${segment}` : segment;
 }

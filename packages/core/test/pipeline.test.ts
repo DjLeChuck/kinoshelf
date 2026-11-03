@@ -33,6 +33,16 @@ describe('discoverVideos', () => {
     ]);
   });
 
+  it('skips a link to a video given by itself, as it skips one met in a folder', async () => {
+    const root = await makeDir();
+    const real = await put(join(root, 'Film.mp4'));
+    const link = join(root, 'Link.mp4');
+    await symlink(real, link);
+
+    expect(await discoverVideos(link)).toEqual([]);
+    expect((await discoverVideos(real)).map((f) => f.displayPath)).toEqual(['Film.mp4']);
+  });
+
   it('skips promotional samples shipped with a release', async () => {
     const root = await makeDir();
     await put(join(root, 'Film (2016)', 'Film.2016.1080p.mkv'));

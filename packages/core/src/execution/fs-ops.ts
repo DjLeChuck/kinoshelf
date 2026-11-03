@@ -5,6 +5,7 @@ import {
   link,
   lstat,
   mkdir,
+  rmdir,
   rename,
   stat,
   unlink,
@@ -46,8 +47,28 @@ export async function ensureDirectory(directory: string): Promise<string[]> {
       break;
     }
   }
-  await mkdir(directory, { recursive: true });
+  try {
+    await mkdir(directory, { recursive: true });
+  } catch (error) {
+    await removeEmptyDirectories(missing);
+    throw error;
+  }
   return missing;
+}
+
+/**
+ * Takes back the directories an operation created when it then failed: nothing is journaled for a
+ * failure, so undo would never find them. `rmdir` refuses a directory that holds anything, so
+ * what someone else put there meanwhile stays. Best effort: a failure here changes nothing.
+ */
+export async function removeEmptyDirectories(created: readonly string[]): Promise<void> {
+  for (const directory of [...created].reverse()) {
+    try {
+      await rmdir(directory);
+    } catch {
+      // Not there, or not empty: the ones above it cannot be emptier.
+    }
+  }
 }
 
 /** Turns a low-level error into the explicit error the user will see. */

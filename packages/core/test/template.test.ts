@@ -115,3 +115,40 @@ describe('parseTemplate / renderTemplate', () => {
     expect(codeOf(() => render('{title}', { title: '???' }))).toBe('template.empty-segment');
   });
 });
+
+describe('finalizing a segment', () => {
+  const posix: RenderContext = {
+    rules: { forbidden: 'posix', replacement: '', maxSegmentBytes: 40 },
+    rangeSeparator: '-e',
+  };
+
+  it('cuts the title, not the id the player matches on', () => {
+    const [name] = render(
+      '{title} ({year}) \\{tmdb-{tmdb}\\}',
+      {
+        title: 'A very long title that does not fit in the segment',
+        year: 2021,
+        tmdb: 438631,
+      },
+      posix,
+    );
+    expect(name?.endsWith(' {tmdb-438631}')).toBe(true);
+    expect(Buffer.byteLength(name ?? '')).toBeLessThanOrEqual(40);
+    const [bracket] = render(
+      '{title} [tmdbid-{tmdb}]',
+      {
+        title: 'A very long title that does not fit in the segment',
+        tmdb: 603,
+      },
+      posix,
+    );
+    expect(bracket?.endsWith(' [tmdbid-603]')).toBe(true);
+  });
+
+  it('keeps a reserved device name from being created on a Windows filesystem', () => {
+    expect(render('{title}', { title: 'CON' })).toEqual(['_CON']);
+    expect(render('{title}', { title: 'nul.txt' })).toEqual(['_nul.txt']);
+    expect(render('{title}', { title: 'Console' })).toEqual(['Console']);
+    expect(render('{title}', { title: 'CON' }, posix)).toEqual(['CON']);
+  });
+});
