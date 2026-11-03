@@ -8,8 +8,10 @@ export interface TmdbClientOptions {
   readonly baseUrl?: string;
   readonly fetch?: typeof fetch;
   readonly cache?: HttpCache;
-  /** Maximum simultaneous requests. */
+  /** Maximum simultaneous requests (ignored when a `pool` is given). */
   readonly concurrency?: number;
+  /** Shared by the clients of one process: the limit and the requests in flight are its, not theirs. */
+  readonly pool?: RequestPool;
   /** Retries after a 429, a 5xx or a network failure. */
   readonly maxRetries?: number;
   readonly sleep?: (ms: number) => Promise<void>;
@@ -23,9 +25,61 @@ export interface GetOptions {
   readonly nullOn404?: boolean;
 }
 
+type Raw = { status: number; body: string };
+
+/**
+ * What the clients of one process share: the simultaneous-request limit (a provider per call
+ * would otherwise each get its own) and the requests in flight, so two callers asking the same
+ * thing at once make one request.
+ */
+export class RequestPool {
+  private active = 0;
+  private readonly waiting: (() => void)[] = [];
+  private readonly inflight = new Map<string, Promise<Raw>>();
+
+  constructor(private readonly concurrency = 8) {}
+
+  /** Runs `task` once for a key while one is already running. */
+  once(key: string, task: () => Promise<Raw>): Promise<Raw> {
+    const running = this.inflight.get(key);
+    if (running) {
+      return running;
+    }
+    const started = task().finally(() => this.inflight.delete(key));
+    this.inflight.set(key, started);
+    return started;
+  }
+
+  async limited<T>(task: () => Promise<T>): Promise<T> {
+    if (this.active >= this.concurrency) {
+      await new Promise<void>((resolve) => this.waiting.push(resolve));
+    }
+    this.active += 1;
+    try {
+      return await task();
+    } finally {
+      this.active -= 1;
+      this.waiting.shift()?.();
+    }
+  }
+}
+
 const RETRY_BASE_MS = 500;
 const MAX_RETRY_AFTER_MS = 30_000;
 const REQUEST_TIMEOUT_MS = 15_000;
+
+/** `Retry-After` is a number of seconds or an HTTP date; 0 when absent or unreadable. */
+function retryAfterOf(header: string | null, now: number): number {
+  if (header === null) {
+    return 0;
+  }
+  const seconds = Number(header);
+  if (header.trim() !== '' && Number.isFinite(seconds)) {
+    return seconds * 1000;
+  }
+  const date = Date.parse(header);
+  return Number.isNaN(date) ? 0 : Math.max(0, date - now);
+}
 
 // A v4 read access token is a JWT; v3 keys are 32 hex characters.
 const isBearerToken = (apiKey: string): boolean => apiKey.startsWith('eyJ');
@@ -35,19 +89,17 @@ export class TmdbClient {
   private readonly baseUrl: string;
   private readonly fetchImpl: typeof fetch;
   private readonly cache: HttpCache;
-  private readonly concurrency: number;
+  private readonly pool: RequestPool;
   private readonly maxRetries: number;
   private readonly sleep: (ms: number) => Promise<void>;
   private readonly now: () => number;
-  private active = 0;
-  private readonly waiting: (() => void)[] = [];
 
   constructor(options: TmdbClientOptions) {
     this.apiKey = options.apiKey;
     this.baseUrl = options.baseUrl ?? 'https://api.themoviedb.org';
     this.fetchImpl = options.fetch ?? fetch;
     this.cache = options.cache ?? new MemoryCache();
-    this.concurrency = options.concurrency ?? 8;
+    this.pool = options.pool ?? new RequestPool(options.concurrency);
     this.maxRetries = options.maxRetries ?? 3;
     this.sleep = options.sleep ?? ((ms) => new Promise((resolve) => setTimeout(resolve, ms)));
     this.now = options.now ?? Date.now;
@@ -69,7 +121,9 @@ export class TmdbClient {
     const cacheKey = `${path}?${query.toString()}`;
 
     const cached = this.cache.get(cacheKey, this.now());
-    const entry = cached ?? (await this.fetchWithRetry(path, query));
+    // The key is the cache's: the same path and query is the same request.
+    const entry =
+      cached ?? (await this.pool.once(cacheKey, () => this.fetchWithRetry(path, query)));
 
     if (entry.status === 404) {
       if (!cached) {
@@ -116,7 +170,7 @@ export class TmdbClient {
       let response: Response | undefined;
       let body: string | undefined;
       try {
-        response = await this.limited(() =>
+        response = await this.pool.limited(() =>
           this.fetchImpl(url, { headers, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) }),
         );
         // A connection cut while the body arrives is a network failure like any other: retried.
@@ -135,6 +189,8 @@ export class TmdbClient {
       if (body !== undefined) {
         return { status, body };
       }
+      // Not read, so not left open: an unconsumed body keeps its connection.
+      void response.body?.cancel().catch(() => undefined);
       if (status === 401) {
         throw new KinoshelfError('tmdb.invalid-key');
       }
@@ -145,28 +201,15 @@ export class TmdbClient {
             status,
           });
         }
-        const retryAfter = Number(response.headers.get('retry-after'));
+        const retryAfterMs = retryAfterOf(response.headers.get('retry-after'), this.now());
         const delay =
-          status === 429 && retryAfter > 0
-            ? Math.min(retryAfter * 1000, MAX_RETRY_AFTER_MS)
+          status === 429 && retryAfterMs > 0
+            ? Math.min(retryAfterMs, MAX_RETRY_AFTER_MS)
             : RETRY_BASE_MS * 2 ** attempt;
         await this.sleep(delay);
         continue;
       }
       throw new KinoshelfError('tmdb.http-error', { path, status });
-    }
-  }
-
-  private async limited<T>(task: () => Promise<T>): Promise<T> {
-    if (this.active >= this.concurrency) {
-      await new Promise<void>((resolve) => this.waiting.push(resolve));
-    }
-    this.active += 1;
-    try {
-      return await task();
-    } finally {
-      this.active -= 1;
-      this.waiting.shift()?.();
     }
   }
 }

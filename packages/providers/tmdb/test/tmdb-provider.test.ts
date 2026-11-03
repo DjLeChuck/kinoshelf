@@ -1,6 +1,6 @@
 import { KinoshelfError } from '@kinoshelf/core';
 import { describe, expect, it } from 'vitest';
-import { MemoryCache, TmdbProvider, type CacheEntry } from '../src/index.js';
+import { MemoryCache, RequestPool, TmdbProvider, type CacheEntry } from '../src/index.js';
 import { at, fakeFetch, fixture, fixtureJson, json, tmdbRoutes } from './helpers.js';
 
 const BEARER = 'eyJhbGciOiJIUzI1NiJ9.payload.signature';
@@ -565,6 +565,34 @@ describe('failures and retries', () => {
     expect(sleeps).toEqual([2000]);
   });
 
+  it('reads Retry-After given as an HTTP date', async () => {
+    let calls = 0;
+    const sleeps: number[] = [];
+    const now = Date.parse('2026-01-01T00:00:00Z');
+    const { provider } = make(
+      [
+        at('/3/tv/136315/season/3', () => {
+          calls += 1;
+          return calls === 1
+            ? new Response('', {
+                status: 429,
+                headers: { 'retry-after': new Date(now + 3000).toUTCString() },
+              })
+            : json('{"season_number":3,"episodes":[]}');
+        }),
+      ],
+      {
+        now: () => now,
+        sleep: (ms) => {
+          sleeps.push(ms);
+          return Promise.resolve();
+        },
+      },
+    );
+    await provider.getSeason({ provider: 'tmdb', id: 136315 }, 3);
+    expect(sleeps).toEqual([3000]);
+  });
+
   it('gives up with tmdb.rate-limited after the retries', async () => {
     const { provider, requests } = make([() => new Response('', { status: 429 })]);
     expect(await codeOf(provider.searchMovies({ title: 'x' }))).toBe('tmdb.rate-limited');
@@ -678,5 +706,49 @@ describe('concurrency', () => {
       [1, 2, 3, 4, 5, 6].map((n) => provider.getSeason({ provider: 'tmdb', id: n }, 1)),
     );
     expect(peak).toBe(2);
+  });
+});
+
+describe('requests shared between providers', () => {
+  const slowSeason = () => {
+    let calls = 0;
+    let inFlight = 0;
+    let peak = 0;
+    const fetchImpl: typeof fetch = async () => {
+      calls += 1;
+      inFlight += 1;
+      peak = Math.max(peak, inFlight);
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      inFlight -= 1;
+      return json('{"season_number":1,"episodes":[]}');
+    };
+    return { fetchImpl, calls: () => calls, peak: () => peak };
+  };
+
+  it('makes one request for the same thing asked at once', async () => {
+    const slow = slowSeason();
+    const provider = new TmdbProvider({ apiKey: BEARER, fetch: slow.fetchImpl, sleep: noSleep });
+    const id = { provider: 'tmdb', id: 7 };
+    await Promise.all([1, 2, 3].map(() => provider.getSeason(id, 1)));
+    expect(slow.calls()).toBe(1);
+  });
+
+  it('shares the same request between providers of one pool', async () => {
+    const slow = slowSeason();
+    const pool = new RequestPool();
+    const make1 = () =>
+      new TmdbProvider({ apiKey: BEARER, fetch: slow.fetchImpl, sleep: noSleep, pool });
+    await Promise.all([make1(), make1()].map((p) => p.getSeason({ provider: 'tmdb', id: 7 }, 1)));
+    expect(slow.calls()).toBe(1);
+  });
+
+  it('applies one limit to the providers of a pool', async () => {
+    const slow = slowSeason();
+    const pool = new RequestPool(2);
+    const providers = [1, 2, 3, 4].map(
+      () => new TmdbProvider({ apiKey: BEARER, fetch: slow.fetchImpl, sleep: noSleep, pool }),
+    );
+    await Promise.all(providers.map((p, n) => p.getSeason({ provider: 'tmdb', id: n }, 1)));
+    expect(slow.peak()).toBe(2);
   });
 });

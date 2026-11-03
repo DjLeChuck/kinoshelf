@@ -4,6 +4,7 @@ import {
   libraryProfile,
   createPlan,
   loadProfile,
+  type Profile,
   MetadataLoader,
   type LoadedMetadata,
   executePlan,
@@ -133,7 +134,9 @@ export class Service {
     const entry = this.pendingEntry(entryId);
     const asked = options.libraryId;
     const libraryId = this.chosenLibrary(entry, candidate, asked);
-    await this.applyChoice(entry, candidate, libraryId);
+    // A release of 200 episodes reads its profile once, not 200 times.
+    const profiles = new Map<string, Promise<Profile>>();
+    await this.applyChoice(entry, candidate, libraryId, profiles);
     // The choice is about the series, so the rest of the release follows; one that cannot (the
     // provider is down, say) stays as it was and can be settled on its own.
     const followers: string[] = [];
@@ -141,7 +144,7 @@ export class Service {
       for (const mate of this.deps.entries.releaseMates(entry)) {
         try {
           const mateLibrary = this.chosenLibrary(mate, candidate, asked);
-          if ((await this.applyChoice(mate, candidate, mateLibrary)) !== 'conflict') {
+          if ((await this.applyChoice(mate, candidate, mateLibrary, profiles)) !== 'conflict') {
             followers.push(mate.id);
           }
         } catch {
@@ -157,8 +160,12 @@ export class Service {
     entry: Entry,
     candidate: Candidate,
     libraryId: string | null,
+    profiles?: Map<string, Promise<Profile>>,
   ): Promise<Classification> {
-    const item = await this.planWith(entry, candidate, { libraryId });
+    const item = await this.planWith(entry, candidate, {
+      libraryId,
+      ...(profiles && { profiles }),
+    });
     const classification = classify(item);
     this.deps.entries.setMatch(entry.id, classification, item, { candidate, score: 100 });
     this.deps.entries.setDestination(entry.id, libraryId);
@@ -195,6 +202,15 @@ export class Service {
     return { details, seasons: seasons.filter((season) => season !== null) };
   }
 
+  private profile(source: string, memo?: Map<string, Promise<Profile>>): Promise<Profile> {
+    if (!memo) {
+      return loadProfile(source);
+    }
+    const loading = memo.get(source) ?? loadProfile(source);
+    memo.set(source, loading);
+    return loading;
+  }
+
   private provider(): MetadataProvider {
     const { config } = this.deps;
     return makeProvider(this.deps, config.metadataLanguage ?? metadataLanguageFor(config.locale));
@@ -208,10 +224,14 @@ export class Service {
   private async planWith(
     entry: Entry,
     candidate: Candidate,
-    options: { lenient?: boolean; libraryId?: string | null } = {},
+    options: {
+      lenient?: boolean;
+      libraryId?: string | null;
+      profiles?: Map<string, Promise<Profile>>;
+    } = {},
   ): Promise<PlanItem> {
     const settings = this.settingsFor(entry, options.libraryId);
-    const profile = await loadProfile(settings.profile);
+    const profile = await this.profile(settings.profile, options.profiles);
     const provider = this.provider();
     const loader = new MetadataLoader({ provider, profile });
     let metadata: LoadedMetadata = {};

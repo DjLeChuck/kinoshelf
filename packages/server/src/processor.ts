@@ -13,7 +13,7 @@ import {
   type Config,
   type MetadataProvider,
 } from '@kinoshelf/core';
-import { SqliteHttpCache, tmdbFromEnv } from '@kinoshelf/provider-tmdb';
+import { RequestPool, SqliteHttpCache, tmdbFromEnv } from '@kinoshelf/provider-tmdb';
 import type { Job, ProcessedJob } from './jobs.js';
 import type { ProgressTracker } from './progress.js';
 
@@ -106,15 +106,28 @@ async function process(deps: ProcessorDeps, job: Job): Promise<ProcessedJob> {
   };
 }
 
+/**
+ * What every provider of a database shares: the cache (its table is created once) and the
+ * request pool, so that a provider made per call neither multiplies the limit nor repeats a
+ * request already in flight.
+ */
+const shared = new WeakMap<Database, { cache: SqliteHttpCache; pool: RequestPool }>();
+
 export function makeProvider(deps: ProcessorDeps, language: string): MetadataProvider {
   if (deps.createProvider) {
     return deps.createProvider({ language });
+  }
+  let common = shared.get(deps.database);
+  if (!common) {
+    common = { cache: new SqliteHttpCache(deps.database), pool: new RequestPool() };
+    shared.set(deps.database, common);
   }
   return tmdbFromEnv({
     env: deps.env,
     config: deps.config,
     configDir: deps.configDir,
     language,
-    cache: new SqliteHttpCache(deps.database),
+    cache: common.cache,
+    pool: common.pool,
   });
 }
