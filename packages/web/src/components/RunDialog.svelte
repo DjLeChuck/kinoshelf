@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { baseName } from '../lib/paths.js';
   import { describeError } from '@kinoshelf/i18n';
   import { messageOf } from '../lib/errors.js';
   import { t } from '../lib/i18n.svelte.js';
@@ -62,7 +63,7 @@
   const byEntry = $derived(new Map(items.map((item) => [item.entryId, item])));
   const totals = $derived(report ? tally(report) : undefined);
   const nameOf = (item: LibraryItem | undefined, fallback: string): string =>
-    item?.title ?? item?.path.split('/').pop() ?? fallback;
+    item?.title ?? (item ? baseName(item.path) : fallback);
   const blocked = (operation: ReportOperation): string | undefined =>
     operation.error ? describeError(t, operation.error) : undefined;
 </script>

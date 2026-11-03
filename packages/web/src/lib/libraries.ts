@@ -1,4 +1,5 @@
 import { api } from './api.js';
+import { baseName } from './paths.js';
 import {
   nullIfBlank,
   profileForm,
@@ -69,6 +70,9 @@ export const libraryApi: LibraryApi = {
   scan: (id) => api.post(`/api/libraries/${id}/scan`),
 };
 
+// The web does not import the core. `THRESHOLD_DEFAULT` mirrors `DEFAULT_THRESHOLD` (core,
+// `matching/config.ts`; change both). The form offers 50 and up, narrower than the
+// API's 0 to 100: below 50 a match is a guess, and the config file still allows it.
 export const THRESHOLD_MIN = 50;
 export const THRESHOLD_MAX = 100;
 export const THRESHOLD_DEFAULT = 85;
@@ -120,7 +124,7 @@ export function libraryForm(
 }
 
 /** The last segment of a path: what a library is called when its owner did not name it. */
-export const folderName = (path: string): string => path.split('/').filter(Boolean).pop() ?? path;
+export const folderName = baseName;
 
 /**
  * What to send; `invalid` names the first thing refused. Only the fields of the library's group

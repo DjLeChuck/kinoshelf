@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { baseName } from '../lib/paths.js';
+  import { imageUrl } from '../lib/arrivals.js';
   import { api } from '../lib/api.js';
   import { messageOf } from '../lib/errors.js';
   import { formatBytes } from '@kinoshelf/i18n';
@@ -13,7 +15,7 @@
   } from '../lib/library-items.js';
   import ArrivalDetail from './ArrivalDetail.svelte';
   import RunDialog from './RunDialog.svelte';
-  import Link from './Link.svelte';
+  import WorkCard from './WorkCard.svelte';
 
   let {
     libraryId,
@@ -49,10 +51,8 @@
 
   void load();
 
-  const backdrop = $derived(
-    detail?.backdropPath ? `/api/images/w780/${detail.backdropPath}` : undefined,
-  );
-  const poster = $derived(detail?.posterPath ? `/api/images/w154/${detail.posterPath}` : undefined);
+  const backdrop = $derived(imageUrl('w780', detail?.backdropPath));
+  const poster = $derived(imageUrl('w154', detail?.posterPath));
   const present = (value: boolean | null): string =>
     value === null ? '—' : t(value ? 'web.library.present' : 'web.library.missing');
 </script>
@@ -62,31 +62,20 @@
 {:else if entry}
   <ArrivalDetail {entry} {ondone} />
 {:else if detail}
-  <article class="card">
-    {#if backdrop}<img class="backdrop" src={backdrop} alt="" loading="lazy" />{/if}
-    <div class="head">
-      {#if poster}<img class="poster" src={poster} alt="" width="92" height="138" />{/if}
-      <div>
-        <h2>
-          {detail.title ?? detail.path.split('/').pop()}{detail.year ? ` (${detail.year})` : ''}
-        </h2>
-        <p class="muted">
-          {[
-            detail.runtime ? t('web.library.runtime', { minutes: detail.runtime }) : undefined,
-            detail.genres.join(', ') || undefined,
-          ]
-            .filter(Boolean)
-            .join(' · ')}
-        </p>
-        {#if detail.tmdbId}
-          <Link
-            href={`https://www.themoviedb.org/${detail.kind === 'series' ? 'tv' : 'movie'}/${detail.tmdbId}`}
-            target="_blank"
-            rel="noreferrer">{t('web.queue.tmdb-link')}</Link
-          >
-        {/if}
-      </div>
-    </div>
+  <WorkCard
+    title={`${detail.title ?? baseName(detail.path)}${detail.year ? ` (${detail.year})` : ''}`}
+    meta={[
+      detail.runtime ? t('web.library.runtime', { minutes: detail.runtime }) : undefined,
+      detail.genres.join(', ') || undefined,
+    ]
+      .filter(Boolean)
+      .join(' · ')}
+    tmdbUrl={detail.tmdbId
+      ? `https://www.themoviedb.org/${detail.kind === 'series' ? 'tv' : 'movie'}/${detail.tmdbId}`
+      : undefined}
+    {poster}
+    {backdrop}
+  >
     {#if detail.overview}<p>{detail.overview}</p>{:else}<p class="muted">
         {t('web.library.no-overview')}
       </p>{/if}
@@ -121,7 +110,7 @@
         </button>
       </div>
     {/if}
-  </article>
+  </WorkCard>
   {#if running}
     <RunDialog
       {libraryId}
@@ -138,28 +127,6 @@
 {/if}
 
 <style>
-  .backdrop {
-    display: block;
-    width: 100%;
-    max-height: 180px;
-    object-fit: cover;
-    border-radius: var(--radius-sm);
-  }
-
-  .head {
-    display: flex;
-    gap: 16px;
-  }
-
-  .poster {
-    flex: none;
-    border-radius: 4px;
-  }
-
-  h2 {
-    font-size: 18px;
-  }
-
   p {
     margin: 0;
   }

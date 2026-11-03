@@ -1,8 +1,8 @@
 <script lang="ts">
   import { messageOf } from '../lib/errors.js';
-  import { refetchOn } from '../lib/events.svelte.js';
+  import { resource } from '../lib/resource.svelte.js';
   import { t } from '../lib/i18n.svelte.js';
-  import { libraryApi, type Library } from '../lib/libraries.js';
+  import { libraryApi } from '../lib/libraries.js';
   import { router } from '../lib/router.svelte.js';
   import { shell } from '../lib/shell-state.svelte.js';
   import ArrivalsView from '../components/ArrivalsView.svelte';
@@ -10,19 +10,9 @@
   import LibraryView from '../components/LibraryView.svelte';
   import NotFound from './NotFound.svelte';
 
-  let libraries = $state<readonly Library[] | undefined>(undefined);
-  let failure = $state<unknown>(undefined);
-
-  async function load(): Promise<void> {
-    try {
-      libraries = await libraryApi.list();
-      failure = undefined;
-    } catch (error) {
-      failure = error;
-    }
-  }
-
-  refetchOn(['settings', 'jobs', 'ready'], () => void load());
+  const loaded = resource(() => libraryApi.list(), ['settings', 'jobs', 'ready']);
+  const libraries = $derived(loaded.value);
+  const failure = $derived(loaded.failure);
 
   const typed = $derived(libraries?.filter((library) => library.type != null) ?? []);
   const hasArrivals = $derived(libraries?.some((library) => library.into != null) ?? false);
@@ -50,7 +40,7 @@
 
   {#if failure}
     <p class="alert alert-danger" role="alert">{messageOf(t, failure)}</p>
-    <button type="button" class="btn" onclick={() => void load()}>{t('web.retry')}</button>
+    <button type="button" class="btn" onclick={() => void loaded.reload()}>{t('web.retry')}</button>
   {:else if libraries === undefined}
     <p class="muted" role="status">{t('web.loading')}</p>
   {:else if typed.length === 0 && !hasArrivals}

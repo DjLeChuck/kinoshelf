@@ -2,12 +2,13 @@
   import { untrack } from 'svelte';
   import { api } from '../lib/api.js';
   import { messageOf } from '../lib/errors.js';
+  import { resource } from '../lib/resource.svelte.js';
   import { refetchOn } from '../lib/events.svelte.js';
   import { t } from '../lib/i18n.svelte.js';
   import { router } from '../lib/router.svelte.js';
   import { oneOf } from '../lib/routes.js';
   import {
-    STATUS_CHIP,
+    QUEUE_CHIP,
     STATUS_LABEL,
     groupReleases,
     readArrivals,
@@ -24,10 +25,8 @@
 
   const PAGE = 50;
 
-  let page = $state<ArrivalPage | undefined>(undefined);
   /** How many releases are shown: "Show more" asks for the next ones. */
   let releases = $state(PAGE);
-  let failure = $state<unknown>(undefined);
   // In the URL (`?state=review`), like the libraries' filter.
   const filter = $derived<Filter>(oneOf(router.query.get('state'), FILTERS) ?? 'all');
   let shown = untrack(() => filter);
@@ -39,6 +38,17 @@
       untrack(() => void load());
     }
   });
+  // A slow answer (the other filter's, or an older event's) is dropped by the resource's ticket.
+  const loaded = resource(() => {
+    const state = filter === 'all' ? '' : `&state=${filter}`;
+    return readArrivals(releases, (limit, offset) =>
+      api.get<ArrivalPage>(`/api/arrivals?limit=${limit}&offset=${offset}${state}`),
+    );
+  }, ['arrivals', 'jobs', 'settings', 'ready']);
+  const page = $derived(loaded.value);
+  const failure = $derived(loaded.failure);
+  const load = loaded.reload;
+
   let chosen = $state<string | undefined>(undefined);
   let notice = $state<string | undefined>(undefined);
   let watch = $state<WatchStatus | undefined>(undefined);
@@ -68,26 +78,6 @@
     );
   }
 
-  // A ticket per read: a slow answer (the other filter's, or an older event's) is dropped.
-  let latest = 0;
-  async function load(): Promise<void> {
-    const ticket = ++latest;
-    const state = filter === 'all' ? '' : `&state=${filter}`;
-    try {
-      const answer = await readArrivals(releases, (limit, offset) =>
-        api.get<ArrivalPage>(`/api/arrivals?limit=${limit}&offset=${offset}${state}`),
-      );
-      if (ticket === latest) {
-        page = answer;
-        failure = undefined;
-      }
-    } catch (error) {
-      if (ticket === latest) {
-        failure = error;
-      }
-    }
-  }
-
   async function loadWatch(): Promise<void> {
     try {
       watch = await api.get<WatchStatus>('/api/watch');
@@ -103,19 +93,16 @@
     try {
       const { submitted, pending } = await api.post<WatchScan>('/api/watch/scan');
       notice = t('web.arrivals.check.done', { submitted, pending });
-      failure = undefined;
+      loaded.failure = undefined;
     } catch (error) {
-      failure = error;
+      loaded.failure = error;
     } finally {
       checking = false;
     }
     void load();
   }
 
-  refetchOn(['arrivals', 'jobs', 'settings', 'ready'], () => {
-    void load();
-    void loadWatch();
-  });
+  refetchOn(['arrivals', 'jobs', 'settings', 'ready'], () => void loadWatch());
 
   const sourceName = (arrival: Arrival): string | undefined =>
     page?.sources.find(({ id }) => id === arrival.sourceId)?.name;
@@ -173,7 +160,7 @@
               >
                 <span class="mono release">{group.name}</span>
                 <span class="meta">
-                  <span class="chip {STATUS_CHIP[status]}">{t(STATUS_LABEL[status])}</span>
+                  <span class="chip {QUEUE_CHIP[status]}">{t(STATUS_LABEL[status])}</span>
                   {#if group.files.length > 1}<span class="muted"
                       >{t('web.arrivals.files', { count: group.files.length })}</span
                     >{/if}
@@ -205,7 +192,7 @@
                         <span class="mono release">{arrival.file}</span>
                         <span class="meta">
                           <span class="chip chip-neutral">{t('web.arrivals.detached')}</span>
-                          <span class="chip {STATUS_CHIP[status]}">{t(STATUS_LABEL[status])}</span>
+                          <span class="chip {QUEUE_CHIP[status]}">{t(STATUS_LABEL[status])}</span>
                           {#if other.files.length > 1}<span class="muted"
                               >{t('web.arrivals.files', { count: other.files.length })}</span
                             >{/if}
@@ -283,12 +270,6 @@
   .filters [aria-pressed='true'] {
     border-color: var(--accent);
     background: var(--surface-2);
-  }
-
-  .notice {
-    color: var(--ok);
-    background: var(--ok-bg);
-    border-color: var(--ok);
   }
 
   .layout {

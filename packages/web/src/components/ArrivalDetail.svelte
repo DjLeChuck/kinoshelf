@@ -6,7 +6,6 @@
     folderOf,
     releaseName,
     statusOf,
-    titleGuess,
     toMatchBody,
     validate,
     type Arrival,
@@ -37,9 +36,9 @@
   let results = $state<readonly Candidate[] | undefined>(undefined);
   let searching = $state(false);
   /* svelte-ignore state_referenced_locally */
-  let query = $state(titleGuess(label(entry, siblings)).title);
+  let query = $state(entry.title ?? '');
   /* svelte-ignore state_referenced_locally */
-  let year = $state(titleGuess(label(entry, siblings)).year ?? '');
+  let year = $state(entry.year === null ? '' : String(entry.year));
   let kind = $state<'' | 'movie' | 'series'>('');
   let busy = $state(false);
   /* svelte-ignore state_referenced_locally */
@@ -49,7 +48,6 @@
 
   const status = $derived(statusOf(entry));
   const name = $derived(label(entry, siblings));
-  const guess = $derived(titleGuess(name));
   /** Only a library other than the default one is a choice; the server knows the default. */
   const chosenLibrary = $derived(
     library !== '' && library !== entry.destination.libraryId ? library : undefined,
@@ -208,8 +206,8 @@
         `web.queue.kind.${entry.kind === 'movie' ? 'movie' : entry.kind === 'series' ? 'series' : 'unknown'}`,
       )}
     </div>
-    {#if guess.title}<div class="chip chip-neutral">{guess.title}</div>{/if}
-    {#if guess.year}<div class="chip chip-neutral">{guess.year}</div>{/if}
+    {#if entry.title}<div class="chip chip-neutral">{entry.title}</div>{/if}
+    {#if entry.year}<div class="chip chip-neutral">{entry.year}</div>{/if}
     {#if entry.resolution}<div class="chip chip-neutral">{entry.resolution}</div>{/if}
   </dl>
 

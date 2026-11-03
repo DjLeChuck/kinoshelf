@@ -82,8 +82,4 @@
     font-size: 20px;
     margin-bottom: 4px;
   }
-
-  .hint {
-    font-size: 12px;
-  }
 </style>

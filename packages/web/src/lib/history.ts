@@ -1,10 +1,11 @@
 import type { Locale } from '@kinoshelf/i18n';
 import type { ErrorBody } from './arrivals.js';
 import type { Library } from './libraries.js';
+import type { Mode } from './settings.js';
 
 export type BatchStatus = 'done' | 'undone' | 'failed';
 export type JobStatus = 'queued' | 'running' | 'done' | 'failed';
-export type Mode = 'copy' | 'hardlink' | 'move';
+export type { Mode };
 
 /** One line of `GET /api/history`: a batch, or a job that has none yet. */
 export interface Activity {

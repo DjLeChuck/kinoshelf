@@ -66,10 +66,6 @@
     font-size: 16px;
   }
 
-  .ok {
-    color: var(--ok);
-  }
-
   .buttons {
     display: flex;
     flex-wrap: wrap;

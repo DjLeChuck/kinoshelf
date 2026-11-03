@@ -54,15 +54,4 @@
   <span class="muted hint">{t('web.settings.watch.apply.hint')}</span>
 </SettingsSection>
 
-<style>
-  .check {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    min-height: 44px;
-  }
-
-  .hint {
-    font-size: 12px;
-  }
-</style>
+<style></style>

@@ -3,7 +3,7 @@
   import { describeError } from '@kinoshelf/i18n';
   import { api } from '../lib/api.js';
   import { messageOf } from '../lib/errors.js';
-  import { refetchOn } from '../lib/events.svelte.js';
+  import { resource } from '../lib/resource.svelte.js';
   import { locale, t } from '../lib/i18n.svelte.js';
   import {
     STATUS_CHIP,
@@ -28,23 +28,17 @@
     embedded?: boolean;
   } = $props();
 
-  let job = $state<JobDetail | undefined>(undefined);
-  let failure = $state<unknown>(undefined);
   let showTech = $state(false);
   let resending = $state(false);
   let resendFailure = $state<unknown>(undefined);
 
   // The parent keys this component on the job, so `id` does not change during its life.
-  refetchOn(['jobs', 'history', 'ready'], () => void load());
-
-  async function load(): Promise<void> {
-    try {
-      job = await api.get<JobDetail>(`/api/jobs/${id}`);
-      failure = undefined;
-    } catch (error) {
-      failure = error;
-    }
-  }
+  const loaded = resource(
+    () => api.get<JobDetail>(`/api/jobs/${id}`),
+    ['jobs', 'history', 'ready'],
+  );
+  const job = $derived(loaded.value);
+  const failure = $derived(loaded.failure);
 
   async function resend(): Promise<void> {
     if (!job) {

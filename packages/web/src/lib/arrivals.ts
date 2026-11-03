@@ -1,4 +1,5 @@
 import type { MessageKey } from '@kinoshelf/i18n';
+import { baseName } from './paths.js';
 
 /** What a candidate looks like, in an arrival and in `GET /api/search`. */
 export interface Candidate {
@@ -39,6 +40,9 @@ export interface Arrival {
   readonly state: 'review' | 'unrecognized';
   readonly kind: 'movie' | 'series' | null;
   readonly resolution: string | null;
+  /** What the parser read of the name: where a manual search starts. */
+  readonly title: string | null;
+  readonly year: number | null;
   /** The arrival folder it came from; `null` for a path sent by hand or a file of a library. */
   readonly sourceId: string | null;
   readonly destination: { readonly libraryId: string | null };
@@ -86,7 +90,7 @@ export const STATUS_LABEL: Record<QueueStatus, MessageKey> = {
   failed: 'web.queue.status.failed',
 };
 
-export const STATUS_CHIP: Record<QueueStatus, string> = {
+export const QUEUE_CHIP: Record<QueueStatus, string> = {
   'to-validate': 'chip-warn',
   'nothing-found': 'chip-neutral',
   conflict: 'chip-danger',
@@ -168,10 +172,7 @@ export function groupReleases(items: readonly Arrival[]): ReleaseGroup[] {
 }
 
 /** The file name, which is what a release is called; the API gives the whole path. */
-export function releaseName(path: string): string {
-  const name = path.split('/').filter(Boolean).pop();
-  return name ?? path;
-}
+export const releaseName = baseName;
 
 /** The folder the file is in, shown apart so the release name stays readable. */
 export function folderOf(path: string): string {
@@ -182,12 +183,18 @@ export function folderOf(path: string): string {
 
 /**
  * A poster served by our own server, which fetches it from TMDB once: the browser never contacts
- * TMDB. `posterPath` comes with its leading slash.
+ * TMDB. The API gives TMDB's path as is, with its leading slash.
  */
-export function posterUrl(posterPath: string | undefined): string | undefined {
-  const file = posterPath?.replace(/^\/+/, '');
-  return file ? `/api/images/w92/${file}` : undefined;
+export function imageUrl(
+  size: 'w92' | 'w154' | 'w342' | 'w780',
+  path: string | null | undefined,
+): string | undefined {
+  const file = path?.replace(/^\/+/, '');
+  return file ? `/api/images/${size}/${file}` : undefined;
 }
+
+export const posterUrl = (posterPath: string | undefined): string | undefined =>
+  imageUrl('w92', posterPath);
 
 /** A search result is posted back as is, without the score only the analysis had. */
 export function toMatchBody(candidate: Candidate): Omit<Candidate, 'score'> {
@@ -238,23 +245,4 @@ export async function validate(
   const followers = matched.followers ?? [];
   await post(`/api/plans/${arrival.jobId}/execute`, { entries: [arrival.id, ...followers] });
   return { status: 'started', followed: followers.length };
-}
-
-/**
- * A title and a year read from a release name, to start a manual search from: the dots and
- * underscores become spaces, and what follows the year (or the picture size) is the release's.
- */
-export function titleGuess(release: string): { title: string; year?: string } {
-  const bare = release.replace(/\.[a-z0-9]{2,4}$/i, '').replace(/[._]+/g, ' ');
-  // The last year wins: `Blade Runner 2049 2017` is a title that holds a year.
-  const years = [...bare.matchAll(/\b(?:19|20)\d{2}\b/g)];
-  const year = years.at(-1);
-  const stops = [
-    year?.index,
-    bare.search(/\b(?:2160|1080|720|480)p\b/i),
-    bare.search(/\bS\d{1,2}E\d{1,3}\b/i),
-  ].filter((at): at is number => at !== undefined && at > 0);
-  const cut = Math.min(...stops, bare.length);
-  const title = bare.slice(0, cut).trim();
-  return year?.index !== undefined && year.index === cut ? { title, year: year[0] } : { title };
 }

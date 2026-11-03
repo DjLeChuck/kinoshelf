@@ -228,10 +228,6 @@
     padding-top: 4px;
   }
 
-  .hint {
-    font-size: 12px;
-  }
-
   .modes {
     display: flex;
     flex-direction: column;

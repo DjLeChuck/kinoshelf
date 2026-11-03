@@ -5,6 +5,7 @@
   import { locale, t } from '../lib/i18n.svelte.js';
   import { formatDate } from '../lib/history.js';
   import { libraryApi, type Library } from '../lib/libraries.js';
+  import { baseName } from '../lib/paths.js';
   import { router } from '../lib/router.svelte.js';
   import { oneOf } from '../lib/routes.js';
   import {
@@ -24,7 +25,7 @@
   import Link from './Link.svelte';
   import ScanProgress from './ScanProgress.svelte';
   import ShowsTree from './ShowsTree.svelte';
-  import { episodeLabel } from '../lib/library-items.js';
+  import { episodeLabel, presenceMark } from '../lib/library-items.js';
 
   let { library }: { library: Library } = $props();
 
@@ -315,7 +316,7 @@
                       <input
                         type="checkbox"
                         aria-label={t('web.library.run.select', {
-                          name: item.title ?? item.path.split('/').pop() ?? '',
+                          name: item.title ?? baseName(item.path),
                         })}
                         checked={pickedIds.has(item.id)}
                         onchange={(event) => {
@@ -334,7 +335,7 @@
                         notice = undefined;
                       }}
                     >
-                      {item.title ?? item.path.split('/').pop()}
+                      {item.title ?? baseName(item.path)}
                       {episodeLabel(item.season, item.episode, item.episodeEnd)}
                     </button>
                     {#if item.state !== 'ok'}<span class="chip {STATE_CHIP[item.state]}"
@@ -343,12 +344,10 @@
                   </td>
                   <td>{item.year ?? ''}</td>
                   <td>{item.resolution ?? ''}</td>
-                  {#if page.library.writes.nfo}<td
-                      >{item.nfo === null ? '' : item.nfo ? '✓' : '✗'}</td
-                    >{/if}
+                  {#if page.library.writes.nfo}<td>{presenceMark(item.nfo)}</td>{/if}
                   {#if page.library.writes.artwork}
-                    <td>{item.poster === null ? '' : item.poster ? '✓' : '✗'}</td>
-                    <td>{item.fanart === null ? '' : item.fanart ? '✓' : '✗'}</td>
+                    <td>{presenceMark(item.poster)}</td>
+                    <td>{presenceMark(item.fanart)}</td>
                   {/if}
                 </tr>
               {/each}
@@ -454,12 +453,6 @@
     gap: 8px;
   }
 
-  .notice {
-    color: var(--ok);
-    background: var(--ok-bg);
-    border-color: var(--ok);
-  }
-
   .layout {
     display: grid;
     grid-template-columns: minmax(0, 1.2fr) minmax(280px, 1fr);
@@ -494,20 +487,6 @@
 
   tr.current {
     background: var(--surface-2);
-  }
-
-  .link {
-    min-height: 44px;
-    padding: 0;
-    border: 0;
-    background: none;
-    color: var(--text);
-    text-align: left;
-    cursor: pointer;
-  }
-
-  .link:hover {
-    text-decoration: underline;
   }
 
   @media (max-width: 960px) {

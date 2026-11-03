@@ -91,12 +91,4 @@
   {/if}
 </SettingsSection>
 
-<style>
-  .hint {
-    font-size: 12px;
-  }
-
-  .ok {
-    color: var(--ok);
-  }
-</style>
+<style></style>

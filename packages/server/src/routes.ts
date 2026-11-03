@@ -128,6 +128,8 @@ function presentArrival(
     state: entry.classification === 'unrecognized' ? 'unrecognized' : 'review',
     kind,
     resolution: resolutionOf(entry.path),
+    title: entry.parsed.title ?? null,
+    year: entry.parsed.year ?? null,
     sourceId: job?.libraryId ?? null,
     destination,
     destinationOptions: service.destinationOptions(entry).map(({ id, name }) => ({ id, name })),

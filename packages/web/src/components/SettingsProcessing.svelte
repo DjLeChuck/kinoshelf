@@ -95,7 +95,7 @@
 
   <fieldset>
     <legend id="mode-legend">{t('web.settings.processing.mode')}</legend>
-    <div class="cards" role="radiogroup" aria-labelledby="mode-legend">
+    <div class="cards cards-two" role="radiogroup" aria-labelledby="mode-legend">
       {#each EXPLAINED as option (option)}
         <label class="option" class:on={option === (mode === '' ? 'default' : mode)}>
           <input
@@ -141,10 +141,6 @@
     font-size: 13px;
   }
 
-  .hint {
-    font-size: 12px;
-  }
-
   /* A field that belongs to the one above it. */
   .sub {
     margin-left: 16px;
@@ -153,57 +149,7 @@
   }
 
   /* Four cards: two by two rather than three and one. */
-  .cards {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 8px;
-  }
-
-  @media (max-width: 560px) {
-    .cards {
-      grid-template-columns: 1fr;
-    }
-  }
-
-  .option {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    min-height: 44px;
-    padding: 12px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    cursor: pointer;
-  }
-
-  .option:hover {
-    background: var(--surface-2);
-  }
-
-  .option.on {
-    border-color: var(--accent);
-    background: var(--warn-bg);
-  }
-
   /* The radio stays in the page for the keyboard and screen readers; the card is what is seen. */
-  .option input {
-    position: absolute;
-    opacity: 0;
-    inset: 0;
-    margin: 0;
-    cursor: pointer;
-  }
-
-  .option:has(input:focus-visible) {
-    outline: 2px solid var(--accent);
-    outline-offset: 2px;
-  }
-
-  .option-name {
-    font-weight: 600;
-  }
-
   .profile-box {
     padding: 8px 12px;
     border: 1px solid var(--border);

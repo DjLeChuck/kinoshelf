@@ -54,12 +54,15 @@ export interface MatchingConfig {
   readonly language?: string;
 }
 
+/** The confidence from which a match is applied without asking; the web mirrors it. */
+export const DEFAULT_THRESHOLD = 85;
+
 /**
  * Starting values, meant to be calibrated on the corpus: this is the only place to tune
  * the scoring.
  */
 export const DEFAULT_MATCHING_CONFIG: MatchingConfig = {
-  threshold: 85,
+  threshold: DEFAULT_THRESHOLD,
   weights: { title: 45, year: 20, kind: 10, episodeExists: 10, margin: 15 },
   marginFullGap: 10,
   knownId: { bonus: 40, minTitleSimilarity: 0.4 },

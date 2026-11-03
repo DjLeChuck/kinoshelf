@@ -181,19 +181,8 @@
     gap: 4px 16px;
   }
 
-  .check {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    min-height: 44px;
-  }
-
   .add {
     align-self: flex-start;
-  }
-
-  .hint {
-    font-size: 12px;
   }
 
   .results {

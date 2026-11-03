@@ -1,6 +1,6 @@
 <script lang="ts">
   import { messageOf } from '../lib/errors.js';
-  import { refetchOn } from '../lib/events.svelte.js';
+  import { resource } from '../lib/resource.svelte.js';
   import { t } from '../lib/i18n.svelte.js';
   import {
     folderName,
@@ -16,22 +16,13 @@
 
   const GROUPS: readonly LibraryGroup[] = ['in-place', 'arrival'];
 
-  let libraries = $state<readonly Library[] | undefined>(undefined);
-  let failure = $state<unknown>(undefined);
   /** The library being edited, or the group of the one being created. */
   let editing = $state<{ id: string } | { group: LibraryGroup } | undefined>(undefined);
 
-  async function load(): Promise<void> {
-    try {
-      libraries = await libraryApi.list();
-      failure = undefined;
-    } catch (error) {
-      failure = error;
-    }
-  }
-
   // Libraries are part of the settings: any change of them, here or elsewhere, comes as such.
-  refetchOn(['settings', 'ready'], () => void load());
+  const loaded = resource(() => libraryApi.list(), ['settings', 'ready']);
+  const libraries = $derived(loaded.value);
+  const failure = $derived(loaded.failure);
 
   const current = $derived.by(() => {
     const target = editing;
@@ -48,7 +39,7 @@
 
   function close(): void {
     editing = undefined;
-    void load();
+    void loaded.reload();
   }
 
   const nameOf = (id: string): string => libraries?.find((one) => one.id === id)?.name ?? id;
@@ -130,7 +121,7 @@
               if (!current) {
                 close();
               } else {
-                void load();
+                void loaded.reload();
               }
             }}
             ondeleted={close}
@@ -158,10 +149,6 @@
 
   h3 {
     font-size: 14px;
-  }
-
-  .hint {
-    font-size: 12px;
   }
 
   .list {

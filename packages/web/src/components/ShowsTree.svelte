@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { baseName } from '../lib/paths.js';
   import { untrack } from 'svelte';
   import { messageOf } from '../lib/errors.js';
   import { refetchOn } from '../lib/events.svelte.js';
@@ -9,6 +10,7 @@
   import {
     PAGE_SIZE,
     episodeLabel,
+    presenceMark,
     libraryItems,
     type EpisodeState,
     type LibraryItem,
@@ -112,7 +114,7 @@
               fresh.filter((entry): entry is [number, ShowDetail] => entry[1] !== null),
             ),
           }).filter(([id]) => opened.includes(Number(id))),
-        );
+        ) as Record<number, ShowDetail>;
         failure = undefined;
       }
     } catch (error) {
@@ -176,7 +178,6 @@
     });
   }
 
-  const mark = (value: boolean | null): string => (value === null ? '' : value ? '✓' : '✗');
   const columns = $derived(5 + (writes.nfo ? 1 : 0) + (writes.artwork ? 2 : 0));
 </script>
 
@@ -232,7 +233,7 @@
                       class="link"
                       onclick={() => (selection = { kind: 'item', item })}
                     >
-                      {item.path.split('/').pop()}
+                      {baseName(item.path)}
                     </button>
                     <span class="chip {item.state === 'review' ? 'chip-warn' : 'chip-danger'}"
                       >{t(
@@ -267,10 +268,10 @@
               <td>{show.year ?? ''}</td>
               <td>{show.seasons}</td>
               <td>{show.episodes}</td>
-              {#if writes.nfo}<td>{mark(show.nfo)}</td>{/if}
+              {#if writes.nfo}<td>{presenceMark(show.nfo)}</td>{/if}
               {#if writes.artwork}
-                <td>{mark(show.poster)}</td>
-                <td>{mark(show.fanart)}</td>
+                <td>{presenceMark(show.poster)}</td>
+                <td>{presenceMark(show.fanart)}</td>
               {/if}
               <td>
                 {#if show.missing}
@@ -329,7 +330,7 @@
                     </td>
                     {#if writes.nfo}<td></td>{/if}
                     {#if writes.artwork}
-                      <td>{mark(season.poster)}</td>
+                      <td>{presenceMark(season.poster)}</td>
                       <td></td>
                     {/if}
                     <td>
@@ -374,7 +375,7 @@
                             >
                           {/if}
                         </td>
-                        {#if writes.nfo}<td>{mark(item?.nfo ?? null)}</td>{/if}
+                        {#if writes.nfo}<td>{presenceMark(item?.nfo ?? null)}</td>{/if}
                         {#if writes.artwork}<td></td><td></td>{/if}
                         <td></td>
                       </tr>
@@ -496,20 +497,6 @@
 
   p {
     margin: 0;
-  }
-
-  .link {
-    min-height: 44px;
-    padding: 0;
-    border: 0;
-    background: none;
-    color: var(--text);
-    text-align: left;
-    cursor: pointer;
-  }
-
-  .link:hover {
-    text-decoration: underline;
   }
 
   @media (max-width: 960px) {

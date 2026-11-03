@@ -89,10 +89,6 @@
     font-weight: 600;
   }
 
-  .hint {
-    font-size: 12px;
-  }
-
   .mapping {
     display: flex;
     flex-direction: column;

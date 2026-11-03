@@ -230,12 +230,6 @@
     margin-bottom: 4px;
   }
 
-  .notice {
-    color: var(--ok);
-    background: var(--ok-bg);
-    border-color: var(--ok);
-  }
-
   .layout {
     display: grid;
     grid-template-columns: minmax(260px, 380px) 1fr;

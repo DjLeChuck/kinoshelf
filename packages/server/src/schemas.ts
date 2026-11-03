@@ -756,6 +756,8 @@ export const arrivalsSchema = {
           'state',
           'kind',
           'resolution',
+          'title',
+          'year',
           'sourceId',
           'destination',
           'destinationOptions',
@@ -788,6 +790,9 @@ export const arrivalsSchema = {
           kind: { type: 'string', enum: ['movie', 'series'], nullable: true },
           /** The picture size the name announces (`2160p`), null when it says none. */
           resolution: { type: 'string', nullable: true },
+          /** The title and year the parser read, which the manual search starts from. */
+          title: { type: 'string', nullable: true },
+          year: { type: 'integer', nullable: true },
           /** The arrival folder it came from; null for a path sent by hand. */
           sourceId: { type: 'string', nullable: true },
           destination: {

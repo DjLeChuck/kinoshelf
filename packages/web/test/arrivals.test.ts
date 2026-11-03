@@ -9,7 +9,6 @@ import {
   releaseName,
   sameCandidate,
   statusOf,
-  titleGuess,
   toMatchBody,
   validate,
   type Arrival,
@@ -27,6 +26,8 @@ const arrival = (over: Partial<Arrival> = {}): Arrival => ({
   state: 'review',
   kind: 'movie',
   resolution: '1080p',
+  title: 'Dune',
+  year: 2021,
   sourceId: 'dl',
   destination: { libraryId: 'films' },
   destinationOptions: [{ id: 'films', name: 'Films' }],
@@ -157,17 +158,6 @@ describe('validate', () => {
     const failure = new Error('down');
     const { post } = recorder((url) => (url.includes('/match') ? renamed : failure));
     await expect(validate(arrival(), { candidate: dune }, post)).rejects.toBe(failure);
-  });
-});
-
-describe('titleGuess', () => {
-  it.each([
-    ['Dune.2021.1080p.WEB-DL.mkv', { title: 'Dune', year: '2021' }],
-    ['Blade_Runner_2049.2017.mkv', { title: 'Blade Runner 2049', year: '2017' }],
-    ['The.Office.US.S02E05.720p.mkv', { title: 'The Office US' }],
-    ['Mystery.Footage.mkv', { title: 'Mystery Footage' }],
-  ])('%s', (release, expected) => {
-    expect(titleGuess(release)).toEqual(expected);
   });
 });
 

@@ -215,7 +215,7 @@
   {:else}
     <section class="card" aria-labelledby="lib-mode">
       <h2 id="lib-mode">{t('web.libraries.mode')}</h2>
-      <div class="cards modes" role="radiogroup" aria-labelledby="lib-mode">
+      <div class="cards cards-two" role="radiogroup" aria-labelledby="lib-mode">
         {#each ['', ...MODES] as const as choice (choice)}
           <label class="option" class:on={form.mode === choice}>
             <input type="radio" name="lib-mode" value={choice} bind:group={form.mode} />
@@ -341,79 +341,13 @@
     font-size: 13px;
   }
 
-  .hint {
-    font-size: 12px;
-  }
-
   .choices {
     display: flex;
     flex-wrap: wrap;
     gap: 4px 24px;
   }
 
-  .check {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    min-height: 44px;
-  }
-
-  .cards {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: 8px;
-  }
-
-  /* Four cards: two by two rather than three and one. */
-  .modes {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  @media (max-width: 560px) {
-    .modes {
-      grid-template-columns: 1fr;
-    }
-  }
-
-  .option {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    min-height: 44px;
-    padding: 12px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    cursor: pointer;
-  }
-
-  .option:hover {
-    background: var(--surface-2);
-  }
-
-  .option.on {
-    border-color: var(--accent);
-    background: var(--warn-bg);
-  }
-
   /* The radio stays in the page for the keyboard and screen readers; the card is what is seen. */
-  .option input {
-    position: absolute;
-    opacity: 0;
-    inset: 0;
-    margin: 0;
-    cursor: pointer;
-  }
-
-  .option:has(input:focus-visible) {
-    outline: 2px solid var(--accent);
-    outline-offset: 2px;
-  }
-
-  .option-name {
-    font-weight: 600;
-  }
-
   .example {
     font-size: 11.5px;
     overflow-wrap: anywhere;
@@ -434,10 +368,6 @@
     flex: 1 1 auto;
     min-height: 44px;
     accent-color: var(--accent);
-  }
-
-  .ok {
-    color: var(--ok);
   }
 
   .buttons {

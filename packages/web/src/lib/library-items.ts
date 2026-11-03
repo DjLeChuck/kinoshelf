@@ -308,3 +308,7 @@ export const isStalled = (progress: ScanProgress | null): boolean =>
 /** A scan that failed and that nothing newer has replaced. */
 export const lastScanFailed = (library: Pick<Library, 'lastScan' | 'scanning'>): boolean =>
   !library.scanning && library.lastScan?.status === 'failed';
+
+/** A file's presence in a table cell: nothing when the profile writes no such file. */
+export const presenceMark = (value: boolean | null): string =>
+  value === null ? '' : value ? '✓' : '✗';
