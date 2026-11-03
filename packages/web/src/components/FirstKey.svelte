@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { copyText } from '../lib/clipboard.js';
   import { api, ApiError } from '../lib/api.js';
   import { messageOf } from '../lib/errors.js';
   import { t } from '../lib/i18n.svelte.js';
@@ -31,12 +32,8 @@
   }
 
   async function copy(): Promise<void> {
-    try {
-      await navigator.clipboard.writeText(key ?? '');
-      copied = true;
-    } catch {
-      // Clipboard denied (plain http): the key is selectable, copying by hand still works.
-    }
+    // When even the fallback fails, the key stays selectable and can be copied by hand.
+    copied = await copyText(key ?? '');
   }
 </script>
 

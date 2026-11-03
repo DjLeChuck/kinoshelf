@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { copyText } from '../lib/clipboard.js';
   import { api } from '../lib/api.js';
   import { messageOf } from '../lib/errors.js';
   import { t } from '../lib/i18n.svelte.js';
@@ -28,12 +29,8 @@
   }
 
   async function copy(): Promise<void> {
-    try {
-      await navigator.clipboard.writeText(fresh ?? '');
-      copied = true;
-    } catch {
-      // Clipboard access can be refused: the key stays selectable on screen.
-    }
+    // When even the fallback fails, the key stays selectable and can be copied by hand.
+    copied = await copyText(fresh ?? '');
   }
 </script>
 
