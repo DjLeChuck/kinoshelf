@@ -8,7 +8,8 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { format, resolveConfig } from 'prettier';
 import { TmdbProvider } from '@kinoshelf/provider-tmdb';
-import { Matcher, GuessitParser } from '@kinoshelf/core';
+import { requestKey } from '../dist/replay.js';
+import { runCorpus } from '../dist/run.js';
 
 const key = process.env.TMDB_API_KEY ?? '';
 if (!key) {
@@ -24,16 +25,9 @@ const recordings = refresh
   : JSON.parse(await readFile(new URL('recordings.json', data), 'utf8').catch(() => '{}'));
 let fetched = 0;
 
-const keyOf = (url) => {
-  const query = new URLSearchParams(url.searchParams);
-  query.delete('api_key');
-  query.sort();
-  return `${url.pathname}?${query.toString()}`;
-};
-
 const recording = async (input, init) => {
   const url = new URL(input instanceof Request ? input.url : input);
-  const known = recordings[keyOf(url)];
+  const known = recordings[requestKey(url)];
   if (known) {
     return new Response(known.body, { status: known.status });
   }
@@ -102,25 +96,19 @@ const recording = async (input, init) => {
       const field = 'titles' in alt ? 'titles' : 'results';
       stored = JSON.stringify({ id: alt.id, [field]: alt[field].map((t) => ({ title: t.title })) });
     }
-    recordings[keyOf(url)] = { status: response.status, body: stored };
+    recordings[requestKey(url)] = { status: response.status, body: stored };
   }
   return new Response(body, { status: response.status, headers: response.headers });
 };
 
-const parser = new GuessitParser();
+// The corpus runs the way the tests replay it, so what is recorded is what they will ask for.
 const providers = new Map();
-const matchers = new Map();
-for (const entry of entries) {
-  const language = entry.language ?? 'en-US';
+await runCorpus((language) => {
   if (!providers.has(language)) {
     providers.set(language, new TmdbProvider({ apiKey: key, fetch: recording, language }));
   }
-  const parsed = parser.parse(entry.path);
-  if (!matchers.has(language)) {
-    matchers.set(language, new Matcher(providers.get(language)));
-  }
-  await matchers.get(language).match(parsed);
-}
+  return providers.get(language);
+}, entries);
 
 const sorted = Object.fromEntries(
   Object.entries(recordings).sort(([a], [b]) => a.localeCompare(b)),
