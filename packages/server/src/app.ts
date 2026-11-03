@@ -87,12 +87,30 @@ function statusOf(error: KinoshelfError): number {
 }
 
 /**
+ * `KINOSHELF_TRUST_PROXY`: which reverse proxy may say what the browser asked for
+ * (`X-Forwarded-For`, `-Proto`, `-Host`). Unset, nobody: the headers are ignored, since anyone
+ * could send them. `true` trusts any, anything else is a comma-separated list of addresses or
+ * ranges (`127.0.0.1,10.0.0.0/8`).
+ */
+export function trustProxyOf(value: string | undefined): boolean | string {
+  const setting = value?.trim() ?? '';
+  if (setting === '' || setting === 'false') {
+    return false;
+  }
+  if (setting === 'true') {
+    return true;
+  }
+  return setting;
+}
+
+/**
  * Builds the HTTP layer without listening, so tests can drive it with `inject`. Routes stay thin:
  * the logic lives in the core. Responses carry codes and parameters, never translated text.
  */
 export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
   const app = Fastify({
     logger: options.logger ?? false,
+    trustProxy: trustProxyOf(options.env.KINOSHELF_TRUST_PROXY),
     // Fastify strips unknown fields by default; a client sending `dryRun` must hear it is not
     // supported rather than believe it was honored.
     ajv: { customOptions: { removeAdditional: false } },

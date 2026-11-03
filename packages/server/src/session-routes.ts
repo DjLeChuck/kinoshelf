@@ -39,7 +39,8 @@ export function sameOrigin(request: FastifyRequest): boolean {
     return true;
   }
   try {
-    return new URL(origin).host === request.headers.host;
+    // `request.host` is the Host header, or X-Forwarded-Host from a trusted proxy.
+    return new URL(origin).host === request.host;
   } catch {
     return false;
   }
@@ -103,9 +104,9 @@ export function registerSessionRoutes(
         return reply.code(401).send({ error: { code: 'auth.unauthorized' } });
       }
       // Origin and Host agree on a rebinding attacker's own domain: the name itself is checked.
-      if (!isLocalHost(request.headers.host, allowed)) {
+      if (!isLocalHost(request.host, allowed)) {
         return reply.code(403).send({
-          error: { code: 'setup.host-not-allowed', params: { host: request.headers.host ?? '' } },
+          error: { code: 'setup.host-not-allowed', params: { host: request.host } },
         });
       }
       if (hasApiKey(database)) {
