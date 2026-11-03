@@ -39,9 +39,14 @@ const TRAILING_ID = /\s*[{[][a-z]+-\d+[}\]]$/i;
 
 /** Cuts on code point boundaries so multi-byte characters are never cut in half. */
 function cut(text: string, bytes: number): string {
-  let result = text;
-  while (Buffer.byteLength(result, 'utf8') > bytes) {
-    result = Array.from(result).slice(0, -1).join('');
+  let used = 0;
+  let result = '';
+  for (const char of text) {
+    used += Buffer.byteLength(char, 'utf8');
+    if (used > bytes) {
+      break;
+    }
+    result += char;
   }
   return result;
 }

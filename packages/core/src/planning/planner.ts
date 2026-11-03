@@ -120,7 +120,12 @@ async function classify(
   return { status: 'ready' };
 }
 
-async function planItem(input: PlanInput, options: PlannerOptions, id: string): Promise<PlanItem> {
+async function planItem(
+  input: PlanInput,
+  options: PlannerOptions,
+  id: string,
+  listings: Map<string, Promise<string[]>>,
+): Promise<PlanItem> {
   const { profile, mode } = options;
   const source = resolve(input.parsed.path);
   const base = {
@@ -193,6 +198,7 @@ async function planItem(input: PlanInput, options: PlannerOptions, id: string): 
   const sidecars = await findSidecars(
     source,
     options.sidecarExtensions ?? DEFAULT_SIDECAR_EXTENSIONS,
+    listings,
   );
   const operations: Operation[] = [
     { type: 'transfer', mode, role: 'main', source, destination },
@@ -289,6 +295,25 @@ function shareCompanions(items: readonly PlanItem[]): PlanItem[] {
   });
 }
 
+/** Items looked at on the disk at once: a library of thousands must not open them all together. */
+const ITEMS_AT_ONCE = 32;
+
+async function inBatches<T, R>(
+  items: readonly T[],
+  size: number,
+  task: (item: T, index: number) => Promise<R>,
+): Promise<R[]> {
+  const results: R[] = [];
+  for (let start = 0; start < items.length; start += size) {
+    results.push(
+      ...(await Promise.all(
+        items.slice(start, start + size).map((item, i) => task(item, start + i)),
+      )),
+    );
+  }
+  return results;
+}
+
 /**
  * Builds the plan for a batch of matched files. It reads the disk (existing destinations,
  * sidecars, devices) but never writes. Items sharing a destination are all held back.
@@ -300,7 +325,12 @@ export async function createPlan(
   const { profile } = options;
 
   const newId = options.newId ?? randomUUID;
-  const items = await Promise.all(inputs.map((input) => planItem(input, options, newId())));
+  // Ids are drawn in input order whatever the order the disk answers in.
+  const ids = inputs.map(() => newId());
+  const listings = new Map<string, Promise<string[]>>();
+  const items = await inBatches(inputs, ITEMS_AT_ONCE, (input, index) =>
+    planItem(input, options, ids[index] as string, listings),
+  );
 
   // Case-insensitive: libraries are often shared with systems that cannot tell the names apart.
   const byDestination = new Map<string, PlanItem[]>();

@@ -25,11 +25,16 @@ export interface Sidecar {
 export async function findSidecars(
   source: string,
   extensions: readonly string[] = DEFAULT_SIDECAR_EXTENSIONS,
+  /** Folder listings already asked for, shared by the videos of one plan: a season is read once. */
+  listings?: Map<string, Promise<string[]>>,
 ): Promise<Sidecar[]> {
   const stem = basename(source, extname(source));
+  const folder = dirname(source);
   let names: string[];
   try {
-    names = await readdir(dirname(source));
+    const listing = listings?.get(folder) ?? readdir(folder);
+    listings?.set(folder, listing);
+    names = await listing;
   } catch {
     return [];
   }

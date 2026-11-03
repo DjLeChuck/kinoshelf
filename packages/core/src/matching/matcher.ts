@@ -122,9 +122,15 @@ export class Matcher {
 
     const readings = titleReadings(parsed);
     const series = candidates.filter((c) => c.kind === 'series');
-    const likeliest = [...series]
-      .sort((a, b) => candidateTitleSimilarity(readings, b) - candidateTitleSimilarity(readings, a))
-      .slice(0, this.config.maxSeasonLookups);
+    // Each similarity is worked out once, not at every comparison of the sort.
+    const likeliest = series
+      .map((candidate) => ({
+        candidate,
+        similarity: candidateTitleSimilarity(readings, candidate),
+      }))
+      .sort((a, b) => b.similarity - a.similarity)
+      .slice(0, this.config.maxSeasonLookups)
+      .map(({ candidate }) => candidate);
     const hinted = series.filter((c) =>
       parsed.knownIds?.some((known) => known.provider === c.id.provider && known.id === c.id.id),
     );

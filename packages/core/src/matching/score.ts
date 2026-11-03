@@ -160,8 +160,14 @@ export function scoreCandidates(
     };
   });
 
+  // The best rival of a candidate is the best sum, or the second best for the leader itself.
+  const sums = raws.map((r) => r.sum);
+  const bestSum = Math.max(...sums);
+  const leader = sums.indexOf(bestSum);
+  const second = Math.max(...sums.filter((_, i) => i !== leader));
+
   const scored = raws.map((raw, index): ScoredCandidate => {
-    const rivalBest = Math.max(...raws.filter((_, i) => i !== index).map((r) => r.sum));
+    const rivalBest = index === leader ? second : bestSum;
     const gap = raws.length === 1 ? Infinity : raw.sum - rivalBest;
     const margin = weights.margin * Math.min(1, Math.max(0, gap / config.marginFullGap));
 

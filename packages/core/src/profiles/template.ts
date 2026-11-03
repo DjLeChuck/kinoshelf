@@ -159,6 +159,10 @@ export function renderTemplate(
   });
 }
 
+/** A profile has a handful of templates, rendered once per file: parsed once. */
+const parsedTemplates = new Map<string, ParsedTemplate>();
+const MAX_PARSED_TEMPLATES = 256;
+
 /**
  * Renders one of a profile's templates with the profile's own rules (forbidden characters, segment
  * length, episode range): the path segments it gives, `reserveBytes` kept free at the end.
@@ -169,7 +173,15 @@ export function renderProfileTemplate(
   variables: TemplateVariables,
   reserveBytes = 0,
 ): string[] {
-  return renderTemplate(parseTemplate(template), variables, {
+  let parsed = parsedTemplates.get(template);
+  if (!parsed) {
+    parsed = parseTemplate(template);
+    if (parsedTemplates.size >= MAX_PARSED_TEMPLATES) {
+      parsedTemplates.clear();
+    }
+    parsedTemplates.set(template, parsed);
+  }
+  return renderTemplate(parsed, variables, {
     rules: profile.filesystem,
     rangeSeparator: profile.episodeRangeSeparator,
     reserveBytes,
