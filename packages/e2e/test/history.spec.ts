@@ -46,6 +46,10 @@ test('lists a failed job with its cause, and sends it again', async ({ page, req
     .first()
     .click();
   await expect(page.getByRole('heading', { name: 'Cause' })).toBeVisible();
+  // The detail says the cause in words, not as a generic failure (the list line already did).
+  await expect(page.getByRole('alert').filter({ hasText: 'Cause' })).toContainText(
+    `Path not found: ${path}`,
+  );
   await page.getByRole('button', { name: 'Show the technical detail' }).click();
   await expect(page.locator('pre')).toContainText('discover.not-found');
 

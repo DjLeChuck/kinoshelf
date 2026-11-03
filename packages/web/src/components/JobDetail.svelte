@@ -1,5 +1,6 @@
 <script lang="ts">
   import Link from './Link.svelte';
+  import { describeError } from '@kinoshelf/i18n';
   import { api } from '../lib/api.js';
   import { messageOf } from '../lib/errors.js';
   import { refetchOn } from '../lib/events.svelte.js';
@@ -63,8 +64,9 @@
     }
   }
 
-  const describe = (error: ErrorBody): string =>
-    messageOf(t, { code: error.code, params: error.params });
+  // A failure the server stored (the job's, a file's) is a code and its parameters, not a thrown
+  // ApiError: `messageOf` would only say something went wrong.
+  const describe = (error: ErrorBody): string => describeError(t, error);
 
   const duration = $derived(
     job?.startedAt && job.finishedAt ? formatDuration(job.startedAt, job.finishedAt) : undefined,
