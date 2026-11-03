@@ -1,4 +1,4 @@
-import type { Journal, JournalBatch, JournalEntry } from '../types/journal.js';
+import type { FileIdentity, Journal, JournalBatch, JournalEntry } from '../types/journal.js';
 
 /** Journal kept in memory: for tests and throw-away runs. */
 export class MemoryJournal implements Journal {
@@ -33,6 +33,12 @@ export class MemoryJournal implements Journal {
     return new Set(
       this.entries.filter((e) => e.entry.batchId === batchId && e.undone).map((e) => e.entry.id),
     );
+  }
+
+  madeFileIdentity(path: string): FileIdentity | undefined {
+    return this.entries.findLast(
+      (e) => !e.undone && e.entry.kind !== 'transfer' && e.entry.destination === path,
+    )?.entry.identity;
   }
 
   hasBatches(): boolean {

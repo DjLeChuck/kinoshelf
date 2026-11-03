@@ -116,6 +116,23 @@ export class SqliteJournal implements Journal {
     );
   }
 
+  madeFileIdentity(path: string): FileIdentity | undefined {
+    const row = this.db
+      .select({ identity: journalEntries.identity })
+      .from(journalEntries)
+      .where(
+        and(
+          eq(journalEntries.destination, path),
+          inArray(journalEntries.kind, ['generated', 'downloaded']),
+          isNull(journalEntries.undoneAt),
+        ),
+      )
+      .orderBy(desc(journalEntries.seq))
+      .limit(1)
+      .get();
+    return row?.identity ? (JSON.parse(row.identity) as FileIdentity) : undefined;
+  }
+
   hasBatches(): boolean {
     return (
       this.db.select({ id: journalEntries.id }).from(journalEntries).limit(1).get() !== undefined

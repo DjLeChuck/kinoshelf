@@ -199,6 +199,12 @@ format follows the Kodi wiki's templates, saved pages are not in the repository)
   (`undo.last-copy`): it is the only one left. An undo that fails partway marks the entries it did
   revert, and a retry leaves them alone. Images come with `ImageSize` (`preview`, `standard`, `original`; `size`
   in the profile, `standard` by default and `original` for a fanart) through `provider.imageUrl`.
+- **A move cleans behind it** (`execution/prune.ts`): after an item's `move`, the folder the video left
+  (and its parents, up to but never including the plan's destination root) is removed when everything
+  in it is a file Kinoshelf made (`Journal.madeFileIdentity`: a `generated`/`downloaded` entry not
+  undone, same size and date). Anything else keeps the folder. The deleted NFO and images are not
+  journaled: a refresh writes them again where the profile wants them. Folders outside the
+  destination root (arrival folders) are never cleaned.
 - **An organized library** gets its missing NFO and images too: an item whose video is already
   where the profile wants it becomes `ready` with only `write-file`/`download` operations (the
   CLI says "already named as the profile wants"). Files already there are left out of the plan

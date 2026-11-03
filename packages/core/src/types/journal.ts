@@ -80,6 +80,12 @@ export interface Journal {
   markUndone(batchId: string, entryIds?: readonly string[]): void;
   /** Ids of the entries of the batch already reverted. */
   undoneEntryIds(batchId: string): ReadonlySet<string>;
+  /**
+   * The identity a file Kinoshelf made (NFO, artwork) had when written, if `path` is the
+   * destination of such an entry that was not undone; `undefined` for any other file. Entries
+   * journaled before identities existed read as `undefined`: they are not trusted as ours.
+   */
+  madeFileIdentity(path: string): FileIdentity | undefined;
   /** Whether anything was ever journaled, without summing up the batches. */
   hasBatches(): boolean;
   /** The most recent batches (all of them without a `limit`), by the time they started. */

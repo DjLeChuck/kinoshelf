@@ -12,6 +12,7 @@ import type {
   WriteFileOperation,
 } from '../types/operation.js';
 import type { BatchResult, ItemResult, Plan, PlanItem } from '../types/plan.js';
+import { pruneVacated } from './prune.js';
 import { fetchImage as defaultFetchImage, MAX_IMAGE_BYTES, type ImageFetcher } from './download.js';
 import {
   copyAtomic,
@@ -215,6 +216,7 @@ function journalEntry(
 }
 
 async function runItem(
+  plan: Plan,
   item: PlanItem,
   batchId: string,
   options: ExecuteOptions,
@@ -223,6 +225,7 @@ async function runItem(
 ): Promise<ItemResult> {
   const dryRun = options.dryRun ?? false;
   const results: OperationResult[] = [];
+  const vacated = new Set<string>();
   let mainDone = true;
 
   for (const operation of item.operations) {
@@ -254,10 +257,17 @@ async function runItem(
           ...(identity && { identity }),
         });
       }
+      if (!dryRun && operation.type === 'transfer' && operation.mode === 'move') {
+        vacated.add(dirname(operation.source));
+      }
       results.push({ operation, status: 'done' });
     } else {
       results.push({ operation, status: outcome.status, error: outcome.error });
     }
+  }
+  if (vacated.size > 0) {
+    // A relayout (another profile) leaves the old folders with only the NFO and artwork we wrote.
+    await pruneVacated([...vacated], plan.destinationRoot, options.journal);
   }
   return { itemId: item.id, results };
 }
@@ -276,7 +286,7 @@ export async function executePlan(plan: Plan, options: ExecuteOptions): Promise<
   for (const item of plan.items) {
     const result =
       item.status === 'ready'
-        ? await runItem(item, batchId, options, newId, now)
+        ? await runItem(plan, item, batchId, options, newId, now)
         : { itemId: item.id, results: [] };
     items.push(result);
     options.onItem?.(result);

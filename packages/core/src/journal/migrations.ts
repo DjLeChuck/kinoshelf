@@ -34,6 +34,11 @@ export const CORE_MIGRATIONS: readonly { readonly name: string; readonly sql: st
     name: 'core:003-journal-identity',
     sql: `ALTER TABLE journal_entries ADD COLUMN identity TEXT;`,
   },
+  {
+    // Cleaning a folder a move left behind asks, for each file in it, whether Kinoshelf made it.
+    name: 'core:004-journal-destination',
+    sql: `CREATE INDEX journal_entries_destination ON journal_entries (destination);`,
+  },
 ];
 
 export function applyMigrations(
