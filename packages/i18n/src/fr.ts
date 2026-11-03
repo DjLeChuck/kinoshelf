@@ -64,6 +64,8 @@ export const fr: Record<keyof typeof en, string> = {
   'error.config.dir-not-writable':
     'Impossible d’écrire dans le dossier de configuration {path} (exécuté avec l’uid {uid}). Rendez-le accessible en écriture à cet utilisateur.',
   'error.config.invalid': 'Fichier de configuration invalide {path} : {detail}',
+  'error.undo.destination-changed':
+    '{path} est conservé : il a changé depuis que Kinoshelf l’a écrit (remplacé ou modifié), ce n’est donc plus à lui de le supprimer.',
   'error.undo.batch-already-undone': 'Le lot {batch} a déjà été annulé.',
   'error.undo.batch-not-found': 'Aucun lot {batch} dans le journal.',
   'error.config.invalid-value': 'Valeur invalide « {value} » pour {option}.',

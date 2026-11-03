@@ -3,7 +3,7 @@ import { dirname } from 'node:path';
 import { describeFsError, ensureDirectory, exists, moveFile } from '../execution/fs-ops.js';
 import type { ErrorCode } from '../error-codes.js';
 import type { ErrorInfo } from '../types/errors.js';
-import type { Journal, JournalEntry } from '../types/journal.js';
+import type { FileIdentity, Journal, JournalEntry } from '../types/journal.js';
 
 export interface UndoEntryResult {
   readonly entry: JournalEntry;
@@ -28,8 +28,13 @@ async function revert(entry: JournalEntry, dryRun: boolean): Promise<UndoEntryRe
   if (!(await exists(entry.destination))) {
     return skipped('undo.destination-missing', entry.destination);
   }
+  if (entry.identity && !(await isUnchanged(entry.destination, entry.identity))) {
+    // Replaced or edited since (a poster of the user's own, a hand-corrected NFO): it is not what
+    // Kinoshelf made any more, so neither deleting it nor moving it back is ours to do.
+    return skipped('undo.destination-changed', entry.destination);
+  }
   if (entry.kind !== 'transfer') {
-    // Ours, whether or not the user edited it since: there is no original to put back.
+    // Ours and untouched: there is no original to put back.
     if (dryRun) {
       return { entry, status: 'undone' };
     }
@@ -69,6 +74,11 @@ async function revert(entry: JournalEntry, dryRun: boolean): Promise<UndoEntryRe
   }
 }
 
+async function isUnchanged(path: string, identity: FileIdentity): Promise<boolean> {
+  const now = await stat(path).catch(() => null);
+  return now !== null && now.size === identity.size && now.mtimeMs === identity.mtimeMs;
+}
+
 /**
  * True while the file a copy or hardlink came from is still there: same inode for a link, same
  * size for a copy (a file put at that name since is not the original).
@@ -104,7 +114,8 @@ async function pruneDirectories(entries: readonly JournalEntry[]): Promise<void>
  * is deleted. They are reverted most recent first, so a video's companions go before the video
  * and the directory pruning, which comes last, finds them empty. Each entry is checked against
  * the disk as it is now, so a later batch cannot be damaged: a destination that was moved on or
- * removed since is skipped, an original place taken since is skipped, a copy or link whose
+ * removed since is skipped, one replaced or edited since is kept, an original place taken since
+ * is skipped, a copy or link whose
  * original is gone is kept (it is the last one), and directories a later batch also filled are
  * left (only empty ones go). Nothing is forced. The batch is marked undone only when nothing
  * failed, so a failed undo can be retried; the entries it did revert are marked one by one, and

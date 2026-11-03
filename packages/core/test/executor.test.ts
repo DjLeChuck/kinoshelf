@@ -71,9 +71,10 @@ describe('executePlan: copy', () => {
     );
   });
 
-  it('journals the transfer with the directories it created', async () => {
+  it('journals the transfer with the directories it created and the file as written', async () => {
     const { root, source, plan, journal } = await setup('copy');
     const batch = await run(plan, journal);
+    const written = await stat(join(root, FOLDER, `${STEM}.mkv`));
 
     expect(journal.lastBatchId()).toBe(batch.batchId);
     expect(journal.entriesOf(batch.batchId)).toEqual([
@@ -86,6 +87,7 @@ describe('executePlan: copy', () => {
         mode: 'copy',
         at: expect.any(String) as string,
         createdDirectories: [join(root, FOLDER)],
+        identity: { size: written.size, mtimeMs: written.mtimeMs },
       },
     ]);
   });

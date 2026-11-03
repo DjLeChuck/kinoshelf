@@ -1,4 +1,4 @@
-import { mkdir, readdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
+import { mkdir, readdir, readFile, rename, rm, stat, utimes, writeFile } from 'node:fs/promises';
 import { lstat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -304,17 +304,57 @@ describe('undoBatch: generated and downloaded files', () => {
     expect(journal.lastBatchId()).toBeNull();
   });
 
-  it('removes a generated file the user edited, and reports a missing one as already gone', async () => {
-    const { folder, journal } = await importWithCompanions();
+  it('keeps a generated file the user edited, and reports a missing one as already gone', async () => {
+    const { folder, source, journal } = await importWithCompanions();
     await writeFile(join(folder, 'movie.nfo'), 'edited by hand');
     await rm(join(folder, 'art', 'poster.jpg'));
     const result = await undoLastBatch(journal);
 
     expect(result?.entries.map((e) => [e.status, e.error?.code])).toEqual([
       ['skipped', 'undo.destination-missing'],
-      ['undone', undefined],
+      ['skipped', 'undo.destination-changed'],
       ['undone', undefined],
     ]);
+    expect(await readFile(join(folder, 'movie.nfo'), 'utf8')).toBe('edited by hand');
+    expect(await readFile(source, 'utf8')).toBe('video');
+  });
+
+  it('keeps an image replaced by one of the same size: its date tells them apart', async () => {
+    const { folder, journal } = await importWithCompanions();
+    const poster = join(folder, 'art', 'poster.jpg');
+    await rm(poster);
+    await writeFile(poster, new Uint8Array([2]));
+    await utimes(poster, new Date('2020-01-01'), new Date('2020-01-01'));
+    const result = await undoLastBatch(journal);
+
+    expect(result?.entries[0]?.error?.code).toBe('undo.destination-changed');
+    expect(await readFile(poster)).toEqual(Buffer.from([2]));
+  });
+
+  it('leaves a moved video in place once it changed, rather than moving it back', async () => {
+    const { lib, source, journal } = await importWithCompanions();
+    const video = join(lib, FOLDER, `${STEM}.mkv`);
+    await writeFile(video, 'remuxed');
+    const result = await undoLastBatch(journal);
+
+    expect(result?.entries.at(-1)?.error?.code).toBe('undo.destination-changed');
+    expect(await readFile(video, 'utf8')).toBe('remuxed');
+    expect(await exists(source)).toBe(false);
+  });
+
+  it('trusts an entry journaled before identities were, as it always did', async () => {
+    const { folder, journal } = await importWithCompanions();
+    const batchId = journal.lastBatchId() ?? '';
+    const legacy = new MemoryJournal();
+    for (const entry of journal.entriesOf(batchId)) {
+      const copy = { ...entry };
+      delete copy.identity;
+      legacy.record(copy);
+    }
+    await writeFile(join(folder, 'movie.nfo'), 'edited by hand');
+    const result = await undoLastBatch(legacy);
+
+    expect(result?.entries.map((e) => e.status)).toEqual(['undone', 'undone', 'undone']);
     expect(await exists(join(folder, 'movie.nfo'))).toBe(false);
   });
 

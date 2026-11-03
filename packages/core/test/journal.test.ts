@@ -40,7 +40,11 @@ function behavesLikeAJournal(name: string, make: () => Journal | Promise<Journal
 
     it('returns the entries of a batch in the order they were recorded, fields intact', async () => {
       const journal = await make();
-      const first = entry('a', 'b1', { mode: 'move', createdDirectories: ['/lib/x', '/lib/x/y'] });
+      const first = entry('a', 'b1', {
+        mode: 'move',
+        createdDirectories: ['/lib/x', '/lib/x/y'],
+        identity: { size: 1234, mtimeMs: 1793690000123.456 },
+      });
       journal.record(first);
       journal.record(entry('b', 'b2'));
       journal.record(entry('c', 'b1', { mode: 'hardlink' }));
@@ -205,7 +209,11 @@ describe('SqliteJournal storage', () => {
     new SqliteJournal(sqlite); // opening again must not fail nor wipe anything
 
     const applied = sqlite.prepare('SELECT name FROM schema_migrations').all();
-    expect(applied).toEqual([{ name: 'core:001-journal' }, { name: 'core:002-journal-kind' }]);
+    expect(applied).toEqual([
+      { name: 'core:001-journal' },
+      { name: 'core:002-journal-kind' },
+      { name: 'core:003-journal-identity' },
+    ]);
     expect(new SqliteJournal(sqlite).lastBatchId()).toBe('b1');
   });
 

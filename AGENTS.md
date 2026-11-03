@@ -175,7 +175,10 @@ format follows the Kodi wiki's templates, saved pages are not in the repository)
 - **Show-level files** (`tvshow.nfo`, the show's poster and fanart) come with every episode; the
   planner keeps the first one of the batch (`shareCompanions`).
 - **Journal and undo**: entries have a `kind` (`transfer`, `generated`, `downloaded`;
-  `core:002-journal-kind`). Undo deletes what Kinoshelf made, even if edited, then prunes only the
+  `core:002-journal-kind`). Each entry keeps the destination's size and date as written
+  (`identity`, `core:003-journal-identity`): a file that differs since (a poster the user replaced, an
+  NFO edited by hand or by a player) is kept (`undo.destination-changed`), video included; entries
+  journaled before carry none and are trusted. Undo deletes what Kinoshelf made, then prunes only the
   directories it created. A copy or hardlink whose original is gone (or replaced) is kept
   (`undo.last-copy`): it is the only one left. An undo that fails partway marks the entries it did
   revert, and a retry leaves them alone. Images come with `ImageSize` (`preview`, `standard`, `original`; `size`

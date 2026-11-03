@@ -64,6 +64,8 @@ export const en = {
   'error.config.dir-not-writable':
     'Cannot write to the config directory {path} (running as uid {uid}). Make it writable for that user.',
   'error.config.invalid': 'Invalid configuration file {path}: {detail}',
+  'error.undo.destination-changed':
+    'Kept {path}: it changed since Kinoshelf wrote it (replaced or edited), so it is no longer ours to remove.',
   'error.undo.batch-already-undone': 'Batch {batch} was already reverted.',
   'error.undo.batch-not-found': 'No batch {batch} in the journal.',
   'error.config.invalid-value': 'Invalid value "{value}" for {option}.',

@@ -2,7 +2,7 @@ import { and, asc, desc, eq, inArray, isNotNull, isNull, sql } from 'drizzle-orm
 import { drizzle, type BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import { integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 import type { Database } from 'better-sqlite3';
-import type { Journal, JournalBatch, JournalEntry } from '../types/journal.js';
+import type { FileIdentity, Journal, JournalBatch, JournalEntry } from '../types/journal.js';
 import type { TransferMode } from '../types/operation.js';
 import { applyMigrations, CORE_MIGRATIONS } from './migrations.js';
 
@@ -18,6 +18,7 @@ const journalEntries = sqliteTable('journal_entries', {
   at: text('at').notNull(),
   createdDirectories: text('created_directories').notNull(),
   undoneAt: text('undone_at'),
+  identity: text('identity'),
 });
 
 /** Durable journal in the caller's SQLite database (the single file in `/config`). */
@@ -36,6 +37,7 @@ export class SqliteJournal implements Journal {
         ...entry,
         mode: entry.kind === 'transfer' ? entry.mode : '',
         createdDirectories: JSON.stringify(entry.createdDirectories),
+        identity: entry.identity ? JSON.stringify(entry.identity) : null,
       })
       .run();
   }
@@ -76,6 +78,9 @@ export class SqliteJournal implements Journal {
           destination: row.destination,
           at: row.at,
           createdDirectories: JSON.parse(row.createdDirectories) as string[],
+          ...(row.identity !== null && {
+            identity: JSON.parse(row.identity) as FileIdentity,
+          }),
         };
         return row.kind === 'transfer' && row.mode !== ''
           ? { ...common, kind: 'transfer', mode: row.mode }

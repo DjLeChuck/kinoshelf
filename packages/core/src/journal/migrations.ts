@@ -29,6 +29,11 @@ export const CORE_MIGRATIONS: readonly { readonly name: string; readonly sql: st
     name: 'core:002-journal-kind',
     sql: `ALTER TABLE journal_entries ADD COLUMN kind TEXT NOT NULL DEFAULT 'transfer';`,
   },
+  {
+    // JSON `FileIdentity`; NULL for rows written before, which undo trusts as it always did.
+    name: 'core:003-journal-identity',
+    sql: `ALTER TABLE journal_entries ADD COLUMN identity TEXT;`,
+  },
 ];
 
 export function applyMigrations(

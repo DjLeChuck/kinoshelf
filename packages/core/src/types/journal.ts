@@ -1,5 +1,15 @@
 import type { TransferMode } from './operation.js';
 
+/**
+ * A file as Kinoshelf left it. Size and modification date only: device and inode numbers change
+ * when a share is mounted again (NFS, SMB without server inodes), which would make every file
+ * look replaced after a reboot.
+ */
+export interface FileIdentity {
+  readonly size: number;
+  readonly mtimeMs: number;
+}
+
 /** Fields every journaled operation has, whatever it did. */
 interface JournalEntryBase {
   readonly id: string;
@@ -14,6 +24,12 @@ interface JournalEntryBase {
   readonly createdDirectories: readonly string[];
   /** ISO 8601 timestamp. */
   readonly at: string;
+  /**
+   * The destination right after it was written. Undo leaves a file that differs since (the user
+   * replaced the poster, edited the NFO): it is no longer what Kinoshelf made. Absent from entries
+   * journaled before it existed, which undo trusts as before.
+   */
+  readonly identity?: FileIdentity;
 }
 
 /** A video or sidecar moved, copied or linked. */

@@ -3,7 +3,7 @@ import { stat } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { KinoshelfError } from '../errors.js';
 import type { ErrorInfo } from '../types/errors.js';
-import type { Journal, JournalEntry } from '../types/journal.js';
+import type { FileIdentity, Journal, JournalEntry } from '../types/journal.js';
 import type {
   DownloadOperation,
   Operation,
@@ -174,6 +174,16 @@ async function createFile(
   }
 }
 
+/** What undo will compare the file with; nothing when it cannot be read (undo then trusts it). */
+async function identityOf(path: string): Promise<FileIdentity | undefined> {
+  try {
+    const { size, mtimeMs } = await stat(path);
+    return { size, mtimeMs };
+  } catch {
+    return undefined;
+  }
+}
+
 function journalEntry(
   operation: Operation,
   base: { id: string; batchId: string; at: string; createdDirectories: readonly string[] },
@@ -228,14 +238,16 @@ async function runItem(
     }
     if (outcome.status === 'done') {
       if (!dryRun) {
-        options.journal.record(
-          journalEntry(operation, {
+        const identity = await identityOf(operation.destination);
+        options.journal.record({
+          ...journalEntry(operation, {
             id: newId(),
             batchId,
             at: now().toISOString(),
             createdDirectories: outcome.createdDirectories ?? [],
           }),
-        );
+          ...(identity && { identity }),
+        });
       }
       results.push({ operation, status: 'done' });
     } else {

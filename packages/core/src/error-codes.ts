@@ -48,6 +48,7 @@ export const ERROR_CODES = [
   'undo.destination-missing',
   'undo.source-exists',
   'undo.last-copy',
+  'undo.destination-changed',
 ] as const;
 
 export type ErrorCode = (typeof ERROR_CODES)[number];
