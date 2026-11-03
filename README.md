@@ -91,6 +91,11 @@ next start.
 - `plex-nfo`: for Plex's optional "Plex NFO" agents (Plex Media Server 1.43.1 or later): the same
   layout as `plex-no-id`, with NFO, `poster.jpg` and `background.jpg`.
 
+Several qualities of one movie (a 1080p and a 2160p) live side by side in the movie's folder, as Plex
+and Jellyfin expect: `Nightbitch (2024) {tmdb-728949} - 2160p.mkv`. The label is the picture size found
+in the file name, and a file already in its folder is never renamed unless you ask for it, from the
+movie's page ("Add the version to the name").
+
 Metadata files are never overwritten (one already there is left as it is and reported), and `undo`
 removes the ones a batch wrote.
 

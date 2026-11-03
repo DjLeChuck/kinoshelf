@@ -82,6 +82,26 @@ contains no player-specific rule.
   must start with its folder's name), `SxxExx` episodes, `movie.nfo`, `tvshow.nfo`, `<file>.nfo`,
   `poster.jpg` and `fanart.jpg`. A season's poster is a plain `poster.jpg` in its folder: Jellyfin's
   documentation does not list Kodi's `seasonNN-poster.jpg`.
+- **Versions of a movie** (`templates.movieVersion`, e.g. `' - {version}'`, every shipped profile has
+  it; only `{version}` is known to it, and a profile without it keeps one file per movie). Plex and
+  Jellyfin take several qualities of one movie in **one folder**, `<name> - <label>` (Jellyfin: the
+  file starts with its folder's name, id included). A movie that **arrives** is always named with its
+  label when its file name gives a picture size (`ParsedMedia.screenSize`, `source`; guessit reads
+  `4K` as `2160p`): `Nightbitch (2024) {tmdb-728949} - 2160p.mkv`. The label (`planning/version.ts`)
+  is the size; files of one movie in a batch that share it add the source, then the release group
+  (the batch takes one level for all of them, so the result does not depend on the order); files
+  nothing tells apart are a `duplicate-destination` conflict, never numbered. A file **already in
+  its movie folder** under the profile's name, with or without a label after it, is `in-place`:
+  the library is never renamed behind its owner's back. The label is also found by trying finer
+  levels when the name is taken on the disk, unless the file there has the **same size** (most likely
+  the same release again: conflict). The folder's `movie.nfo`, poster and fanart are written once
+  (the first version; later ones leave them, so undoing a later batch does not remove them), while
+  a `{file}.nfo` follows each version. Guessit does not tell WEB-DL from WEBRip (`Web`) nor read
+  Remux, so two such files differ by their group or conflict. Not done: a size read by `ffprobe`
+  when the name says none, a choice of size at the validation of an arrival, a batch action in the
+  web. The page of one movie has "Add the version to the name": a dialog whose size menu starts from
+  the name's and can be changed (`POST /api/libraries/{id}/execute` with `version: true` and
+  `screenSize`, which wins over the name).
 - `ParsedMedia.knownIds` (ids found in names) is a hint, not a truth: a candidate whose id matches
   is boosted only if its type, title, season/episode and year agree. If the id designates a
   candidate yet another one scores higher (`Dune (2021) {tmdb-841}`: 841 is the 1984 film), the
@@ -312,6 +332,17 @@ refuses to delete a library an arrival folder points at (`library.in-use`). Ther
   unknown); otherwise 202 with the executions, and the batch shows in the history and can be undone.
   409 `library.nothing-to-do` when nothing is left. The web's "Rename preview" dialog (`RunDialog`)
   is the dry run, then the run. Rows added by an arrival carry no entry: they have nothing to run.
+  With `version: true` (movie libraries) the chosen movies are planned again with `applyVersion`,
+  named with their label though already in place (a `move` in the same folder, undoable); the size
+  is the request's `screenSize` when given, else the one in the stored `parsed` of the scan, so
+  without either (an older scan, a name with no size) the movie is refused
+  (409 `library.version-unavailable` when all are, else `skipped`). A dry run changes nothing; the run
+  stores the new plans (`commitVersions`) then queues the execution as any other.
+- **A stored plan is as old as its analysis.** Two releases of one movie are two jobs planned before
+  either moves, so `Service.prepare` plans a movie again, against the disk as it is, when its main
+  destination exists by the time it runs (`refreshed`); a movie left without a free name waits in
+  Arrivals as a `destination-exists` conflict (also when the name is taken between the plan and the
+  write), it is not marked failed. Transfers run one at a time, so the second job sees the first.
 - **Scan progress** (`progress.ts`): `GET /api/jobs/:id` and the `scan` of
   `GET /api/libraries/:id/items` carry `progress` (`phase` discover|identify|plan, `found`, `done`,
   `total`, `current`, `idleSeconds`) while an analysis runs, `null` otherwise. It lives in the
