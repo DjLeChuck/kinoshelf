@@ -87,13 +87,21 @@
     operation.error ? describeError(t, operation.error) : undefined;
 </script>
 
-<dialog bind:this={dialog} class="card" aria-labelledby="run-title" {onclose}>
+<dialog
+  bind:this={dialog}
+  class="card"
+  class:compact={mode === 'version'}
+  aria-labelledby="run-title"
+  {onclose}
+>
   <h2 id="run-title">{t(`web.library.run.title.${mode}`)}</h2>
 
   {#if mode === 'version'}
-    <label class="size">
-      {t('web.library.run.size')}
+    <div class="field size">
+      <label for="version-size">{t('web.library.run.size')}</label>
       <select
+        id="version-size"
+        class="input"
         bind:value={size}
         onchange={() => {
           void load();
@@ -104,7 +112,7 @@
           <option value={option}>{option}</option>
         {/each}
       </select>
-    </label>
+    </div>
   {/if}
 
   {#if failure}
@@ -200,11 +208,14 @@
     background: rgb(0 0 0 / 50%);
   }
 
+  /* One line to show, not a list: the dialog need not be as wide as for a selection. */
+  dialog.compact {
+    width: min(640px, 94vw);
+  }
+
   .size {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 8px;
+    max-width: 240px;
+    margin-bottom: 12px;
   }
 
   h2 {

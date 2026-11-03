@@ -296,10 +296,10 @@ export const fr: Record<keyof typeof en, string> = {
   'web.library.run.title.version': 'Aperçu du nom avec la version',
   'web.library.run.version': 'Ajouter la version au nom…',
   'web.library.run.version.hint':
-    'Nomme le fichier avec sa taille d’image à côté du nom de son dossier, pour qu’une autre qualité du même film puisse cohabiter. La taille est proposée d’après le nom du fichier ; tu peux en choisir une autre.',
+    'Nomme le fichier avec sa taille d’image à côté du nom de son dossier, pour qu’une autre qualité du même film puisse cohabiter. La taille est proposée d’après le nom du fichier ; vous pouvez en choisir une autre.',
   'web.library.run.size': 'Taille d’image',
   'web.library.run.size.pick': 'Choisir…',
-  'web.library.run.size.needed': 'Choisis la taille d’image pour voir ce qui sera renommé.',
+  'web.library.run.size.needed': 'Choisissez la taille d’image pour voir ce qui sera renommé.',
   'web.library.run.title.refresh': 'Aperçu de l’actualisation',
   'web.library.run.summary':
     '{transfers} à déplacer · {written} à écrire · {skipped} laissés tels quels',
