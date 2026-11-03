@@ -66,6 +66,11 @@ export interface AnalyzeOptions {
   readonly onPlanning?: () => void;
 }
 
+/** Longest stretch of synchronous parsing before other work (requests, timers) may run. */
+const PARSE_SLICE_MS = 20;
+
+const yieldToEventLoop = (): Promise<void> => new Promise((resolve) => setImmediate(resolve));
+
 /** Runs `task` over `items` with bounded concurrency, keeping the results in order. */
 async function mapLimited<T, R>(
   items: readonly T[],
@@ -153,10 +158,17 @@ export async function analyze(
   const concurrency = options.concurrency ?? 4;
 
   // The parser reads context from the relative path; everything after that uses the absolute one.
-  const parsedFiles = files.map((file): ParsedMedia => ({
-    ...options.parser.parse(file.parserPath),
-    path: file.path,
-  }));
+  // Parsing is synchronous and a few milliseconds a file: a library of thousands would keep a
+  // server from answering anything for the whole run, so the loop gets its turn between slices.
+  const parsedFiles: ParsedMedia[] = [];
+  let sliceStart = performance.now();
+  for (const file of files) {
+    parsedFiles.push({ ...options.parser.parse(file.parserPath), path: file.path });
+    if (performance.now() - sliceStart > PARSE_SLICE_MS) {
+      await yieldToEventLoop();
+      sliceStart = performance.now();
+    }
+  }
   const { units, clusterOf } = matchingUnits(files, parsedFiles);
   const outcomes = new Array<MatchOutcome>(files.length);
   await mapLimited(units, concurrency, async (unit) => {

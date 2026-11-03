@@ -323,4 +323,40 @@ describe('analyze', () => {
     expect(result.entries[0]?.parsed.path).toBe(path);
     expect(result.plan.items[0]?.operations[0]).toMatchObject({ source: path });
   });
+
+  it('lets the event loop run while it parses, so a server stays reachable', async () => {
+    const root = await makeDir();
+    for (const name of ['A.2020.mkv', 'B.2021.mkv', 'C.2022.mkv']) {
+      await put(join(root, 'Movies', name));
+    }
+    const files = await discoverVideos(join(root, 'Movies'));
+    const inner = new GuessitParser();
+    let ran = false;
+    let ranBeforeLastFile = false;
+    let parsed = 0;
+    // Each parse takes longer than a slice, as thousands of files do together.
+    const slow = {
+      parse: (path: string) => {
+        const until = performance.now() + 30;
+        while (performance.now() < until) {
+          // busy-wait: the parser is synchronous
+        }
+        if (++parsed === 1) {
+          setImmediate(() => (ran = true));
+        }
+        if (parsed === files.length) {
+          ranBeforeLastFile = ran;
+        }
+        return inner.parse(path);
+      },
+    };
+    await analyze(files, {
+      parser: slow,
+      provider: new FakeProvider([]),
+      profile: await loadBundledProfile('plex'),
+      destinationRoot: join(root, 'lib'),
+      mode: 'copy',
+    });
+    expect(ranBeforeLastFile).toBe(true);
+  });
 });
