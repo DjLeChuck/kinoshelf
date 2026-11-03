@@ -231,7 +231,7 @@ and `config.yaml` in `/config`, listens on `8484`, and its `HEALTHCHECK` calls `
 
 ## Development
 
-With Nix: `nix develop` (or direnv). Otherwise: Node.js 22 and pnpm.
+With Nix: `nix develop` (or direnv). Otherwise: Node.js 26 and pnpm.
 
 ```sh
 pnpm install

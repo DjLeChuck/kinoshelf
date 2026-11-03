@@ -18,7 +18,7 @@
       devShells = forAllSystems (pkgs: {
         default = pkgs.mkShell {
           packages = [
-            pkgs.nodejs_22
+            pkgs.nodejs_26
             pkgs.pnpm
             pkgs.python3 # native build of better-sqlite3 when no prebuilt binary exists
             pkgs.gnumake

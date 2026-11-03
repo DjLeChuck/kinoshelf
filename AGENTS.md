@@ -397,7 +397,7 @@ new entry can fail: break the matcher on purpose and see it go red.
 
 ## Stack
 
-Node.js 22, TypeScript (strict, ESM, NodeNext), pnpm workspaces, Vitest, ESLint
+Node.js 26, TypeScript (strict, ESM, NodeNext), pnpm workspaces, Vitest, ESLint
 (`strictTypeChecked`), Prettier, SQLite (better-sqlite3 + Drizzle), Fastify, Svelte 5.
 
 ## Environment
