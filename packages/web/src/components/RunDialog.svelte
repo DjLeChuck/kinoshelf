@@ -42,7 +42,9 @@
     dialog?.showModal();
   });
 
-  // Naming a version needs a size: the name's, when it says one, else the owner's pick.
+  // Naming a version needs a size: the name's, when it says one, else the owner's pick. It only
+  // starts from the item's (the dialog is mounted for one selection); the menu then owns it.
+  /* svelte-ignore state_referenced_locally */
   let size = $state(items[0] ? sizeOfItem(items[0]) : '');
   const version = $derived(mode === 'version' && size !== '' ? { screenSize: size } : undefined);
 
