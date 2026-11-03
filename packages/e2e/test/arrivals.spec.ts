@@ -1,6 +1,6 @@
 import { access, mkdir, readdir, writeFile } from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
-import { API_KEY, incoming, library } from '../support.js';
+import { AUTH_HEADERS, incoming, library } from '../support.js';
 import { signIn, signInAt } from './helpers.js';
 
 const exists = (path: string): Promise<boolean> =>
@@ -18,14 +18,15 @@ test('validates an arrival and finds it in the library it was sent to', async ({
   await mkdir(folder, { recursive: true });
   // No year: Dune of 1984 and Dune of 2021 both fit, so a human has to choose.
   await writeFile(`${folder}/Dune.1080p.mkv`, 'video');
-  const headers = { authorization: `Bearer ${API_KEY}` };
   const created = await request.post('/api/libraries', {
-    headers,
+    headers: AUTH_HEADERS,
     data: { name: 'Dune drop', source: folder, into: { movie: 'films', series: 'series' } },
   });
   expect(created.status()).toBe(201);
   const { id } = (await created.json()) as { id: string };
-  expect((await request.post(`/api/libraries/${id}/scan`, { headers })).status()).toBe(202);
+  expect(
+    (await request.post(`/api/libraries/${id}/scan`, { headers: AUTH_HEADERS })).status(),
+  ).toBe(202);
 
   await signIn(page);
   await page.goto('/arrivals');
@@ -56,9 +57,8 @@ test('Check now submits what a watched folder holds without waiting for it to se
 }) => {
   const folder = incoming('arrivals-watched');
   await mkdir(folder, { recursive: true });
-  const headers = { authorization: `Bearer ${API_KEY}` };
   const created = await request.post('/api/libraries', {
-    headers,
+    headers: AUTH_HEADERS,
     data: {
       name: 'Watched drop',
       source: folder,
@@ -82,7 +82,7 @@ test('Check now submits what a watched folder holds without waiting for it to se
     ).toBeVisible();
   } finally {
     // The other tests expect no watched folder.
-    await request.delete(`/api/libraries/${id}`, { headers });
+    await request.delete(`/api/libraries/${id}`, { headers: AUTH_HEADERS });
   }
   await page.reload();
   await expect(page.getByRole('button', { name: 'Check now' })).toBeDisabled();
@@ -113,14 +113,15 @@ test('sets a series folder aside once, and shows the episode of another show set
   for (const name of ['Sev.S01E01.mkv', 'Sev.S01E02.mkv', 'Zzz.S01E01.mkv']) {
     await writeFile(`${pack}/${name}`, 'video');
   }
-  const headers = { authorization: `Bearer ${API_KEY}` };
   const created = await request.post('/api/libraries', {
-    headers,
+    headers: AUTH_HEADERS,
     data: { name: 'Release drop', source: folder, into: { movie: 'films', series: 'series' } },
   });
   expect(created.status()).toBe(201);
   const { id } = (await created.json()) as { id: string };
-  expect((await request.post(`/api/libraries/${id}/scan`, { headers })).status()).toBe(202);
+  expect(
+    (await request.post(`/api/libraries/${id}/scan`, { headers: AUTH_HEADERS })).status(),
+  ).toBe(202);
 
   await signIn(page);
   await page.goto('/arrivals');
@@ -159,14 +160,13 @@ test('validates a series folder once and transfers every episode of it', async (
   // Its own destination: the shared series library is counted by another test.
   const shows = library('release-shows');
   await mkdir(shows, { recursive: true });
-  const headers = { authorization: `Bearer ${API_KEY}` };
   const destination = await request.post('/api/libraries', {
-    headers,
+    headers: AUTH_HEADERS,
     data: { name: 'Release shows', source: shows, type: 'series' },
   });
   expect(destination.status()).toBe(201);
   const created = await request.post('/api/libraries', {
-    headers,
+    headers: AUTH_HEADERS,
     data: {
       name: 'Validate drop',
       source: folder,
@@ -175,7 +175,9 @@ test('validates a series folder once and transfers every episode of it', async (
   });
   expect(created.status()).toBe(201);
   const { id } = (await created.json()) as { id: string };
-  expect((await request.post(`/api/libraries/${id}/scan`, { headers })).status()).toBe(202);
+  expect(
+    (await request.post(`/api/libraries/${id}/scan`, { headers: AUTH_HEADERS })).status(),
+  ).toBe(202);
 
   await signIn(page);
   await page.goto('/arrivals');

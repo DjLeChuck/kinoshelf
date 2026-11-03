@@ -1,6 +1,6 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
-import { API_KEY, incoming, library } from '../support.js';
+import { AUTH_HEADERS, incoming, library } from '../support.js';
 import { signIn } from './helpers.js';
 
 test('browses a series library as a tree and finds the episode it lacks', async ({
@@ -13,8 +13,9 @@ test('browses a series library as a tree and finds the episode it lacks', async 
   for (const name of ['S01E01', 'S01E03', 'S02E01']) {
     await writeFile(`${folder}/Severance.${name}.1080p.mkv`, 'video');
   }
-  const headers = { authorization: `Bearer ${API_KEY}` };
-  expect((await request.post('/api/libraries/series/scan', { headers })).status()).toBe(202);
+  expect(
+    (await request.post('/api/libraries/series/scan', { headers: AUTH_HEADERS })).status(),
+  ).toBe(202);
 
   await signIn(page);
   await page.goto('/libraries/series');
@@ -46,14 +47,15 @@ test('shows which NFO and images a show and its seasons have', async ({ page, re
   for (const name of ['tvshow.nfo', 'poster.jpg', 'Season 01/poster.jpg']) {
     await writeFile(`${show}/${name}`, 'x');
   }
-  const headers = { authorization: `Bearer ${API_KEY}` };
   const created = await request.post('/api/libraries', {
-    headers,
+    headers: AUTH_HEADERS,
     data: { name: 'Jelly series', source: folder, type: 'series', profile: 'jellyfin' },
   });
   expect(created.status()).toBe(201);
   const { id } = (await created.json()) as { id: string };
-  expect((await request.post(`/api/libraries/${id}/scan`, { headers })).status()).toBe(202);
+  expect(
+    (await request.post(`/api/libraries/${id}/scan`, { headers: AUTH_HEADERS })).status(),
+  ).toBe(202);
 
   await signIn(page);
   await page.goto(`/libraries/${id}`);

@@ -1,6 +1,6 @@
 import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { loadConfig } from '@kinoshelf/core';
+import { loadConfig, type SearchQuery } from '@kinoshelf/core';
 import { NOTIFY_INTERVAL_MS, ProgressTracker } from '../src/progress.js';
 import { cleanup, fakeProvider, harness, makeDir, put } from './harness.js';
 
@@ -79,7 +79,7 @@ describe('the progress of a scan, over the API', () => {
       // Nothing is matched until the test says so.
       createProvider: () => ({
         ...fakeProvider,
-        searchMovies: async (query) => {
+        searchMovies: async (query: SearchQuery) => {
           await gate;
           return fakeProvider.searchMovies(query);
         },

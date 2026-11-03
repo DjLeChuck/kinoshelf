@@ -8,6 +8,8 @@ export const TMDB_PORT = 8588;
 export const BASE_URL = `http://127.0.0.1:${PORT}`;
 /** At least 32 characters, as the server demands. */
 export const API_KEY = 'e2e-api-key-0123456789-0123456789';
+/** What a request to the API sends to be let in. */
+export const AUTH_HEADERS = { authorization: `Bearer ${API_KEY}` };
 
 export const incoming = (...parts: string[]): string => join(DIR, 'incoming', ...parts);
 export const library = (...parts: string[]): string => join(DIR, 'library', ...parts);

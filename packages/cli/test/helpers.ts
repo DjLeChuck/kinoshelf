@@ -1,127 +1,22 @@
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
-import type {
-  Candidate,
-  ExternalId,
-  ImageSize,
-  MetadataProvider,
-  MovieCandidate,
-  MovieDetails,
-  SeasonInfo,
-  SeriesCandidate,
-  SeriesDetails,
-} from '@kinoshelf/core';
+import type { Candidate, SeasonInfo } from '@kinoshelf/core';
+import {
+  FakeProvider as CoreFakeProvider,
+  cleanup,
+  makeDir,
+  movie,
+  put,
+  series,
+} from '@kinoshelf/core/testing';
 import { run, type CliDeps } from '../src/cli.js';
 
-const created: string[] = [];
-
-/**
- * A fresh empty directory with a fixed name: the parser reads the folder name too, and a random
- * one (`kinoshelf-cli-S86e68`) can look like an episode marker and flip a test now and then.
- */
-export async function makeDir(): Promise<string> {
-  const root = await mkdtemp(join(tmpdir(), 'kinoshelf-cli-'));
-  created.push(root);
-  const directory = join(root, 'dir');
-  await mkdir(directory);
-  return directory;
-}
-
-export async function cleanup(): Promise<void> {
-  await Promise.all(created.splice(0).map((d) => rm(d, { recursive: true, force: true })));
-}
-
-export async function put(path: string, content = 'x'): Promise<string> {
-  await mkdir(dirname(path), { recursive: true });
-  await writeFile(path, content);
-  return path;
-}
-
-export const movie = (id: number, title: string, year: number): MovieCandidate => ({
-  kind: 'movie',
-  id: { provider: 'tmdb', id },
-  title,
-  originalTitle: title,
-  alternativeTitles: [],
-  year,
-});
-
-export const series = (id: number, title: string, year: number): SeriesCandidate => ({
-  kind: 'series',
-  id: { provider: 'tmdb', id },
-  title,
-  originalTitle: title,
-  alternativeTitles: [],
-  year,
-});
+export { cleanup, makeDir, movie, put, series };
 
 /** Answers every search with the catalog entries whose title shares its first word. */
-export class FakeProvider implements MetadataProvider {
-  readonly name = 'fake';
-  constructor(
-    private readonly catalog: readonly Candidate[],
-    private readonly seasons: Record<string, SeasonInfo> = {},
-  ) {}
-
-  private find(kind: Candidate['kind'], title: string): Candidate[] {
-    const word = title.toLowerCase().split(' ')[0] ?? '';
-    return this.catalog.filter((c) => c.kind === kind && c.title.toLowerCase().startsWith(word));
-  }
-
-  searchMovies(query: { title: string }): Promise<readonly MovieCandidate[]> {
-    return Promise.resolve(this.find('movie', query.title) as MovieCandidate[]);
-  }
-
-  searchSeries(query: { title: string }): Promise<readonly SeriesCandidate[]> {
-    return Promise.resolve(this.find('series', query.title) as SeriesCandidate[]);
-  }
-
-  getSeason(id: ExternalId, season: number): Promise<SeasonInfo | null> {
-    return Promise.resolve(this.seasons[`${id.id}:${season}`] ?? null);
-  }
-
-  getMovieDetails(id: ExternalId): Promise<MovieDetails | null> {
-    const found = this.catalog.find((c) => c.kind === 'movie' && c.id.id === id.id);
-    return Promise.resolve(
-      found?.kind === 'movie'
-        ? {
-            kind: 'movie',
-            id: found.id,
-            title: found.title,
-            originalTitle: found.originalTitle,
-            genres: [],
-            studios: [],
-            countries: [],
-            cast: [],
-            directors: [],
-            writers: [],
-          }
-        : null,
+export class FakeProvider extends CoreFakeProvider {
+  constructor(catalog: readonly Candidate[], seasons: Record<string, SeasonInfo> = {}) {
+    super(catalog, seasons, ({ title }, candidate) =>
+      candidate.title.toLowerCase().startsWith(title.toLowerCase().split(' ')[0] ?? ''),
     );
-  }
-
-  getSeriesDetails(id: ExternalId): Promise<SeriesDetails | null> {
-    const found = this.catalog.find((c) => c.kind === 'series' && c.id.id === id.id);
-    return Promise.resolve(
-      found?.kind === 'series'
-        ? {
-            kind: 'series',
-            id: found.id,
-            title: found.title,
-            originalTitle: found.originalTitle,
-            genres: [],
-            studios: [],
-            countries: [],
-            cast: [],
-            seasons: [],
-          }
-        : null,
-    );
-  }
-
-  imageUrl(path: string, size: ImageSize): string {
-    return `https://image.test/${size}${path}`;
   }
 }
 

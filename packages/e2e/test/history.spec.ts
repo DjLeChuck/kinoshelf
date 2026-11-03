@@ -1,6 +1,6 @@
 import { access } from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
-import { API_KEY, library } from '../support.js';
+import { AUTH_HEADERS, library } from '../support.js';
 import { signIn, signInAt, submit } from './helpers.js';
 
 const ALIEN = library('films', 'Alien (1979) {tmdb-348}', 'Alien (1979) {tmdb-348}.mkv');
@@ -34,7 +34,7 @@ test('lists a batch, previews its undo, then undoes it', async ({ page, request 
 test('lists a failed job with its cause, and sends it again', async ({ page, request }) => {
   const path = '/no/such/history-failed';
   const created = await request.post('/api/jobs', {
-    headers: { authorization: `Bearer ${API_KEY}` },
+    headers: AUTH_HEADERS,
     data: { path },
   });
   expect(created.status()).toBe(202);

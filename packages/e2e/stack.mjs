@@ -3,7 +3,6 @@
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { join } from 'node:path';
-import { pathToFileURL } from 'node:url';
 
 const { E2E_DIR: dir, E2E_TMDB_PORT: tmdbPort } = process.env;
 if (!dir || !tmdbPort) {
@@ -142,4 +141,4 @@ createServer((request, response) => {
 }).listen(Number(tmdbPort), '127.0.0.1');
 
 const serverMain = new URL('../server/dist/main.js', import.meta.url);
-await import(pathToFileURL(serverMain.pathname).href);
+await import(serverMain.href);

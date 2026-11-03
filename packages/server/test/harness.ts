@@ -1,9 +1,14 @@
-import { mkdir, mkdtemp, rm, stat, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { stat } from 'node:fs/promises';
 import Database from 'better-sqlite3';
 import type { FastifyInstance, LightMyRequestResponse } from 'fastify';
-import type { Config, MetadataProvider, MovieCandidate } from '@kinoshelf/core';
+import type { Config, MetadataProvider } from '@kinoshelf/core';
+import {
+  FakeProvider,
+  cleanup as cleanupDirectories,
+  makeDir,
+  movie,
+  put,
+} from '@kinoshelf/core/testing';
 import { buildApp, type AppOptions } from '../src/app.js';
 import { generateApiKey, setApiKey } from '../src/auth.js';
 import { migrated } from '../src/database.js';
@@ -12,23 +17,9 @@ import { ExecutionStore, type Execution } from '../src/executions.js';
 import { presentEntry } from '../src/routes.js';
 import type { Prober } from '../src/probe.js';
 
-const created: string[] = [];
 const apps: FastifyInstance[] = [];
 
-/** A fresh directory with a fixed name: the parser reads folder names too. */
-export async function makeDir(): Promise<string> {
-  const root = await mkdtemp(join(tmpdir(), 'kinoshelf-server-'));
-  created.push(root);
-  const directory = join(root, 'dir');
-  await mkdir(directory);
-  return directory;
-}
-
-export async function put(path: string, content = 'x'): Promise<string> {
-  await mkdir(dirname(path), { recursive: true });
-  await writeFile(path, content);
-  return path;
-}
+export { makeDir, put };
 
 /** Registers an app built by a test, so `cleanup` closes it. */
 export function track(app: FastifyInstance): FastifyInstance {
@@ -38,48 +29,25 @@ export function track(app: FastifyInstance): FastifyInstance {
 
 export async function cleanup(): Promise<void> {
   await Promise.all(apps.splice(0).map((app) => app.close()));
-  await Promise.all(created.splice(0).map((d) => rm(d, { recursive: true, force: true })));
+  await cleanupDirectories();
 }
 
-const film = (id: number, title: string, year: number): MovieCandidate => ({
-  kind: 'movie',
-  id: { provider: 'tmdb', id },
-  title,
-  originalTitle: title,
-  alternativeTitles: [],
-  year,
-});
-
-const catalog = [film(438631, 'Dune', 2021), film(348, 'Alien', 1979)];
-
 /** Knows two films, so a `Dune.2021` file matches and anything else is unrecognized. */
+const base = new FakeProvider(
+  [movie(438631, 'Dune', 2021), movie(348, 'Alien', 1979)],
+  {},
+  ({ title }, candidate) => title.toLowerCase().startsWith(candidate.title.toLowerCase()),
+);
+
+// A plain object, so a test can spread it and override one method.
 export const fakeProvider: MetadataProvider = {
-  name: 'fake',
-  searchMovies: ({ title }) =>
-    Promise.resolve(catalog.filter((c) => title.toLowerCase().startsWith(c.title.toLowerCase()))),
-  searchSeries: () => Promise.resolve([]),
-  getSeason: () => Promise.resolve(null),
-  getMovieDetails: ({ id }) => {
-    const found = catalog.find((c) => c.id.id === id);
-    return Promise.resolve(
-      found
-        ? {
-            kind: 'movie',
-            id: found.id,
-            title: found.title,
-            originalTitle: found.originalTitle,
-            genres: [],
-            studios: [],
-            countries: [],
-            cast: [],
-            directors: [],
-            writers: [],
-          }
-        : null,
-    );
-  },
-  getSeriesDetails: () => Promise.resolve(null),
-  imageUrl: (path, size) => `https://image.test/${size}${path}`,
+  name: base.name,
+  searchMovies: (query) => base.searchMovies(query),
+  searchSeries: (query) => base.searchSeries(query),
+  getSeason: (id, season) => base.getSeason(id, season),
+  getMovieDetails: (id) => base.getMovieDetails(id),
+  getSeriesDetails: (id) => base.getSeriesDetails(id),
+  imageUrl: (path, size) => base.imageUrl(path, size),
 };
 
 /** Reads no file: a codec chosen by the name, so a test can tell what was probed. */

@@ -1,6 +1,6 @@
 import { access, mkdir, writeFile } from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
-import { API_KEY, library } from '../support.js';
+import { AUTH_HEADERS, library } from '../support.js';
 import { signIn } from './helpers.js';
 
 const exists = (path: string): Promise<boolean> =>
@@ -16,8 +16,9 @@ test('previews a rename from the library, runs it, and finds it in the history',
 }) => {
   await mkdir(library('films'), { recursive: true });
   await writeFile(library('films', 'Alien.1979.1080p.mkv'), 'video');
-  const headers = { authorization: `Bearer ${API_KEY}` };
-  expect((await request.post('/api/libraries/films/scan', { headers })).status()).toBe(202);
+  expect(
+    (await request.post('/api/libraries/films/scan', { headers: AUTH_HEADERS })).status(),
+  ).toBe(202);
 
   await signIn(page);
   await page.goto('/libraries/films');
