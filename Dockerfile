@@ -7,7 +7,7 @@
 # crash (SIGILL, exit 132) under QEMU. Only JavaScript comes out of it, so it is the same for every
 # target; the one thing that depends on the target (better-sqlite3's prebuild) is picked by
 # TARGETARCH below.
-FROM --platform=$BUILDPLATFORM node:22-alpine@sha256:fe4f6d74e20370acb04ad889077d14d0f64a9c8ea6a42bc60cddf1e844699914 AS build
+FROM --platform=$BUILDPLATFORM node:26-alpine@sha256:c6ad9e9c1d80f6eb607c26b4b0a132ff7a2344fad1c78ea3baa2a7d4c8de6d94 AS build
 ARG TARGETARCH
 RUN corepack enable
 WORKDIR /app
@@ -33,7 +33,7 @@ RUN set -eu; \
          -o -iname 'HISTORY' -o -iname 'HISTORY.md' \) -type f -delete
 
 # The node binary of the target platform, without the debug symbols it never uses.
-FROM node:22-alpine@sha256:fe4f6d74e20370acb04ad889077d14d0f64a9c8ea6a42bc60cddf1e844699914 AS node
+FROM node:26-alpine@sha256:c6ad9e9c1d80f6eb607c26b4b0a132ff7a2344fad1c78ea3baa2a7d4c8de6d94 AS node
 RUN apk add --no-cache binutils && strip --strip-unneeded -o /out-node /usr/local/bin/node
 
 # Alpine alone: the node:alpine image adds npm, yarn and corepack, which the runtime does not use.
