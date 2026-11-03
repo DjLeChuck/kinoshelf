@@ -271,6 +271,53 @@ describe('POST /api/plans/{id}/execute', () => {
     ]);
   });
 
+  it('names the quality of a release analyzed before names carried it', async () => {
+    const h = await harness();
+    const source = await makeDir();
+    await put(join(source, 'Dune.2021.2160p.mkv'), 'dune in 4k');
+    const created = await h.request('POST', '/api/jobs', { path: source, apply: false });
+    const jobId = created.json<{ id: string }>().id;
+    await h.app.jobs.idle();
+
+    // What an older version stored: no size in the reading of the name, and a plan with no label,
+    // taken by a file the first release left there.
+    const folder = join(h.destination, 'Dune (2021) {tmdb-438631}');
+    await put(join(folder, 'Dune (2021) {tmdb-438631}.mkv'), 'the first release');
+    const row = h.database
+      .prepare<[string], { id: string; parsed: string; item: string }>(
+        'SELECT id, parsed, item FROM job_entries WHERE job_id = ?',
+      )
+      .get(jobId);
+    const strip = (value: Record<string, unknown>) => {
+      delete value['screenSize'];
+      delete value['source'];
+      return value;
+    };
+    const item = JSON.parse(row?.item ?? '{}') as {
+      parsed: Record<string, unknown>;
+      operations: { destination: string }[];
+    };
+    strip(item.parsed);
+    const [main] = item.operations;
+    if (main) {
+      main.destination = join(folder, 'Dune (2021) {tmdb-438631}.mkv');
+    }
+    h.database
+      .prepare('UPDATE job_entries SET parsed = ?, item = ? WHERE id = ?')
+      .run(
+        JSON.stringify(strip(JSON.parse(row?.parsed ?? '{}') as Record<string, unknown>)),
+        JSON.stringify(item),
+        row?.id,
+      );
+
+    expect(await transfer(h, jobId)).toMatchObject({ summary: { done: 1, failed: 0 } });
+
+    expect((await readdir(folder)).sort()).toEqual([
+      'Dune (2021) {tmdb-438631} - 2160p.mkv',
+      'Dune (2021) {tmdb-438631}.mkv',
+    ]);
+  });
+
   it('holds back a release no name can tell from one already there, and says why', async () => {
     const h = await harness();
     const jobs: string[] = [];

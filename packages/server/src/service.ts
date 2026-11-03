@@ -4,6 +4,7 @@ import {
   metadataLanguageFor,
   libraryProfile,
   createPlan,
+  GuessitParser,
   loadProfile,
   type Profile,
   MetadataLoader,
@@ -19,6 +20,7 @@ import {
   type LibraryConfig,
   type MetadataProvider,
   type MovieDetails,
+  type ParsedMedia,
   type SeasonInfo,
   type SeriesDetails,
   type Operation,
@@ -253,7 +255,7 @@ export class Service {
     const plan = await createPlan(
       [
         {
-          parsed: entry.parsed,
+          parsed: withQuality(entry.parsed),
           candidate,
           ...metadata,
           ...(options.applyVersion && { applyVersion: true }),
@@ -851,6 +853,27 @@ export class Service {
     }
     return settings;
   }
+}
+
+const parser = new GuessitParser();
+
+/**
+ * A file analyzed before names carried their quality has no size or source in what was stored:
+ * they are read again from its name, which says the same today as then. Only what is missing is
+ * added, so a size chosen by hand is kept.
+ */
+function withQuality(parsed: ParsedMedia): ParsedMedia {
+  if (parsed.kind !== 'movie' || parsed.screenSize !== undefined) {
+    return parsed;
+  }
+  const { screenSize, source } = parser.parse(parsed.path);
+  return screenSize === undefined
+    ? parsed
+    : {
+        ...parsed,
+        screenSize,
+        ...(source !== undefined && parsed.source === undefined && { source }),
+      };
 }
 
 /** What the planner reads of a candidate the queue kept: title, year and id. */
