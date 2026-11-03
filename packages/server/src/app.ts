@@ -384,8 +384,6 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     version: options.version,
   }));
 
-  app.get('/api/openapi.json', { schema: { hide: true } }, () => app.swagger());
-
   // Wrong keys, per address, whether typed on the sign-in page or sent as a Bearer token.
   const attempts = new AttemptLimiter();
   registerSessionRoutes(app, options.database, allowedHosts(options.env), attempts);
@@ -433,6 +431,9 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
         .send({ error: { code: 'auth.unauthorized' } });
     });
 
+    // Behind the key like the rest of /api: the contract is in the public repository anyway, but
+    // a stranger has no reason to be told what this server answers.
+    api.get('/api/openapi.json', { schema: { hide: true } }, () => app.swagger());
     closeStreams = registerEventRoutes(api, events);
     registerSettingsRoutes(api, {
       store: configStore,

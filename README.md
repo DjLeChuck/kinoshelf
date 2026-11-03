@@ -39,7 +39,8 @@ locale).
 
 `kinoshelf-server` is a REST API over the same core as the CLI: a post-download script makes one
 HTTP call instead of running a tool. The API is published as OpenAPI at `/api/openapi.json`;
-`GET /health` is public, everything under `/api` needs the API key as `Authorization: Bearer <key>`.
+`GET /health` is public, everything under `/api` (the OpenAPI document included) needs the API key
+as `Authorization: Bearer <key>`.
 On a first launch with no key, the web UI's sign-in page can create it for you (shown once, then you
 sign in with it), when the server is reached by a local name: an IP address, `localhost`, a name
 without a dot or ending in `.local`, `.lan`, `.home.arpa` or `.internal` (add others to

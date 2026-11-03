@@ -13,9 +13,14 @@ describe('GET /health', () => {
 });
 
 describe('GET /api/openapi.json', () => {
-  it('publishes the contract without credentials', async () => {
+  it('keeps the contract behind the key', async () => {
     const { app } = await harness();
-    const response = await app.inject('/api/openapi.json');
+    expect((await app.inject('/api/openapi.json')).statusCode).toBe(401);
+  });
+
+  it('publishes the contract to a client holding the key', async () => {
+    const { request } = await harness();
+    const response = await request('GET', '/api/openapi.json');
     const spec = response.json<{
       openapi: string;
       info: { version: string };
