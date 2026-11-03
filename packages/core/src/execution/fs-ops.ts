@@ -89,6 +89,11 @@ async function publish(from: string, to: string): Promise<'linked' | 'renamed'> 
       throw error;
     }
   }
+  // The one place the rule can be broken: a file created at `to` between this check and the
+  // `rename` is overwritten. Closing the gap needs renameat2(RENAME_NOREPLACE), which Node does not
+  // expose. Reserving `to` first (an exclusive open, then renaming over it) would leave an empty
+  // file under the final name after a crash, which every retry then refuses; the gap is narrower
+  // than that risk is worth, and only filesystems without hardlinks take this path.
   if (await exists(to)) {
     throw new KinoshelfError('destination.exists', { path: to });
   }

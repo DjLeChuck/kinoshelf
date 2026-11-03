@@ -36,7 +36,9 @@ reading completion from a download client's own API (see "Getting downloads in")
 - Never overwrite a destination file by default: the operation goes to the validation queue.
   Enforced in layers: the planner flags it, the executor re-checks right before writing, and the
   primitives in `execution/fs-ops.ts` publish with `link` (fails on EEXIST) instead of `rename`
-  (silently overwrites). Keep all three; tests cover each layer.
+  (silently overwrites). Keep all three; tests cover each layer. On a filesystem without
+  hardlinks (some SMB, FAT, exFAT mounts) `publish` falls back to a check then `rename`: a file
+  created in between is overwritten. Node has no `RENAME_NOREPLACE`; the gap is known and accepted.
 - Durable SQLite data (the journal) changes only through `journal/migrations.ts`: append a new
   entry, never edit a shipped one. Disposable data (the TMDB cache) is created on demand.
 
