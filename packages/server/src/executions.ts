@@ -146,13 +146,14 @@ export class ExecutionStore {
   }
 
   /** The oldest queued execution, marked running. */
-  claimNext(): Execution | undefined {
+  claimNext(accept: (execution: Execution) => boolean = () => true): Execution | undefined {
     return this.database.transaction((): Execution | undefined => {
       const row = this.database
         .prepare<[], { id: string }>(
-          "SELECT id FROM executions WHERE status = 'queued' ORDER BY seq LIMIT 1",
+          "SELECT id FROM executions WHERE status = 'queued' ORDER BY seq",
         )
-        .get();
+        .all()
+        .find(({ id }) => accept(this.require(id)));
       if (!row) {
         return undefined;
       }

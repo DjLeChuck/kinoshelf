@@ -12,3 +12,7 @@ export function isSystemPath(path: string): boolean {
   const absolute = resolve(path);
   return absolute === '/' || SYSTEM_ROOTS.some((root) => isInside(absolute, root));
 }
+
+/** One folder is, or is inside, the other: reading one while the other changes is reading a moving target. */
+export const sharesFolder = (a: string, b: string): boolean =>
+  isInside(resolve(a), resolve(b)) || isInside(resolve(b), resolve(a));

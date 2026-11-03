@@ -149,13 +149,12 @@ export class JobStore {
   }
 
   /** Takes the oldest queued job and marks it running; the queue is served in order. */
-  claimNext(): Job | undefined {
+  claimNext(accept: (job: Job) => boolean = () => true): Job | undefined {
     return this.database.transaction((): Job | undefined => {
       const row = this.database
-        .prepare<[], { id: string }>(
-          "SELECT id FROM jobs WHERE status = 'queued' ORDER BY seq LIMIT 1",
-        )
-        .get();
+        .prepare<[], { id: string }>("SELECT id FROM jobs WHERE status = 'queued' ORDER BY seq")
+        .all()
+        .find(({ id }) => accept(this.require(id)));
       if (!row) {
         return undefined;
       }

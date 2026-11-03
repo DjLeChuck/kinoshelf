@@ -129,3 +129,14 @@ describe('GET /api/fs', () => {
     expect(response.statusCode).toBe(401);
   });
 });
+
+describe('sharesFolder', () => {
+  it('tells nested folders from siblings that merely share a prefix', async () => {
+    const { sharesFolder } = await import('../src/system-paths.js');
+    expect(sharesFolder('/media/series', '/media/series')).toBe(true);
+    expect(sharesFolder('/media', '/media/series')).toBe(true);
+    expect(sharesFolder('/media/series/Show', '/media/series')).toBe(true);
+    expect(sharesFolder('/media/series', '/media/series2')).toBe(false);
+    expect(sharesFolder('/downloads/show', '/media/films')).toBe(false);
+  });
+});

@@ -220,6 +220,78 @@ describe('JobRunner', () => {
     expect(order).toEqual(['transfer job-x', 'analyze /a', 'analyze /b']);
   });
 
+  describe('two lanes', () => {
+    /** A task that ends when told to, to hold a lane open. */
+    function gate(): { open: () => void; closed: Promise<void> } {
+      let open = (): void => undefined;
+      const closed = new Promise<void>((resolve) => {
+        open = resolve;
+      });
+      return { open, closed };
+    }
+
+    const setup = (overlaps?: (job: { path: string }, transferOf: string) => boolean) => {
+      const { jobs, executions } = newQueue();
+      const events: string[] = [];
+      const transfer = gate();
+      const source = jobs.create('/downloads/show');
+      const scan = jobs.create('/media/films');
+      executions.create(source.id);
+      const runner = new JobRunner(
+        jobs,
+        executions,
+        (job) => {
+          events.push(`scan ${job.path}`);
+          return Promise.resolve(empty);
+        },
+        async () => {
+          events.push('transfer start');
+          await transfer.closed;
+          events.push('transfer end');
+          return done;
+        },
+        overlaps && {
+          overlaps: (job, execution) => overlaps(job, jobs.get(execution.jobId)?.path ?? ''),
+        },
+      );
+      return { runner, events, transfer, scan };
+    };
+
+    it('runs a scan beside a transfer that touches other folders', async () => {
+      const { runner, events, transfer } = setup(() => false);
+      runner.kick();
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      // The first job is the one the transfer belongs to; both lanes work while it is open.
+      expect(events).toContain('transfer start');
+      expect(events).toContain('scan /downloads/show');
+      expect(events).not.toContain('transfer end');
+      transfer.open();
+      await runner.idle();
+      expect(events).toContain('scan /media/films');
+    });
+
+    it('holds a scan back while a transfer touches its folder', async () => {
+      const { runner, events, transfer } = setup((job) => job.path === '/media/films');
+      runner.kick();
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      // The scan of the source folder is free, the scan of the films is not: it needs the transfer's end.
+      expect(events).not.toContain('scan /media/films');
+      transfer.open();
+      await runner.idle();
+      expect(events.indexOf('scan /media/films')).toBeGreaterThan(events.indexOf('transfer end'));
+    });
+
+    it('serves one task at a time when nothing says they may overlap', async () => {
+      const { runner, events, transfer } = setup();
+      runner.kick();
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      expect(events).toEqual(['transfer start']);
+      transfer.open();
+      await runner.idle();
+      expect(events[1]).toBe('transfer end');
+    });
+  });
+
   it('picks up after a crash: what was running is run again', async () => {
     const { jobs, executions } = newQueue();
     const job = jobs.create('/a');
@@ -297,5 +369,69 @@ describe('JobRunner', () => {
     runner.kick();
     await runner.idle();
     expect(jobs.list(10).map((job) => job.status)).toEqual(['queued', 'queued']);
+  });
+});
+
+describe('a scan beside a transfer', () => {
+  /** Polls the job until it is no longer waiting or running, without a fixed sleep. */
+  async function settled(h: Awaited<ReturnType<typeof harness>>, id: string): Promise<string> {
+    for (let attempt = 0; attempt < 200; attempt++) {
+      const { status } = (await h.request('GET', `/api/jobs/${id}`)).json<{ status: string }>();
+      if (status === 'done' || status === 'failed') {
+        return status;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 5));
+    }
+    return 'timeout';
+  }
+
+  it('lets the scan of another library through and holds the one of the destination', async () => {
+    const films = await makeDir();
+    const shows = await makeDir();
+    const source = await makeDir();
+    await put(join(source, 'Dune.2021.mkv'));
+    let release = (): void => undefined;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const h = await harness({
+      config: {
+        libraries: [
+          { id: 'films', name: 'Films', source: films, type: 'movie' },
+          { id: 'shows', name: 'Shows', source: shows, type: 'series' },
+        ],
+      },
+      // The transfer waits here, as a long copy would.
+      executeWith: (run) => async (execution) => {
+        await gate;
+        return run(execution);
+      },
+    });
+    try {
+      const analysed = (await h.request('POST', '/api/jobs', { path: source })).json<{
+        id: string;
+      }>().id;
+      await h.app.jobs.idle();
+      expect((await h.request('POST', `/api/plans/${analysed}/execute`)).statusCode).toBe(202);
+
+      const showsScan = (await h.request('POST', '/api/libraries/shows/scan')).json<{
+        id: string;
+      }>().id;
+      const filmsScan = (await h.request('POST', '/api/libraries/films/scan')).json<{
+        id: string;
+      }>().id;
+
+      // The series library is not touched by the transfer: its scan ends while the copy is open.
+      expect(await settled(h, showsScan)).toBe('done');
+      // The films are where the transfer writes: that scan waits for it.
+      const waiting = (await h.request('GET', `/api/jobs/${filmsScan}`)).json<{ status: string }>();
+      expect(waiting.status).toBe('queued');
+
+      release();
+      await h.app.jobs.idle();
+      expect(await settled(h, filmsScan)).toBe('done');
+    } finally {
+      release();
+    }
   });
 });

@@ -7,6 +7,7 @@ import { SqliteHttpCache } from '@kinoshelf/provider-tmdb';
 import { ApiError } from './api-error.js';
 import { hasApiKey, isValidApiKey } from './auth.js';
 import { ProgressTracker } from './progress.js';
+import { sharesFolder } from './system-paths.js';
 import { EntryStore } from './entries.js';
 import { EventBus, registerEventRoutes } from './events.js';
 import { ExecutionStore } from './executions.js';
@@ -25,7 +26,7 @@ import { Completeness, CompletenessStore } from './completeness.js';
 import { SeriesFiles, SeriesFilesStore } from './series-files.js';
 import { ffprobe, ProbeQueue, type Prober } from './probe.js';
 import { LibraryItemStore, LibrarySnapshot } from './library-items.js';
-import { JobRunner, type JobProcessor } from './runner.js';
+import { JobRunner, type ExecutionRunner, type JobProcessor } from './runner.js';
 import { healthSchema } from './schemas.js';
 import { Service } from './service.js';
 import { isValidSession } from './sessions.js';
@@ -64,6 +65,8 @@ export interface AppOptions extends Omit<ProcessorDeps, 'database'> {
   readonly logger?: boolean;
   /** Replaces the real pipeline, for tests. */
   readonly processor?: JobProcessor;
+  /** Wraps the real transfer, for tests that must hold one open (a gate before it runs). */
+  readonly executeWith?: (run: ExecutionRunner) => ExecutionRunner;
   /**
    * Days after which a finished job, all its files settled, is forgotten. Checked at start and
    * every day. Unset or 0 keeps everything.
@@ -210,6 +213,21 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
       events.emit('history');
     },
   });
+  const transfer: ExecutionRunner = async (execution) => {
+    try {
+      return await service.run(
+        execution,
+        (done, _total, path) => {
+          progress.transferred(execution.id, done, path);
+        },
+        (total) => {
+          progress.startTransfer(execution.id, total);
+        },
+      );
+    } finally {
+      progress.finishTransfer(execution.id);
+    }
+  };
   const runner = new JobRunner(
     jobs,
     executions,
@@ -221,22 +239,13 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
           app.log.warn(error, `Left out a folder that cannot be read: ${path}`);
         },
       }),
-    async (execution) => {
-      try {
-        return await service.run(
-          execution,
-          (done, _total, path) => {
-            progress.transferred(execution.id, done, path);
-          },
-          (total) => {
-            progress.startTransfer(execution.id, total);
-          },
-        );
-      } finally {
-        progress.finishTransfer(execution.id);
-      }
-    },
+    options.executeWith ? options.executeWith(transfer) : transfer,
     {
+      // A scan runs beside a transfer only when they share no folder (see `JobRunner`).
+      overlaps: (job, execution) => {
+        const touched = service.touches(execution);
+        return !touched || touched.some((root) => sharesFolder(root, job.path));
+      },
       scanned: async (job) => {
         // Before the snapshot and the notification: a file is planned for the library it goes to.
         await service.planArrivals(job);

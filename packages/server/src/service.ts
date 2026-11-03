@@ -409,6 +409,30 @@ export class Service {
   }
 
   /**
+   * The folders an execution reads from and writes to: what a job analysing any of them must not
+   * run beside. `undefined` when they cannot be told, which the runner takes as "everything".
+   */
+  touches(execution: Execution): string[] | undefined {
+    try {
+      const job = this.deps.jobs.get(execution.jobId);
+      if (!job) {
+        return undefined;
+      }
+      const selected = execution.entryIds && new Set(execution.entryIds);
+      const roots = this.deps.entries
+        .executable(execution.jobId)
+        .filter((entry) => !selected || selected.has(entry.id))
+        .flatMap((entry) => {
+          const root = this.settingsFor(entry).destinationRoot;
+          return typeof root === 'string' ? [root] : [root.movie, root.series];
+        });
+      return [job.path, ...roots];
+    } catch {
+      return undefined;
+    }
+  }
+
+  /**
    * Transfers the files of an execution, run by the queue worker. The plan is rebuilt from the
    * stored items and the settings of the job, and the executor re-checks each destination right
    * before writing. Each file is settled as soon as it is transferred, in step with the journal:
