@@ -113,7 +113,8 @@ export function trustProxyOf(value: string | undefined): boolean | string {
  */
 export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
   const app = Fastify({
-    logger: options.logger ?? false,
+    // An ISO date rather than pino's epoch milliseconds, which nobody reads in `docker logs`.
+    logger: options.logger ? { timestamp: () => `,"time":"${new Date().toISOString()}"` } : false,
     trustProxy: trustProxyOf(options.env.KINOSHELF_TRUST_PROXY),
     // Fastify strips unknown fields by default; a client sending `dryRun` must hear it is not
     // supported rather than believe it was honored.
