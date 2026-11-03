@@ -1,3 +1,4 @@
+import { candidateKey } from '../matching/score.js';
 import { parseTemplate, templateVariables } from '../profiles/template.js';
 import type { Details } from '../types/details.js';
 import type { ParsedMedia } from '../types/media.js';
@@ -71,7 +72,7 @@ export class MetadataLoader {
 
   private detailsOf(candidate: Candidate): Promise<Details | null> {
     const { provider, language } = this.options;
-    const key = `${candidate.kind}:${candidate.id.provider}:${candidate.id.id}:${language ?? ''}`;
+    const key = `${candidateKey(candidate)}:${language ?? ''}`;
     return this.shared(this.details, key, () =>
       candidate.kind === 'movie'
         ? provider.getMovieDetails(candidate.id, language)
@@ -81,7 +82,7 @@ export class MetadataLoader {
 
   private seasonOf(candidate: Candidate, season: number): Promise<SeasonInfo | null> {
     const { provider, language } = this.options;
-    const key = `${candidate.id.provider}:${candidate.id.id}:${season}:${language ?? ''}`;
+    const key = `${candidateKey(candidate)}:${season}:${language ?? ''}`;
     return this.shared(this.seasons, key, () => provider.getSeason(candidate.id, season, language));
   }
 

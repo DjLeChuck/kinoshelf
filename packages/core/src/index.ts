@@ -60,6 +60,7 @@ export {
 } from './pipeline/metadata.js';
 export {
   analyze,
+  classifyItem,
   type Analysis,
   type AnalysisEntry,
   type AnalyzeOptions,

@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { lstat, stat } from 'node:fs/promises';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { KinoshelfError } from '../errors.js';
-import { nearestExistingDevice } from '../execution/fs-ops.js';
+import { exists, nearestExistingDevice } from '../execution/fs-ops.js';
 import { renderProfileTemplate, type TemplateVariables } from '../profiles/template.js';
 import type { Details, ImageSize } from '../types/details.js';
 import type { ErrorInfo } from '../types/errors.js';
@@ -186,7 +186,7 @@ async function planItem(
     // an organized library would be full of it.
     const missing = await Promise.all(
       companionOperations(input, place, companionOptions).map(async (operation) =>
-        (await lstat(operation.destination).catch(() => null)) ? null : operation,
+        (await exists(operation.destination)) ? null : operation,
       ),
     );
     const operations = missing.filter((operation) => operation !== null);

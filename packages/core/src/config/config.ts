@@ -2,7 +2,7 @@ import { constants } from 'node:fs';
 import { access, mkdir, readFile, rename, stat, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import { isMap, parse, parseDocument, type Document } from 'yaml';
+import { isMap, parseDocument, type Document } from 'yaml';
 import { z } from 'zod';
 import { errnoCode, KinoshelfError } from '../errors.js';
 
@@ -214,16 +214,7 @@ export async function loadConfig(directory: string): Promise<Config> {
   if (text === undefined) {
     return {};
   }
-  let raw: unknown;
-  try {
-    raw = parse(text);
-  } catch (error) {
-    throw new KinoshelfError('config.invalid', {
-      path,
-      detail: error instanceof Error ? error.message : String(error),
-    });
-  }
-  return validate(raw, path);
+  return validate(parseText(text, path).toJS(), path);
 }
 
 /** One change to `config.yaml`: set the value at `path`, or remove it when `value` is undefined. */

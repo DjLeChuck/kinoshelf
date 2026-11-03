@@ -11,6 +11,7 @@ import {
   undoBatch,
   selectItems,
   type Candidate,
+  classifyItem,
   type Classification,
   type ErrorInfo,
   type Journal,
@@ -166,7 +167,7 @@ export class Service {
       libraryId,
       ...(profiles && { profiles }),
     });
-    const classification = classify(item);
+    const classification = classifyItem(item);
     this.deps.entries.setMatch(
       entry.id,
       classification,
@@ -319,7 +320,7 @@ export class Service {
       // one is still a good one.
       try {
         const item = await this.planWith(entry, toCandidate(best), { libraryId: planned.id });
-        this.deps.entries.setMatch(entry.id, classify(item), item);
+        this.deps.entries.setMatch(entry.id, classifyItem(item), item);
       } catch {
         continue;
       }
@@ -647,14 +648,6 @@ export class Service {
     }
     return settings;
   }
-}
-
-function classify(item: PlanItem): Classification {
-  return item.status === 'ready'
-    ? 'to-rename'
-    : item.status === 'in-place'
-      ? 'compliant'
-      : 'conflict';
 }
 
 /** What the planner reads of a candidate the queue kept: title, year and id. */

@@ -19,6 +19,15 @@ import { clusterRelease, isTitledEpisode } from './release.js';
  * - `ambiguous`: candidates found, none convincing: needs a human.
  * - `unrecognized`: nothing to go on.
  */
+/** How a planned item reads to a human: to rename, already as wanted, or blocked. */
+export function classifyItem(item: PlanItem): Classification {
+  return item.status === 'ready'
+    ? 'to-rename'
+    : item.status === 'in-place'
+      ? 'compliant'
+      : 'conflict';
+}
+
 export type Classification = 'compliant' | 'to-rename' | 'conflict' | 'ambiguous' | 'unrecognized';
 
 export interface AnalysisEntry {
@@ -201,9 +210,7 @@ export async function analyze(
     if (!item) {
       throw new Error('plan items out of step with matched files');
     }
-    const classification: Classification =
-      item.status === 'ready' ? 'to-rename' : item.status === 'in-place' ? 'compliant' : 'conflict';
-    return { ...entry, classification, item };
+    return { ...entry, classification: classifyItem(item), item };
   });
 
   return { entries, plan };
