@@ -20,6 +20,7 @@
   } from '../lib/library-items.js';
   import Chevron from './Chevron.svelte';
   import ItemPanel from './ItemPanel.svelte';
+  import RunDialog from './RunDialog.svelte';
   import ShowPanel from './ShowPanel.svelte';
 
   let {
@@ -67,6 +68,54 @@
   let selection = $state<Selection | undefined>(undefined);
   let failure = $state<unknown>(undefined);
   let limit = $state(PAGE_SIZE);
+  /** The shows ticked to rename or refresh, by TMDB id. */
+  let picked = $state<readonly number[]>([]);
+  let running = $state<{ mode: 'rename' | 'refresh'; items: readonly LibraryItem[] } | undefined>(
+    undefined,
+  );
+  let starting = $state(false);
+  let runFailure = $state<unknown>(undefined);
+
+  // A show with nothing to rename or refresh has no checkbox.
+  const runnable = $derived((shows?.items ?? []).filter((s) => s.rename + s.refresh > 0));
+  const pickedShows = $derived(runnable.filter((s) => picked.includes(s.tmdbId)));
+  const toRename = $derived(pickedShows.reduce((sum, s) => sum + s.rename, 0));
+  const toRefresh = $derived(pickedShows.reduce((sum, s) => sum + s.refresh, 0));
+
+  function pick(tmdbId: number, on: boolean): void {
+    picked = on ? [...picked, tmdbId] : picked.filter((id) => id !== tmdbId);
+  }
+
+  /** The episodes of the ticked shows that the action takes, read from the library's list. */
+  async function start(mode: 'rename' | 'refresh'): Promise<void> {
+    starting = true;
+    runFailure = undefined;
+    try {
+      // `incomplete` has no filter of its own: its files are the ones lacking an NFO or an image.
+      const states =
+        mode === 'rename' ? (['rename'] as const) : (['missing-nfo', 'missing-artwork'] as const);
+      const pages = await Promise.all(
+        states.map((state) => libraryItems.page(libraryId, { state, limit: 100_000 })),
+      );
+      const wanted = new Set(picked);
+      const found = new Map(
+        pages
+          .flatMap((page) => page.items)
+          .filter(
+            (item) =>
+              item.tmdbId !== null &&
+              wanted.has(item.tmdbId) &&
+              item.state === (mode === 'rename' ? 'rename' : 'incomplete'),
+          )
+          .map((item) => [item.id, item] as const),
+      );
+      running = { mode, items: [...found.values()] };
+    } catch (error) {
+      runFailure = error;
+    } finally {
+      starting = false;
+    }
+  }
 
   const chosenShow = $derived.by(() => {
     const chosen = selection;
@@ -140,6 +189,7 @@
         return;
       }
       limit = PAGE_SIZE;
+      picked = [];
       void load({ query: wantedQuery, filter: wantedFilter });
     });
   });
@@ -192,6 +242,43 @@
 {:else if shows.items.length === 0 && settling.length === 0}
   <p class="card muted">{t('web.library.empty')}</p>
 {:else}
+  {#if runFailure}
+    <p class="alert alert-danger" role="alert">{messageOf(t, runFailure)}</p>
+  {/if}
+  {#if runnable.length > 0}
+    <div class="bar" role="group">
+      <label class="check">
+        <input
+          type="checkbox"
+          checked={pickedShows.length === runnable.length}
+          indeterminate={pickedShows.length > 0 && pickedShows.length < runnable.length}
+          onchange={(event) => {
+            picked = event.currentTarget.checked ? runnable.map((s) => s.tmdbId) : [];
+          }}
+        />
+        {t('web.library.run.all')}
+      </label>
+      {#if pickedShows.length > 0}
+        <span>{t('web.library.run.shows', { count: pickedShows.length })}</span>
+        <button
+          type="button"
+          class="btn btn-primary"
+          disabled={toRename === 0 || starting}
+          onclick={() => void start('rename')}
+        >
+          {t('web.library.run.rename')}
+        </button>
+        <button
+          type="button"
+          class="btn"
+          disabled={toRefresh === 0 || starting}
+          onclick={() => void start('refresh')}
+        >
+          {t('web.library.run.refresh')}
+        </button>
+      {/if}
+    </div>
+  {/if}
   <div class="layout">
     <div class="table-wrap">
       <table>
@@ -256,18 +343,33 @@
             {@const isOpen = opened.includes(show.tmdbId)}
             <tr class:current={selection?.kind === 'show' && selection.tmdbId === show.tmdbId}>
               <td>
-                <button
-                  type="button"
-                  class="link"
-                  aria-expanded={isOpen}
-                  aria-label={t(isOpen ? 'web.library.shows.close' : 'web.library.shows.open', {
-                    title: show.title ?? '',
-                  })}
-                  onclick={() => void toggle(show)}
-                >
-                  <Chevron open={isOpen} />
-                  {show.title ?? ''}
-                </button>
+                <div class="name">
+                  <!-- Always there, so the titles of the shows without a box stay in line. -->
+                  <span class="box">
+                    {#if show.rename + show.refresh > 0}
+                      <input
+                        type="checkbox"
+                        aria-label={t('web.library.run.select', { name: show.title ?? '' })}
+                        checked={picked.includes(show.tmdbId)}
+                        onchange={(event) => {
+                          pick(show.tmdbId, event.currentTarget.checked);
+                        }}
+                      />
+                    {/if}
+                  </span>
+                  <button
+                    type="button"
+                    class="link"
+                    aria-expanded={isOpen}
+                    aria-label={t(isOpen ? 'web.library.shows.close' : 'web.library.shows.open', {
+                      title: show.title ?? '',
+                    })}
+                    onclick={() => void toggle(show)}
+                  >
+                    <Chevron open={isOpen} />
+                    {show.title ?? ''}
+                  </button>
+                </div>
               </td>
               <td>{show.year ?? ''}</td>
               <td>{show.seasons}</td>
@@ -432,7 +534,48 @@
   </div>
 {/if}
 
+{#if running && running.items.length > 0}
+  <RunDialog
+    {libraryId}
+    items={running.items}
+    mode={running.mode}
+    onclose={() => {
+      running = undefined;
+    }}
+    ondone={(message: string) => {
+      picked = [];
+      running = undefined;
+      onsettled(message);
+    }}
+  />
+{/if}
+
 <style>
+  .name {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .box {
+    display: inline-flex;
+    flex: none;
+    width: 16px;
+  }
+
+  .bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  /* The count of what is ticked, set apart from the "select all" box before it. */
+  .bar > span {
+    margin-left: 4px;
+    padding-left: 12px;
+    border-left: 1px solid var(--border-strong);
+  }
+
   .layout {
     display: grid;
     grid-template-columns: minmax(0, 1.2fr) minmax(280px, 1fr);

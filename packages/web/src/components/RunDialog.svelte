@@ -132,8 +132,30 @@
   dialog {
     width: min(960px, 94vw);
     max-height: 86vh;
-    overflow: auto;
     color: var(--text);
+  }
+
+  /* Only the list scrolls: the title, the summary and the buttons stay in view however long it is. */
+  dialog[open] {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .table-wrap {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+  }
+
+  thead th {
+    position: sticky;
+    top: 0;
+    background: var(--surface);
+  }
+
+  .actions {
+    flex: none;
   }
 
   dialog::backdrop {

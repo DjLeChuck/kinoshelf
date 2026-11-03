@@ -107,6 +107,9 @@ export interface Show {
   readonly seasons: number;
   readonly episodes: number;
   readonly missing: number | null;
+  /** Episodes to rename, and to refresh (NFO or image missing): what the show's checkbox runs. */
+  readonly rename: number;
+  readonly refresh: number;
   /** The show's own files; `null`: the profile does not write it, or it was not looked at yet. */
   readonly nfo: boolean | null;
   readonly poster: boolean | null;

@@ -182,6 +182,9 @@ describe('the shows of a series library', () => {
     expect((body.counts.review ?? 0) + (body.counts.unrecognized ?? 0)).toBe(1);
     const state = async (value: string) =>
       (await h.request('GET', `/api/libraries/shows/shows?state=${value}`)).json<Shows>().total;
+    // What the show's checkbox runs: its four videos are all still to rename.
+    const shows = (await h.request('GET', '/api/libraries/shows/shows')).json<Shows>();
+    expect(shows.items[0]).toMatchObject({ rename: 4, refresh: 0 });
     expect(await state('rename')).toBe(body.counts.rename);
     expect(await state('missing-nfo')).toBe(body.counts['missing-nfo']);
     expect(await state('missing-artwork')).toBe(body.counts['missing-artwork']);

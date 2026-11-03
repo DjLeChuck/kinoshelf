@@ -286,6 +286,8 @@ export const fr: Record<keyof typeof en, string> = {
   'web.library.run.rename': 'Renommer…',
   'web.library.run.refresh': 'Actualiser…',
   'web.library.run.select': 'Sélectionner {name}',
+  'web.library.run.all': 'Tout sélectionner',
+  'web.library.run.shows': 'Séries sélectionnées : {count}',
   'web.library.run.title.rename': 'Aperçu du renommage',
   'web.library.run.title.refresh': 'Aperçu de l’actualisation',
   'web.library.run.summary':

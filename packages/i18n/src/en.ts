@@ -273,6 +273,8 @@ export const en = {
   'web.library.run.rename': 'Rename…',
   'web.library.run.refresh': 'Refresh…',
   'web.library.run.select': 'Select {name}',
+  'web.library.run.all': 'Select all',
+  'web.library.run.shows': 'Selected shows: {count}',
   'web.library.run.title.rename': 'Rename preview',
   'web.library.run.title.refresh': 'Refresh preview',
   'web.library.run.summary': '{transfers} to move · {written} to write · {skipped} left alone',

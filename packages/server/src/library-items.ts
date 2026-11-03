@@ -422,6 +422,8 @@ export class LibraryItemStore {
         seasons: row.seasons,
         episodes: row.episodes,
         missing: row.missing,
+        rename: row.rename,
+        refresh: row.refresh,
         nfo: flag(row.nfo),
         poster: flag(row.poster),
         fanart: flag(row.fanart),
@@ -463,6 +465,7 @@ export class LibraryItemStore {
         SUM(CASE WHEN i.episode IS NULL THEN 1
                  ELSE COALESCE(i.episode_end, i.episode) - i.episode + 1 END) AS episodes,
         MAX(c.missing) AS missing,
+        SUM(i.state = 'rename') AS rename, SUM(i.state = 'incomplete') AS refresh,
         MAX(f.nfo) AS nfo, MAX(f.poster) AS poster, MAX(f.fanart) AS fanart
       FROM library_items i
       LEFT JOIN series_completeness c ON c.library_id = i.library_id AND c.tmdb_id = i.tmdb_id
@@ -540,6 +543,9 @@ export interface ShowRow {
   readonly episodes: number;
   /** Aired episodes no file holds, as last counted; `null` until it was. */
   readonly missing: number | null;
+  /** Episodes whose video is to rename, and those lacking an NFO or image: what "Rename" and "Refresh" take. */
+  readonly rename: number;
+  readonly refresh: number;
   /** The show's own files (`tvshow.nfo`, poster, fanart); `null`: not written, or not looked at. */
   readonly nfo: Presence;
   readonly poster: Presence;
@@ -553,6 +559,8 @@ interface ShowQuery {
   seasons: number;
   episodes: number;
   missing: number | null;
+  rename: number;
+  refresh: number;
   nfo: number | null;
   poster: number | null;
   fanart: number | null;

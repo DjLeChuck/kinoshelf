@@ -38,6 +38,27 @@ test('browses a series library as a tree and finds the episode it lacks', async 
   await expect(page.getByRole('button', { name: /Severance/ })).toBeVisible();
 });
 
+test('renames every episode of the ticked shows in one go', async ({ page, request }) => {
+  const folder = library('series');
+  await mkdir(folder, { recursive: true });
+  for (const name of ['S01E01', 'S01E02', 'S02E01']) {
+    await writeFile(`${folder}/Severance.${name}.1080p.mkv`, 'video');
+  }
+  expect(
+    (await request.post('/api/libraries/series/scan', { headers: AUTH_HEADERS })).status(),
+  ).toBe(202);
+
+  await signIn(page);
+  await page.goto('/libraries/series');
+  await page.getByRole('checkbox', { name: /Select Severance/ }).check();
+  await expect(page.getByText('Selected shows: 1')).toBeVisible();
+  await page.getByRole('button', { name: 'Rename…' }).click();
+
+  // One preview for the three episodes, nothing picked one by one.
+  const dialog = page.getByRole('dialog', { name: 'Rename preview' });
+  await expect(dialog.getByText(/[3-9] to move/)).toBeVisible();
+});
+
 test('shows which NFO and images a show and its seasons have', async ({ page, request }) => {
   const folder = incoming('series-files');
   const show = `${folder}/Severance (2022) [tmdbid-95396]`;

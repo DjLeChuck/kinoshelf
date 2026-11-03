@@ -262,29 +262,45 @@
     {:else if page.items.length === 0}
       <p class="card muted">{t('web.library.empty')}</p>
     {:else}
-      {#if pickedItems.length > 0}
+      {#if page.items.some(canRun)}
         <div class="bar" role="group">
-          <span>{t('web.library.run.selected', { count: pickedItems.length })}</span>
-          <button
-            type="button"
-            class="btn btn-primary"
-            disabled={split.rename.length === 0}
-            onclick={() => {
-              running = 'rename';
-            }}
-          >
-            {t('web.library.run.rename')}
-          </button>
-          <button
-            type="button"
-            class="btn"
-            disabled={split.refresh.length === 0}
-            onclick={() => {
-              running = 'refresh';
-            }}
-          >
-            {t('web.library.run.refresh')}
-          </button>
+          <label class="check">
+            <input
+              type="checkbox"
+              checked={pickedItems.length === page.items.filter(canRun).length}
+              indeterminate={pickedItems.length > 0 &&
+                pickedItems.length < page.items.filter(canRun).length}
+              onchange={(event) => {
+                picked = event.currentTarget.checked
+                  ? (page?.items.filter(canRun).map(({ id }) => id) ?? [])
+                  : [];
+              }}
+            />
+            {t('web.library.run.all')}
+          </label>
+          {#if pickedItems.length > 0}
+            <span>{t('web.library.run.selected', { count: pickedItems.length })}</span>
+            <button
+              type="button"
+              class="btn btn-primary"
+              disabled={split.rename.length === 0}
+              onclick={() => {
+                running = 'rename';
+              }}
+            >
+              {t('web.library.run.rename')}
+            </button>
+            <button
+              type="button"
+              class="btn"
+              disabled={split.refresh.length === 0}
+              onclick={() => {
+                running = 'refresh';
+              }}
+            >
+              {t('web.library.run.refresh')}
+            </button>
+          {/if}
         </div>
       {/if}
       <div class="layout">
@@ -430,6 +446,13 @@
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
+  }
+
+  /* The count of what is ticked, set apart from the "select all" box before it. */
+  .bar > span {
+    margin-left: 4px;
+    padding-left: 12px;
+    border-left: 1px solid var(--border-strong);
   }
 
   .filters [aria-pressed='true'] {

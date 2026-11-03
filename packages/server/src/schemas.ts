@@ -893,6 +893,8 @@ export const showSchema = {
     'seasons',
     'episodes',
     'missing',
+    'rename',
+    'refresh',
     'nfo',
     'poster',
     'fanart',
@@ -908,6 +910,8 @@ export const showSchema = {
       nullable: true,
       description: 'Aired episodes no file holds, as last counted; `null` until it was.',
     },
+    rename: { type: 'integer', description: 'Episodes whose video is to rename.' },
+    refresh: { type: 'integer', description: 'Episodes lacking an NFO or an image of their own.' },
     nfo: { type: 'boolean', nullable: true, description: presenceDescription('`tvshow.nfo`') },
     poster: {
       type: 'boolean',

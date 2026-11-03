@@ -2005,6 +2005,10 @@ export interface paths {
                                 episodes: number;
                                 /** @description Aired episodes no file holds, as last counted; `null` until it was. */
                                 missing: number | null;
+                                /** @description Episodes whose video is to rename. */
+                                rename: number;
+                                /** @description Episodes lacking an NFO or an image of their own. */
+                                refresh: number;
                                 /** @description `tvshow.nfo` is on the disk. `null`: the profile does not write it, or no scan or change has looked yet. */
                                 nfo: boolean | null;
                                 /** @description The show poster is on the disk. `null`: the profile does not write it, or no scan or change has looked yet. */
