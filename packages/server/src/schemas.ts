@@ -457,8 +457,6 @@ export interface Paging {
   readonly offset: number;
 }
 
-export const classificationValues = CLASSIFICATIONS;
-
 /** One entry per target; a URL is shown without its secret part. */
 export const notificationTestSchema = {
   type: 'array',

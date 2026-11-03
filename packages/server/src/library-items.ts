@@ -667,7 +667,7 @@ export class LibrarySnapshot {
       return;
     }
     const now = new Date().toISOString();
-    const entries = this.deps.entries.list(job.id, { limit: Number.MAX_SAFE_INTEGER, offset: 0 });
+    const entries = this.deps.entries.list(job.id);
     this.deps.store.replace(
       library.id,
       entries.map((entry) => itemOf(entry, profile, library.id, now)),

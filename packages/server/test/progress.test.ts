@@ -107,8 +107,6 @@ describe('the progress of a scan, over the API', () => {
           found: 2,
         });
       });
-      const listed = (await h.request('GET', '/api/jobs')).json<Job[]>();
-      expect(listed[0]?.progress).toMatchObject({ phase: 'identify', total: 2 });
       const library = (await h.request('GET', '/api/libraries/films/items')).json<{
         scan: { jobId: string; progress: { phase: string } | null } | null;
       }>();

@@ -12,7 +12,7 @@ import {
   itemId,
   type LibraryItem,
 } from '../src/library-items.js';
-import { cleanup, harness, makeDir, put } from './harness.js';
+import { cleanup, harness, batchOf, makeDir, put } from './harness.js';
 
 afterEach(cleanup);
 
@@ -111,9 +111,7 @@ describe('the snapshot of a library', () => {
     // Only an NFO was missing: the film stays where it is, and is now complete.
     expect(store.get('films', alien)).toMatchObject({ state: 'ok', nfo: true });
 
-    const { batchId } = (await h.request('GET', `/api/executions/${execution.id}`)).json<{
-      batchId: string;
-    }>();
+    const batchId = batchOf(h, execution.id);
     expect((await h.request('POST', `/api/batches/${batchId}/undo`)).statusCode).toBe(200);
 
     expect(store.get('films', moved)).toBeUndefined();
@@ -172,9 +170,7 @@ describe('the snapshot of a library', () => {
 
     // The download was deleted after seeding: the copy in the library is the only one left.
     await rm(download);
-    const { batchId } = (await h.request('GET', `/api/executions/${execution.id}`)).json<{
-      batchId: string;
-    }>();
+    const batchId = batchOf(h, execution.id);
     expect((await h.request('POST', `/api/batches/${batchId}/undo`)).statusCode).toBe(200);
     expect(store.all('films').map(({ path }) => path)).toEqual([copied?.path]);
   });

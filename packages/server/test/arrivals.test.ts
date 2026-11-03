@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { loadConfig } from '@kinoshelf/core';
 import { afterEach, describe, expect, it } from 'vitest';
-import { cleanup, harness, makeDir, put, type Harness } from './harness.js';
+import { cleanup, harness, jobEntries, makeDir, put, type Harness } from './harness.js';
 
 afterEach(cleanup);
 
@@ -213,9 +213,9 @@ describe('choosing where a file goes', () => {
 
     await put(join(downloads, 'Dune.2021.1080p.mkv'));
     const jobId = await scanDownloads(h);
-    const [dune] = (await h.request('GET', `/api/jobs/${jobId}/entries`))
-      .json<{ path: string; destination: string }[]>()
-      .filter((entry) => entry.path.endsWith('Dune.2021.1080p.mkv'));
+    const [dune] = jobEntries<{ path: string; destination: string }>(h, jobId).filter((entry) =>
+      entry.path.endsWith('Dune.2021.1080p.mkv'),
+    );
     expect(dune?.destination.startsWith(roots.uhd)).toBe(false);
   });
 });

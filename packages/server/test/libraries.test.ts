@@ -9,6 +9,7 @@ import {
   cleanup,
   fakeProvider,
   harness,
+  jobEntries,
   librariesAt,
   makeDir,
   put,
@@ -42,9 +43,13 @@ interface EntryBody {
 
 /** The files of a scan in one classification (what a transfer has settled is left out). */
 const entriesOf = async (h: Harness, jobId: string, classification: string): Promise<EntryBody[]> =>
-  (await h.request('GET', `/api/jobs/${jobId}/entries?classification=${classification}`))
-    .json<EntryBody[]>()
-    .filter((entry) => entry.resolution === null || entry.resolution === 'failed');
+  Promise.resolve(
+    jobEntries<EntryBody>(h, jobId).filter(
+      (entry) =>
+        entry.classification === classification &&
+        (entry.resolution === null || entry.resolution === 'failed'),
+    ),
+  );
 
 /** A server with a real config.yaml, since libraries live there. */
 async function served(yaml = '') {
@@ -328,11 +333,6 @@ describe('scanning a library', () => {
 
     // Only the chosen files are transferred.
     const chosen = dune?.id ?? '';
-    const dry = await h.request('POST', `/api/plans/${jobId}/execute`, {
-      dryRun: true,
-      entries: [chosen],
-    });
-    expect(dry.json<{ items: unknown[] }>().items).toHaveLength(1);
     const run = await h.request('POST', `/api/plans/${jobId}/execute`, { entries: [chosen] });
     expect(run.statusCode).toBe(202);
     await h.app.jobs.idle();

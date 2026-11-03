@@ -59,10 +59,10 @@ curl -X POST localhost:8484/api/jobs -H "Authorization: Bearer $KEY" \
   -H 'content-type: application/json' -d '{"path": "/media/downloads/Dune.2021.1080p.mkv", "apply": true}'
 ```
 
-A job analyzes a file or a folder (parse, match, plan). Without `apply` nothing is written: read
-the result with `GET /api/jobs/{id}/entries`, then run `POST /api/plans/{id}/execute` (with
-`{"dryRun": true}` to see what would be done). With `apply`, the files matched with confidence are
-transferred in one batch and the others wait among the arrivals (`GET /api/arrivals`), where
+A job analyzes a file or a folder (parse, match, plan). Without `apply` nothing is written: its
+files wait in the web UI's Arrivals, to be checked and validated there. With `apply`, the files
+matched with confidence are transferred in one batch and the others wait among the arrivals
+(`GET /api/arrivals`), where
 `POST /api/entries/{id}/match` picks a candidate found with `GET /api/search` (for a series, the other episodes of the same release follow). Every batch can be
 undone with `POST /api/batches/{id}/undo`. Transfers are queued, survive a crash and resume at the
 next start.

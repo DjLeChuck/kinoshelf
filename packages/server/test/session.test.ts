@@ -110,14 +110,14 @@ describe('a session cookie on /api routes', () => {
   it('opens the API without the key', async () => {
     const h = await harness();
     const { cookie } = await signIn(h);
-    const response = await h.app.inject({ url: '/api/jobs', headers: { cookie } });
+    const response = await h.app.inject({ url: '/api/history', headers: { cookie } });
     expect(response.statusCode).toBe(200);
   });
 
   it('is not enough with a forged value', async () => {
     const { app } = await harness();
     const response = await app.inject({
-      url: '/api/jobs',
+      url: '/api/history',
       headers: { cookie: 'kinoshelf_session=forged' },
     });
     expect(response.statusCode).toBe(401);
@@ -147,14 +147,14 @@ describe('a session cookie on /api routes', () => {
     });
     expect(out.statusCode).toBe(204);
     expect(String(out.headers['set-cookie'])).toContain('Max-Age=0');
-    expect((await h.app.inject({ url: '/api/jobs', headers: { cookie } })).statusCode).toBe(401);
+    expect((await h.app.inject({ url: '/api/history', headers: { cookie } })).statusCode).toBe(401);
   });
 
   it('stops working when the API key is replaced', async () => {
     const h = await harness();
     const { cookie } = await signIn(h);
     setApiKey(h.database, generateApiKey());
-    expect((await h.app.inject({ url: '/api/jobs', headers: { cookie } })).statusCode).toBe(401);
+    expect((await h.app.inject({ url: '/api/history', headers: { cookie } })).statusCode).toBe(401);
   });
 });
 
@@ -183,7 +183,7 @@ describe('first-launch API key', () => {
     const { apiKey } = created.json<{ apiKey: string }>();
     const withKey = await h.app.inject({
       method: 'GET',
-      url: '/api/jobs',
+      url: '/api/history',
       headers: { authorization: `Bearer ${apiKey}` },
     });
     expect(withKey.statusCode).toBe(200);

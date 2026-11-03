@@ -10,6 +10,8 @@ import {
   cleanup,
   fakeProvider,
   harness,
+  executionOf,
+  jobEntries,
   librariesAt,
   makeDir,
   put,
@@ -39,12 +41,6 @@ interface ExecutionRecord {
   error: { code: string } | null;
 }
 
-interface ExecutionBody {
-  batchId: string;
-  dryRun: boolean;
-  items: { entryId: string; results: { status: string; error: { code: string } | null }[] }[];
-}
-
 const DUNE = { kind: 'movie', id: { provider: 'tmdb', id: 438631 }, title: 'Dune', year: 2021 };
 
 /** A folder holding one recognizable film and one the provider knows nothing about. */
@@ -55,7 +51,7 @@ async function analyzed(h: Harness, apply = false) {
   const created = await h.request('POST', '/api/jobs', { path: source, apply });
   const jobId = created.json<{ id: string }>().id;
   await h.app.jobs.idle();
-  const entries = (await h.request('GET', `/api/jobs/${jobId}/entries`)).json<EntryBody[]>();
+  const entries = jobEntries<EntryBody>(h, jobId);
   const named = (path: string): EntryBody => {
     const entry = entries.find((e) => e.path === path);
     if (!entry) {
@@ -175,26 +171,19 @@ async function transfer(h: Harness, jobId: string, body?: object): Promise<Execu
   const queued = await h.request('POST', `/api/plans/${jobId}/execute`, body);
   expect(queued.statusCode).toBe(202);
   await h.app.jobs.idle();
-  return (
-    await h.request('GET', `/api/executions/${queued.json<{ id: string }>().id}`)
-  ).json<ExecutionRecord>();
+  return executionOf(h, queued.json<{ id: string }>().id);
 }
 
-const entriesOf = async (h: Harness, jobId: string): Promise<EntryBody[]> =>
-  (await h.request('GET', `/api/jobs/${jobId}/entries`)).json<EntryBody[]>();
+const entriesOf = (h: Harness, jobId: string): Promise<EntryBody[]> =>
+  Promise.resolve(jobEntries<EntryBody>(h, jobId));
 
 describe('POST /api/plans/{id}/execute', () => {
-  it('writes nothing on a dry run, and answers at once', async () => {
+  it('refuses a dry run, which nothing asks it for', async () => {
     const h = await harness();
-    const { jobId, dune } = await analyzed(h);
-
+    const { jobId } = await analyzed(h);
     const response = await h.request('POST', `/api/plans/${jobId}/execute`, { dryRun: true });
-    const body = response.json<ExecutionBody>();
-    expect(response.statusCode).toBe(200);
-    expect(body.dryRun).toBe(true);
-    expect(body.items.map((i) => i.entryId)).toEqual([dune.id]);
+    expect(response.statusCode).toBe(400);
     expect(await readdir(h.destination)).toEqual([]);
-    expect((await entriesOf(h, jobId)).find((e) => e.id === dune.id)?.resolution).toBeNull();
   });
 
   it('queues the transfer, keeps the source (copy) and settles the entries', async () => {
@@ -211,9 +200,7 @@ describe('POST /api/plans/{id}/execute', () => {
     expect(queued.json<ExecutionRecord>().status).toBe('queued');
 
     await h.app.jobs.idle();
-    const execution = (
-      await h.request('GET', `/api/executions/${queued.json<{ id: string }>().id}`)
-    ).json<ExecutionRecord>();
+    const execution = executionOf(h, queued.json<{ id: string }>().id);
     expect(execution).toMatchObject({ status: 'done', summary: { done: 1, failed: 0 } });
     expect(execution.batchId).toEqual(expect.any(String));
 
@@ -264,10 +251,9 @@ describe('POST /api/plans/{id}/execute', () => {
     expect(entries.filter((e) => e.id !== first?.id).map((e) => e.resolution)).toEqual([null]);
   });
 
-  it('answers 404 for an unknown job or execution', async () => {
+  it('answers 404 for an unknown job', async () => {
     const h = await harness();
     expect((await h.request('POST', '/api/plans/nope/execute')).statusCode).toBe(404);
-    expect((await h.request('GET', '/api/executions/nope')).statusCode).toBe(404);
   });
 });
 
@@ -350,21 +336,12 @@ describe('a queue that is busy', () => {
     expect(second.statusCode).toBe(202);
     expect(second.json<{ id: string }>().id).not.toBe(first.json<{ id: string }>().id);
 
-    // Checking what a transfer would do is not a transfer: allowed meanwhile.
-    expect(
-      (await h.request('POST', `/api/plans/${jobId}/execute`, { dryRun: true })).statusCode,
-    ).toBe(200);
-
     release();
     await h.app.jobs.idle();
-    const [a, b] = await Promise.all(
-      [first, second].map((r) =>
-        h.request('GET', `/api/executions/${r.json<{ id: string }>().id}`),
-      ),
-    );
+    const [a, b] = [first, second].map((r) => executionOf(h, r.json<{ id: string }>().id));
     // The first took the file; the second found nothing left to do, so nothing was copied twice.
-    expect(a?.json()).toMatchObject({ status: 'done', summary: { done: 1, failed: 0 } });
-    expect(b?.json()).toMatchObject({ status: 'done', summary: { done: 0, failed: 0 } });
+    expect(a).toMatchObject({ status: 'done', summary: { done: 1, failed: 0 } });
+    expect(b).toMatchObject({ status: 'done', summary: { done: 0, failed: 0 } });
   });
 
   it('refuses a transfer of a job that is still being analyzed', async () => {
@@ -419,13 +396,7 @@ describe('after a crash', () => {
     expect(execution.status).toBe('done');
     expect(JSON.parse(execution.summary)).toEqual({ done: 1, failed: 0 });
 
-    const entries = (
-      await restarted.inject({
-        method: 'GET',
-        url: `/api/jobs/${jobId}/entries`,
-        headers: { authorization: `Bearer ${h.apiKey}` },
-      })
-    ).json<EntryBody[]>();
+    const entries = jobEntries<EntryBody>(h, jobId);
     // The file done before the crash is not reported as failed.
     expect(entries.find((e) => e.id === first?.id)).toMatchObject({
       resolution: 'done',

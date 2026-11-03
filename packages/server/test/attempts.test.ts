@@ -75,12 +75,12 @@ describe('wrong keys over HTTP', () => {
     const h = await harness();
     for (let i = 0; i < MAX_FAILURES; i += 1) {
       const response = await h.app.inject({
-        url: '/api/jobs',
+        url: '/api/history',
         headers: { authorization: 'Bearer ks_wrong' },
       });
       expect(response.statusCode).toBe(401);
     }
-    const bearer = await h.request('GET', '/api/jobs');
+    const bearer = await h.request('GET', '/api/history');
     expect(bearer.statusCode).toBe(429);
     expect(bearer.json()).toMatchObject({ error: { code: 'auth.too-many-attempts' } });
     expect((await signIn(h, h.apiKey)).statusCode).toBe(429);

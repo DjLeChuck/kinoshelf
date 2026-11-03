@@ -15,12 +15,10 @@ import {
   activitySchema,
   batchDetailSchema,
   candidateSchema,
-  classificationValues,
   arrivalsSchema,
   entrySchema,
   matchResultSchema,
   errorSchema,
-  executionReportSchema,
   executionSchema,
   jobSchema,
   matchBodySchema,
@@ -82,7 +80,8 @@ function presentPlan(item: PlanItem | null) {
   };
 }
 
-function presentEntry(entry: Entry): unknown {
+/** A file as `match` and `ignore` answer it. */
+export function presentEntry(entry: Entry): unknown {
   const { parsed } = entry;
   return {
     id: entry.id,
@@ -163,7 +162,7 @@ export function jobPresenter(
 
 /** Thin HTTP layer: validate, call the store or the service, shape the answer. */
 export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
-  const { jobs, entries, executions, service, runner, notifier, events, history } = ctx;
+  const { jobs, entries, service, runner, notifier, events, history } = ctx;
   const presentJob = jobPresenter(ctx);
   const idParams = { type: 'object', properties: { id: { type: 'string' } } } as const;
   const dryRunBody = {
@@ -215,18 +214,6 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
     },
   );
 
-  api.get<{ Querystring: Pick<Paging, 'limit'> }>(
-    '/api/jobs',
-    {
-      schema: {
-        summary: 'List jobs, newest first',
-        querystring: { type: 'object', properties: { limit: paging.limit } },
-        response: { 200: { type: 'array', items: jobSchema }, 401: errorSchema },
-      },
-    },
-    (request) => jobs.list(request.query.limit).map(presentJob),
-  );
-
   api.get<{ Params: { id: string } }>(
     '/api/jobs/:id',
     {
@@ -239,44 +226,6 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
     (request, reply) => {
       const job = jobs.get(request.params.id);
       return job ? presentJob(job) : reply.code(404).send({ error: { code: 'job.not-found' } });
-    },
-  );
-
-  api.get<{
-    Params: { id: string };
-    Querystring: Paging & { classification?: (typeof classificationValues)[number] };
-  }>(
-    '/api/jobs/:id/entries',
-    {
-      schema: {
-        summary: 'The files of a job, page by page',
-        params: idParams,
-        querystring: {
-          type: 'object',
-          properties: {
-            ...paging,
-            classification: { type: 'string', enum: classificationValues },
-          },
-        },
-        response: {
-          200: { type: 'array', items: entrySchema },
-          401: errorSchema,
-          404: errorSchema,
-        },
-      },
-    },
-    (request, reply) => {
-      if (!jobs.get(request.params.id)) {
-        return reply.code(404).send({ error: { code: 'job.not-found' } });
-      }
-      const { classification, limit, offset } = request.query;
-      return entries
-        .list(request.params.id, {
-          ...(classification && { classification }),
-          limit,
-          offset,
-        })
-        .map(presentEntry);
     },
   );
 
@@ -369,7 +318,7 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
 
   api.post<{
     Params: { id: string };
-    Body: CandidateBody & { onlyThis?: boolean; libraryId?: string };
+    Body: CandidateBody & { libraryId?: string };
   }>(
     '/api/entries/:id/match',
     {
@@ -379,7 +328,7 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
           'Plans the file with a candidate returned by `GET /api/search`; it overrides the score. ' +
           'The file ends up `to-rename`, or in `conflict` if its target cannot be used. For ' +
           'a series, the other episodes of the same release follow the choice (the ones of ' +
-          'the same `cluster`, not with `onlyThis`); `followers` lists them. ' +
+          'the same `cluster`); `followers` lists them. ' +
           "`libraryId` sends the file to that library (of the work's kind) rather than to the " +
           'default one, for this file only.',
         params: idParams,
@@ -387,7 +336,6 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
           ...matchBodySchema,
           properties: {
             ...matchBodySchema.properties,
-            onlyThis: { type: 'boolean', description: 'Do not apply to the rest of the release' },
             libraryId: { type: 'string' },
           },
         },
@@ -399,7 +347,6 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
         request.params.id,
         toCandidate(request.body),
         {
-          ...(request.body.onlyThis !== undefined && { onlyThis: request.body.onlyThis }),
           ...(request.body.libraryId !== undefined && { libraryId: request.body.libraryId }),
         },
       );
@@ -435,28 +382,24 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
     },
   );
 
-  api.post<{ Params: { id: string }; Body?: { onlyThis?: boolean } }>(
+  api.post<{ Params: { id: string } }>(
     '/api/entries/:id/ignore',
     {
-      preValidation: emptyBodyByDefault,
       schema: {
         summary: 'Set a file aside',
-        description: 'The rest of its release goes with it, unless `onlyThis`.',
+        description: 'The rest of its release goes with it.',
         params: idParams,
-        body: { type: 'object', properties: { onlyThis: { type: 'boolean' } } },
         response: { 200: entrySchema, 401: errorSchema, 404: errorSchema, 409: errorSchema },
       },
     },
     (request) => {
-      const entry = service.ignore(request.params.id, {
-        ...(request.body?.onlyThis !== undefined && { onlyThis: request.body.onlyThis }),
-      });
+      const entry = service.ignore(request.params.id);
       events.emit('arrivals');
       return presentEntry(entry);
     },
   );
 
-  api.post<{ Params: { id: string }; Body?: { dryRun?: boolean; entries?: string[] } }>(
+  api.post<{ Params: { id: string }; Body?: { entries?: string[] } }>(
     '/api/plans/:id/execute',
     {
       preValidation: emptyBodyByDefault,
@@ -464,16 +407,15 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
         summary: 'Execute the plan of a job',
         description:
           'The plan of a job is the set of its matched files not transferred yet; its id is the ' +
-          "job's. With `dryRun`, every precondition is checked, nothing is written and the report " +
-          'comes back at once (200). Otherwise the transfer is queued (202): poll the execution ' +
-          'until it is `done` or `failed`. Transfers run one at a time: a request made while another ' +
+          "job's. The transfer is queued (202) and its batch shows in the history. Transfers run " +
+          'one at a time: a request made while another ' +
           'is queued or running waits its turn. A destination that exists is never ' +
           'overwritten, and hardlink never falls back to copy.',
         params: idParams,
         body: {
-          ...dryRunBody,
+          type: 'object',
+          additionalProperties: false,
           properties: {
-            ...dryRunBody.properties,
             entries: {
               type: 'array',
               maxItems: MAX_SELECTION,
@@ -483,7 +425,6 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
           },
         },
         response: {
-          200: executionReportSchema,
           202: executionSchema,
           401: errorSchema,
           404: errorSchema,
@@ -493,29 +434,10 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
     },
     async (request, reply) => {
       const entryIds = request.body?.entries;
-      if (request.body?.dryRun) {
-        return service.dryRun(request.params.id, entryIds);
-      }
       const execution = service.enqueue(request.params.id, entryIds);
       events.emit('jobs');
       runner.kick();
       return reply.code(202).send(execution);
-    },
-  );
-
-  api.get<{ Params: { id: string } }>(
-    '/api/executions/:id',
-    {
-      schema: {
-        summary: 'A queued transfer and how it went',
-        description: 'What became of each file is on the file: see `GET /api/jobs/{id}/entries`.',
-        params: idParams,
-        response: { 200: executionSchema, 401: errorSchema, 404: errorSchema },
-      },
-    },
-    (request, reply) => {
-      const execution = executions.get(request.params.id);
-      return execution ?? reply.code(404).send({ error: { code: 'execution.not-found' } });
     },
   );
 

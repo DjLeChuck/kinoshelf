@@ -32,6 +32,9 @@ reading completion from a download client's own API (see "Getting downloads in")
   throws/returns typed errors carrying a stable `code` and parameters; translation happens at the
   edges (CLI, server, web) with the `fr` and `en` catalogs. Any new message must be added to both.
 - Nothing touches the disk without a validated plan (parse → match → plan → execute).
+- **The REST API serves its clients, nothing more**: the web, the CLI (`kinoshelf submit`) and the
+  e2e. A route, a parameter or a response field none of them reads is removed, not kept "for the
+  API"; tests read the stores (`jobEntries`, `executionOf` in the server's test harness) instead.
 - No automatic fallback when a hardlink is impossible: fail with an explicit error.
 - Never overwrite a destination file by default: the operation goes to the validation queue.
   Enforced in layers: the planner flags it, the executor re-checks right before writing, and the
@@ -99,7 +102,7 @@ contains no player-specific rule.
   migrations 016 and 017). Each cluster is matched and validated as a whole; the UI lists the other
   clusters under the release (`detached`, linked to it). Movies are never grouped. Validating
   (`POST /api/entries/:id/match`) an episode applies the choice to the other pending episodes of its
-  cluster (`followers` in the answer; `onlyThis` limits it to one); `ignore` does the same. There are
+  cluster (`followers` in the answer); `ignore` does the same. There are
   no aliases and no "remember this title": correct the release once.
 - **Path picker** (`GET /api/fs?path=…[&files=yaml]`): the settings browse the server's disk for the
   destination folders and a custom profile, since a browser cannot see it (and in Docker only
@@ -221,7 +224,7 @@ refuses to delete a library an arrival folder points at (`library.in-use`). Ther
 - **Scan**: `POST /api/libraries/:id/scan` queues a job on the whole source (409
   `library.scan-in-progress`). The scan's files are read from the snapshot below
   (`GET /api/libraries/:id/items`), not from the job. A batch runs through
-  `POST /api/plans/:id/execute` with `entries` (also `dryRun`); only the files to rename are
+  `POST /api/plans/:id/execute` with `entries`; only the files to rename are
   selectable, the others go through the arrivals or the review filter.
 - **Arrivals** (`GET /api/arrivals`, `?state=review|unrecognized`): what the arrival folders (and paths
   sent by hand, which belong to none) hold that needs a human; a library organized in place never
@@ -285,7 +288,7 @@ refuses to delete a library an arrival folder points at (`library.in-use`). Ther
   unknown); otherwise 202 with the executions, and the batch shows in the history and can be undone.
   409 `library.nothing-to-do` when nothing is left. The web's "Rename preview" dialog (`RunDialog`)
   is the dry run, then the run. Rows added by an arrival carry no entry: they have nothing to run.
-- **Scan progress** (`progress.ts`): `GET /api/jobs`, `GET /api/jobs/:id` and the `scan` of
+- **Scan progress** (`progress.ts`): `GET /api/jobs/:id` and the `scan` of
   `GET /api/libraries/:id/items` carry `progress` (`phase` discover|identify|plan, `found`, `done`,
   `total`, `current`, `idleSeconds`) while an analysis runs, `null` otherwise. It lives in the
   server's memory (`ProgressTracker`), never in the database: a restart runs the job again from 0.

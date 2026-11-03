@@ -7,7 +7,7 @@ import { EntryStore } from '../src/entries.js';
 import { ExecutionStore } from '../src/executions.js';
 import { JobStore, type ProcessedJob } from '../src/jobs.js';
 import { JobRunner } from '../src/runner.js';
-import { cleanup, harness, librariesAt, makeDir, put } from './harness.js';
+import { cleanup, harness, jobEntries, librariesAt, makeDir, put } from './harness.js';
 
 afterEach(cleanup);
 
@@ -69,7 +69,7 @@ describe('POST /api/jobs', () => {
     expect(job.settings?.mode).toBeTruthy();
     expect(job.settings?.profile).toBeTruthy();
 
-    const entries = (await h.request('GET', `/api/jobs/${id}/entries`)).json<EntryBody[]>();
+    const entries = jobEntries<EntryBody>(h, id);
     const renamed = entries.find((entry) => entry.path === file);
     expect(renamed?.classification).toBe('to-rename');
     expect(renamed?.destination).toBe(
@@ -80,11 +80,6 @@ describe('POST /api/jobs', () => {
     ).toBeNull();
     // Analysis alone writes nothing.
     expect(await readdir(h.destination)).toEqual([]);
-
-    const filtered = await h.request('GET', `/api/jobs/${id}/entries?classification=unrecognized`);
-    expect(filtered.json<EntryBody[]>()).toHaveLength(1);
-    const paged = await h.request('GET', `/api/jobs/${id}/entries?limit=1&offset=1`);
-    expect(paged.json<EntryBody[]>()).toHaveLength(1);
   });
 
   it('fails the job with a code when the path does not exist', async () => {
@@ -167,16 +162,10 @@ function newQueue(): { jobs: JobStore; executions: ExecutionStore } {
 const done = { summary: { done: 0, failed: 0 }, files: [] };
 
 describe('GET /api/jobs', () => {
-  it('lists newest first and answers 404 for an unknown job', async () => {
+  it('answers 404 for an unknown job', async () => {
     const h = await harness({
       processor: () => Promise.resolve(empty),
     });
-    await h.request('POST', '/api/jobs', { path: '/first' });
-    await h.request('POST', '/api/jobs', { path: '/second' });
-    await h.app.jobs.idle();
-
-    const list = (await h.request('GET', '/api/jobs')).json<{ path: string }[]>();
-    expect(list.map((job) => job.path)).toEqual(['/second', '/first']);
     expect((await h.request('GET', '/api/jobs/nope')).statusCode).toBe(404);
   });
 });

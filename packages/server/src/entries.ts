@@ -155,17 +155,13 @@ export class EntryStore {
     return row && toEntry(row);
   }
 
-  list(
-    jobId: string,
-    options: { classification?: Classification; limit: number; offset: number },
-  ): Entry[] {
-    const filter = options.classification ? 'AND classification = ?' : '';
-    const params = [jobId, ...(options.classification ? [options.classification] : [])];
+  /** Every file of a job, in the order it was analyzed. */
+  list(jobId: string): Entry[] {
     return this.database
-      .prepare<unknown[], EntryRow>(
-        `SELECT ${COLUMNS} FROM job_entries WHERE job_id = ? ${filter} ORDER BY seq LIMIT ? OFFSET ?`,
+      .prepare<[string], EntryRow>(
+        `SELECT ${COLUMNS} FROM job_entries WHERE job_id = ? ORDER BY seq`,
       )
-      .all(...params, options.limit, options.offset)
+      .all(jobId)
       .map(toEntry);
   }
 

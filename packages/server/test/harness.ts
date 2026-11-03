@@ -7,6 +7,9 @@ import type { Config, MetadataProvider, MovieCandidate } from '@kinoshelf/core';
 import { buildApp, type AppOptions } from '../src/app.js';
 import { generateApiKey, setApiKey } from '../src/auth.js';
 import { migrated } from '../src/database.js';
+import { EntryStore } from '../src/entries.js';
+import { ExecutionStore, type Execution } from '../src/executions.js';
+import { presentEntry } from '../src/routes.js';
 import type { Prober } from '../src/probe.js';
 
 const created: string[] = [];
@@ -152,4 +155,32 @@ export async function harness(
         ...(payload && { payload }),
       }),
   };
+}
+
+/**
+ * The files of a job, shaped as `match` answers one. No route lists them (the web reads the
+ * arrivals and the libraries); tests read the store to see what an analysis decided.
+ */
+export function jobEntries<T>(h: Pick<Harness, 'database'>, jobId: string): T[] {
+  return new EntryStore(h.database)
+    .list(jobId)
+    .map((entry) => JSON.parse(JSON.stringify(presentEntry(entry))) as T);
+}
+
+/** A queued transfer and how it went, read from the store (the web follows the history instead). */
+export function executionOf(h: Pick<Harness, 'database'>, id: string): Execution {
+  const execution = new ExecutionStore(h.database).get(id);
+  if (!execution) {
+    throw new Error(`no execution ${id}`);
+  }
+  return execution;
+}
+
+/** The batch a finished transfer made. */
+export function batchOf(h: Pick<Harness, 'database'>, executionId: string): string {
+  const { batchId } = executionOf(h, executionId);
+  if (batchId === null) {
+    throw new Error(`execution ${executionId} made no batch`);
+  }
+  return batchId;
 }

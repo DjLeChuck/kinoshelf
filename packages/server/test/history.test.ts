@@ -1,7 +1,7 @@
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { SqliteJournal } from '@kinoshelf/core';
-import { cleanup, harness, makeDir, put, type Harness } from './harness.js';
+import { cleanup, harness, batchOf, makeDir, put, type Harness } from './harness.js';
 
 afterEach(cleanup);
 
@@ -38,9 +38,7 @@ async function run(
     id: string;
   }>();
   await h.app.jobs.idle();
-  const { batchId } = (await h.request('GET', `/api/executions/${execution.id}`)).json<{
-    batchId: string;
-  }>();
+  const batchId = batchOf(h, execution.id);
   return { source, batchId };
 }
 

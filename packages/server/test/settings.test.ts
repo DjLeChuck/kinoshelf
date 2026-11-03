@@ -359,7 +359,7 @@ describe('POST /api/settings/api-key', () => {
     expect(apiKey).toMatch(/^ks_/);
     expect(isValidApiKey(h.database, apiKey)).toBe(true);
     expect(isValidApiKey(h.database, h.apiKey)).toBe(false);
-    expect((await h.request('GET', '/api/jobs')).statusCode).toBe(401);
+    expect((await h.request('GET', '/api/history')).statusCode).toBe(401);
   });
 
   it('keeps the browser signed in, with a fresh session', async () => {

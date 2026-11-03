@@ -128,7 +128,7 @@ export class Service {
   async match(
     entryId: string,
     candidate: Candidate,
-    options: { onlyThis?: boolean; libraryId?: string } = {},
+    options: { libraryId?: string } = {},
   ): Promise<MatchResult> {
     const entry = this.pendingEntry(entryId);
     const asked = options.libraryId;
@@ -137,7 +137,7 @@ export class Service {
     // The choice is about the series, so the rest of the release follows; one that cannot (the
     // provider is down, say) stays as it was and can be settled on its own.
     const followers: string[] = [];
-    if (candidate.kind === 'series' && !options.onlyThis) {
+    if (candidate.kind === 'series') {
       for (const mate of this.deps.entries.releaseMates(entry)) {
         try {
           const mateLibrary = this.chosenLibrary(mate, candidate, asked);
@@ -342,14 +342,12 @@ export class Service {
     return chosen?.id ?? null;
   }
 
-  /** Sets a file aside, and with it the rest of its release unless `onlyThis`. */
-  ignore(entryId: string, options: { onlyThis?: boolean } = {}): Entry {
+  /** Sets a file aside, and with it the rest of its release. */
+  ignore(entryId: string): Entry {
     const entry = this.pendingEntry(entryId);
     this.deps.entries.resolve(entry.id, 'ignored');
-    if (!options.onlyThis) {
-      for (const mate of this.deps.entries.releaseMates(entry)) {
-        this.deps.entries.resolve(mate.id, 'ignored');
-      }
+    for (const mate of this.deps.entries.releaseMates(entry)) {
+      this.deps.entries.resolve(mate.id, 'ignored');
     }
     return this.require(entryId);
   }

@@ -58,7 +58,7 @@ describe('the web UI', () => {
     expect(unknown.json()).toEqual({ error: { code: 'request.not-found' } });
     expect(unknown.headers['x-content-type-options']).toBe('nosniff');
     expect((await app.inject('/health')).json()).toMatchObject({ status: 'ok' });
-    expect((await app.inject('/api/jobs')).statusCode).toBe(401);
+    expect((await app.inject('/api/history')).statusCode).toBe(401);
   });
 
   it('only serves GET pages: a POST to a UI route is not the page', async () => {

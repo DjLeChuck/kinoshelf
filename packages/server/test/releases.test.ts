@@ -1,6 +1,6 @@
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { cleanup, harness, makeDir, put, type Harness } from './harness.js';
+import { cleanup, harness, jobEntries, makeDir, put, type Harness } from './harness.js';
 
 afterEach(cleanup);
 
@@ -35,8 +35,7 @@ async function scan(h: Harness) {
   }
   const jobId = (await h.request('POST', '/api/jobs', { path: source })).json<{ id: string }>().id;
   await h.app.jobs.idle();
-  const entries = async () =>
-    (await h.request('GET', `/api/jobs/${jobId}/entries`)).json<EntryBody[]>();
+  const entries = (): Promise<EntryBody[]> => Promise.resolve(jobEntries<EntryBody>(h, jobId));
   const named = async (name: string): Promise<EntryBody> => {
     const entry = (await entries()).find((e) => e.path.endsWith(name));
     if (!entry) {
@@ -90,18 +89,7 @@ describe('validating a release', () => {
     expect((await named('Zorp.S01E01.mkv')).classification).toBe('unrecognized');
   });
 
-  it('leaves the rest of the release alone when asked', async () => {
-    const h = await harness();
-    const { named } = await scan(h);
-    await h.request('POST', `/api/entries/${(await named('Zorp.S01E01.mkv')).id}/match`, {
-      ...ZORP,
-      onlyThis: true,
-    });
-    expect((await named('Zorp.S01E01.mkv')).classification).toBe('to-rename');
-    expect((await named('Zorp.S01E02.mkv')).classification).toBe('unrecognized');
-  });
-
-  it('sets the whole release aside, or just the file', async () => {
+  it('sets the whole release aside', async () => {
     const h = await harness();
     const { named } = await scan(h);
     await h.request('POST', `/api/entries/${(await named('Quux.S01E01.mkv')).id}/ignore`);

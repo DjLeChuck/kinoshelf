@@ -1,7 +1,17 @@
 import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { cleanup, fakeProvider, harness, librariesAt, makeDir, put } from './harness.js';
+import { EntryStore } from '../src/entries.js';
+import {
+  cleanup,
+  fakeProvider,
+  harness,
+  batchOf,
+  jobEntries,
+  librariesAt,
+  makeDir,
+  put,
+} from './harness.js';
 
 afterEach(cleanup);
 
@@ -22,10 +32,6 @@ filesystem: { forbidden: posix, replacement: '', maxSegmentBytes: 255 }
 
 const DUNE = { kind: 'movie', id: { provider: 'tmdb', id: 438631 }, title: 'Dune', year: 2021 };
 
-interface Report {
-  items: { results: { type: string; destination: string; status: string }[] }[];
-}
-
 /** A queue holding one file the provider cannot read, under a profile that writes an NFO. */
 async function setup(options: { detailsFail?: boolean } = {}) {
   const profile = join(await makeDir(), 'kodi.yaml');
@@ -45,20 +51,20 @@ async function setup(options: { detailsFail?: boolean } = {}) {
   const created = await h.request('POST', '/api/jobs', { path: source });
   const jobId = created.json<{ id: string }>().id;
   await h.app.jobs.idle();
-  const [entry] = (await h.request('GET', `/api/jobs/${jobId}/entries`)).json<{ id: string }[]>();
+  const [entry] = jobEntries<{ id: string }>(h, jobId);
   return { h, destination, jobId, entryId: entry?.id ?? '', file };
 }
 
 describe('metadata files in the validation queue', () => {
   it('plans the NFO of a file a human matched', async () => {
-    const { h, destination, jobId, entryId } = await setup();
+    const { h, destination, entryId } = await setup();
     const matched = await h.request('POST', `/api/entries/${entryId}/match`, DUNE);
     expect(matched.statusCode).toBe(200);
 
-    const dry = await h.request('POST', `/api/plans/${jobId}/execute`, { dryRun: true });
-    const results = dry.json<Report>().items.flatMap((item) => item.results);
-    expect(results.map((r) => r.type).sort()).toEqual(['transfer', 'write-file']);
-    expect(results.find((r) => r.type === 'write-file')?.destination).toBe(
+    // What the transfer will run, as stored on the file: nothing is written yet.
+    const operations = new EntryStore(h.database).get(entryId)?.item?.operations ?? [];
+    expect(operations.map((op) => op.type).sort()).toEqual(['transfer', 'write-file']);
+    expect(operations.find((op) => op.type === 'write-file')?.destination).toBe(
       join(destination, 'Dune (2021)', 'movie.nfo'),
     );
   });
@@ -87,9 +93,7 @@ describe('metadata files in the validation queue', () => {
       id: string;
     }>();
     await h.app.jobs.idle();
-    const { batchId } = (await h.request('GET', `/api/executions/${execution.id}`)).json<{
-      batchId: string;
-    }>();
+    const batchId = batchOf(h, execution.id);
     const batch = (await h.request('GET', `/api/batches/${batchId}`)).json<{
       items: unknown[];
       extras: unknown[];

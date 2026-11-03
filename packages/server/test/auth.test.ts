@@ -45,7 +45,7 @@ describe('API key', () => {
     const { app } = await harness();
     const response = await app.inject({
       method: 'GET',
-      url: '/api/jobs',
+      url: '/api/history',
       ...(authorization && { headers: { authorization } }),
     });
     expect(response.statusCode).toBe(401);
@@ -55,13 +55,13 @@ describe('API key', () => {
 
   it('lets a valid key through', async () => {
     const { request } = await harness();
-    expect((await request('GET', '/api/jobs')).statusCode).toBe(200);
+    expect((await request('GET', '/api/history')).statusCode).toBe(200);
   });
 
   it('answers 503 while no key exists, then works as soon as one is created', async () => {
     const { app, database, request } = await harness();
     database.prepare('DELETE FROM api_keys').run();
-    const response = await request('GET', '/api/jobs');
+    const response = await request('GET', '/api/history');
     expect(response.statusCode).toBe(503);
     expect(response.json()).toEqual({ error: { code: 'auth.not-configured' } });
     expect((await app.inject('/health')).statusCode).toBe(200);
@@ -70,7 +70,7 @@ describe('API key', () => {
     setApiKey(database, key);
     const retry = await app.inject({
       method: 'GET',
-      url: '/api/jobs',
+      url: '/api/history',
       headers: { authorization: `Bearer ${key}` },
     });
     expect(retry.statusCode).toBe(200);

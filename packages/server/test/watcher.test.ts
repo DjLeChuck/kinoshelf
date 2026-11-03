@@ -1,6 +1,9 @@
 import { readFile, rename, rm, utimes, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import Database from 'better-sqlite3';
+import { EntryStore } from '../src/entries.js';
+import { ExecutionStore } from '../src/executions.js';
+import { JobStore } from '../src/jobs.js';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { migrated } from '../src/database.js';
 import { FolderWatcher, type WatcherSettings } from '../src/watcher.js';
@@ -243,7 +246,11 @@ describe('the watch API', () => {
     expect(scan.statusCode).toBe(200);
     expect(scan.json()).toEqual({ submitted: 1, pending: 0, known: 0 });
     await h.app.jobs.idle();
-    const jobs = (await h.request('GET', '/api/jobs')).json<{ path: string; status: string }[]>();
+    const jobs = new JobStore(
+      h.database,
+      new EntryStore(h.database),
+      new ExecutionStore(h.database),
+    ).list(10);
     // The job remembers which library's folder it came from.
     expect(jobs).toMatchObject([
       { path: join(folder, 'Dune.2021.mkv'), status: 'done', libraryId: 'downloads' },
