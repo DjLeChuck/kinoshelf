@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { lstat } from 'node:fs/promises';
 import {
   metadataLanguageFor,
   libraryProfile,
@@ -232,6 +233,7 @@ export class Service {
     candidate: Candidate,
     options: {
       lenient?: boolean;
+      applyVersion?: boolean;
       libraryId?: string | null;
       profiles?: Map<string, Promise<Profile>>;
     } = {},
@@ -248,12 +250,22 @@ export class Service {
         throw error;
       }
     }
-    const plan = await createPlan([{ parsed: entry.parsed, candidate, ...metadata }], {
-      profile,
-      destinationRoot: settings.destinationRoot,
-      mode: settings.mode,
-      ...(loader.needsMetadata && { imageUrl: provider.imageUrl.bind(provider) }),
-    });
+    const plan = await createPlan(
+      [
+        {
+          parsed: entry.parsed,
+          candidate,
+          ...metadata,
+          ...(options.applyVersion && { applyVersion: true }),
+        },
+      ],
+      {
+        profile,
+        destinationRoot: settings.destinationRoot,
+        mode: settings.mode,
+        ...(loader.needsMetadata && { imageUrl: provider.imageUrl.bind(provider) }),
+      },
+    );
     const item = plan.items[0];
     if (!item) {
       throw new Error('the planner returned no item for one input');
@@ -381,8 +393,14 @@ export class Service {
   }
 
   /** What a transfer of the job would do, checked against the disk, with nothing written. */
-  async dryRun(jobId: string, entryIds?: readonly string[]): Promise<ExecutionReport> {
-    const groups = await this.prepare(jobId, entryIds);
+  async dryRun(
+    jobId: string,
+    entryIds?: readonly string[],
+    overrides?: ReadonlyMap<string, PlanItem>,
+  ): Promise<ExecutionReport> {
+    const { groups, held } = await this.prepare(jobId, entryIds, {
+      ...(overrides && { overrides }),
+    });
     const items: ExecutionReport['items'][number][] = [];
     let batchId = '';
     for (const { plan, entryOfItem } of groups) {
@@ -394,6 +412,23 @@ export class Service {
           results: result.results.map(report),
         })),
       );
+    }
+    // A file whose destination is taken for good is reported as the run would: not done.
+    for (const { entry, destination } of held) {
+      items.push({
+        entryId: entry.id,
+        results: [
+          {
+            type: 'transfer',
+            role: 'main',
+            mode: null,
+            source: entry.path,
+            destination,
+            status: 'skipped',
+            error: { code: 'destination.exists', params: { path: destination } },
+          },
+        ],
+      });
     }
     return { batchId, dryRun: true, items };
   }
@@ -433,6 +468,50 @@ export class Service {
   }
 
   /**
+   * Plans, for movies of a library, the name that says their version (`- 2160p`), whether or not
+   * they are already named as the profile wants. `ready` is what would be renamed; `refused` is what
+   * cannot be (no size in the name, a profile without a naming for versions). A file with nothing
+   * to change is in neither.
+   */
+  async planVersions(
+    jobId: string,
+    entryIds: readonly string[],
+    screenSize?: string,
+  ): Promise<{ ready: Map<string, PlanItem>; refused: Map<string, PlanItem> }> {
+    this.requireDoneJob(jobId);
+    const profiles = new Map<string, Promise<Profile>>();
+    const ready = new Map<string, PlanItem>();
+    const refused = new Map<string, PlanItem>();
+    for (const id of entryIds) {
+      const entry = this.deps.entries.get(id);
+      const stored = entry?.candidates.find(({ id: c }) => c.id === entry.item?.externalId.id);
+      if (!entry || entry.jobId !== jobId || entry.parsed.kind !== 'movie' || !stored) {
+        continue;
+      }
+      // A size chosen by hand wins over what the name says: it is what the owner means.
+      const named =
+        screenSize === undefined ? entry : { ...entry, parsed: { ...entry.parsed, screenSize } };
+      const item = await this.planWith(named, toCandidate(stored), {
+        applyVersion: true,
+        profiles,
+      });
+      if (item.status === 'ready') {
+        ready.set(id, item);
+      } else if (item.status === 'conflict') {
+        refused.set(id, item);
+      }
+    }
+    return { ready, refused };
+  }
+
+  /** Makes the planned version names what the files wait to do, so a transfer can run them. */
+  commitVersions(ready: ReadonlyMap<string, PlanItem>): void {
+    for (const [id, item] of ready) {
+      this.deps.entries.setMatch(id, 'to-rename', item);
+    }
+  }
+
+  /**
    * Transfers the files of an execution, run by the queue worker. The plan is rebuilt from the
    * stored items and the settings of the job, and the executor re-checks each destination right
    * before writing. Each file is settled as soon as it is transferred, in step with the journal:
@@ -443,7 +522,9 @@ export class Service {
     onSettled?: (done: number, total: number, path: string) => void,
     onStart?: (total: number) => void,
   ): Promise<ExecutionOutcome> {
-    const groups = await this.prepare(execution.jobId, execution.entryIds ?? undefined);
+    const { groups, held } = await this.prepare(execution.jobId, execution.entryIds ?? undefined, {
+      persist: true,
+    });
     // A resumed execution keeps its batch: what it did before the crash and what it does now are
     // one batch in the journal, so one undo reverts them all.
     const batchId = execution.batchId ?? randomUUID();
@@ -451,11 +532,23 @@ export class Service {
       this.deps.executions.setBatch(execution.id, batchId);
     }
 
-    const total = groups.reduce((sum, group) => sum + group.entryOfItem.size, 0);
+    const total = groups.reduce((sum, group) => sum + group.entryOfItem.size, 0) + held.length;
     onStart?.(total);
     let done = 0;
     let failed = 0;
     const files: OutcomeFile[] = [];
+    // Left waiting in Arrivals with the conflict, not marked failed: nothing was attempted.
+    for (const { entry, destination } of held) {
+      failed++;
+      files.push({
+        path: entry.path,
+        destination,
+        kind: 'movie',
+        status: 'failed',
+        error: { code: 'destination.exists', params: { path: destination } },
+      });
+      onSettled?.(done + failed, total, entry.path);
+    }
     const settled: { entry: Entry; results: readonly OperationResult[] }[] = [];
     for (const { plan, entryOfItem } of groups) {
       await this.transferGroup(plan, entryOfItem, batchId, (entry, results) => {
@@ -509,9 +602,17 @@ export class Service {
   private async prepare(
     jobId: string,
     entryIds?: readonly string[],
-  ): Promise<{ plan: Plan; entryOfItem: Map<string, Entry> }[]> {
+    options: { persist?: boolean; overrides?: ReadonlyMap<string, PlanItem> } = {},
+  ): Promise<{
+    groups: { plan: Plan; entryOfItem: Map<string, Entry> }[];
+    held: { entry: Entry; destination: string }[];
+  }> {
     const job = this.requireDoneJob(jobId);
-    const executable = this.deps.entries.executable(jobId);
+    const { overrides } = options;
+    // Versions asked for by hand come with their own plan: the stored one says nothing to do.
+    const executable = overrides
+      ? [...overrides].map(([id, item]): Entry => ({ ...this.require(id), item }))
+      : this.deps.entries.executable(jobId);
     const selected = entryIds && new Set(entryIds);
     // A show's files ride on one episode of the plan: left out, it hands them to a chosen one.
     const items = selected
@@ -522,13 +623,26 @@ export class Service {
           ).map((item) => [item.id, item]),
         )
       : undefined;
-    const entries = executable.flatMap((entry) => {
+    const chosen = executable.flatMap((entry) => {
       if (!entry.item || (selected && !selected.has(entry.id))) {
         return [];
       }
       const item = items?.get(entry.item.id) ?? entry.item;
       return [item === entry.item ? entry : { ...entry, item }];
     });
+    const held: { entry: Entry; destination: string }[] = [];
+    const profiles = new Map<string, Promise<Profile>>();
+    const entries: Entry[] = [];
+    for (const entry of chosen) {
+      const fresh = overrides
+        ? entry
+        : await this.refreshed(entry, profiles, options.persist === true);
+      if ('held' in fresh) {
+        held.push({ entry, destination: fresh.held });
+      } else {
+        entries.push(fresh);
+      }
+    }
 
     const groups = new Map<string, { settings: PlanSettings; entries: Entry[] }>();
     for (const entry of entries) {
@@ -541,7 +655,7 @@ export class Service {
     if (groups.size === 0) {
       groups.set('', { settings: this.settingsOf(jobId), entries: [] });
     }
-    return Promise.all(
+    const planned = await Promise.all(
       [...groups.values()].map(async ({ settings, entries: members }, index) => {
         const profile = await loadProfile(settings.profile);
         const plan: Plan = {
@@ -558,6 +672,53 @@ export class Service {
         return { plan, entryOfItem };
       }),
     );
+    return { groups: planned, held };
+  }
+
+  /**
+   * A stored plan is as old as the analysis: another transfer may have taken the name since (the
+   * same movie in a second quality, from another release). A movie whose destination is now taken
+   * is planned again against the disk as it is, which may find it a free name of its quality. If
+   * none is left, it is held in Arrivals as a conflict rather than sent to fail. Other works are
+   * left as they were: they cannot be told apart by a name.
+   */
+  private async refreshed(
+    entry: Entry,
+    profiles: Map<string, Promise<Profile>>,
+    persist: boolean,
+  ): Promise<Entry | { held: string }> {
+    const main = entry.item?.operations.find(
+      (operation) => operation.type === 'transfer' && operation.role === 'main',
+    );
+    if (!entry.item || !main || entry.parsed.kind !== 'movie') {
+      return entry;
+    }
+    if (
+      !(await lstat(main.destination).then(
+        () => true,
+        () => false,
+      ))
+    ) {
+      return entry;
+    }
+    const stored = entry.candidates.find(({ id }) => id.id === entry.item?.externalId.id);
+    if (!stored) {
+      return entry;
+    }
+    let item: PlanItem;
+    try {
+      // The stored plan's own reading of the name: a size chosen by hand lives only there.
+      item = await this.planWith({ ...entry, parsed: entry.item.parsed }, toCandidate(stored), {
+        profiles,
+      });
+    } catch {
+      // The provider is down: the stored plan stands, and the executor still refuses to overwrite.
+      return entry;
+    }
+    if (persist) {
+      this.deps.entries.setMatch(entry.id, classifyItem(item), item);
+    }
+    return item.status === 'ready' ? { ...entry, item } : { held: main.destination };
   }
 
   private requireDoneJob(jobId: string): Job {
@@ -630,6 +791,17 @@ export class Service {
       return 'done';
     }
     const error: StoredError = main?.error ?? { code: 'main-not-done' };
+    if (main?.error?.code === 'destination.exists' && entry.item) {
+      // The name was taken between the plan and the write (the executor never overwrites): the
+      // file waits as a conflict, with its reason, instead of failing without one.
+      this.deps.entries.setMatch(entry.id, 'conflict', {
+        ...entry.item,
+        status: 'conflict',
+        operations: [],
+        conflicts: [{ reason: 'destination-exists', path: main.operation.destination }],
+      });
+      return 'failed';
+    }
     this.deps.entries.resolve(entry.id, 'failed', { error });
     return 'failed';
   }

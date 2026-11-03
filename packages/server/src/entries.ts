@@ -179,6 +179,23 @@ export class EntryStore {
       .map((row) => map(toEntry(row)));
   }
 
+  /**
+   * The ids of the files whose version could be named now: a planned movie (in place or waiting to
+   * be renamed) nobody has settled yet, without reading any of them.
+   */
+  versionableIds(jobId: string): Set<string> {
+    return new Set(
+      this.database
+        .prepare<[string], { id: string }>(
+          `SELECT id FROM job_entries
+           WHERE job_id = ? AND classification IN ('compliant', 'to-rename') AND item IS NOT NULL
+             AND ${openEntry()}`,
+        )
+        .all(jobId)
+        .map(({ id }) => id),
+    );
+  }
+
   /** The ids of the files `executable` returns that carry a plan, without reading any of them. */
   executableIds(jobId: string): Set<string> {
     return new Set(

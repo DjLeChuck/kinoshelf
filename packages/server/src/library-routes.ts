@@ -6,6 +6,7 @@ import {
   libraryId,
   loadProfile,
   type MovieDetails,
+  type PlanItem,
   type SeriesDetails,
   type Config,
   type ConfigEdit,
@@ -63,8 +64,19 @@ export interface LibraryContext {
   readonly seriesFiles: SeriesFilesStore;
   /** Plans and queues the transfers of a scan's files (see `POST /api/plans/{id}/execute`). */
   readonly batch: {
-    readonly dryRun: (jobId: string, entryIds: readonly string[]) => Promise<ExecutionReport>;
+    readonly dryRun: (
+      jobId: string,
+      entryIds: readonly string[],
+      overrides?: ReadonlyMap<string, PlanItem>,
+    ) => Promise<ExecutionReport>;
     readonly enqueue: (jobId: string, entryIds: readonly string[]) => Execution;
+    /** Plans the version names of movies (see `Service.planVersions`). */
+    readonly planVersions: (
+      jobId: string,
+      entryIds: readonly string[],
+      screenSize?: string,
+    ) => Promise<{ ready: Map<string, PlanItem>; refused: Map<string, PlanItem> }>;
+    readonly commitVersions: (ready: ReadonlyMap<string, PlanItem>) => void;
   };
   /** The provider's details of a work, for the page of one item. */
   readonly details: (
@@ -757,7 +769,10 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
     },
   );
 
-  api.post<{ Params: { id: string }; Body: { items: string[]; dryRun?: boolean } }>(
+  api.post<{
+    Params: { id: string };
+    Body: { items: string[]; dryRun?: boolean; version?: boolean; screenSize?: string };
+  }>(
     '/api/libraries/:id/execute',
     {
       schema: {
@@ -770,7 +785,11 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
           'is written (200, the report of `POST /api/plans/{id}/execute`, entries being the items’ ' +
           '`entryId`); otherwise the transfers are queued (202) and the batch appears in the history. ' +
           'Items with nothing to do (done, never scanned, unknown) are listed in `skipped`; 409 ' +
-          '`library.nothing-to-do` when none is left.',
+          '`library.nothing-to-do` when none is left. With `version`, the movies chosen are renamed ' +
+          'to say their version (`Title (2021) - 2160p`) even when they are already named as the ' +
+          'profile wants; the size comes from the file name, and a movie whose name gives none is ' +
+          'skipped (409 `library.version-unavailable` when that is all of them). `screenSize` ' +
+          '(`1080p`, `2160p`…) names the size when the file name gives none, or corrects it.',
         params: idParams,
         body: {
           type: 'object',
@@ -784,6 +803,8 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
               items: { type: 'string', maxLength: 64 },
             },
             dryRun: { type: 'boolean' },
+            version: { type: 'boolean' },
+            screenSize: { type: 'string', pattern: '^[0-9]{3,4}[pi]$' },
           },
         },
         response: {
@@ -802,6 +823,68 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
       }
       const rows = items.byItemIds(library.id, request.body.items);
       const skipped = new Set(request.body.items);
+      if (request.body.version) {
+        if (library.type !== 'movie') {
+          throw new ApiError(409, 'library.not-typed');
+        }
+        // The files that can take a version: movies nobody settled, whatever the scan made of them.
+        const eligible = new Map<string, Set<string>>();
+        const byJob = new Map<string, string[]>();
+        for (const row of rows) {
+          const { scanJobId, entryId } = row;
+          if (scanJobId === null || entryId === null) {
+            continue;
+          }
+          if (!eligible.has(scanJobId)) {
+            eligible.set(scanJobId, entries.versionableIds(scanJobId));
+          }
+          if (eligible.get(scanJobId)?.has(entryId)) {
+            byJob.set(scanJobId, [...(byJob.get(scanJobId) ?? []), entryId]);
+          }
+        }
+        const ready = new Map<string, Map<string, PlanItem>>();
+        let refused = 0;
+        const named = new Set<string>();
+        for (const [jobId, entryIds] of byJob) {
+          const planned = await ctx.batch.planVersions(jobId, entryIds, request.body.screenSize);
+          refused += planned.refused.size;
+          if (planned.ready.size > 0) {
+            ready.set(jobId, planned.ready);
+          }
+          for (const entryId of planned.ready.keys()) {
+            named.add(entryId);
+          }
+        }
+        if (ready.size === 0) {
+          throw new ApiError(
+            409,
+            refused > 0 ? 'library.version-unavailable' : 'library.nothing-to-do',
+          );
+        }
+        for (const row of rows) {
+          if (row.entryId !== null && named.has(row.entryId)) {
+            skipped.delete(itemId(row.path));
+          }
+        }
+        if (request.body.dryRun) {
+          const reports = await Promise.all(
+            [...ready].map(([jobId, plans]) => ctx.batch.dryRun(jobId, [...plans.keys()], plans)),
+          );
+          return {
+            batchId: reports[0]?.batchId ?? '',
+            dryRun: true,
+            items: reports.flatMap((report) => report.items),
+            skipped: [...skipped],
+          };
+        }
+        const executions = [...ready].map(([jobId, plans]) => {
+          ctx.batch.commitVersions(plans);
+          return ctx.batch.enqueue(jobId, [...plans.keys()]);
+        });
+        events.emit('jobs');
+        runner.kick();
+        return reply.code(202).send({ executions, skipped: [...skipped] });
+      }
       // What the scan planned, by the job that scanned it: its entries are what can still run.
       const byJob = new Map<string, string[]>();
       const runnable = new Map<string, Set<string>>();

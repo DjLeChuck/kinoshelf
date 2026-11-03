@@ -76,6 +76,7 @@ interface ArrivalBody {
   id: string;
   state: 'review' | 'unrecognized';
   error: { code: string } | null;
+  conflicts?: { reason: string }[];
 }
 
 /** What waits for a human: the arrivals (a path sent by hand is one). */
@@ -218,7 +219,84 @@ describe('POST /api/plans/{id}/execute', () => {
     });
   });
 
-  it('never overwrites: a destination taken in between fails the entry and returns it to the queue', async () => {
+  it('keeps two qualities of one movie from two releases, each in its own file', async () => {
+    const h = await harness();
+    const releases = await Promise.all(
+      ['Dune.2021.1080p.mkv', 'Dune.2021.2160p.mkv'].map(async (name) => {
+        const source = await makeDir();
+        await put(join(source, name), name);
+        const created = await h.request('POST', '/api/jobs', { path: source, apply: false });
+        return created.json<{ id: string }>().id;
+      }),
+    );
+    await h.app.jobs.idle();
+
+    // Both were planned before either moved: each saw a free folder.
+    for (const jobId of releases) {
+      expect(await transfer(h, jobId)).toMatchObject({
+        status: 'done',
+        summary: { done: 1, failed: 0 },
+      });
+    }
+
+    const folder = join(h.destination, 'Dune (2021) {tmdb-438631}');
+    expect((await readdir(folder)).sort()).toEqual([
+      'Dune (2021) {tmdb-438631} - 1080p.mkv',
+      'Dune (2021) {tmdb-438631} - 2160p.mkv',
+    ]);
+  });
+
+  it('finds a free name when a second release has the same quality but another source', async () => {
+    const h = await harness();
+    const jobs: string[] = [];
+    for (const name of ['Dune.2021.1080p.WEB-DL-AAA.mkv', 'Dune.2021.1080p.BluRay-AAA.mkv']) {
+      const source = await makeDir();
+      await put(
+        join(source, name),
+        `${name} as it was released`.slice(0, name.length + (name.includes('Blu') ? 3 : 7)),
+      );
+      const created = await h.request('POST', '/api/jobs', { path: source, apply: false });
+      jobs.push(created.json<{ id: string }>().id);
+    }
+    await h.app.jobs.idle();
+
+    for (const jobId of jobs) {
+      expect(await transfer(h, jobId)).toMatchObject({ summary: { done: 1, failed: 0 } });
+    }
+
+    const folder = join(h.destination, 'Dune (2021) {tmdb-438631}');
+    expect((await readdir(folder)).sort()).toEqual([
+      'Dune (2021) {tmdb-438631} - 1080p Blu-ray.mkv',
+      'Dune (2021) {tmdb-438631} - 1080p.mkv',
+    ]);
+  });
+
+  it('holds back a release no name can tell from one already there, and says why', async () => {
+    const h = await harness();
+    const jobs: string[] = [];
+    for (const folder of ['one', 'two']) {
+      const source = await makeDir();
+      await put(join(source, folder, 'Dune.2021.1080p.WEB-DL-AAA.mkv'), folder);
+      const created = await h.request('POST', '/api/jobs', { path: source, apply: false });
+      jobs.push(created.json<{ id: string }>().id);
+    }
+    await h.app.jobs.idle();
+
+    expect(await transfer(h, jobs[0] as string)).toMatchObject({ summary: { done: 1, failed: 0 } });
+    expect(await transfer(h, jobs[1] as string)).toMatchObject({ summary: { done: 0, failed: 1 } });
+
+    const waiting = await queue(h);
+    expect(waiting).toHaveLength(1);
+    expect(waiting[0]).toMatchObject({
+      state: 'review',
+      error: null,
+      conflicts: [{ reason: 'destination-exists' }],
+    });
+    // The one in place is untouched.
+    expect(await readdir(join(h.destination, 'Dune (2021) {tmdb-438631}'))).toHaveLength(1);
+  });
+
+  it('never overwrites: a destination taken in between holds the entry back as a conflict', async () => {
     const h = await harness();
     const { jobId, dune } = await analyzed(h);
     await put(duneTarget(h), 'someone else got here first');
@@ -227,17 +305,19 @@ describe('POST /api/plans/{id}/execute', () => {
 
     expect(execution).toMatchObject({ status: 'done', summary: { done: 0, failed: 1 } });
     expect(await readFile(duneTarget(h), 'utf8')).toBe('someone else got here first');
+    // It waits as a conflict that says why, not as a failure with a bare error.
     expect((await queue(h)).find((e) => e.id === dune.id)).toMatchObject({
       state: 'review',
-      error: { code: 'destination.exists' },
+      error: null,
+      conflicts: [{ reason: 'destination-exists' }],
     });
   });
 
   it('transfers only the files asked for', async () => {
     const h = await harness();
     const source = await makeDir();
-    await put(join(source, 'Dune.2021.1080p.mkv'), 'dune');
-    await put(join(source, 'Alien.1979.1080p.mkv'), 'alien');
+    await put(join(source, 'Dune.2021.mkv'), 'dune');
+    await put(join(source, 'Alien.1979.mkv'), 'alien');
     const jobId = (await h.request('POST', '/api/jobs', { path: source })).json<{ id: string }>()
       .id;
     await h.app.jobs.idle();

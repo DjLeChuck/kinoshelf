@@ -482,7 +482,12 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
       completeness,
       seriesFiles: seriesFilesStore,
       batch: {
-        dryRun: (jobId, entryIds) => service.dryRun(jobId, entryIds),
+        planVersions: (jobId, entryIds, screenSize) =>
+          service.planVersions(jobId, entryIds, screenSize),
+        commitVersions: (ready) => {
+          service.commitVersions(ready);
+        },
+        dryRun: (jobId, entryIds, overrides) => service.dryRun(jobId, entryIds, overrides),
         enqueue: (jobId, entryIds) => service.enqueue(jobId, entryIds),
       },
       details: (kind, id) => service.details(kind, id),
