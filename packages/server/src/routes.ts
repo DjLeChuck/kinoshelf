@@ -6,7 +6,7 @@ import { isSystemPath } from './system-paths.js';
 import { workKindOf, type Entry, type EntryStore } from './entries.js';
 import { resolutionOf } from './library-items.js';
 import type { EventBus } from './events.js';
-import type { ExecutionStore } from './executions.js';
+import type { Execution, ExecutionStore } from './executions.js';
 import type { History } from './history.js';
 import type { Job, JobStore } from './jobs.js';
 import type { ProgressTracker } from './progress.js';
@@ -150,6 +150,16 @@ const emptyBodyByDefault = (
   done();
 };
 
+/** A transfer with where it is, while it runs (in memory, like a scan's progress). */
+function presentExecution(
+  ctx: Pick<RouteContext, 'progress'>,
+  execution: Execution | undefined,
+): unknown {
+  return execution
+    ? { ...execution, progress: ctx.progress.transferOf(execution.id) ?? null }
+    : null;
+}
+
 /** A job as the API shows it: its row, a count of its files, its latest transfer, its settings, its progress. */
 export function jobPresenter(
   ctx: Pick<RouteContext, 'jobs' | 'entries' | 'executions' | 'progress'>,
@@ -157,7 +167,9 @@ export function jobPresenter(
   return (job) => ({
     ...job,
     summary: job.status === 'done' ? ctx.entries.summary(job.id) : null,
-    execution: ctx.executions.latestOf(job.id) ?? null,
+    execution: presentExecution(ctx, ctx.executions.latestOf(job.id)),
+    // The transfer going on (whoever's it is) while this job waits behind it.
+    transfer: job.status === 'queued' ? (ctx.progress.runningTransfer() ?? null) : null,
     settings: ctx.jobs.settings(job.id) ?? null,
     // Only while it runs: in memory, never stored.
     progress: ctx.progress.of(job.id) ?? null,

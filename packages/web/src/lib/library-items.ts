@@ -64,6 +64,13 @@ export interface ScanProgress {
   readonly idleSeconds: number;
 }
 
+/** Where a transfer is: files settled out of the files it goes through. */
+export interface TransferProgress {
+  readonly done: number;
+  readonly total: number;
+  readonly current: string | null;
+}
+
 export interface ItemsPage {
   readonly library: {
     readonly writes: { readonly nfo: boolean; readonly artwork: boolean };
@@ -74,6 +81,8 @@ export interface ItemsPage {
     readonly jobId: string;
     readonly status: 'queued' | 'running';
     readonly progress: ScanProgress | null;
+    /** The transfer this scan waits behind, if any. */
+    readonly transfer: TransferProgress | null;
   } | null;
   readonly counts: Counts;
   readonly total: number;
@@ -296,6 +305,7 @@ export const libraryItems = {
     api.get<{
       readonly status: 'queued' | 'running' | 'done' | 'failed';
       readonly progress: ScanProgress | null;
+      readonly transfer: TransferProgress | null;
     }>(`/api/jobs/${jobId}`),
 };
 

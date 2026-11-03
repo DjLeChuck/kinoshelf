@@ -323,6 +323,8 @@ export const fr: Record<keyof typeof en, string> = {
   'web.library.progress.identify': 'Identification',
   'web.library.progress.plan': 'Planification',
   'web.library.progress.waiting': 'En attente de son tour…',
+  'web.library.progress.transfer':
+    'En attente de la fin d’un transfert : {done} fichiers sur {total} traités',
   'web.library.progress.found':
     '{count, plural, one {# vidéo trouvée} other {# vidéos trouvées}} pour l’instant',
   'web.library.progress.done': '{done} sur {total} identifiés',
@@ -619,6 +621,8 @@ export const fr: Record<keyof typeof en, string> = {
   'web.history.job.title': 'Job {id}',
   'web.history.job.apply': 'Analyse et transfert',
   'web.history.job.analyse': 'Analyse seule',
+  'web.history.job.transfer': 'Transfert en cours : {done} fichiers sur {total} traités',
+  'web.history.job.transfer.label': 'Avancement du transfert',
   'web.history.job.files': '{count, plural, one {# fichier analysé} other {# fichiers analysés}}',
   'web.history.job.duration': 'durée {duration}',
   'web.history.job.cause': 'Cause',

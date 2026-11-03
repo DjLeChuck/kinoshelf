@@ -1572,6 +1572,11 @@ export interface paths {
                                 jobId: string;
                                 /** @enum {string} */
                                 status: "queued" | "running" | "done" | "failed";
+                                progress?: {
+                                    done: number;
+                                    total: number;
+                                    current: string | null;
+                                } | null;
                                 /** Format: date-time */
                                 createdAt: string;
                                 /** Format: date-time */
@@ -1605,6 +1610,11 @@ export interface paths {
                                 total: number;
                                 current: string | null;
                                 idleSeconds: number;
+                            } | null;
+                            transfer?: {
+                                done: number;
+                                total: number;
+                                current: string | null;
                             } | null;
                             settings: {
                                 profile: string;
@@ -1729,6 +1739,11 @@ export interface paths {
                                     total: number;
                                     current: string | null;
                                     idleSeconds: number;
+                                } | null;
+                                transfer: {
+                                    done: number;
+                                    total: number;
+                                    current: string | null;
                                 } | null;
                             } | null;
                             /** @description A movie library counts files. A series library counts shows, except `review` and `unrecognized`: those files belong to no show, so they stay counted as files. */
@@ -2302,6 +2317,11 @@ export interface paths {
                                 jobId: string;
                                 /** @enum {string} */
                                 status: "queued" | "running" | "done" | "failed";
+                                progress?: {
+                                    done: number;
+                                    total: number;
+                                    current: string | null;
+                                } | null;
                                 /** Format: date-time */
                                 createdAt: string;
                                 /** Format: date-time */
@@ -2653,6 +2673,11 @@ export interface paths {
                                 jobId: string;
                                 /** @enum {string} */
                                 status: "queued" | "running" | "done" | "failed";
+                                progress?: {
+                                    done: number;
+                                    total: number;
+                                    current: string | null;
+                                } | null;
                                 /** Format: date-time */
                                 createdAt: string;
                                 /** Format: date-time */
@@ -2686,6 +2711,11 @@ export interface paths {
                                 total: number;
                                 current: string | null;
                                 idleSeconds: number;
+                            } | null;
+                            transfer?: {
+                                done: number;
+                                total: number;
+                                current: string | null;
                             } | null;
                             settings: {
                                 profile: string;
@@ -2821,6 +2851,11 @@ export interface paths {
                                 jobId: string;
                                 /** @enum {string} */
                                 status: "queued" | "running" | "done" | "failed";
+                                progress?: {
+                                    done: number;
+                                    total: number;
+                                    current: string | null;
+                                } | null;
                                 /** Format: date-time */
                                 createdAt: string;
                                 /** Format: date-time */
@@ -2854,6 +2889,11 @@ export interface paths {
                                 total: number;
                                 current: string | null;
                                 idleSeconds: number;
+                            } | null;
+                            transfer?: {
+                                done: number;
+                                total: number;
+                                current: string | null;
                             } | null;
                             settings: {
                                 profile: string;
@@ -3753,6 +3793,11 @@ export interface paths {
                             jobId: string;
                             /** @enum {string} */
                             status: "queued" | "running" | "done" | "failed";
+                            progress?: {
+                                done: number;
+                                total: number;
+                                current: string | null;
+                            } | null;
                             /** Format: date-time */
                             createdAt: string;
                             /** Format: date-time */
@@ -3944,10 +3989,10 @@ export interface paths {
                             /** Format: date-time */
                             at: string;
                             /**
-                             * @description `failed`: nothing was transferred, so there is nothing to undo.
+                             * @description `queued`/`running`: its transfer is not over. `failed`: nothing was transferred, so there is nothing to undo.
                              * @enum {string}
                              */
-                            status: "done" | "undone" | "failed";
+                            status: "queued" | "running" | "done" | "undone" | "failed";
                             /** @description Transfers recorded in the journal. */
                             operations: number;
                             modes: ("copy" | "hardlink" | "move")[];

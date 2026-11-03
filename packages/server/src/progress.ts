@@ -14,6 +14,14 @@ export interface ScanProgress {
   readonly idleSeconds: number;
 }
 
+/** What a client shows of a running transfer: files settled out of the files it will go through. */
+export interface TransferProgress {
+  readonly done: number;
+  readonly total: number;
+  /** The last file settled (its source path). */
+  readonly current: string | null;
+}
+
 interface State {
   phase: ScanPhase;
   found: number;
@@ -33,6 +41,7 @@ export const NOTIFY_INTERVAL_MS = 500;
  */
 export class ProgressTracker {
   private readonly states = new Map<string, State>();
+  private readonly transfers = new Map<string, TransferProgress>();
   private lastNotified = 0;
   private timer: NodeJS.Timeout | undefined;
 
@@ -73,6 +82,33 @@ export class ProgressTracker {
 
   finish(jobId: string): void {
     this.states.delete(jobId);
+  }
+
+  /** A transfer begins: `total` files to settle, none yet. */
+  startTransfer(executionId: string, total: number): void {
+    this.transfers.set(executionId, { done: 0, total, current: null });
+    this.changed();
+  }
+
+  transferred(executionId: string, done: number, current: string): void {
+    const state = this.transfers.get(executionId);
+    if (state) {
+      this.transfers.set(executionId, { ...state, done, current });
+      this.changed();
+    }
+  }
+
+  finishTransfer(executionId: string): void {
+    this.transfers.delete(executionId);
+  }
+
+  transferOf(executionId: string): TransferProgress | undefined {
+    return this.transfers.get(executionId);
+  }
+
+  /** The transfer going on, whichever job it belongs to: the queue runs one task at a time. */
+  runningTransfer(): TransferProgress | undefined {
+    return this.transfers.values().next().value;
   }
 
   of(jobId: string): ScanProgress | undefined {

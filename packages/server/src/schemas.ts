@@ -38,6 +38,19 @@ const summarySchema = {
   properties: Object.fromEntries(CLASSIFICATIONS.map((name) => [name, { type: 'integer' }])),
 } as const;
 
+/** Files settled out of the files a running transfer goes through; null when it does not run. */
+export const transferProgressSchema = {
+  type: 'object',
+  nullable: true,
+  required: ['done', 'total', 'current'],
+  properties: {
+    done: { type: 'integer' },
+    total: { type: 'integer' },
+    /** The source of the last file settled. */
+    current: { type: 'string', nullable: true },
+  },
+} as const;
+
 /** A queued transfer: poll it until `done` or `failed`; the files show what became of each. */
 export const executionSchema = {
   type: 'object',
@@ -56,6 +69,8 @@ export const executionSchema = {
     id: { type: 'string', format: 'uuid' },
     jobId: { type: 'string', format: 'uuid' },
     status: { type: 'string', enum: ['queued', 'running', 'done', 'failed'] },
+    /** Where a running transfer is; only `GET /api/jobs/{id}` fills it. */
+    progress: transferProgressSchema,
     createdAt: { type: 'string', format: 'date-time' },
     startedAt: { type: 'string', format: 'date-time', nullable: true },
     finishedAt: { type: 'string', format: 'date-time', nullable: true },
@@ -120,6 +135,8 @@ export const jobSchema = {
     execution: { ...executionSchema, nullable: true },
     summary: { ...summarySchema, nullable: true },
     progress: progressSchema,
+    /** While the job waits its turn: the transfer in front of it, if that is what it waits for. */
+    transfer: transferProgressSchema,
     /** What the plan was built with; only an analysis that finished has it. */
     settings: {
       type: 'object',
@@ -341,8 +358,9 @@ const batchProperties = {
   at: { type: 'string', format: 'date-time' },
   status: {
     type: 'string',
-    enum: ['done', 'undone', 'failed'],
-    description: '`failed`: nothing was transferred, so there is nothing to undo.',
+    enum: ['queued', 'running', 'done', 'undone', 'failed'],
+    description:
+      '`queued`/`running`: its transfer is not over. `failed`: nothing was transferred, so there is nothing to undo.',
   },
   operations: { type: 'integer', description: 'Transfers recorded in the journal.' },
   modes: { type: 'array', items: { type: 'string', enum: ['copy', 'hardlink', 'move'] } },

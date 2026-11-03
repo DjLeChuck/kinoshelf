@@ -3,8 +3,9 @@ import type { ErrorBody } from './arrivals.js';
 import type { Library } from './libraries.js';
 import type { Mode } from './settings.js';
 
-export type BatchStatus = 'done' | 'undone' | 'failed';
 export type JobStatus = 'queued' | 'running' | 'done' | 'failed';
+/** `queued`/`running`: the transfer of a batch is not over. */
+export type BatchStatus = 'done' | 'undone' | 'failed' | 'queued' | 'running';
 export type { Mode };
 
 /** One line of `GET /api/history`: a batch, or a job that has none yet. */
@@ -37,6 +38,7 @@ export interface JobDetail {
     readonly status: JobStatus;
     readonly batchId: string | null;
     readonly error: ErrorBody | null;
+    readonly progress?: { readonly done: number; readonly total: number } | null;
   } | null;
   readonly summary: Readonly<Record<string, number>> | null;
   readonly settings: {
@@ -62,7 +64,7 @@ export interface BatchItem {
   readonly source: string;
   readonly destination: string | null;
   readonly mode: Mode;
-  readonly status: BatchStatus;
+  readonly status: Exclude<BatchStatus, 'queued' | 'running'>;
   readonly error: ErrorBody | null;
 }
 
@@ -96,6 +98,12 @@ export const STATUS_CHIP: Record<BatchStatus | JobStatus, string> = {
   queued: 'chip-neutral',
   running: 'chip-neutral',
 };
+
+/** An analysis that is done is not a job that is: its transfer may still run. */
+export const jobStatusOf = (job: Pick<JobDetail, 'status' | 'execution'>): JobStatus =>
+  job.execution?.status === 'queued' || job.execution?.status === 'running'
+    ? job.execution.status
+    : job.status;
 
 /** Only a batch that transferred something and was not reverted has anything to undo. */
 export const canUndo = (batch: Pick<BatchSummary, 'status'>): boolean => batch.status === 'done';

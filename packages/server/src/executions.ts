@@ -124,6 +124,18 @@ export class ExecutionStore {
     );
   }
 
+  /** The jobs whose transfer is waiting or running, with where it is. */
+  unfinished(): Map<string, 'queued' | 'running'> {
+    return new Map(
+      this.database
+        .prepare<[], { job_id: string; status: 'queued' | 'running' }>(
+          "SELECT job_id, status FROM executions WHERE status IN ('queued', 'running') ORDER BY seq",
+        )
+        .all()
+        .map((row) => [row.job_id, row.status]),
+    );
+  }
+
   latestOf(jobId: string): Execution | undefined {
     const row = this.database
       .prepare<[string], ExecutionRow>(

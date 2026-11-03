@@ -221,7 +221,21 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
           app.log.warn(error, `Left out a folder that cannot be read: ${path}`);
         },
       }),
-    (execution) => service.run(execution),
+    async (execution) => {
+      try {
+        return await service.run(
+          execution,
+          (done, _total, path) => {
+            progress.transferred(execution.id, done, path);
+          },
+          (total) => {
+            progress.startTransfer(execution.id, total);
+          },
+        );
+      } finally {
+        progress.finishTransfer(execution.id);
+      }
+    },
     {
       scanned: async (job) => {
         // Before the snapshot and the notification: a file is planned for the library it goes to.

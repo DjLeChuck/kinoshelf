@@ -309,6 +309,7 @@ export const en = {
   'web.library.progress.identify': 'Identifying',
   'web.library.progress.plan': 'Planning',
   'web.library.progress.waiting': 'Waiting for its turn…',
+  'web.library.progress.transfer': 'Waiting for a transfer to end: {done} of {total} files done',
   'web.library.progress.found':
     '{count, plural, one {# video found} other {# videos found}} so far',
   'web.library.progress.done': '{done} of {total} identified',
@@ -598,6 +599,8 @@ export const en = {
   'web.history.job.title': 'Job {id}',
   'web.history.job.apply': 'Analysis and transfer',
   'web.history.job.analyse': 'Analysis only',
+  'web.history.job.transfer': 'Transfer in progress: {done} of {total} files done',
+  'web.history.job.transfer.label': 'Transfer progress',
   'web.history.job.files': '{count, plural, one {# file analysed} other {# files analysed}}',
   'web.history.job.duration': 'took {duration}',
   'web.history.job.cause': 'Cause',

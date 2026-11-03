@@ -1,8 +1,16 @@
 <script lang="ts">
   import { t } from '../lib/i18n.svelte.js';
-  import { isStalled, scanPercent, type ScanProgress } from '../lib/library-items.js';
+  import {
+    isStalled,
+    scanPercent,
+    type ScanProgress,
+    type TransferProgress,
+  } from '../lib/library-items.js';
 
-  let { progress }: { progress: ScanProgress | null } = $props();
+  let {
+    progress,
+    transfer = null,
+  }: { progress: ScanProgress | null; transfer?: TransferProgress | null } = $props();
 
   const PHASES = ['discover', 'identify', 'plan'] as const;
   const percent = $derived(scanPercent(progress));
@@ -27,7 +35,9 @@
   {/if}
 
   <p class="muted detail">
-    {#if progress === null}
+    {#if progress === null && transfer}
+      {t('web.library.progress.transfer', { done: transfer.done, total: transfer.total })}
+    {:else if progress === null}
       {t('web.library.progress.waiting')}
     {:else if percent === undefined}
       {t('web.library.progress.found', { count: progress.found })}
@@ -35,7 +45,9 @@
       {t('web.library.progress.done', { done: progress.done, total: progress.total })}
     {/if}
   </p>
-  {#if progress?.current}<p class="muted mono current">{progress.current}</p>{/if}
+  {#if progress?.current ?? transfer?.current}<p class="muted mono current">
+      {progress?.current ?? transfer?.current}
+    </p>{/if}
   {#if isStalled(progress)}<p class="alert">{t('web.library.progress.stalled')}</p>{/if}
 </div>
 

@@ -10,6 +10,7 @@
     analysed,
     formatDate,
     formatDuration,
+    jobStatusOf,
     resendRequest,
     rootsOf,
     shortId,
@@ -35,7 +36,7 @@
   // The parent keys this component on the job, so `id` does not change during its life.
   const loaded = resource(
     () => api.get<JobDetail>(`/api/jobs/${id}`),
-    ['jobs', 'history', 'ready'],
+    ['jobs', 'history', 'ready', 'progress'],
   );
   const job = $derived(loaded.value);
   const failure = $derived(loaded.failure);
@@ -61,6 +62,9 @@
   // A failure the server stored (the job's, a file's) is a code and its parameters, not a thrown
   // ApiError: `messageOf` would only say something went wrong.
   const describe = (error: ErrorBody): string => describeError(t, error);
+
+  const status = $derived(job ? jobStatusOf(job) : 'queued');
+  const transfer = $derived(job?.execution?.status === 'running' ? job.execution.progress : null);
 
   const duration = $derived(
     job?.startedAt && job.finishedAt ? formatDuration(job.startedAt, job.finishedAt) : undefined,
@@ -97,8 +101,21 @@
           {#if duration}· {t('web.history.job.duration', { duration })}{/if}
         </p>
       </div>
-      <span class="chip {STATUS_CHIP[job.status]}">{t(`web.history.status.${job.status}`)}</span>
+      <span class="chip {STATUS_CHIP[status]}">{t(`web.history.status.${status}`)}</span>
     </header>
+
+    {#if transfer}
+      <div class="transfer" role="status" aria-live="polite">
+        <progress
+          max={Math.max(transfer.total, 1)}
+          value={transfer.done}
+          aria-label={t('web.history.job.transfer.label')}
+        ></progress>
+        <p class="muted">
+          {t('web.history.job.transfer', { done: transfer.done, total: transfer.total })}
+        </p>
+      </div>
+    {/if}
 
     {#each causes as cause (cause.label)}
       <section class="cause" role="alert" aria-labelledby={cause.label}>
@@ -166,6 +183,11 @@
 {/if}
 
 <style>
+  .transfer progress {
+    width: 100%;
+    accent-color: var(--accent);
+  }
+
   article {
     display: flex;
     flex-direction: column;

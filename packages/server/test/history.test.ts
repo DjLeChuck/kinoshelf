@@ -1,3 +1,4 @@
+import { ExecutionStore } from '../src/executions.js';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { SqliteJournal } from '@kinoshelf/core';
@@ -210,6 +211,23 @@ describe('GET /api/history, jobs', () => {
     // Nothing kicks the runner before `idle`, so the job is still queued.
     const queued = await submit(h, await makeDir());
     expect((await list(h))[0]).toMatchObject({ id: queued, kind: 'job', routine: false });
+  });
+
+  it('keeps saying a job works while its transfer waits', async () => {
+    const h = await harness();
+    const source = await makeDir();
+    await put(join(source, 'Dune.2021.mkv'));
+    const analysed = await submit(h, source);
+    await h.app.jobs.idle();
+    // Stored but not kicked: the analysis is done, its transfer is not.
+    new ExecutionStore(h.database).create(analysed);
+
+    const line = (await view(h, '?all=true')).items.find((item) => item.id === analysed);
+    expect(line).toMatchObject({ kind: 'job', status: 'queued' });
+    const job = (await h.request('GET', `/api/jobs/${analysed}`)).json<{
+      execution: { status: string; progress: unknown };
+    }>();
+    expect(job.execution).toMatchObject({ status: 'queued', progress: null });
   });
 
   it('hides a job that finished and moved nothing, unless asked for all', async () => {

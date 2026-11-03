@@ -44,6 +44,7 @@ import {
   selectionReportSchema,
   selectionRunSchema,
   progressSchema,
+  transferProgressSchema,
   seasonSchema,
   showSchema,
   type Paging,
@@ -434,12 +435,14 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
               scan: {
                 type: 'object',
                 nullable: true,
-                required: ['jobId', 'status', 'progress'],
+                required: ['jobId', 'status', 'progress', 'transfer'],
                 properties: {
                   jobId: { type: 'string', format: 'uuid' },
                   status: { type: 'string', enum: ['queued', 'running'] },
                   /** Where the analysis is; null while it waits its turn. */
                   progress: progressSchema,
+                  /** The transfer this scan waits behind, if any. */
+                  transfer: transferProgressSchema,
                 },
               },
               counts: {
@@ -492,6 +495,8 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
               jobId: running.id,
               status: running.status,
               progress: ctx.progress.of(running.id) ?? null,
+              transfer:
+                running.status === 'queued' ? (ctx.progress.runningTransfer() ?? null) : null,
             }
           : null,
         counts: items.counts(library.id, library.type === 'series'),

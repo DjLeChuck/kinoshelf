@@ -34,6 +34,20 @@ describe('ProgressTracker', () => {
     expect(tracker.of('j')).toBeUndefined();
   });
 
+  it('follows a transfer file by file, then forgets it', () => {
+    const tracker = new ProgressTracker(() => undefined);
+    expect(tracker.runningTransfer()).toBeUndefined();
+    tracker.startTransfer('e', 40);
+    expect(tracker.transferOf('e')).toEqual({ done: 0, total: 40, current: null });
+    tracker.transferred('e', 12, 'a/b.mkv');
+    expect(tracker.runningTransfer()).toEqual({ done: 12, total: 40, current: 'a/b.mkv' });
+    tracker.finishTransfer('e');
+    expect(tracker.transferOf('e')).toBeUndefined();
+    // A late report of a finished transfer is ignored, not resurrected.
+    tracker.transferred('e', 13, 'c.mkv');
+    expect(tracker.transferOf('e')).toBeUndefined();
+  });
+
   it('counts the seconds since anything moved, by its own clock', () => {
     let now = 1_000_000;
     const tracker = new ProgressTracker(

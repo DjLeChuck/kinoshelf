@@ -140,7 +140,15 @@
         current?.jobId === scan.jobId &&
         (job.status === 'queued' || job.status === 'running')
       ) {
-        page = { ...page, scan: { ...current, status: job.status, progress: job.progress } };
+        page = {
+          ...page,
+          scan: {
+            ...current,
+            status: job.status,
+            progress: job.progress,
+            transfer: job.transfer,
+          },
+        };
       }
     } catch {
       // The next full load says what went wrong.
@@ -210,7 +218,7 @@
     </p>
   {/if}
 
-  {#if page?.scan}<ScanProgress progress={page.scan.progress} />{/if}
+  {#if page?.scan}<ScanProgress progress={page.scan.progress} transfer={page.scan.transfer} />{/if}
 
   {#if notice}<p class="alert notice" role="status">{notice}</p>{/if}
 

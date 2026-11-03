@@ -414,7 +414,11 @@ export class Service {
    * before writing. Each file is settled as soon as it is transferred, in step with the journal:
    * after a crash the execution only has what is left to do.
    */
-  async run(execution: Execution): Promise<ExecutionOutcome> {
+  async run(
+    execution: Execution,
+    onSettled?: (done: number, total: number, path: string) => void,
+    onStart?: (total: number) => void,
+  ): Promise<ExecutionOutcome> {
     const groups = await this.prepare(execution.jobId, execution.entryIds ?? undefined);
     // A resumed execution keeps its batch: what it did before the crash and what it does now are
     // one batch in the journal, so one undo reverts them all.
@@ -423,6 +427,8 @@ export class Service {
       this.deps.executions.setBatch(execution.id, batchId);
     }
 
+    const total = groups.reduce((sum, group) => sum + group.entryOfItem.size, 0);
+    onStart?.(total);
     let done = 0;
     let failed = 0;
     const files: OutcomeFile[] = [];
@@ -446,6 +452,7 @@ export class Service {
           status,
           ...(status === 'failed' && { error: main?.error ?? { code: 'main-not-done' } }),
         });
+        onSettled?.(done + failed, total, entry.path);
       });
     }
     await this.deps.snapshot.transferred(execution.jobId, settled);

@@ -19,7 +19,8 @@ export interface BatchOrigin {
 export interface BatchSummary {
   readonly id: string;
   readonly at: string;
-  readonly status: BatchStatus;
+  /** `queued`/`running` while its transfer is not over: the journal already holds what went through. */
+  readonly status: BatchStatus | 'queued' | 'running';
   readonly operations: number;
   readonly modes: readonly TransferMode[];
   /** Files that did not go through in a batch that did transfer others. */
@@ -114,6 +115,7 @@ export class History {
     };
     const batched = new Set(withBatch.filter(isFinished).map((execution) => execution.jobId));
     const executed = this.executions.jobsWithExecution();
+    const unfinished = this.executions.unfinished();
     // A line of the page is one of the newest of its own kind: only that many batches are read.
     const wanted = options.offset + options.limit;
     const journaled = this.journal.batches(wanted);
@@ -138,7 +140,8 @@ export class History {
             id: job.id,
             kind: 'job',
             at: job.finishedAt ?? job.createdAt,
-            status: job.status,
+            // A job whose analysis is done but whose transfer is not is still at work.
+            status: unfinished.get(job.id) ?? job.status,
             path: job.path,
             operations: 0,
             failed: 0,
@@ -231,7 +234,7 @@ export class History {
     return {
       id: batch.batchId,
       at: batch.at,
-      status: batch.undone ? 'undone' : 'done',
+      status: unfinishedStatus(execution) ?? (batch.undone ? 'undone' : 'done'),
       operations: batch.operations,
       modes: batch.modes,
       failed: execution?.summary?.failed ?? 0,
@@ -254,6 +257,10 @@ export class History {
     };
   }
 }
+
+/** `queued` or `running` while the transfer is not over, so a line never says "done" too soon. */
+const unfinishedStatus = (execution: Execution | undefined): 'queued' | 'running' | undefined =>
+  execution?.status === 'queued' || execution?.status === 'running' ? execution.status : undefined;
 
 const isFinished = (execution: Execution): boolean =>
   execution.status === 'done' || execution.status === 'failed';
