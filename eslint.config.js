@@ -4,7 +4,14 @@ import tseslint from 'typescript-eslint';
 const webProject = './packages/web/tsconfig.json';
 
 export default tseslint.config(
-  { ignores: ['**/dist/**', '**/coverage/**', 'node_modules/**'] },
+  {
+    ignores: [
+      '**/dist/**',
+      '**/coverage/**',
+      'node_modules/**',
+      'packages/web/src/lib/api-schema.d.ts',
+    ],
+  },
   ...tseslint.configs.strictTypeChecked,
   {
     languageOptions: {
