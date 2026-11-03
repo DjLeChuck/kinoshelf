@@ -1,4 +1,5 @@
 import type { Database } from 'better-sqlite3';
+import { unsettledEntry } from './entry-sql.js';
 
 const DAY_MS = 86_400_000;
 
@@ -49,7 +50,7 @@ const FORGOTTEN_JOBS = `
       NOT EXISTS (
         SELECT 1 FROM job_entries e
         WHERE e.job_id = j.id
-          AND ((e.resolution IS NULL AND e.classification <> 'compliant') OR e.resolution = 'failed')
+          AND ${unsettledEntry('e')}
       )
       OR (${SUPERSEDED} AND j.path = (SELECT value FROM json_each(?) WHERE key = j.library_id))
     )`;

@@ -8,6 +8,7 @@ import type {
   ScoredCandidate,
 } from '@kinoshelf/core';
 import type { Database } from 'better-sqlite3';
+import { openEntry, REVIEW_ENTRY, UNRECOGNIZED_ENTRY } from './entry-sql.js';
 
 /** How a file left the queue: transferred, failed (needs a human again) or set aside. */
 export type Resolution = 'done' | 'failed' | 'ignored';
@@ -185,7 +186,7 @@ export class EntryStore {
         .prepare<[string], { id: string }>(
           `SELECT id FROM job_entries
            WHERE job_id = ? AND classification = 'to-rename' AND item IS NOT NULL
-             AND (resolution IS NULL OR resolution = 'failed')`,
+             AND ${openEntry()}`,
         )
         .all(jobId)
         .map(({ id }) => id),
@@ -204,9 +205,8 @@ export class EntryStore {
     offset: number;
   }): { total: number; entries: Entry[] } {
     const marks = options.arrivalIds.map(() => '?').join(', ');
-    const review =
-      "((classification IN ('ambiguous', 'conflict') AND resolution IS NULL) OR resolution = 'failed')";
-    const unrecognized = "(classification = 'unrecognized' AND resolution IS NULL)";
+    const review = REVIEW_ENTRY;
+    const unrecognized = UNRECOGNIZED_ENTRY;
     const state =
       options.state === 'review'
         ? review
@@ -276,7 +276,7 @@ export class EntryStore {
       .prepare<[string], EntryRow>(
         `SELECT ${COLUMNS} FROM job_entries
          WHERE job_id = ? AND classification = 'to-rename'
-           AND (resolution IS NULL OR resolution = 'failed')
+           AND ${openEntry()}
          ORDER BY seq`,
       )
       .all(jobId)
