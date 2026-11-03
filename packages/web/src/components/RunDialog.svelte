@@ -5,6 +5,8 @@
   import { t } from '../lib/i18n.svelte.js';
   import {
     libraryItems,
+    PICTURE_SIZES,
+    sizeOfItem,
     tally,
     type LibraryItem,
     type ReportOperation,
@@ -21,7 +23,7 @@
     libraryId: string;
     /** The items to run: what the preview shows and the run does. */
     items: readonly LibraryItem[];
-    mode: 'rename' | 'refresh';
+    mode: 'rename' | 'refresh' | 'version';
     onclose: () => void;
     /** The batch was queued: what to tell the user. */
     ondone: (message: string) => void;
@@ -40,11 +42,28 @@
     dialog?.showModal();
   });
 
+  // Naming a version needs a size: the name's, when it says one, else the owner's pick.
+  let size = $state(items[0] ? sizeOfItem(items[0]) : '');
+  const version = $derived(mode === 'version' && size !== '' ? { screenSize: size } : undefined);
+
+  let latest = 0;
   async function load(): Promise<void> {
+    const ticket = ++latest;
+    report = undefined;
+    failure = undefined;
+    if (mode === 'version' && version === undefined) {
+      return;
+    }
     try {
-      report = await libraryItems.preview(libraryId, ids);
+      const answer = await libraryItems.preview(libraryId, ids, version);
+      // An answer that comes after another choice of size is stale.
+      if (ticket === latest) {
+        report = answer;
+      }
     } catch (error) {
-      failure = error;
+      if (ticket === latest) {
+        failure = error;
+      }
     }
   }
   void load();
@@ -52,7 +71,7 @@
   async function run(): Promise<void> {
     running = true;
     try {
-      await libraryItems.run(libraryId, ids);
+      await libraryItems.run(libraryId, ids, version);
       ondone(t('web.library.run.started'));
     } catch (error) {
       failure = error;
@@ -71,8 +90,27 @@
 <dialog bind:this={dialog} class="card" aria-labelledby="run-title" {onclose}>
   <h2 id="run-title">{t(`web.library.run.title.${mode}`)}</h2>
 
+  {#if mode === 'version'}
+    <label class="size">
+      {t('web.library.run.size')}
+      <select
+        bind:value={size}
+        onchange={() => {
+          void load();
+        }}
+      >
+        <option value="" disabled>{t('web.library.run.size.pick')}</option>
+        {#each PICTURE_SIZES as option (option)}
+          <option value={option}>{option}</option>
+        {/each}
+      </select>
+    </label>
+  {/if}
+
   {#if failure}
     <p class="alert alert-danger" role="alert">{messageOf(t, failure)}</p>
+  {:else if mode === 'version' && version === undefined}
+    <p class="muted">{t('web.library.run.size.needed')}</p>
   {:else if report === undefined || totals === undefined}
     <p class="muted" role="status">{t('web.loading')}</p>
   {:else}
@@ -120,7 +158,7 @@
     <button
       type="button"
       class="btn btn-primary"
-      disabled={running || report === undefined || totals?.failed !== 0}
+      disabled={running || report === undefined || failure !== undefined || totals?.failed !== 0}
       onclick={() => void run()}
     >
       {t('web.library.run.confirm')}
@@ -160,6 +198,13 @@
 
   dialog::backdrop {
     background: rgb(0 0 0 / 50%);
+  }
+
+  .size {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
   }
 
   h2 {

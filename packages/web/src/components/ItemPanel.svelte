@@ -7,6 +7,7 @@
   import { t } from '../lib/i18n.svelte.js';
   import type { Arrival } from '../lib/arrivals.js';
   import {
+    canNameVersion,
     canRun,
     isSettling,
     libraryItems,
@@ -34,7 +35,7 @@
   let detail = $state<ItemDetail | undefined>(undefined);
   let entry = $state<Arrival | undefined>(undefined);
   let failure = $state<unknown>(undefined);
-  let running = $state(false);
+  let running = $state<'rename' | 'refresh' | 'version' | undefined>(undefined);
 
   async function load(): Promise<void> {
     const { entryId, id } = item;
@@ -103,11 +104,25 @@
           type="button"
           class="btn btn-primary"
           onclick={() => {
-            running = true;
+            running = item.state === 'rename' ? 'rename' : 'refresh';
           }}
         >
           {t(item.state === 'rename' ? 'web.library.run.rename' : 'web.library.run.refresh')}
         </button>
+      </div>
+    {/if}
+    {#if canNameVersion(item)}
+      <div>
+        <button
+          type="button"
+          class="btn"
+          onclick={() => {
+            running = 'version';
+          }}
+        >
+          {t('web.library.run.version')}
+        </button>
+        <p class="muted">{t('web.library.run.version.hint')}</p>
       </div>
     {/if}
   </WorkCard>
@@ -115,9 +130,9 @@
     <RunDialog
       {libraryId}
       items={[item]}
-      mode={item.state === 'rename' ? 'rename' : 'refresh'}
+      mode={running}
       onclose={() => {
-        running = false;
+        running = undefined;
       }}
       {ondone}
     />

@@ -231,6 +231,31 @@ export interface RunReport {
 export const canRun = (item: Pick<LibraryItem, 'state'>): boolean =>
   item.state === 'rename' || item.state === 'incomplete';
 
+/** The picture sizes offered when naming a version by hand, the highest first. */
+export const PICTURE_SIZES = ['2160p', '1440p', '1080p', '720p', '576p', '480p'] as const;
+
+/** Naming a version: the size to use (chosen by hand, or the one the name says). */
+export interface VersionRequest {
+  readonly screenSize: string;
+}
+
+const versionBody = (version: VersionRequest | undefined) =>
+  version === undefined ? {} : { version: true, screenSize: version.screenSize };
+
+/** The size to start from for an item: the one its name says, when it is one that can be picked. */
+export const sizeOfItem = (item: Pick<LibraryItem, 'resolution'>): string =>
+  PICTURE_SIZES.find((size) => size === item.resolution) ?? '';
+
+/**
+ * A movie can be asked to name its version (`- 2160p`) whatever its state: the size is the one its
+ * file name says, or one chosen by hand.
+ */
+export const canNameVersion = (item: Pick<LibraryItem, 'kind' | 'entryId' | 'state'>): boolean =>
+  item.kind === 'movie' &&
+  item.entryId !== null &&
+  item.state !== 'review' &&
+  item.state !== 'unrecognized';
+
 /** A selection split by what it asks: "Rename" takes the first, "Refresh" the second. */
 export function partition(items: readonly Pick<LibraryItem, 'id' | 'state'>[]): {
   readonly rename: string[];
@@ -282,10 +307,17 @@ export async function inChunks<
 }
 
 export const libraryItems = {
-  preview: (libraryId: string, items: readonly string[]) =>
-    api.post<RunReport>(`/api/libraries/${libraryId}/execute`, { items, dryRun: true }),
-  run: (libraryId: string, items: readonly string[]) =>
-    api.post<{ skipped: readonly string[] }>(`/api/libraries/${libraryId}/execute`, { items }),
+  preview: (libraryId: string, items: readonly string[], version?: VersionRequest) =>
+    api.post<RunReport>(`/api/libraries/${libraryId}/execute`, {
+      items,
+      dryRun: true,
+      ...versionBody(version),
+    }),
+  run: (libraryId: string, items: readonly string[], version?: VersionRequest) =>
+    api.post<{ skipped: readonly string[] }>(`/api/libraries/${libraryId}/execute`, {
+      items,
+      ...versionBody(version),
+    }),
   page: (libraryId: string, query: ItemsQuery) =>
     inChunks(query.limit, (limit, offset) =>
       api.get<ItemsPage>(itemsUrl(libraryId, { ...query, limit, offset })),

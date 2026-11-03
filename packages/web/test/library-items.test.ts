@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   inChunks,
+  canNameVersion,
+  PICTURE_SIZES,
+  sizeOfItem,
   canRun,
   episodeLabel,
   isSettling,
@@ -98,6 +101,28 @@ describe('canRun and partition', () => {
   it('keeps what has something to run, and splits it by what is asked', () => {
     expect(rows.filter(canRun).map(({ id }) => id)).toEqual(['a', 'b']);
     expect(partition(rows)).toEqual({ rename: ['a'], refresh: ['b'] });
+  });
+});
+
+describe('canNameVersion', () => {
+  const movie = { kind: 'movie', entryId: 'e', state: 'ok' } as const;
+
+  it('is offered for a movie, whatever its state and whether or not its name says a size', () => {
+    expect(canNameVersion(movie)).toBe(true);
+    expect(canNameVersion({ ...movie, state: 'rename' })).toBe(true);
+  });
+
+  it('is not offered when the server would refuse', () => {
+    expect(canNameVersion({ ...movie, entryId: null })).toBe(false);
+    expect(canNameVersion({ ...movie, kind: 'series' })).toBe(false);
+    expect(canNameVersion({ ...movie, state: 'review' })).toBe(false);
+  });
+
+  it('starts from the size the name says when it can be picked, else from none', () => {
+    expect(sizeOfItem({ resolution: '1080p' })).toBe('1080p');
+    expect(sizeOfItem({ resolution: null })).toBe('');
+    expect(sizeOfItem({ resolution: '8k' })).toBe('');
+    expect(PICTURE_SIZES[0]).toBe('2160p');
   });
 });
 
