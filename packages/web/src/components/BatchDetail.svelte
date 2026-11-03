@@ -106,7 +106,8 @@
           <li>
             <div class="row">
               <strong class="mono">{releaseName(item.source)}</strong>
-              <span class="chip chip-neutral">{t(`web.history.mode.${item.mode}`)}</span>
+              <span class="chip chip-neutral">{t(`web.settings.processing.mode.${item.mode}`)}</span
+              >
               <span class="chip {STATUS_CHIP[item.status]}"
                 >{t(`web.history.item.${item.status}`)}</span
               >

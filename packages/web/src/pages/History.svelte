@@ -174,7 +174,9 @@
                           count: line.failed,
                         })}{/if}
                       {#if line.modes.length > 0}
-                        · {line.modes.map((mode) => t(`web.history.mode.${mode}`)).join(', ')}
+                        · {line.modes
+                          .map((mode) => t(`web.settings.processing.mode.${mode}`))
+                          .join(', ')}
                       {/if}
                     </span>
                   {:else}
@@ -190,7 +192,7 @@
           </ul>
           {#if items.length < total}
             <button type="button" class="btn" onclick={() => void more()}>
-              {t('web.history.more', { shown: items.length, total })}
+              {t('web.library.more', { shown: items.length, total })}
             </button>
           {/if}
         </div>

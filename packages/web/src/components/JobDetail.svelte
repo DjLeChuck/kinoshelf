@@ -131,7 +131,7 @@
           <dt>{t('web.history.job.used.profile')}</dt>
           <dd class="mono">{job.settings.profile}</dd>
           <dt>{t('web.history.job.used.mode')}</dt>
-          <dd>{t(`web.history.mode.${job.settings.mode}`)}</dd>
+          <dd>{t(`web.settings.processing.mode.${job.settings.mode}`)}</dd>
           {#if roots.movies === roots.series}
             <dt>{t('web.history.job.used.destination')}</dt>
             <dd class="mono">{roots.movies}</dd>

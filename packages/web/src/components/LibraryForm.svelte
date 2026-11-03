@@ -56,7 +56,13 @@
     try {
       const body = libraryBody(form, library === undefined);
       if ('invalid' in body) {
-        throw new FormError(t(`web.libraries.invalid.${body.invalid}`));
+        throw new FormError(
+          t(
+            body.invalid === 'threshold'
+              ? 'web.settings.invalid.threshold'
+              : `web.libraries.invalid.${body.invalid}`,
+          ),
+        );
       }
       const result = library
         ? await libraryApi.update(library.id, body)

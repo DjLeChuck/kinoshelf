@@ -187,7 +187,7 @@ export function renderUndo(result: UndoResult, t: Translate): { lines: string[];
     } else if (error) {
       lines.push(`  ${status === 'failed' ? '✗' : '⚠'} ${entry.destination}`);
       lines.push(
-        `      ${t(status === 'failed' ? 'undo.failed' : 'undo.skipped', { reason: describeError(t, error) })}`,
+        `      ${t(status === 'failed' ? 'result.failed' : 'result.skipped', { reason: describeError(t, error) })}`,
       );
     }
   }

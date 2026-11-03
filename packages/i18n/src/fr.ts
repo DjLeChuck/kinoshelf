@@ -112,8 +112,6 @@ export const fr: Record<keyof typeof en, string> = {
 
   'undo.nothing': 'Rien à annuler.',
   'undo.header': 'Lot : {batch}',
-  'undo.skipped': 'ignoré : {reason}',
-  'undo.failed': 'échec : {reason}',
   'undo.summary': '{undone} annulés, {skipped} ignorés, {failed} en échec.',
   'undo.dry-run': 'Simulation : rien n’a été modifié. Ajoutez --apply pour annuler.',
 
@@ -414,7 +412,6 @@ export const fr: Record<keyof typeof en, string> = {
   'web.libraries.delete.cancel': 'Annuler',
   'web.libraries.invalid.source': 'Indiquez le dossier source, en chemin absolu.',
   'web.libraries.invalid.profile': 'Indiquez le chemin du fichier de profil.',
-  'web.libraries.invalid.threshold': 'Le seuil est un nombre de 0 à 100.',
   'web.welcome.eyebrow': 'Bienvenue',
   'web.welcome.title': 'Mettons de l’ordre dans vos films et séries',
   'web.welcome.intro':
@@ -581,9 +578,6 @@ export const fr: Record<keyof typeof en, string> = {
   'web.history.files': '{count, plural, one {# fichier} other {# fichiers}}',
   'web.history.failed-files': '{count} en échec',
   'web.history.origin.cli': 'Ligne de commande',
-  'web.history.mode.copy': 'Copie',
-  'web.history.mode.hardlink': 'Lien dur',
-  'web.history.mode.move': 'Déplacement',
   'web.history.select': 'Choisissez une ligne pour voir son détail.',
   'web.history.submitted': 'Soumis',
   'web.history.items': 'Fichiers',
@@ -615,7 +609,6 @@ export const fr: Record<keyof typeof en, string> = {
   'web.history.show-all': 'Afficher toutes les analyses',
   'web.history.show-all.hint':
     'Les analyses terminées qui n’ont rien déplacé sont conservées, seulement masquées par défaut.',
-  'web.history.more': 'Afficher la suite ({shown} sur {total})',
   'web.history.kind.job': 'Analyse',
   'web.history.routine': 'rien de déplacé',
   'web.history.job.title': 'Job {id}',

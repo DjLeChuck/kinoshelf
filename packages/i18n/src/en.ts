@@ -111,8 +111,6 @@ export const en = {
 
   'undo.nothing': 'Nothing to undo.',
   'undo.header': 'Batch: {batch}',
-  'undo.skipped': 'skipped: {reason}',
-  'undo.failed': 'failed: {reason}',
   'undo.summary': '{undone} reverted, {skipped} skipped, {failed} failed.',
   'undo.dry-run': 'Dry run: nothing was changed. Add --apply to revert.',
 
@@ -397,7 +395,6 @@ export const en = {
   'web.libraries.delete.cancel': 'Cancel',
   'web.libraries.invalid.source': 'Give the source folder, as an absolute path.',
   'web.libraries.invalid.profile': 'Give the path of the profile file.',
-  'web.libraries.invalid.threshold': 'The threshold is a number from 0 to 100.',
   'web.welcome.eyebrow': 'Welcome',
   'web.welcome.title': 'Let’s put your movies and series in order',
   'web.welcome.intro':
@@ -560,9 +557,6 @@ export const en = {
   'web.history.files': '{count, plural, one {# file} other {# files}}',
   'web.history.failed-files': '{count} failed',
   'web.history.origin.cli': 'Command line',
-  'web.history.mode.copy': 'Copy',
-  'web.history.mode.hardlink': 'Hardlink',
-  'web.history.mode.move': 'Move',
   'web.history.select': 'Select a line to see its detail.',
   'web.history.submitted': 'Submitted',
   'web.history.items': 'Files',
@@ -594,7 +588,6 @@ export const en = {
   'web.history.show-all': 'Show every analysis',
   'web.history.show-all.hint':
     'Analyses that finished and moved nothing are kept, and only hidden by default.',
-  'web.history.more': 'Show more ({shown} of {total})',
   'web.history.kind.job': 'Analysis',
   'web.history.routine': 'nothing moved',
   'web.history.job.title': 'Job {id}',
