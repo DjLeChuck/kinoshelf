@@ -31,7 +31,7 @@ async function run(
   between: () => Promise<unknown> = () => Promise.resolve(),
 ): Promise<{ source: string; batchId: string }> {
   const source = await makeDir();
-  await put(join(source, 'Dune.2021.1080p.mkv'), 'dune');
+  await put(join(source, 'Dune.2021.mkv'), 'dune');
   const job = (await h.request('POST', '/api/jobs', { path: source })).json<{ id: string }>();
   await h.app.jobs.idle();
   await between();
@@ -162,7 +162,7 @@ describe('GET /api/batches/:id', () => {
     const detail = (await h.request('GET', `/api/batches/${batchId}`)).json<BatchBody>();
     expect(detail.items).toEqual([
       {
-        source: expect.stringMatching(/Dune\.2021\.1080p\.mkv$/) as string,
+        source: expect.stringMatching(/Dune\.2021\.mkv$/) as string,
         destination: expect.stringMatching(/Dune \(2021\) \{tmdb-438631\}\.mkv$/) as string,
         mode: 'copy',
         status: 'done',

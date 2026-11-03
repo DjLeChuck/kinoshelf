@@ -10,6 +10,7 @@ export const profileSchema = z.strictObject({
   templates: z.strictObject({
     movieFolder: z.string(),
     movieFile: text,
+    movieVersion: text.optional(),
     seriesFolder: text,
     seasonFolder: text,
     episodeFile: text,

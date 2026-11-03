@@ -56,4 +56,11 @@ export interface ParsedMedia {
   readonly country?: string;
   readonly releaseGroup?: string;
   readonly languages?: readonly string[];
+  /**
+   * Picture size as guessit names it (`2160p`, `1080p`, `720p`, `1080i`; `4K` already reads
+   * `2160p`). With `source` and `releaseGroup`, it tells apart two files of the same movie.
+   */
+  readonly screenSize?: string;
+  /** Where the picture comes from, as guessit names it (`Blu-ray`, `Ultra HD Blu-ray`, `Web`, `HDTV`). */
+  readonly source?: string;
 }

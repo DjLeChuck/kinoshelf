@@ -48,7 +48,7 @@ describe('first-launch setup', () => {
   it('ticks the source step and completes once a job exists', async () => {
     const h = await harness();
     const source = await makeDir();
-    await put(join(source, 'Dune.2021.1080p.mkv'));
+    await put(join(source, 'Dune.2021.mkv'));
     await h.request('POST', '/api/jobs', { path: source });
     await h.app.jobs.idle();
     const body = (await h.request('GET', '/api/onboarding')).json<Body>();

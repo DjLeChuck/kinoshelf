@@ -92,7 +92,7 @@ describe('after a transfer', () => {
   it('tells the webhooks that listen, and asks Plex and Jellyfin to look at the new folder', async () => {
     const { h, hook, plex, jellyfin } = await reporting();
 
-    await apply(h, { 'Dune.2021.1080p.mkv': 'dune' });
+    await apply(h, { 'Dune.2021.mkv': 'dune' });
 
     // The generic webhook listens to the default events; the Gotify one only to failures.
     expect(hook.received.map((r) => r.url)).toEqual(['/generic']);
@@ -123,15 +123,15 @@ describe('after a transfer', () => {
 
   it('speaks the language of the configuration', async () => {
     const { h, hook } = await reporting({ locale: 'fr' });
-    await apply(h, { 'Dune.2021.1080p.mkv': 'dune' });
+    await apply(h, { 'Dune.2021.mkv': 'dune' });
     expect(json(hook.received[0] as Received).title).toBe('1 fichier transféré');
   });
 
   it('is a failure when a file did not go through, yet still refreshes what did', async () => {
     const { h, hook, plex, destination } = await reporting();
     const source = await makeDir();
-    await put(join(source, 'Dune.2021.1080p.mkv'), 'dune');
-    await put(join(source, 'Alien.1979.1080p.mkv'), 'alien');
+    await put(join(source, 'Dune.2021.mkv'), 'dune');
+    await put(join(source, 'Alien.1979.mkv'), 'alien');
     const job = (await h.request('POST', '/api/jobs', { path: source })).json<{ id: string }>();
     await h.app.jobs.idle();
 
@@ -153,7 +153,7 @@ describe('after a transfer', () => {
       title: '1 file not transferred',
       execution: { done: 1, failed: 1 },
     });
-    expect(generic.message).toContain('Alien.1979.1080p.mkv: A file already exists at');
+    expect(generic.message).toContain('Alien.1979.mkv: A file already exists at');
     expect(generic.files.map((f) => f.status).sort()).toEqual(['done', 'failed']);
     expect(generic.files.find((f) => f.status === 'failed')?.error?.code).toBe(
       'destination.exists',
@@ -170,7 +170,7 @@ describe('after a transfer', () => {
       'taken',
     );
 
-    await apply(h, { 'Dune.2021.1080p.mkv': 'dune' });
+    await apply(h, { 'Dune.2021.mkv': 'dune' });
 
     expect(plexRefreshes(plex)).toEqual([]);
     expect(jellyfin.received.filter((r) => r.method === 'POST')).toEqual([]);
@@ -260,7 +260,7 @@ describe('a target that cannot be reached', () => {
       webhooks: [{ url: `${goneUrl}/hook?token=SECRET` }],
     });
 
-    const jobId = await apply(h, { 'Dune.2021.1080p.mkv': 'dune' });
+    const jobId = await apply(h, { 'Dune.2021.mkv': 'dune' });
 
     const job = (await h.request('GET', `/api/jobs/${jobId}`)).json<{
       execution: { status: string; summary: { done: number } };

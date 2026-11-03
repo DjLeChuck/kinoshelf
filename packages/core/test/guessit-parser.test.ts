@@ -14,6 +14,8 @@ describe('GuessitParser', () => {
         episodes: [],
         extension: 'mkv',
         releaseGroup: 'GRP',
+        screenSize: '2160p',
+        source: 'Ultra HD Blu-ray',
       });
     });
 
@@ -34,6 +36,22 @@ describe('GuessitParser', () => {
         '/mnt/downloads/torrents/Dune.Part.Two.2024.1080p.WEB-DL-GRP/dune.part.two.2024.1080p.mkv',
       );
       expect(parsed).toMatchObject({ kind: 'movie', year: 2024 });
+    });
+  });
+
+  describe('quality', () => {
+    it.each([
+      ['Nightbitch.2024.1080p.WEB-DL.DDP5.1.H264-GRP.mkv', '1080p', 'Web'],
+      ['Film.2020.4K.HDR.WEBRip.mkv', '2160p', 'Web'],
+      ['Film.2020.720p.HDTV.mkv', '720p', 'HDTV'],
+    ])('reads the size and the source of %s', (name, screenSize, source) => {
+      expect(parser.parse(name)).toMatchObject({ kind: 'movie', screenSize, source });
+    });
+
+    it('leaves them out when the name says nothing', () => {
+      const parsed = parser.parse('Film.2020.mkv');
+      expect(parsed).not.toHaveProperty('screenSize');
+      expect(parsed).not.toHaveProperty('source');
     });
   });
 

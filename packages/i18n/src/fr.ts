@@ -21,6 +21,8 @@ export const fr: Record<keyof typeof en, string> = {
   'error.plan.episode-numbers-missing': 'Le numéro de saison ou d’épisode est introuvable.',
   'error.plan.outside-root': 'Le chemin cible sortirait du dossier de destination.',
   'error.plan.unsafe-segment': 'Le titre produirait un nom de dossier ou de fichier dangereux.',
+  'error.plan.version-unavailable':
+    'Le nom du fichier n’indique pas sa taille d’image, ou le profil ne prévoit pas de nom pour plusieurs versions.',
   'error.profile.double-quoted-escape':
     'Profil invalide : les templates contenant \\{ ou \\} doivent utiliser des guillemets simples. ({detail})',
   'error.profile.invalid': 'Profil invalide à « {path} » : {detail}',
@@ -219,6 +221,8 @@ export const fr: Record<keyof typeof en, string> = {
     'Le dossier d’arrivée « {name} » envoie ses fichiers dans cette bibliothèque.',
   'error.library.invalid': 'Cette bibliothèque n’est pas valide : {detail}',
   'error.library.nothing-to-do': 'Cette sélection n’a plus rien à faire.',
+  'error.library.version-unavailable':
+    'Ces films ne peuvent pas recevoir de version : le nom du fichier n’indique pas la taille d’image, ou le profil ne prévoit pas de nom pour les versions.',
   'error.library.not-series': 'Cette bibliothèque ne contient pas de séries.',
   'error.library.not-typed': 'C’est un dossier d’arrivée : il ne contient pas de bibliothèque.',
   'error.library.item-not-found':
@@ -289,6 +293,13 @@ export const fr: Record<keyof typeof en, string> = {
   'web.library.run.all': 'Tout sélectionner',
   'web.library.run.shows': 'Séries sélectionnées : {count}',
   'web.library.run.title.rename': 'Aperçu du renommage',
+  'web.library.run.title.version': 'Aperçu du nom avec la version',
+  'web.library.run.version': 'Ajouter la version au nom…',
+  'web.library.run.version.hint':
+    'Nomme le fichier avec sa taille d’image à côté du nom de son dossier, pour qu’une autre qualité du même film puisse cohabiter. La taille est proposée d’après le nom du fichier ; tu peux en choisir une autre.',
+  'web.library.run.size': 'Taille d’image',
+  'web.library.run.size.pick': 'Choisir…',
+  'web.library.run.size.needed': 'Choisis la taille d’image pour voir ce qui sera renommé.',
   'web.library.run.title.refresh': 'Aperçu de l’actualisation',
   'web.library.run.summary':
     '{transfers} à déplacer · {written} à écrire · {skipped} laissés tels quels',

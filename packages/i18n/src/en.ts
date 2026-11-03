@@ -26,6 +26,8 @@ export const en = {
   'error.plan.episode-numbers-missing': 'The season or episode number could not be determined.',
   'error.plan.outside-root': 'The target path would leave the destination folder.',
   'error.plan.unsafe-segment': 'The title would produce an unsafe folder or file name.',
+  'error.plan.version-unavailable':
+    'The file name does not say its picture size, or the profile has no naming for several versions.',
   'error.profile.double-quoted-escape':
     'Invalid profile: templates containing \\{ or \\} must use single quotes. ({detail})',
   'error.profile.invalid': 'Invalid profile at "{path}": {detail}',
@@ -209,6 +211,8 @@ export const en = {
   'error.library.in-use': 'The arrival folder “{name}” sends its files to this library.',
   'error.library.invalid': 'This library is not valid: {detail}',
   'error.library.nothing-to-do': 'This selection has nothing left to do.',
+  'error.library.version-unavailable':
+    'These movies cannot be given a version: their file name does not say the picture size, or the profile has no naming for versions.',
   'error.library.not-series': 'This library does not hold series.',
   'error.library.not-typed': 'This is an arrival folder: it holds no library of its own.',
   'error.library.item-not-found':
@@ -276,6 +280,13 @@ export const en = {
   'web.library.run.all': 'Select all',
   'web.library.run.shows': 'Selected shows: {count}',
   'web.library.run.title.rename': 'Rename preview',
+  'web.library.run.title.version': 'Version naming preview',
+  'web.library.run.version': 'Add the version to the name…',
+  'web.library.run.version.hint':
+    'Names the file with its picture size beside its folder’s name, so another quality of the same movie can sit next to it. The size is proposed from the file name; you can choose another.',
+  'web.library.run.size': 'Picture size',
+  'web.library.run.size.pick': 'Choose…',
+  'web.library.run.size.needed': 'Choose the picture size to see what will be renamed.',
   'web.library.run.title.refresh': 'Refresh preview',
   'web.library.run.summary': '{transfers} to move · {written} to write · {skipped} left alone',
   'web.library.run.skipped':

@@ -24,6 +24,7 @@ export const ERROR_CODES = [
   'plan.episode-numbers-missing',
   'plan.outside-root',
   'plan.unsafe-segment',
+  'plan.version-unavailable',
   'profile.double-quoted-escape',
   'profile.invalid',
   'profile.invalid-path',

@@ -51,8 +51,11 @@ export function companionOperations(
     companionName(profile, template, variables);
 
   const operations: Operation[] = [];
-  // A series' own files and a season's poster belong to no single episode.
-  const shared = details.kind === 'series';
+  const flat = details.kind === 'movie' && place.workFolders.length === 0;
+  // A series' own files and a season's poster belong to no single episode. A movie kept in several
+  // versions shares its folder's poster and fanart (and a `movie.nfo`) between them.
+  const shared =
+    details.kind === 'series' || (!flat && profile.templates.movieVersion !== undefined);
   const write = (folders: readonly string[], name: string, content: string, own = false) => {
     operations.push({
       type: 'write-file',
@@ -73,7 +76,6 @@ export function companionOperations(
   };
 
   const nfoOptions = imageUrl ? { imageUrl: (path: string) => imageUrl(path, 'preview') } : {};
-  const flat = details.kind === 'movie' && place.workFolders.length === 0;
   const written = companionsWritten(profile, details.kind, flat);
 
   const { nfo } = profile;
@@ -84,6 +86,7 @@ export function companionOperations(
           place.workFolders,
           render(nfo.movie, { file: place.stem }),
           renderMovieNfo(details, nfoOptions),
+          templateVariables(parseTemplate(nfo.movie)).includes('file'),
         );
       }
     } else {

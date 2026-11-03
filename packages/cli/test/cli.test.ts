@@ -16,8 +16,8 @@ const exists = (path: string): Promise<boolean> =>
 async function library() {
   const src = await makeDir();
   const dest = await makeDir();
-  await put(join(src, 'Dune.2021.2160p.mkv'), 'dune');
-  await put(join(src, 'Dune.2021.2160p.en.srt'), 'subs');
+  await put(join(src, 'Dune.2021.mkv'), 'dune');
+  await put(join(src, 'Dune.2021.en.srt'), 'subs');
   await put(join(src, 'The.Bear.S03E04.mkv'), 'bear');
   await put(join(src, 'Dune.mkv'), 'ambiguous');
   await put(join(src, 'zzqx.2020.mkv'), 'nothing');
@@ -102,7 +102,7 @@ describe('process', () => {
     expect(await h.cli('process', src, '--dest', dest)).toBe(0);
     expect(h.out.join('\n')).toContain('Dry run: nothing was written. Add --apply to execute.');
     expect(await readdir(dest)).toEqual([]);
-    expect(await exists(join(src, 'Dune.2021.2160p.mkv'))).toBe(true);
+    expect(await exists(join(src, 'Dune.2021.mkv'))).toBe(true);
   });
 
   it('organizes the files with --apply, sidecars included, and keeps the sources by default', async () => {
@@ -120,7 +120,7 @@ describe('process', () => {
         'utf8',
       ),
     ).toBe('bear');
-    expect(await exists(join(src, 'Dune.2021.2160p.mkv'))).toBe(true);
+    expect(await exists(join(src, 'Dune.2021.mkv'))).toBe(true);
     // The ambiguous and unrecognized files are left alone.
     expect(await exists(join(dest, 'zzqx.2020.mkv'))).toBe(false);
     const text = h.out.join('\n');
@@ -133,7 +133,7 @@ describe('process', () => {
     const { src, dest } = await library();
     const h = await harness();
     await h.cli('process', src, '--dest', dest, '--mode', 'move', '--apply');
-    expect(await exists(join(src, 'Dune.2021.2160p.mkv'))).toBe(false);
+    expect(await exists(join(src, 'Dune.2021.mkv'))).toBe(false);
     expect(await exists(join(dest, DUNE_DIR, 'Dune (2021) {tmdb-438631}.mkv'))).toBe(true);
   });
 
@@ -212,7 +212,7 @@ describe('undo', () => {
     expect(await h.cli('undo', '--apply')).toBe(0);
     expect(h.out.join('\n')).toContain('3 reverted, 0 skipped, 0 failed.');
     expect(await readdir(dest)).toEqual([]);
-    expect(await exists(join(src, 'Dune.2021.2160p.mkv'))).toBe(true);
+    expect(await exists(join(src, 'Dune.2021.mkv'))).toBe(true);
 
     h.out.length = 0;
     await h.cli('undo', '--apply');
@@ -287,7 +287,7 @@ describe('undo', () => {
     const h = await harness();
     await h.cli('process', src, '--dest', dest, '--mode', 'move', '--apply');
     await h.cli('undo', '--apply');
-    expect(await readFile(join(src, 'Dune.2021.2160p.mkv'), 'utf8')).toBe('dune');
+    expect(await readFile(join(src, 'Dune.2021.mkv'), 'utf8')).toBe('dune');
     expect(await readdir(dest)).toEqual([]);
   });
 });

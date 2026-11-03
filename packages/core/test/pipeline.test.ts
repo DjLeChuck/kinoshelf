@@ -45,23 +45,23 @@ describe('discoverVideos', () => {
 
   it('skips promotional samples shipped with a release', async () => {
     const root = await makeDir();
-    await put(join(root, 'Film (2016)', 'Film.2016.1080p.mkv'));
+    await put(join(root, 'Film (2016)', 'Film.2016.mkv'));
     await put(join(root, 'Film (2016)', 'sample.avi'));
     await put(join(root, 'Film (2016)', 'Film.2016.1080p-sample.mkv'));
     await put(join(root, 'Film (2016)', 'Sample', 'proof.mkv'));
     await put(join(root, 'Sampler.2020.mkv'));
     const found = await discoverVideos(root);
     expect(found.map((f) => f.displayPath).sort()).toEqual([
-      join('Film (2016)', 'Film.2016.1080p.mkv'),
+      join('Film (2016)', 'Film.2016.mkv'),
       'Sampler.2020.mkv',
     ]);
   });
 
   it('judges samples below the scanned root only', async () => {
     const root = join(await makeDir(), 'samples', 'Movies');
-    await put(join(root, 'Film (2016)', 'Film.2016.1080p.mkv'));
+    await put(join(root, 'Film (2016)', 'Film.2016.mkv'));
     expect((await discoverVideos(root)).map((f) => f.displayPath)).toEqual([
-      join('Film (2016)', 'Film.2016.1080p.mkv'),
+      join('Film (2016)', 'Film.2016.mkv'),
     ]);
   });
 
@@ -215,7 +215,7 @@ describe('analyze', () => {
   it('classifies a whole folder, end to end', async () => {
     const src = await makeDir();
     const lib = await makeDir();
-    await put(join(src, 'Dune.2021.2160p.UHD.BluRay.x265-GRP.mkv'));
+    await put(join(src, 'Dune.2021.UHD.BluRay.x265-GRP.mkv'));
     await put(join(src, 'Breaking.Bad.S02E05.720p.mkv'));
     await put(join(src, 'Casablanca.1942.mkv'));
     await put(join(src, 'zzqx.2020.mkv'));

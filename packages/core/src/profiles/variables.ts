@@ -2,6 +2,7 @@
 export const VARIABLES = {
   movieFolder: ['title', 'year', 'tmdb'],
   movieFile: ['title', 'year', 'tmdb'],
+  movieVersion: ['version'],
   seriesFolder: ['title', 'year', 'tmdb'],
   seasonFolder: ['title', 'year', 'tmdb', 'season'],
   episodeFile: ['title', 'year', 'tmdb', 'season', 'episode', 'episodeTitle'],

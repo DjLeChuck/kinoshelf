@@ -12,6 +12,8 @@ templates:
   # Jellyfin reads `[tmdbid-<id>]` (brackets, parentheses and braces all work; brackets are its own).
   movieFolder: '{title} ({year}) [tmdbid-{tmdb}]'
   movieFile: '{title} ({year}) [tmdbid-{tmdb}]'
+  # Several qualities of a movie share its folder: `<file> - 2160p`, per the player's multi-version rules.
+  movieVersion: ' - {version}'
   seriesFolder: '{title} ({year}) [tmdbid-{tmdb}]'
   # `Season 01`, never `S01`; specials go in `Season 00`.
   seasonFolder: 'Season {season:02}'

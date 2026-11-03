@@ -13,6 +13,8 @@ episodeRangeSeparator: '-e'
 templates:
   movieFolder: '{title} ({year})'
   movieFile: '{title} ({year})'
+  # Several qualities of a movie share its folder: `<file> - 2160p`, per the player's multi-version rules.
+  movieVersion: ' - {version}'
   seriesFolder: '{title} ({year})'
   # The English word "Season" is mandatory, whatever the content language.
   seasonFolder: 'Season {season:02}'

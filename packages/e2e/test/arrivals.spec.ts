@@ -8,7 +8,7 @@ const exists = (path: string): Promise<boolean> =>
     () => true,
     () => false,
   );
-const DUNE = library('films', 'Dune (2021) {tmdb-438631}', 'Dune (2021) {tmdb-438631}.mkv');
+const DUNE = library('films', 'Dune (2021) {tmdb-438631}', 'Dune (2021) {tmdb-438631} - 1080p.mkv');
 
 test('validates an arrival and finds it in the library it was sent to', async ({
   page,

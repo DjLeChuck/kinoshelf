@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { lstat, stat } from 'node:fs/promises';
-import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
+import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { KinoshelfError } from '../errors.js';
 import { exists, nearestExistingDevice } from '../execution/fs-ops.js';
 import { renderProfileTemplate, type TemplateVariables } from '../profiles/template.js';
@@ -13,6 +13,7 @@ import type { Profile } from '../types/profile.js';
 import type { Candidate, EpisodeInfo } from '../types/provider.js';
 import { companionOperations } from './companions.js';
 import { DEFAULT_SIDECAR_EXTENSIONS, findSidecars } from './sidecars.js';
+import { MAX_VERSION_LEVEL, versionLabel, versionLabels } from './version.js';
 
 /** A matched file, ready to be planned. `parsed.path` is the source file. */
 export interface PlanInput {
@@ -25,6 +26,12 @@ export interface PlanInput {
   readonly details?: Details;
   /** The provider's record of the file's episodes (also where `{episodeTitle}` comes from). */
   readonly episodes?: readonly EpisodeInfo[];
+  /**
+   * Name a movie with its version even though it is already in its folder under the profile's
+   * name: the owner asked for it. Without a size in the name, or a profile that has no naming for
+   * versions, the item is held back as unresolvable rather than guessed.
+   */
+  readonly applyVersion?: boolean;
 }
 
 export interface PlannerOptions {
@@ -56,6 +63,7 @@ function targetSegments(
   input: PlanInput,
   profile: Profile,
   extensionBytes: number,
+  version?: string,
 ): { folders: string[]; stem: string; workDepth: number } {
   const { parsed, candidate } = input;
   // The provider's title for the (first) episode, else what the file name says.
@@ -74,9 +82,17 @@ function targetSegments(
 
   if (candidate.kind === 'movie') {
     const folders = render(templates.movieFolder);
+    // A rendered segment loses its leading spaces, which ` - {version}` starts with: the suffix is
+    // rendered behind a placeholder that is cut off again. Its size is kept out of the title's.
+    const suffix =
+      version !== undefined && templates.movieVersion !== undefined
+        ? renderProfileTemplate(profile, `_${templates.movieVersion}`, { ...variables, version })
+            .join('')
+            .slice(1)
+        : '';
     return {
       folders,
-      stem: render(templates.movieFile, extensionBytes).join(''),
+      stem: `${render(templates.movieFile, extensionBytes + Buffer.byteLength(suffix)).join('')}${suffix}`,
       workDepth: folders.length,
     };
   }
@@ -120,12 +136,34 @@ async function classify(
   return { status: 'ready' };
 }
 
+async function sameSize(first: string, second: string): Promise<boolean> {
+  const [a, b] = await Promise.all([stat(first).catch(() => null), stat(second).catch(() => null)]);
+  return a !== null && b !== null && a.size === b.size;
+}
+
 async function planItem(
   input: PlanInput,
   options: PlannerOptions,
   id: string,
   listings: Map<string, Promise<string[]>>,
+  versionLevel?: number,
 ): Promise<PlanItem> {
+  const forced = input.applyVersion === true && input.candidate.kind === 'movie';
+  if (forced && versionLevel === undefined) {
+    return blocked(
+      {
+        reason: 'unresolvable-name',
+        path: resolve(input.parsed.path),
+        detail: { code: 'plan.version-unavailable' },
+      },
+      {
+        id,
+        parsed: input.parsed,
+        externalId: input.candidate.id,
+        operations: [],
+      },
+    );
+  }
   const { profile, mode } = options;
   const source = resolve(input.parsed.path);
   const base = {
@@ -139,12 +177,9 @@ async function planItem(
 
   const extension = input.parsed.extension ? `.${input.parsed.extension}` : '';
   let target: { folders: string[]; stem: string; workDepth: number };
+  const reserveBytes = Math.max(Buffer.byteLength(extension), STEM_SUFFIX_RESERVE_BYTES);
   try {
-    target = targetSegments(
-      input,
-      profile,
-      Math.max(Buffer.byteLength(extension), STEM_SUFFIX_RESERVE_BYTES),
-    );
+    target = targetSegments(input, profile, reserveBytes);
   } catch (error) {
     if (error instanceof KinoshelfError) {
       return unresolvable(error.info);
@@ -162,12 +197,56 @@ async function planItem(
       ? roots
       : roots[input.candidate.kind === 'movie' ? 'movie' : 'series'],
   );
-  const destination = join(root, ...target.folders, `${target.stem}${extension}`);
+  const pathOf = (t: { folders: string[]; stem: string }): string =>
+    join(root, ...t.folders, `${t.stem}${extension}`);
+  let destination = pathOf(target);
   if (!destination.startsWith(`${root}${sep}`)) {
     return unresolvable({ code: 'plan.outside-root' });
   }
 
-  const state = await classify(source, destination, mode);
+  let state = await classify(source, destination, mode);
+  if (versionLevel !== undefined && input.candidate.kind === 'movie') {
+    // A file already in the movie's folder under the profile's name, with or without a version
+    // after it, is where it belongs: a library is never renamed behind its owner's back.
+    const sourceStem = basename(source, extension);
+    const rest = sourceStem.slice(target.stem.length);
+    if (
+      !forced &&
+      dirname(source) === dirname(destination) &&
+      sourceStem.startsWith(target.stem) &&
+      (rest === '' || /^[\s._[(-]/.test(rest))
+    ) {
+      target = { ...target, stem: sourceStem };
+      destination = source;
+      state = { status: 'in-place' };
+    } else {
+      // The shortest label that is free: a file of the same size already there asks for the
+      // source, then the group, before it is called a conflict.
+      for (let level = versionLevel; level <= MAX_VERSION_LEVEL; level++) {
+        const label = versionLabel(input.parsed, level);
+        if (label === undefined) {
+          break;
+        }
+        try {
+          target = targetSegments(input, profile, reserveBytes, label);
+        } catch (error) {
+          if (error instanceof KinoshelfError) {
+            return unresolvable(error.info);
+          }
+          throw error;
+        }
+        destination = pathOf(target);
+        state = await classify(source, destination, mode);
+        if (
+          !('conflict' in state && state.conflict.reason === 'destination-exists') ||
+          // The same size is most likely the same release again, not another version of it.
+          (await sameSize(source, destination))
+        ) {
+          break;
+        }
+      }
+    }
+  }
   if ('conflict' in state) {
     return blocked(state.conflict, base);
   }
@@ -295,6 +374,44 @@ function shareCompanions(items: readonly PlanItem[]): PlanItem[] {
   });
 }
 
+/**
+ * How much of its quality each movie's name says (see `versionLabel`), for a profile that keeps
+ * several qualities of a movie in one folder. The files of one movie in the batch are told apart
+ * together, so the result does not depend on their order. `undefined`: no suffix (no such profile,
+ * not a movie, or a file that never says its size).
+ */
+function versionLevels(inputs: readonly PlanInput[], profile: Profile): (number | undefined)[] {
+  const levels: (number | undefined)[] = inputs.map(() => undefined);
+  if (profile.templates.movieVersion === undefined) {
+    return levels;
+  }
+  const groups = new Map<string, number[]>();
+  inputs.forEach((input, index) => {
+    if (input.candidate.kind === 'movie' && input.parsed.screenSize !== undefined) {
+      const key = `${input.candidate.id.provider}:${String(input.candidate.id.id)}`;
+      groups.set(key, [...(groups.get(key) ?? []), index]);
+    }
+  });
+  for (const members of groups.values()) {
+    const files = members.map((index) => (inputs[index] as PlanInput).parsed);
+    const labels = versionLabels(files);
+    members.forEach((index, position) => {
+      const file = files[position] as ParsedMedia;
+      const label = labels[position];
+      // Files nothing can tell apart all take the finest label: the batch then reports them.
+      let level = MAX_VERSION_LEVEL;
+      for (let candidate = 0; label !== null && candidate <= MAX_VERSION_LEVEL; candidate++) {
+        if (versionLabel(file, candidate) === label) {
+          level = candidate;
+          break;
+        }
+      }
+      levels[index] = level;
+    });
+  }
+  return levels;
+}
+
 /** Items looked at on the disk at once: a library of thousands must not open them all together. */
 const ITEMS_AT_ONCE = 32;
 
@@ -328,8 +445,9 @@ export async function createPlan(
   // Ids are drawn in input order whatever the order the disk answers in.
   const ids = inputs.map(() => newId());
   const listings = new Map<string, Promise<string[]>>();
+  const levels = versionLevels(inputs, profile);
   const items = await inBatches(inputs, ITEMS_AT_ONCE, (input, index) =>
-    planItem(input, options, ids[index] as string, listings),
+    planItem(input, options, ids[index] as string, listings, levels[index]),
   );
 
   // Case-insensitive: libraries are often shared with systems that cannot tell the names apart.

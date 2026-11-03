@@ -54,7 +54,7 @@ describe('POST /api/jobs', () => {
   it('queues a job and analyzes it without touching the disk', async () => {
     const h = await harness();
     const source = await makeDir();
-    const file = await put(join(source, 'Dune.2021.1080p.mkv'));
+    const file = await put(join(source, 'Dune.2021.mkv'));
     await put(join(source, 'Unknown.Home.Video.mkv'));
 
     const created = await h.request('POST', '/api/jobs', { path: source });

@@ -183,6 +183,8 @@ export class GuessitParser implements Parser {
     const year = count(guess.year);
     const episodeTitle = text(guess.episode_title);
     const releaseGroup = text(guess.release_group);
+    const screenSize = text(guess.screen_size);
+    const source = text(guess.source);
     const country = countryOf(guess.country);
     const subtitle = text(guess.alternative_title);
     // guessit calls it a volume (`Vol.2`) or a part (`Part.2`); a title names it either way.
@@ -213,6 +215,8 @@ export class GuessitParser implements Parser {
       ...(country !== undefined && { country }),
       ...(releaseGroup !== undefined && { releaseGroup }),
       ...(languages.length > 0 && { languages }),
+      ...(kind === 'movie' && screenSize !== undefined && { screenSize }),
+      ...(kind === 'movie' && source !== undefined && { source }),
     };
   }
 }

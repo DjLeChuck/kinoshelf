@@ -46,7 +46,7 @@ const DUNE = { kind: 'movie', id: { provider: 'tmdb', id: 438631 }, title: 'Dune
 /** A folder holding one recognizable film and one the provider knows nothing about. */
 async function analyzed(h: Harness, apply = false) {
   const source = await makeDir();
-  const dune = await put(join(source, 'Dune.2021.1080p.mkv'), 'dune');
+  const dune = await put(join(source, 'Dune.2021.mkv'), 'dune');
   const mystery = await put(join(source, 'Mystery.Home.Video.mkv'), 'mystery');
   const created = await h.request('POST', '/api/jobs', { path: source, apply });
   const jobId = created.json<{ id: string }>().id;
@@ -289,8 +289,8 @@ describe('a transfer in progress', () => {
       },
     });
     const source = await makeDir();
-    await put(join(source, 'Dune.2021.1080p.mkv'));
-    await put(join(source, 'Alien.1979.1080p.mkv'));
+    await put(join(source, 'Dune.2021.mkv'));
+    await put(join(source, 'Alien.1979.mkv'));
     const jobId = (await h.request('POST', '/api/jobs', { path: source })).json<{ id: string }>()
       .id;
     await h.app.jobs.idle();
@@ -364,8 +364,8 @@ describe('after a crash', () => {
   it('resumes a transfer that was running and only does what is left', async () => {
     const h = await harness();
     const source = await makeDir();
-    await put(join(source, 'Dune.2021.1080p.mkv'), 'dune');
-    await put(join(source, 'Alien.1979.1080p.mkv'), 'alien');
+    await put(join(source, 'Dune.2021.mkv'), 'dune');
+    await put(join(source, 'Alien.1979.mkv'), 'alien');
     const jobId = (await h.request('POST', '/api/jobs', { path: source })).json<{ id: string }>()
       .id;
     await h.app.jobs.idle();
@@ -460,7 +460,7 @@ describe('apply jobs', () => {
       },
     });
     const source = await makeDir();
-    await put(join(source, 'Dune.2021.1080p.mkv'));
+    await put(join(source, 'Dune.2021.mkv'));
     await h.request('POST', '/api/jobs', { path: '/blocked' });
     const apply = (await h.request('POST', '/api/jobs', { path: source, apply: true })).json<{
       id: string;
@@ -499,7 +499,7 @@ describe('POST /api/batches/{id}/undo', () => {
     const one = await transfer(h, first.jobId);
 
     const source = await makeDir();
-    await put(join(source, 'Alien.1979.1080p.mkv'));
+    await put(join(source, 'Alien.1979.mkv'));
     const alien = (await h.request('POST', '/api/jobs', { path: source, apply: true })).json<{
       id: string;
     }>();

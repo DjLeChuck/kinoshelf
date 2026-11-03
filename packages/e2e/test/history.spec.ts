@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test';
 import { AUTH_HEADERS, library } from '../support.js';
 import { signIn, signInAt, submit } from './helpers.js';
 
-const ALIEN = library('films', 'Alien (1979) {tmdb-348}', 'Alien (1979) {tmdb-348}.mkv');
+const ALIEN = library('films', 'Alien (1979) {tmdb-348}', 'Alien (1979) {tmdb-348} - 1080p.mkv');
 
 const exists = (path: string): Promise<boolean> =>
   access(path).then(

@@ -46,6 +46,7 @@ export const API_ERROR_CODES = [
   'library.not-found',
   'library.not-series',
   'library.nothing-to-do',
+  'library.version-unavailable',
   'library.not-typed',
   'library.scan-in-progress',
   'library.source-taken',

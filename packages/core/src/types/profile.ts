@@ -26,6 +26,12 @@ export interface PathTemplates {
   readonly movieFolder: string;
   /** File name without extension (added by the planner). */
   readonly movieFile: string;
+  /**
+   * What follows `movieFile` when the same movie is kept in several qualities in one folder
+   * (` - {version}`: `Dune (2021) - 2160p`). Absent: the profile has no such convention, and a
+   * second file for a movie is a conflict. Only `{version}` is known to it.
+   */
+  readonly movieVersion?: string;
   readonly seriesFolder: string;
   readonly seasonFolder: string;
   /** File name without extension. */

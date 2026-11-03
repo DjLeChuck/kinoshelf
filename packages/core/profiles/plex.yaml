@@ -12,6 +12,8 @@ templates:
   # Plex matches `{tmdb-<id>}` in the movie folder and file name.
   movieFolder: '{title} ({year}) \{tmdb-{tmdb}\}'
   movieFile: '{title} ({year}) \{tmdb-{tmdb}\}'
+  # Several qualities of a movie share its folder: `<file> - 2160p`, per the player's multi-version rules.
+  movieVersion: ' - {version}'
   # For series the id belongs to the series folder only; the year is recommended.
   seriesFolder: '{title} ({year}) \{tmdb-{tmdb}\}'
   # The English word "Season" is mandatory, whatever the content language.

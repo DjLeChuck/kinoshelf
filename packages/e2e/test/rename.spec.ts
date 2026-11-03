@@ -8,7 +8,7 @@ const exists = (path: string): Promise<boolean> =>
     () => true,
     () => false,
   );
-const ALIEN = library('films', 'Alien (1979) {tmdb-348}', 'Alien (1979) {tmdb-348}.mkv');
+const ALIEN = library('films', 'Alien (1979) {tmdb-348}', 'Alien (1979) {tmdb-348} - 1080p.mkv');
 
 test('previews a rename from the library, runs it, and finds it in the history', async ({
   page,

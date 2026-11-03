@@ -287,7 +287,7 @@ describe('scanning a library', () => {
     const h = await served('profile: jellyfin\n');
     const source = await makeDir();
     const { movies: target, series } = await typedLibraries(h);
-    await put(join(source, 'Dune.2021.1080p.mkv'), 'dune');
+    await put(join(source, 'Dune.2021.mkv'), 'dune');
     await put(join(source, 'Alien.1979.mkv'), 'alien');
     await put(join(source, 'Mystery.Home.Video.mkv'), 'mystery');
     // An arrival folder: its files go to the typed libraries, with its own mode.
@@ -316,7 +316,7 @@ describe('scanning a library', () => {
 
     const rename = await entriesOf(h, jobId, 'to-rename');
     expect(rename).toHaveLength(2);
-    const dune = rename.find((f) => f.path.endsWith('Dune.2021.1080p.mkv'));
+    const dune = rename.find((f) => f.path.endsWith('Dune.2021.mkv'));
     expect(dune?.destination).toBe(
       join(target, 'Dune (2021) [tmdbid-438631]', 'Dune (2021) [tmdbid-438631].mkv'),
     );
