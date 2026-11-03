@@ -14,7 +14,7 @@ import {
   type OperationResult,
   type Profile,
 } from '@kinoshelf/core';
-import type { Database } from 'better-sqlite3';
+import type { Database, Statement } from 'better-sqlite3';
 import { workKindOf as kindOf, type Entry, type EntryStore } from './entries.js';
 import { isInside } from './notify/paths.js';
 import type { Job, JobStore } from './jobs.js';
@@ -91,6 +91,26 @@ const PROBE_COLUMNS = 'path, video, audio, size, mtime, probed_at';
 const bit = (value: Presence): number | null => (value === null ? null : value ? 1 : 0);
 const flag = (value: number | null): Presence => (value === null ? null : value === 1);
 
+/** The values of a row, in the order of `COLUMNS`. */
+const valuesOf = (item: LibraryItem): (string | number | null)[] => [
+  item.libraryId,
+  item.path,
+  item.kind,
+  item.tmdbId,
+  item.title,
+  item.year,
+  item.season,
+  item.episode,
+  item.episodeEnd,
+  item.state,
+  bit(item.nfo),
+  bit(item.poster),
+  bit(item.fanart),
+  item.entryId,
+  item.scanJobId,
+  item.scannedAt,
+];
+
 const toItem = (row: Row): LibraryItem => ({
   libraryId: row.library_id,
   path: row.path,
@@ -127,24 +147,25 @@ export class LibraryItemStore {
           .map((row) => [row.path, row]),
       );
       this.database.prepare('DELETE FROM library_items WHERE library_id = ?').run(libraryId);
+      // Prepared once: preparing per row costs more than the insert itself on a large library.
+      const put = this.putStatement();
+      const restore = this.database.prepare(
+        `UPDATE library_items SET video = ?, audio = ?, size = ?, mtime = ?, probed_at = ?
+         WHERE library_id = ? AND path = ?`,
+      );
       for (const item of items) {
-        this.put(item);
+        put.run(...valuesOf(item));
         const probe = kept.get(item.path);
         if (probe?.probed_at) {
-          this.database
-            .prepare(
-              `UPDATE library_items SET video = ?, audio = ?, size = ?, mtime = ?, probed_at = ?
-               WHERE library_id = ? AND path = ?`,
-            )
-            .run(
-              probe.video,
-              probe.audio,
-              probe.size,
-              probe.mtime,
-              probe.probed_at,
-              libraryId,
-              item.path,
-            );
+          restore.run(
+            probe.video,
+            probe.audio,
+            probe.size,
+            probe.mtime,
+            probe.probed_at,
+            libraryId,
+            item.path,
+          );
         }
       }
     })();
@@ -206,35 +227,20 @@ export class LibraryItemStore {
       .map(({ path }) => path);
   }
 
+  private putStatement(): Statement {
+    return this.database.prepare(
+      // An upsert, not a replacement: what ffprobe learned of the file is not the scan's to erase.
+      `INSERT INTO library_items (${COLUMNS})
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT (library_id, path) DO UPDATE SET ${COLUMNS.split(', ')
+         .slice(2)
+         .map((column) => `${column} = excluded.${column}`)
+         .join(', ')}`,
+    );
+  }
+
   put(item: LibraryItem): void {
-    this.database
-      .prepare(
-        // An upsert, not a replacement: what ffprobe learned of the file is not the scan's to erase.
-        `INSERT INTO library_items (${COLUMNS})
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-         ON CONFLICT (library_id, path) DO UPDATE SET ${COLUMNS.split(', ')
-           .slice(2)
-           .map((column) => `${column} = excluded.${column}`)
-           .join(', ')}`,
-      )
-      .run(
-        item.libraryId,
-        item.path,
-        item.kind,
-        item.tmdbId,
-        item.title,
-        item.year,
-        item.season,
-        item.episode,
-        item.episodeEnd,
-        item.state,
-        bit(item.nfo),
-        bit(item.poster),
-        bit(item.fanart),
-        item.entryId,
-        item.scanJobId,
-        item.scannedAt,
-      );
+    this.putStatement().run(...valuesOf(item));
   }
 
   get(libraryId: string, path: string): LibraryItem | undefined {
@@ -667,10 +673,9 @@ export class LibrarySnapshot {
       return;
     }
     const now = new Date().toISOString();
-    const entries = this.deps.entries.list(job.id);
     this.deps.store.replace(
       library.id,
-      entries.map((entry) => itemOf(entry, profile, library.id, now)),
+      this.deps.entries.mapList(job.id, (entry) => itemOf(entry, profile, library.id, now)),
     );
     this.deps.changed?.(library.id);
   }

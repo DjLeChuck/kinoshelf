@@ -800,18 +800,12 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
           continue;
         }
         if (!runnable.has(scanJobId)) {
-          runnable.set(
-            scanJobId,
-            new Set(
-              entries
-                .executable(scanJobId)
-                .filter((entry) => entry.item)
-                .map((entry) => entry.id),
-            ),
-          );
+          runnable.set(scanJobId, entries.executableIds(scanJobId));
         }
         if (runnable.get(scanJobId)?.has(entryId)) {
-          byJob.set(scanJobId, [...(byJob.get(scanJobId) ?? []), entryId]);
+          const ids = byJob.get(scanJobId) ?? [];
+          ids.push(entryId);
+          byJob.set(scanJobId, ids);
           skipped.delete(itemId(row.path));
         }
       }

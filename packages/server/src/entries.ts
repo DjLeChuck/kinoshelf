@@ -166,6 +166,33 @@ export class EntryStore {
   }
 
   /**
+   * Maps every file of a job without keeping them: a scan of tens of thousands of files would
+   * otherwise hold all their parsed JSON at once.
+   */
+  mapList<T>(jobId: string, map: (entry: Entry) => T): T[] {
+    return this.database
+      .prepare<[string], EntryRow>(
+        `SELECT ${COLUMNS} FROM job_entries WHERE job_id = ? ORDER BY seq`,
+      )
+      .all(jobId)
+      .map((row) => map(toEntry(row)));
+  }
+
+  /** The ids of the files `executable` returns that carry a plan, without reading any of them. */
+  executableIds(jobId: string): Set<string> {
+    return new Set(
+      this.database
+        .prepare<[string], { id: string }>(
+          `SELECT id FROM job_entries
+           WHERE job_id = ? AND classification = 'to-rename' AND item IS NOT NULL
+             AND (resolution IS NULL OR resolution = 'failed')`,
+        )
+        .all(jobId)
+        .map(({ id }) => id),
+    );
+  }
+
+  /**
    * Files of the arrival folders (and of jobs sent by hand, which belong to none) that wait for a
    * human: a file to choose a work for, or one whose transfer failed. A scan of a library
    * organized in place never lands here: what it holds is already where it lives.
