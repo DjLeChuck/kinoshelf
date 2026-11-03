@@ -88,6 +88,12 @@ async function process(deps: ProcessorDeps, job: Job): Promise<ProcessedJob> {
     profile: settings.profile,
     destinationRoot: settings.destinations,
     mode: settings.mode,
+    onParsing: (done, total) => {
+      progress?.parsed(job.id, done, total);
+    },
+    onMatching: () => {
+      progress?.identifying(job.id);
+    },
     onProgress: (done, total, file) => {
       progress?.identified(job.id, done, total, file.displayPath);
     },

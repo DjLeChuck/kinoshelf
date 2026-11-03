@@ -1604,7 +1604,7 @@ export interface paths {
                             } | null;
                             progress: {
                                 /** @enum {string} */
-                                phase: "discover" | "identify" | "plan";
+                                phase: "discover" | "read" | "identify" | "plan";
                                 found: number;
                                 done: number;
                                 total: number;
@@ -1733,7 +1733,7 @@ export interface paths {
                                 status: "queued" | "running";
                                 progress: {
                                     /** @enum {string} */
-                                    phase: "discover" | "identify" | "plan";
+                                    phase: "discover" | "read" | "identify" | "plan";
                                     found: number;
                                     done: number;
                                     total: number;
@@ -2707,7 +2707,7 @@ export interface paths {
                             } | null;
                             progress: {
                                 /** @enum {string} */
-                                phase: "discover" | "identify" | "plan";
+                                phase: "discover" | "read" | "identify" | "plan";
                                 found: number;
                                 done: number;
                                 total: number;
@@ -2885,7 +2885,7 @@ export interface paths {
                             } | null;
                             progress: {
                                 /** @enum {string} */
-                                phase: "discover" | "identify" | "plan";
+                                phase: "discover" | "read" | "identify" | "plan";
                                 found: number;
                                 done: number;
                                 total: number;

@@ -92,7 +92,7 @@ export const progressSchema = {
   nullable: true,
   required: ['phase', 'found', 'done', 'total', 'current', 'idleSeconds'],
   properties: {
-    phase: { type: 'string', enum: ['discover', 'identify', 'plan'] },
+    phase: { type: 'string', enum: ['discover', 'read', 'identify', 'plan'] },
     /** Videos found so far. */
     found: { type: 'integer' },
     /** Files matched, out of `total` (known once the walk of the folder is over). */

@@ -12,7 +12,7 @@
     transfer = null,
   }: { progress: ScanProgress | null; transfer?: TransferProgress | null } = $props();
 
-  const PHASES = ['discover', 'identify', 'plan'] as const;
+  const PHASES = ['discover', 'read', 'identify', 'plan'] as const;
   const percent = $derived(scanPercent(progress));
   const phase = $derived(progress?.phase ?? 'discover');
   const current = $derived(PHASES.indexOf(phase));
@@ -49,6 +49,8 @@
       {t('web.library.progress.waiting')}
     {:else if progress.phase === 'plan'}
       {t('web.library.progress.planning')}
+    {:else if progress.phase === 'read' && percent !== undefined}
+      {t('web.library.progress.reading', { done: progress.done, total: progress.total })}
     {:else if percent === undefined}
       {t('web.library.progress.found', { count: progress.found })}
     {:else}

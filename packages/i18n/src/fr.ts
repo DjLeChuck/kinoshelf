@@ -331,7 +331,9 @@ export const fr: Record<keyof typeof en, string> = {
   'web.library.state.incomplete': 'Incomplet',
   'web.library.progress.label': 'Avancement du scan',
   'web.library.progress.discover': 'Recherche des vidéos',
+  'web.library.progress.read': 'Lecture des noms',
   'web.library.progress.identify': 'Identification',
+  'web.library.progress.reading': '{done} sur {total} noms lus',
   'web.library.progress.plan': 'Planification',
   'web.library.progress.waiting': 'En attente de son tour…',
   'web.library.progress.transfer':

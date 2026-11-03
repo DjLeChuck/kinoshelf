@@ -56,7 +56,7 @@ export interface ItemDetail extends LibraryItem {
 }
 
 export interface ScanProgress {
-  readonly phase: 'discover' | 'identify' | 'plan';
+  readonly phase: 'discover' | 'read' | 'identify' | 'plan';
   readonly found: number;
   readonly done: number;
   readonly total: number;
@@ -342,11 +342,11 @@ export const libraryItems = {
 };
 
 /**
- * Whole percent of the identification, once the walk of the folder has told how many files. The
+ * Whole percent of the reading of names or of the identification, once the walk of the folder has told how many files. The
  * planning that follows (details fetched for every work) has no count: the bar must not sit at 100%.
  */
 export function scanPercent(progress: ScanProgress | null): number | undefined {
-  return progress?.phase === 'identify' && progress.total > 0
+  return (progress?.phase === 'read' || progress?.phase === 'identify') && progress.total > 0
     ? Math.min(100, Math.floor((progress.done / progress.total) * 100))
     : undefined;
 }

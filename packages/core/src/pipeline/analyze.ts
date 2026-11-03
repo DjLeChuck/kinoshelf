@@ -62,6 +62,10 @@ export interface AnalyzeOptions {
   readonly concurrency?: number;
   /** One more file matched; `file` is the one that just was. */
   readonly onProgress?: (done: number, total: number, file: DiscoveredFile) => void;
+  /** One more file's name read by the parser (synchronous work: thousands of files take a while). */
+  readonly onParsing?: (done: number, total: number) => void;
+  /** Every name is read and the files grouped: matching against the provider begins. */
+  readonly onMatching?: () => void;
   /** Every file is matched: the details of the works are fetched and the plan is built. */
   readonly onPlanning?: () => void;
 }
@@ -164,12 +168,14 @@ export async function analyze(
   let sliceStart = performance.now();
   for (const file of files) {
     parsedFiles.push({ ...options.parser.parse(file.parserPath), path: file.path });
+    options.onParsing?.(parsedFiles.length, files.length);
     if (performance.now() - sliceStart > PARSE_SLICE_MS) {
       await yieldToEventLoop();
       sliceStart = performance.now();
     }
   }
   const { units, clusterOf } = matchingUnits(files, parsedFiles);
+  options.onMatching?.();
   const outcomes = new Array<MatchOutcome>(files.length);
   await mapLimited(units, concurrency, async (unit) => {
     const flat =

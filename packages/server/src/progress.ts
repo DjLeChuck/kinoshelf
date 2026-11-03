@@ -1,5 +1,5 @@
-/** Where an analysis is: looking for videos, matching them, or building the plan. */
-export type ScanPhase = 'discover' | 'identify' | 'plan';
+/** Where an analysis is: looking for videos, reading their names, matching them, or building the plan. */
+export type ScanPhase = 'discover' | 'read' | 'identify' | 'plan';
 
 /** What a client shows of a running analysis. */
 export interface ScanProgress {
@@ -67,9 +67,19 @@ export class ProgressTracker {
     this.update(jobId, { found, total: found });
   }
 
-  /** The walk is over: every video is known, none is matched yet. */
+  /** The walk is over: every video is known, no name is read yet. */
   discovered(jobId: string, total: number): void {
-    this.update(jobId, { phase: 'identify', found: total, done: 0, total });
+    this.update(jobId, { phase: 'read', found: total, done: 0, total });
+  }
+
+  /** Names read so far: the parser is synchronous and slow enough on a big library to be seen. */
+  parsed(jobId: string, done: number, total: number): void {
+    this.update(jobId, { phase: 'read', found: total, done, total });
+  }
+
+  /** Every name is read: matching begins, none is matched yet. */
+  identifying(jobId: string): void {
+    this.update(jobId, { phase: 'identify', done: 0 });
   }
 
   identified(jobId: string, done: number, total: number, current: string): void {

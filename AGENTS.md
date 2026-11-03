@@ -344,14 +344,14 @@ refuses to delete a library an arrival folder points at (`library.in-use`). Ther
   Arrivals as a `destination-exists` conflict (also when the name is taken between the plan and the
   write), it is not marked failed. Transfers run one at a time, so the second job sees the first.
 - **Scan progress** (`progress.ts`): `GET /api/jobs/:id` and the `scan` of
-  `GET /api/libraries/:id/items` carry `progress` (`phase` discover|identify|plan, `found`, `done`,
+  `GET /api/libraries/:id/items` carry `progress` (`phase` discover|read|identify|plan, `found`, `done`,
   `total`, `current`, `idleSeconds`) while an analysis runs, `null` otherwise. It lives in the
   server's memory (`ProgressTracker`), never in the database: a restart runs the job again from 0.
   `idleSeconds` is the server's clock, so the web can say "still running" past a minute without
   trusting the browser's. Every change emits the payload-less `progress` event, at most twice a second;
   only a view showing a scan listens to it, and reads `GET /api/jobs/:id` alone (`jobs` reloads every list).
-  The core reports through `discoverVideos`' `onFound`, and `analyze`'s `onProgress` (with the file)
-  and `onPlanning`.
+  The core reports through `discoverVideos`' `onFound`, and `analyze`'s `onParsing` (names read: synchronous, so
+  slices of 20 ms leave the event loop free), `onMatching`, `onProgress` (with the file) and `onPlanning`.
 - **ffprobe** (`probe.ts`): `ProbeQueue` fills `video`, `audio`, `size`, `mtime`, `probed_at` in the
   background, only while the job queue is idle (the runner's `idle` hook wakes it), and rebuilds from
   the rows without `probed_at` at startup. A page's probe jumps the line; a row whose size and date

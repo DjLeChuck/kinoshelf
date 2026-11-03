@@ -17,6 +17,10 @@ describe('ProgressTracker', () => {
     tracker.found('j', 12);
     expect(tracker.of('j')).toMatchObject({ phase: 'discover', found: 12, total: 12, done: 0 });
     tracker.discovered('j', 12);
+    expect(tracker.of('j')).toMatchObject({ phase: 'read', done: 0, total: 12 });
+    tracker.parsed('j', 7, 12);
+    expect(tracker.of('j')).toMatchObject({ phase: 'read', done: 7, total: 12 });
+    tracker.identifying('j');
     expect(tracker.of('j')).toMatchObject({ phase: 'identify', done: 0, total: 12 });
     tracker.identified('j', 5, 12, 'a/b.mkv');
     expect(tracker.of('j')).toMatchObject({
