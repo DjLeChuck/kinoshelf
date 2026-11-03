@@ -243,6 +243,11 @@ refuses to delete a library an arrival folder points at (`library.in-use`). Ther
   (`GET /api/libraries/:id/items`), not from the job. A batch runs through
   `POST /api/plans/:id/execute` with `entries`; only the files to rename are
   selectable, the others go through the arrivals or the review filter.
+- **Two lanes** (`runner.ts`): analyses and transfers each run one at a time, and together only when
+  they touch no common folder (`overlaps`, from `Service.touches`: the job's path and the destination
+  roots of the executable entries). A scan replaces a library's rows as a whole, so one running while
+  files move into the library would leave a stale view. Without a verdict, or when it cannot be told,
+  they stay serial. The idle hook (probing, completeness) fires only when both lanes are free.
 - **Arrivals** (`GET /api/arrivals`, `?state=review|unrecognized`): what the arrival folders (and paths
   sent by hand, which belong to none) hold that needs a human; a library organized in place never
   lands there. Each item carries its `release` and `detached`; the web groups them (one line per release,
