@@ -1,10 +1,13 @@
 # syntax=docker/dockerfile:1
 
+# Base images are pinned by the digest of their multi-arch index (a tag can be moved to other
+# content); the tag stays for the reader and for Dependabot, which bumps both every week.
+
 # The build runs on the builder's own architecture: esbuild and rollup are native binaries that
 # crash (SIGILL, exit 132) under QEMU. Only JavaScript comes out of it, so it is the same for every
 # target; the one thing that depends on the target (better-sqlite3's prebuild) is picked by
 # TARGETARCH below.
-FROM --platform=$BUILDPLATFORM node:22-alpine AS build
+FROM --platform=$BUILDPLATFORM node:22-alpine@sha256:fe4f6d74e20370acb04ad889077d14d0f64a9c8ea6a42bc60cddf1e844699914 AS build
 ARG TARGETARCH
 RUN corepack enable
 WORKDIR /app
@@ -30,11 +33,11 @@ RUN set -eu; \
          -o -iname 'HISTORY' -o -iname 'HISTORY.md' \) -type f -delete
 
 # The node binary of the target platform, without the debug symbols it never uses.
-FROM node:22-alpine AS node
+FROM node:22-alpine@sha256:fe4f6d74e20370acb04ad889077d14d0f64a9c8ea6a42bc60cddf1e844699914 AS node
 RUN apk add --no-cache binutils && strip --strip-unneeded -o /out-node /usr/local/bin/node
 
 # Alpine alone: the node:alpine image adds npm, yarn and corepack, which the runtime does not use.
-FROM alpine:3.24
+FROM alpine:3.24@sha256:be2656061b536c1883c4034790e21d0a09c5aaaf51968b89368a3c0371ea2c9a
 # `ffmpeg` is there for its `ffprobe` (a video's codec and audio tracks); Kinoshelf never encodes.
 RUN apk add --no-cache libstdc++ su-exec ffmpeg
 COPY docker/entrypoint.sh /usr/local/bin/docker-entrypoint
