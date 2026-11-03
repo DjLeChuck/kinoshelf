@@ -9,8 +9,10 @@
 # TARGETARCH below.
 FROM --platform=$BUILDPLATFORM node:26-alpine@sha256:c6ad9e9c1d80f6eb607c26b4b0a132ff7a2344fad1c78ea3baa2a7d4c8de6d94 AS build
 ARG TARGETARCH
-RUN corepack enable
+# Node 25 dropped corepack, so pnpm is installed with npm, at the version `packageManager` pins.
 WORKDIR /app
+COPY package.json ./
+RUN npm install -g "pnpm@$(node -p "require('./package.json').packageManager.split('@')[1]")"
 COPY . .
 # Install scripts are skipped (here and in `deploy`): better-sqlite3 would compile itself with
 # node-gyp, but it ships a prebuilt binary for musl (x64 and arm64) that it loads instead.
@@ -36,7 +38,7 @@ RUN set -eu; \
 FROM node:26-alpine@sha256:c6ad9e9c1d80f6eb607c26b4b0a132ff7a2344fad1c78ea3baa2a7d4c8de6d94 AS node
 RUN apk add --no-cache binutils && strip --strip-unneeded -o /out-node /usr/local/bin/node
 
-# Alpine alone: the node:alpine image adds npm, yarn and corepack, which the runtime does not use.
+# Alpine alone: the node:alpine image adds npm and yarn, which the runtime does not use.
 FROM alpine:3.24@sha256:be2656061b536c1883c4034790e21d0a09c5aaaf51968b89368a3c0371ea2c9a
 # `ffmpeg` is there for its `ffprobe` (a video's codec and audio tracks); Kinoshelf never encodes.
 RUN apk add --no-cache libstdc++ su-exec ffmpeg
