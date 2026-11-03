@@ -1731,7 +1731,7 @@ export interface paths {
                                     idleSeconds: number;
                                 } | null;
                             } | null;
-                            /** @description `missing-episodes` and `missing-show-files` count shows (a series library only), the others files. */
+                            /** @description A movie library counts files. A series library counts shows, except `review` and `unrecognized`: those files belong to no show, so they stay counted as files. */
                             counts: {
                                 all: number;
                                 review: number;
@@ -1967,7 +1967,7 @@ export interface paths {
         };
         /**
          * The shows of a series library
-         * @description One row per work (files nobody identified are not shows: they are in `GET /api/libraries/{id}/items`, filtered by state). `missing` is the number of aired episodes no file holds, as last counted: `null` until it was (it is counted on opening a show, and in the background when no job runs), never by this request. `missing=true` keeps the shows that lack some; `incomplete=true` those lacking a file the profile writes for the show or a season (`tvshow.nfo`, an image: see `nfo`, `poster`, `fanart`). 409 `library.not-series` for a movie library.
+         * @description One row per work (files nobody identified are not shows: they are in `GET /api/libraries/{id}/items`, filtered by state). `missing` is the number of aired episodes no file holds, as last counted: `null` until it was (it is counted on opening a show, and in the background when no job runs), never by this request. `missing=true` keeps the shows that lack some; `incomplete=true` those lacking a file the profile writes for the show or a season (`tvshow.nfo`, an image: see `nfo`, `poster`, `fanart`); `state` keeps the shows holding a file of that state, as `GET /api/libraries/{id}/items` filters. 409 `library.not-series` for a movie library.
          */
         get: {
             parameters: {
@@ -1975,6 +1975,7 @@ export interface paths {
                     q?: string;
                     missing?: boolean;
                     incomplete?: boolean;
+                    state?: "review" | "rename" | "unrecognized" | "missing-nfo" | "missing-artwork";
                     limit?: number;
                     offset?: number;
                 };

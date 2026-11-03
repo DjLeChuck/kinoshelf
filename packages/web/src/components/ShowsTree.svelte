@@ -15,6 +15,7 @@
     type EpisodeState,
     type LibraryItem,
     type Show,
+    type ShowFilter,
     type ShowDetail,
   } from '../lib/library-items.js';
   import Chevron from './Chevron.svelte';
@@ -25,17 +26,14 @@
     libraryId,
     writes,
     query,
-    only,
-    settleCount,
+    filter,
     onsettled,
   }: {
     libraryId: string;
     writes: { nfo: boolean; artwork: boolean };
     query: string;
-    /** Only the shows that lack episodes, or files of their own (and nothing waiting to be validated). */
-    only: 'missing-episodes' | 'missing-show-files' | undefined;
-    /** Files to validate or identify, from the library's counts: they have no show. */
-    settleCount: number;
+    /** The tab: the shows it keeps, and the files waiting for a person (`review`, `unrecognized`). */
+    filter: ShowFilter | undefined;
     /** A file was settled: what to tell the user, and the library to read again. */
     onsettled: (message: string) => void;
   } = $props();
@@ -78,24 +76,31 @@
   });
 
   let latest = 0;
-  async function load(wanted = { query, only, settleCount }): Promise<void> {
+  async function load(wanted = { query, filter }): Promise<void> {
     const ticket = ++latest;
     try {
-      const answer = await libraryItems.shows(libraryId, {
-        q: wanted.query,
-        missing: wanted.only === 'missing-episodes',
-        incomplete: wanted.only === 'missing-show-files',
-        limit,
-      });
-      // The files that wait for a person are one node at the top, never inside a show.
-      const pages =
-        wanted.only !== undefined || wanted.settleCount === 0
-          ? []
-          : await Promise.all(
-              (['review', 'unrecognized'] as const).map((state) =>
-                libraryItems.page(libraryId, { state, q: wanted.query, limit: 100 }),
-              ),
-            );
+      // The files that wait for a person are one node at the top, never inside a show: the tabs
+      // `review` and `unrecognized` list them alone, and the tab of every show lists both kinds.
+      const waiting = (['review', 'unrecognized'] as const).filter(
+        (state) => wanted.filter === undefined || wanted.filter === state,
+      );
+      const answer =
+        wanted.filter === 'review' || wanted.filter === 'unrecognized'
+          ? { total: 0, items: [] }
+          : await libraryItems.shows(libraryId, {
+              q: wanted.query,
+              missing: wanted.filter === 'missing-episodes',
+              incomplete: wanted.filter === 'missing-show-files',
+              ...(wanted.filter !== undefined &&
+                wanted.filter !== 'missing-episodes' &&
+                wanted.filter !== 'missing-show-files' && { state: wanted.filter }),
+              limit,
+            });
+      const pages = await Promise.all(
+        waiting.map((state) =>
+          libraryItems.page(libraryId, { state, q: wanted.query, limit: 100 }),
+        ),
+      );
       // A show that was open is read again, so the tree follows what a transfer changed.
       const fresh = await Promise.all(
         opened.map(
@@ -125,18 +130,17 @@
   }
 
   // The parent's search box and filter come through the props: read again when they change.
-  // Not on `settleCount`: it moves each time the parent reloads, and the tree already follows the
-  // same events by itself. Not on the first run either: `refetchOn` below reads it once.
+  // Not on the first run: `refetchOn` below reads it once.
   let mounted = false;
   $effect(() => {
-    const [wantedQuery, wantedOnly] = [query, only];
+    const [wantedQuery, wantedFilter] = [query, filter];
     untrack(() => {
       if (!mounted) {
         mounted = true;
         return;
       }
       limit = PAGE_SIZE;
-      void load({ query: wantedQuery, only: wantedOnly, settleCount });
+      void load({ query: wantedQuery, filter: wantedFilter });
     });
   });
 

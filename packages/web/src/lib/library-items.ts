@@ -10,7 +10,7 @@ export const ITEM_FILTERS: readonly ItemFilter[] = [
   'missing-nfo',
   'missing-artwork',
 ];
-/** A series library also filters its shows (`missing-episodes` counts shows, not files). */
+/** A series library also filters its shows. Its tabs count shows, except the files that wait for a person. */
 export type ShowFilter = ItemFilter | 'missing-episodes' | 'missing-show-files';
 export const SERIES_FILTERS: readonly ShowFilter[] = [
   ...ITEM_FILTERS,
@@ -154,18 +154,21 @@ export interface ShowsQuery {
   readonly q?: string | undefined;
   readonly missing?: boolean | undefined;
   readonly incomplete?: boolean | undefined;
+  /** Only the shows holding a file of this state (or lacking this kind of file). */
+  readonly state?: ItemFilter | undefined;
   readonly limit: number;
   readonly offset?: number;
 }
 
 export function showsUrl(
   libraryId: string,
-  { q, missing, incomplete, limit, offset }: ShowsQuery,
+  { q, missing, incomplete, state, limit, offset }: ShowsQuery,
 ): string {
   const parameters = [
     ...(q?.trim() ? [`q=${encodeURIComponent(q.trim())}`] : []),
     ...(missing ? ['missing=true'] : []),
     ...(incomplete ? ['incomplete=true'] : []),
+    ...(state ? [`state=${state}`] : []),
     `limit=${limit}`,
     ...(offset ? [`offset=${offset}`] : []),
   ];

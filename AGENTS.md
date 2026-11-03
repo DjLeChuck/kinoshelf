@@ -286,8 +286,10 @@ refuses to delete a library an arrival folder points at (`library.in-use`). Ther
   `GET .../shows/:tmdbId` a `poster` per season, `null` when the profile writes no such file, when no video
   of the show is in place yet (its folder is unknown) or before it was looked at. The planner cannot say it:
   it leaves out what exists, and keeps a show-level file on one episode only (`shareCompanions`). `missing-show-files` is a tree filter (it counts shows, like `missing-episodes`): `GET .../shows?incomplete=true`
-  keeps the shows lacking a file of their own or a season poster. `missing-nfo` and `missing-artwork` still read
-  the rows (episodes).
+  keeps the shows lacking a file of their own or a season poster. **A series library's tabs count shows**
+  (`counts(libraryId, series)`) and always show the tree: `GET .../shows?state=rename|missing-nfo|missing-artwork`
+  keeps the shows holding a file of that state. The exception is `review` and `unrecognized`: those files belong
+  to no show, so their tabs list only the "To validate" node and count files. A movie library counts files.
 - **Rename and refresh** (`POST /api/libraries/:id/execute`, body `{ items, dryRun? }`): the items are
   the `id`s of the library's list. The server finds each one's entry and scan job (`entryId`,
   `scan_job_id` of its row), keeps what is still executable, and runs one plan per job under one batch

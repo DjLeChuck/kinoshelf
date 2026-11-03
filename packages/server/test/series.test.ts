@@ -169,6 +169,24 @@ describe('the snapshot of a series library', () => {
 });
 
 describe('the shows of a series library', () => {
+  it('counts shows in the tabs, and keeps the files nobody identified in files', async () => {
+    const { h } = await scanned();
+    const body = (await h.request('GET', '/api/libraries/shows/items')).json<{
+      counts: Record<string, number>;
+    }>();
+    // One show (five episodes) and one stranger: the show is counted once in each tab it is in.
+    expect(body.counts.all).toBe(1);
+    expect(body.counts.rename).toBe(1);
+    // A video still to rename has no NFO "missing": all of its files are still to come.
+    expect(body.counts['missing-nfo']).toBe(0);
+    expect((body.counts.review ?? 0) + (body.counts.unrecognized ?? 0)).toBe(1);
+    const state = async (value: string) =>
+      (await h.request('GET', `/api/libraries/shows/shows?state=${value}`)).json<Shows>().total;
+    expect(await state('rename')).toBe(body.counts.rename);
+    expect(await state('missing-nfo')).toBe(body.counts['missing-nfo']);
+    expect(await state('missing-artwork')).toBe(body.counts['missing-artwork']);
+  });
+
   it('lists one row per work, with its seasons and episodes, and leaves the unknown out', async () => {
     const { h } = await scanned();
     const shows = (await h.request('GET', '/api/libraries/shows/shows')).json<Shows>();

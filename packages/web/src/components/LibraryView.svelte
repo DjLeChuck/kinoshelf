@@ -17,6 +17,7 @@
     lastScanFailed,
     libraryItems,
     scanPercent,
+    type ItemFilter,
     type ItemState,
     type ItemsPage,
   } from '../lib/library-items.js';
@@ -78,8 +79,8 @@
     picked = on ? [...picked, id] : picked.filter((other) => other !== id);
   }
 
-  // A series library reads as a tree of shows, until a filter asks for the files themselves
-  // (the ones to validate, to rename, without NFO…): then it is the same flat list as the movies'.
+  // A series library always reads as a tree of shows, whatever the tab: the tab narrows the shows
+  // (and its counts are in shows). A movie library is a flat list of files.
   const isSeries = $derived(library.type === 'series');
   const filters = $derived(isSeries ? SERIES_FILTERS : ITEM_FILTERS);
   // The filter lives in the URL (`?state=review`): a link keeps it, and so does a reload.
@@ -92,10 +93,6 @@
       untrack(refilter);
     }
   });
-  const tree = $derived(
-    isSeries &&
-      (filter === undefined || filter === 'missing-episodes' || filter === 'missing-show-files'),
-  );
 
   const open = $derived(page?.items.find(({ id }) => id === chosen));
   const scanning = $derived(page?.scan != null || library.scanning);
@@ -107,10 +104,9 @@
     try {
       // The tree reads its shows itself: here only the counts and the scan are wanted.
       const answer = await libraryItems.page(library.id, {
-        state:
-          filter === 'missing-episodes' || filter === 'missing-show-files' ? undefined : filter,
+        state: isSeries ? undefined : (filter as ItemFilter | undefined),
         q: searched,
-        limit: tree ? 1 : limit,
+        limit: isSeries ? 1 : limit,
       });
       if (ticket === latest) {
         page = answer;
@@ -252,13 +248,12 @@
       oninput={search}
     />
 
-    {#if tree}
+    {#if isSeries}
       <ShowsTree
         libraryId={library.id}
         writes={page.library.writes}
         query={searched}
-        only={filter === 'missing-episodes' || filter === 'missing-show-files' ? filter : undefined}
-        settleCount={page.counts.review + page.counts.unrecognized}
+        {filter}
         onsettled={(message: string) => {
           notice = message;
           void load();

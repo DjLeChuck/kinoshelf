@@ -446,7 +446,8 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
                 type: 'object',
                 required: ['all', ...ITEM_FILTERS, 'missing-episodes', 'missing-show-files'],
                 description:
-                  '`missing-episodes` and `missing-show-files` count shows (a series library only), the others files.',
+                  'A movie library counts files. A series library counts shows, except `review` and ' +
+                  '`unrecognized`: those files belong to no show, so they stay counted as files.',
                 properties: Object.fromEntries(
                   ['all', ...ITEM_FILTERS, 'missing-episodes', 'missing-show-files'].map((key) => [
                     key,
@@ -493,7 +494,7 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
               progress: ctx.progress.of(running.id) ?? null,
             }
           : null,
-        counts: items.counts(library.id),
+        counts: items.counts(library.id, library.type === 'series'),
         total: page.total,
         items: page.items.map(presentItem),
       };
@@ -597,6 +598,7 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
       q?: string;
       missing?: boolean;
       incomplete?: boolean;
+      state?: ItemFilter;
     };
   }>(
     '/api/libraries/:id/shows',
@@ -609,7 +611,8 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
           'episodes no file holds, as last counted: `null` until it was (it is counted on ' +
           'opening a show, and in the background when no job runs), never by this request. ' +
           '`missing=true` keeps the shows that lack some; `incomplete=true` those lacking a file the profile ' +
-          'writes for the show or a season (`tvshow.nfo`, an image: see `nfo`, `poster`, `fanart`). 409 `library.not-series` for a movie library.',
+          'writes for the show or a season (`tvshow.nfo`, an image: see `nfo`, `poster`, `fanart`); ' +
+          '`state` keeps the shows holding a file of that state, as `GET /api/libraries/{id}/items` filters. 409 `library.not-series` for a movie library.',
         params: idParams,
         querystring: {
           type: 'object',
@@ -617,6 +620,7 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
             q: { type: 'string', minLength: 1 },
             missing: { type: 'boolean' },
             incomplete: { type: 'boolean' },
+            state: { type: 'string', enum: [...ITEM_FILTERS] },
             ...paging,
           },
         },
@@ -637,11 +641,12 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
     },
     (request) => {
       const library = seriesLibrary(request.params.id);
-      const { q, missing, incomplete, limit, offset } = request.query;
+      const { q, missing, incomplete, state, limit, offset } = request.query;
       return items.shows(library.id, {
         ...(q && { query: q }),
         ...(missing && { missing }),
         ...(incomplete && { incomplete }),
+        ...(state && { state }),
         limit,
         offset,
       });

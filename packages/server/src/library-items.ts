@@ -140,6 +140,8 @@ interface ShowFilter {
   missing?: boolean;
   /** Only the shows lacking a file of their own (`tvshow.nfo`, an image) or of a season. */
   incomplete?: boolean;
+  /** Only the shows holding at least one file in this state (or lacking this kind of file). */
+  state?: ItemFilter;
 }
 
 export class LibraryItemStore {
@@ -370,7 +372,7 @@ export class LibraryItemStore {
   }
 
   /** What each filter holds, for the tabs of the page. */
-  counts(libraryId: string): ItemCounts {
+  counts(libraryId: string, series = false): ItemCounts {
     const counts = { all: 0 } as ItemCounts;
     const count = (extra: string): number =>
       this.database
@@ -381,6 +383,16 @@ export class LibraryItemStore {
     counts.all = count('');
     for (const filter of ITEM_FILTERS) {
       counts[filter] = count(` AND ${FILTER_SQL[filter]}`);
+    }
+    if (series) {
+      // A series library reads as a tree of shows, so its tabs count shows. Only the files that
+      // wait for a person stay in files: they belong to no show (they are one node of the tree).
+      counts.all = this.countShows(libraryId, {});
+      for (const filter of ITEM_FILTERS) {
+        if (filter !== 'review' && filter !== 'unrecognized') {
+          counts[filter] = this.countShows(libraryId, { state: filter });
+        }
+      }
     }
     // Counted in shows, not files: it is the list of shows that this filter narrows.
     counts['missing-episodes'] = this.countShows(libraryId, { missing: true });
@@ -425,6 +437,13 @@ export class LibraryItemStore {
     const where = [
       "i.library_id = ? AND i.kind = 'series' AND i.tmdb_id IS NOT NULL",
       ...(options.query ? ["lower(i.title) LIKE ? ESCAPE '\\'"] : []),
+      // The filter's columns are unqualified: inside the sub-query they are the inner table's.
+      ...(options.state
+        ? [
+            `EXISTS (SELECT 1 FROM library_items x WHERE x.library_id = i.library_id
+               AND x.tmdb_id = i.tmdb_id AND x.kind = 'series' AND ${FILTER_SQL[options.state]})`,
+          ]
+        : []),
       // A season's row only ever carries its poster, so one check covers the show and its seasons.
       ...(options.incomplete
         ? [
