@@ -2447,7 +2447,7 @@ export interface paths {
         put?: never;
         /**
          * Look at the watched folders now
-         * @description Submits what is there without waiting for it to settle: whoever asks knows it is complete. A file still carrying a download suffix (`.part`, `.!qB`) is left alone. 409 `watch.not-configured` when no folder is watched.
+         * @description Submits what is there without waiting for it to settle: whoever asks knows it is complete. A file still carrying a download suffix (`.part`, `.!qB`) is left alone. With `all`, starts over: every file is analysed again, except those a job is working on or that already wait in the arrivals (the libraries were emptied, say). 409 `watch.not-configured` when no folder is watched.
          */
         post: {
             parameters: {
@@ -2456,7 +2456,13 @@ export interface paths {
                 path?: never;
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody: {
+                content: {
+                    "application/json": {
+                        all?: boolean;
+                    } | null;
+                };
+            };
             responses: {
                 /** @description Default Response */
                 200: {

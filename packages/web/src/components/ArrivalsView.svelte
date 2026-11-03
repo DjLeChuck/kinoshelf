@@ -88,10 +88,10 @@
   }
 
   /** Skips the settling time: whoever clicks knows the downloads are finished. */
-  async function checkNow(): Promise<void> {
+  async function checkNow(all = false): Promise<void> {
     checking = true;
     try {
-      const { submitted, pending } = await api.post<WatchScan>('/api/watch/scan');
+      const { submitted, pending } = await api.post<WatchScan>('/api/watch/scan', { all });
       notice = t('web.arrivals.check.done', { submitted, pending });
       loaded.failure = undefined;
     } catch (error) {
@@ -117,6 +117,13 @@
       disabled={!watch?.enabled || checking}
       title={watch?.enabled ? undefined : t('web.arrivals.check.none')}
       onclick={() => void checkNow()}>{t('web.arrivals.check')}</button
+    >
+    <button
+      type="button"
+      class="btn"
+      disabled={!watch?.enabled || checking}
+      title={t('web.arrivals.recheck.hint')}
+      onclick={() => void checkNow(true)}>{t('web.arrivals.recheck')}</button
     >
   </div>
 

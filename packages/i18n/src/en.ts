@@ -335,6 +335,9 @@ export const en = {
   'web.arrivals.select': 'Pick a file to settle it.',
   'web.arrivals.check': 'Check now',
   'web.arrivals.check.done': 'Releases found: {submitted} submitted, {pending} still settling.',
+  'web.arrivals.recheck': 'Analyse everything again',
+  'web.arrivals.recheck.hint':
+    'Starts over: every file of the arrival folders is analysed again, except those already waiting here. Useful after emptying a library.',
   'web.arrivals.check.none':
     'No folder is watched. Turn on watching for an arrival folder in the settings.',
   'web.libraries.title': 'Libraries',

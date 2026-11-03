@@ -9,6 +9,7 @@ import {
   type WatchConfig,
 } from '@kinoshelf/core';
 import type { Database } from 'better-sqlite3';
+import { REVIEW_ENTRY, UNRECOGNIZED_ENTRY } from './entry-sql.js';
 
 /** What download clients append to a file while it is not complete. */
 const INCOMPLETE_EXTENSIONS = ['!qb', 'part', 'crdownload', 'tmp', '!ut', 'bc!', 'aria2'];
@@ -148,8 +149,10 @@ export class FolderWatcher {
   }
 
   /** One scan at a time: two at once would submit the same release twice. */
-  scan(options: { force?: boolean } = {}): Promise<ScanResult> {
-    const run = this.chain.then(() => this.scanFolders(options.force ?? false));
+  scan(options: { force?: boolean; all?: boolean } = {}): Promise<ScanResult> {
+    const run = this.chain.then(() =>
+      this.scanFolders(options.force === true || options.all === true, options.all === true),
+    );
     this.chain = run.catch(() => undefined);
     return run;
   }
@@ -207,13 +210,13 @@ export class FolderWatcher {
     this.timer = setInterval(() => void this.scan(), FALLBACK_POLL_MS).unref();
   }
 
-  private async scanFolders(force: boolean): Promise<ScanResult> {
+  private async scanFolders(force: boolean, all: boolean): Promise<ScanResult> {
     const config = this.config;
     let submitted = 0;
     let pending = 0;
     if (config) {
       for (const folder of config.folders) {
-        const result = await this.scanFolder(folder, config, force);
+        const result = await this.scanFolder(folder, config, force, all);
         submitted += result.submitted;
         pending += result.pending;
       }
@@ -234,6 +237,7 @@ export class FolderWatcher {
     folder: string,
     config: WatcherSettings,
     force: boolean,
+    all: boolean,
   ): Promise<ScanResult> {
     const releases = await collect(folder);
     this.available.set(folder, releases !== undefined);
@@ -247,7 +251,9 @@ export class FolderWatcher {
     const known = this.knownFiles(folder);
     // Someone who asks for a scan wants what is not queued: a file remembered while its job was
     // since deleted (history cleared) would otherwise stay unreachable until its date changes.
-    const queued = force ? this.queuedPaths(folder) : undefined;
+    // `all` starts over (the libraries were emptied, say): what only waits on the disk is analysed
+    // again, and just what a job is working on or a person still has to settle is left alone.
+    const queued = all ? this.busyPaths(folder) : force ? this.queuedPaths(folder) : undefined;
     let submitted = 0;
     let pending = 0;
     const seen: VideoFile[] = [];
@@ -297,6 +303,23 @@ export class FolderWatcher {
       )
       .all(...below(folder));
     return new Set(rows.map((row) => row.path));
+  }
+
+  /** Paths a job is queued or running on, and files already waiting in the arrivals. */
+  private busyPaths(folder: string): Set<string> {
+    const [from, to] = below(folder);
+    const jobs = this.deps.database
+      .prepare<[string, string], { path: string }>(
+        "SELECT DISTINCT path FROM jobs WHERE status IN ('queued', 'running') AND path >= ? AND path < ?",
+      )
+      .all(from, to);
+    const entries = this.deps.database
+      .prepare<[string, string], { path: string }>(
+        `SELECT DISTINCT path FROM job_entries
+         WHERE (${REVIEW_ENTRY} OR ${UNRECOGNIZED_ENTRY}) AND path >= ? AND path < ?`,
+      )
+      .all(from, to);
+    return new Set([...jobs, ...entries].map((row) => row.path));
   }
 
   private remember(files: readonly VideoFile[]): void {

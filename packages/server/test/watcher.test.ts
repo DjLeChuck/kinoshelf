@@ -109,6 +109,35 @@ describe('FolderWatcher', () => {
     expect(submitted).toHaveLength(2);
   });
 
+  it('analyses everything again when asked to start over, except what is busy or waiting', async () => {
+    const { folder, submitted, watcher, database } = await setup();
+    const done = join(folder, 'Alien.1979.mkv');
+    const running = join(folder, 'Dune.2021.mkv');
+    const waiting = join(folder, 'Heat.1995.mkv');
+    for (const file of [done, running, waiting]) {
+      await age(await put(file), SETTLE + 1);
+    }
+    await watcher.scan();
+    submitted.length = 0;
+
+    const job = database.prepare(
+      "INSERT INTO jobs (id, path, status, created_at) VALUES (?, ?, ?, '')",
+    );
+    job.run('a', done, 'done');
+    job.run('b', running, 'running');
+    job.run('c', waiting, 'done');
+    database
+      .prepare(
+        `INSERT INTO job_entries (id, job_id, path, classification, parsed, outcome)
+         VALUES ('e', 'c', ?, 'ambiguous', '{}', '{}')`,
+      )
+      .run(waiting);
+
+    expect(await watcher.scan({ force: true })).toEqual({ submitted: 0, pending: 0 });
+    expect(await watcher.scan({ all: true })).toEqual({ submitted: 1, pending: 0 });
+    expect(submitted).toEqual([{ path: done, apply: false }]);
+  });
+
   it('submits only the new files of a release that grew', async () => {
     const { folder, submitted, watcher } = await setup();
     const release = join(folder, 'Show.S01');

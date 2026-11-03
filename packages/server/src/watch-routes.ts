@@ -30,7 +30,14 @@ export function registerWatchRoutes(api: FastifyInstance, watcher: FolderWatcher
         description:
           'Submits what is there without waiting for it to settle: whoever asks knows it is ' +
           'complete. A file still carrying a download suffix (`.part`, `.!qB`) is left alone. ' +
+          'With `all`, starts over: every file is analysed again, except those a job is working ' +
+          'on or that already wait in the arrivals (the libraries were emptied, say). ' +
           '409 `watch.not-configured` when no folder is watched.',
+        body: {
+          type: ['object', 'null'],
+          properties: { all: { type: 'boolean' } },
+          additionalProperties: false,
+        },
         response: {
           200: {
             type: 'object',
@@ -45,11 +52,12 @@ export function registerWatchRoutes(api: FastifyInstance, watcher: FolderWatcher
         },
       },
     },
-    async () => {
+    async (request) => {
       if (!watcher.status().enabled) {
         throw new ApiError(409, 'watch.not-configured');
       }
-      return await watcher.scan({ force: true });
+      const body = request.body as { all?: boolean } | null | undefined;
+      return await watcher.scan({ force: true, all: body?.all === true });
     },
   );
 }

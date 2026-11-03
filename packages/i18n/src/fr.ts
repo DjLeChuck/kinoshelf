@@ -350,6 +350,9 @@ export const fr: Record<keyof typeof en, string> = {
   'web.arrivals.check': 'Vérifier maintenant',
   'web.arrivals.check.done':
     'Dossiers trouvés : {submitted} envoyé(s), {pending} en cours de stabilisation.',
+  'web.arrivals.recheck': 'Tout réanalyser',
+  'web.arrivals.recheck.hint':
+    'Repart de zéro : chaque fichier des dossiers d’arrivée est réanalysé, sauf ceux qui attendent déjà ici. Utile après avoir vidé une bibliothèque.',
   'web.arrivals.check.none':
     'Aucun dossier n’est surveillé. Activez la surveillance d’un dossier d’arrivée dans les réglages.',
   'web.libraries.title': 'Bibliothèques',
