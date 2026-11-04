@@ -19,14 +19,7 @@ const movie: MovieDetails = {
   countries: ['United States of America'],
   rating: { value: 7.8, votes: 12000 },
   cast: [
-    {
-      name: 'Timothée Chalamet',
-      role: 'Paul',
-      order: 0,
-      profilePath: '/t.jpg',
-      id: 1190668,
-      profileUrl: 'https://www.themoviedb.org/person/1190668',
-    },
+    { name: 'Timothée Chalamet', role: 'Paul', order: 0, profilePath: '/t.jpg' },
     { name: 'Zendaya', role: 'Chani', order: 1 },
   ],
   releaseDate: '2021-09-15',
@@ -117,8 +110,6 @@ describe('NFO writer', () => {
         <name>Timothée Chalamet</name>
         <role>Paul</role>
         <order>0</order>
-        <profile>https://www.themoviedb.org/person/1190668</profile>
-        <tmdbid>1190668</tmdbid>
     </actor>
     <actor>
         <name>Zendaya</name>

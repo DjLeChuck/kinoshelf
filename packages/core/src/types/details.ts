@@ -13,10 +13,6 @@ export interface Person {
   /** Billing order, 0 first. */
   readonly order?: number;
   readonly profilePath?: string;
-  /** The provider's id for the person: what lets a player tell two people of one name apart. */
-  readonly id?: number;
-  /** A page about the person on the provider's site. */
-  readonly profileUrl?: string;
 }
 
 /** A vote average on a 0 to 10 scale. */

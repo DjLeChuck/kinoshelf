@@ -126,14 +126,7 @@ function actors(cast: readonly Person[], options: NfoOptions): XmlNode[] {
     return [
       {
         tag: 'actor',
-        children: [
-          ...name,
-          ...leaf('role', person.role),
-          ...leaf('order', person.order),
-          ...thumb,
-          ...leaf('profile', person.profileUrl),
-          ...leaf('tmdbid', person.id),
-        ],
+        children: [...name, ...leaf('role', person.role), ...leaf('order', person.order), ...thumb],
       },
     ];
   });
