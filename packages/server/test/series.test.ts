@@ -51,6 +51,7 @@ const DETAILS: SeriesDetails = {
   originalTitle: 'Severance',
   overview: 'Work and life, split.',
   genres: ['Drama'],
+  tags: [],
   studios: [],
   countries: [],
   cast: [],

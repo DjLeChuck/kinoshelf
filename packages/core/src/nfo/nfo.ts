@@ -126,7 +126,14 @@ function actors(cast: readonly Person[], options: NfoOptions): XmlNode[] {
     return [
       {
         tag: 'actor',
-        children: [...name, ...leaf('role', person.role), ...leaf('order', person.order), ...thumb],
+        children: [
+          ...name,
+          ...leaf('role', person.role),
+          ...leaf('order', person.order),
+          ...thumb,
+          ...leaf('profile', person.profileUrl),
+          ...leaf('tmdbid', person.id),
+        ],
       },
     ];
   });
@@ -168,6 +175,7 @@ export function renderMovieNfo(details: MovieDetails, options: NfoOptions = {}):
         ...leaf('premiered', details.releaseDate),
         ...leaf('year', yearOf(details.releaseDate)),
         ...repeated('studio', details.studios),
+        ...repeated('tag', details.tags),
         ...actors(details.cast, options),
       ],
     },
@@ -193,6 +201,7 @@ export function renderSeriesNfo(details: SeriesDetails, options: NfoOptions = {}
         ...leaf('year', yearOf(details.firstAirDate)),
         ...leaf('status', details.status),
         ...repeated('studio', details.studios),
+        ...repeated('tag', details.tags),
         ...actors(details.cast, options),
         ...details.seasons.flatMap((season) =>
           leaf('namedseason', season.name, { number: String(season.season) }),

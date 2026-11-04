@@ -31,6 +31,7 @@ const details: MovieDetails = {
   title: 'Nightbitch',
   originalTitle: 'Nightbitch',
   genres: [],
+  tags: [],
   studios: [],
   countries: [],
   cast: [],

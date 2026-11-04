@@ -13,6 +13,10 @@ export interface Person {
   /** Billing order, 0 first. */
   readonly order?: number;
   readonly profilePath?: string;
+  /** The provider's id for the person: what lets a player tell two people of one name apart. */
+  readonly id?: number;
+  /** A page about the person on the provider's site. */
+  readonly profileUrl?: string;
 }
 
 /** A vote average on a 0 to 10 scale. */
@@ -31,6 +35,8 @@ interface DetailsBase {
   readonly tagline?: string;
   readonly overview?: string;
   readonly genres: readonly string[];
+  /** The provider's keywords (`body horror`, `satire`), in its language, usually English. */
+  readonly tags: readonly string[];
   readonly studios: readonly string[];
   /** Country names (not codes): what Kodi-format files carry. */
   readonly countries: readonly string[];

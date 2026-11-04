@@ -14,11 +14,19 @@ const movie: MovieDetails = {
   tagline: 'It begins.',
   overview: 'Paul Atreides.',
   genres: ['Science Fiction', 'Adventure'],
+  tags: ['desert', 'based on novel or book'],
   studios: ['Legendary Pictures'],
   countries: ['United States of America'],
   rating: { value: 7.8, votes: 12000 },
   cast: [
-    { name: 'Timothée Chalamet', role: 'Paul', order: 0, profilePath: '/t.jpg' },
+    {
+      name: 'Timothée Chalamet',
+      role: 'Paul',
+      order: 0,
+      profilePath: '/t.jpg',
+      id: 1190668,
+      profileUrl: 'https://www.themoviedb.org/person/1190668',
+    },
     { name: 'Zendaya', role: 'Chani', order: 1 },
   ],
   releaseDate: '2021-09-15',
@@ -34,6 +42,7 @@ const series: SeriesDetails = {
   title: 'Breaking Bad',
   originalTitle: 'Breaking Bad',
   genres: ['Drama'],
+  tags: ['drug dealer'],
   studios: ['AMC'],
   countries: ['United States of America'],
   cast: [],
@@ -102,10 +111,14 @@ describe('NFO writer', () => {
     <premiered>2021-09-15</premiered>
     <year>2021</year>
     <studio>Legendary Pictures</studio>
+    <tag>desert</tag>
+    <tag>based on novel or book</tag>
     <actor>
         <name>Timothée Chalamet</name>
         <role>Paul</role>
         <order>0</order>
+        <profile>https://www.themoviedb.org/person/1190668</profile>
+        <tmdbid>1190668</tmdbid>
     </actor>
     <actor>
         <name>Zendaya</name>
@@ -132,6 +145,7 @@ describe('NFO writer', () => {
     <year>2008</year>
     <status>Ended</status>
     <studio>AMC</studio>
+    <tag>drug dealer</tag>
     <namedseason number="0">Specials</namedseason>
     <namedseason number="2">Season Two</namedseason>
 </tvshow>
@@ -216,6 +230,7 @@ describe('NFO writer', () => {
       originalTitle: '  ',
       overview: '',
       genres: ['', 'Drama'],
+      tags: ['', ' '],
       studios: [],
       countries: [],
       cast: [{ name: '' }],
