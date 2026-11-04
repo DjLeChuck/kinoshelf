@@ -9,7 +9,7 @@ ways instead, from the most to the least precise.
 Run `kinoshelf submit <path>` from the client's "on completion" hook. It reads `KINOSHELF_API_KEY`
 and `KINOSHELF_URL` (default `http://localhost:8484`) from the environment, so the secret never sits
 in a command line. Add `--apply` to also transfer what is matched with confidence; the rest waits in
-[Arrivals](web-ui.md#arrivals).
+[Arrivals](1-web-ui.md#arrivals).
 
 | Client       | Where                                                  | Command                                                                                                |
 | ------------ | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------ |

@@ -12,7 +12,7 @@ HTTP call instead of running a tool. The API serves Kinoshelf's own clients (the
 - An address that gives ten wrong keys within ten minutes is refused with a 429 until those ten
   minutes are over.
 
-See [Installation](installation.md#first-key) for creating the key.
+See [Installation](0-installation.md#first-key) for creating the key.
 
 ## Jobs
 

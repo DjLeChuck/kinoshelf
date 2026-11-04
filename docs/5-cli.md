@@ -6,7 +6,7 @@
 docker compose exec kinoshelf kinoshelf …
 ```
 
-Outside Docker, build it from source (see [Development](development.md)).
+Outside Docker, build it from source (see [Development](7-development.md)).
 
 ## Commands
 
@@ -36,7 +36,7 @@ kinoshelf submit <path>   # hand a path to a running server (see Getting downloa
 ## Settings and language
 
 Settings can live in `~/.config/kinoshelf/config.yaml` (same format as the server's, see
-[Configuration](configuration.md)). The tool speaks French or English: `--lang fr|en`, or your
+[Configuration](4-configuration.md)). The tool speaks French or English: `--lang fr|en`, or your
 locale.
 
 `submit` reads `KINOSHELF_API_KEY` and `KINOSHELF_URL` (default `http://localhost:8484`) from the

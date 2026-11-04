@@ -6,19 +6,19 @@ works too.
 
 ## Environment variables
 
-| Variable                    | Purpose                                                                       |
-| --------------------------- | ----------------------------------------------------------------------------- |
-| `TMDB_API_KEY`              | your own TMDB key (or `apiKey.tmdb` in `config.yaml`)                         |
-| `KINOSHELF_API_KEY`         | the server's API key, 32 characters at least (otherwise `api-key create`)     |
-| `KINOSHELF_ALLOWED_HOSTS`   | more host names the first key may be created through (comma-separated)        |
-| `KINOSHELF_TRUST_PROXY`     | proxy addresses or ranges whose `X-Forwarded-*` are believed, or `true`       |
-| `KINOSHELF_HOST`            | address to listen on (default `0.0.0.0`)                                      |
-| `KINOSHELF_PORT`            | port (default `8484`)                                                         |
-| `KINOSHELF_CONFIG_DIR`      | config directory, holds `config.yaml` and `kinoshelf.sqlite`                  |
-| `KINOSHELF_WEB_DIR`         | built web UI to serve (found by itself in the Docker image)                   |
-| `KINOSHELF_TMDB_URL`        | TMDB API base, for a proxy or tests (default `https://api.themoviedb.org`)    |
-| `KINOSHELF_TMDB_IMAGES_URL` | TMDB images base (default `https://image.tmdb.org/t/p`)                       |
-| `PUID`, `PGID`              | Docker only: the user Kinoshelf runs as (see [Installation](installation.md)) |
+| Variable                    | Purpose                                                                         |
+| --------------------------- | ------------------------------------------------------------------------------- |
+| `TMDB_API_KEY`              | your own TMDB key (or `apiKey.tmdb` in `config.yaml`)                           |
+| `KINOSHELF_API_KEY`         | the server's API key, 32 characters at least (otherwise `api-key create`)       |
+| `KINOSHELF_ALLOWED_HOSTS`   | more host names the first key may be created through (comma-separated)          |
+| `KINOSHELF_TRUST_PROXY`     | proxy addresses or ranges whose `X-Forwarded-*` are believed, or `true`         |
+| `KINOSHELF_HOST`            | address to listen on (default `0.0.0.0`)                                        |
+| `KINOSHELF_PORT`            | port (default `8484`)                                                           |
+| `KINOSHELF_CONFIG_DIR`      | config directory, holds `config.yaml` and `kinoshelf.sqlite`                    |
+| `KINOSHELF_WEB_DIR`         | built web UI to serve (found by itself in the Docker image)                     |
+| `KINOSHELF_TMDB_URL`        | TMDB API base, for a proxy or tests (default `https://api.themoviedb.org`)      |
+| `KINOSHELF_TMDB_IMAGES_URL` | TMDB images base (default `https://image.tmdb.org/t/p`)                         |
+| `PUID`, `PGID`              | Docker only: the user Kinoshelf runs as (see [Installation](0-installation.md)) |
 
 A variable wins over what the Settings could save.
 
@@ -61,7 +61,7 @@ notify:
 ### Libraries
 
 Each entry of `libraries` is either a library or an arrival folder (see
-[Concepts](web-ui.md#two-kinds-of-folders)).
+[Concepts](1-web-ui.md#two-kinds-of-folders)).
 
 | Key         | Library (`type`)               | Arrival folder (`into`)                        |
 | ----------- | ------------------------------ | ---------------------------------------------- |
@@ -77,7 +77,7 @@ Each entry of `libraries` is either a library or an arrival folder (see
 
 ### Watching
 
-See [Getting downloads in](getting-downloads-in.md#2-watch-a-folder).
+See [Getting downloads in](2-getting-downloads-in.md#2-watch-a-folder).
 
 ### Notifications
 
