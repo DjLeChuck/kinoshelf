@@ -12,6 +12,7 @@
     type ReportOperation,
     type RunReport,
   } from '../lib/library-items.js';
+  import { FOLD_FROM, previewOf, type PreviewFile, type PreviewItem } from '../lib/run-preview.js';
 
   let {
     libraryId,
@@ -83,11 +84,57 @@
 
   const byEntry = $derived(new Map(items.map((item) => [item.entryId, item])));
   const totals = $derived(report ? tally(report) : undefined);
+  const preview = $derived(report ? previewOf(report) : undefined);
+  const folded = $derived((preview?.items.length ?? 0) >= FOLD_FROM);
   const nameOf = (item: LibraryItem | undefined, fallback: string): string =>
     item?.title ?? (item ? baseName(item.path) : fallback);
   const blocked = (operation: ReportOperation): string | undefined =>
     operation.error ? describeError(t, operation.error) : undefined;
 </script>
+
+{#snippet status(file: PreviewFile)}
+  {#if file.operation.status === 'skipped'}
+    <span class="chip chip-neutral">{t('web.library.run.exists')}</span>
+  {:else if file.operation.status === 'failed'}
+    <span class="chip chip-danger" title={blocked(file.operation)}
+      >{t('web.library.run.blocked')}</span
+    >
+  {/if}
+{/snippet}
+
+{#snippet folders(item: PreviewItem)}
+  <div class="folders">
+    {#each item.folders as folder (folder.path)}
+      <p class="mono folder">{folder.path}/</p>
+      <ul class="files">
+        {#each folder.moved as file (file.name)}
+          <li>
+            <span class="tag">
+              {t(
+                file.operation.role === 'sidecar'
+                  ? 'web.library.run.tag.sidecar'
+                  : 'web.library.run.tag.main',
+              )}
+            </span>
+            <span class="mono" title={file.name}>{file.short}</span>
+            {@render status(file)}
+          </li>
+        {/each}
+        {#if folder.written.length > 0}
+          <li>
+            <span class="tag">{t('web.library.run.tag.written')}</span>
+            <span class="written">
+              {#each folder.written as file (file.name)}
+                <span class="mono token" title={file.name}>{file.short}</span>
+                {@render status(file)}
+              {/each}
+            </span>
+          </li>
+        {/if}
+      </ul>
+    {/each}
+  </div>
+{/snippet}
 
 <dialog
   bind:this={dialog}
@@ -128,40 +175,35 @@
     {#if report.skipped.length > 0}
       <p class="muted">{t('web.library.run.skipped', { count: report.skipped.length })}</p>
     {/if}
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>{t('web.library.run.col.file')}</th>
-            <th>{t('web.library.run.col.what')}</th>
-            <th>{t('web.library.run.col.to')}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {#each report.items as entry (entry.entryId)}
-            {#each entry.results as operation, index (index)}
-              <tr>
-                <td>{index === 0 ? nameOf(byEntry.get(entry.entryId), entry.entryId) : ''}</td>
-                <td>
-                  {t(
-                    operation.type === 'transfer' && operation.role === 'sidecar'
-                      ? 'web.library.run.op.sidecar'
-                      : `web.library.run.op.${operation.type}`,
-                  )}
-                  {#if operation.status === 'skipped'}
-                    <span class="chip chip-neutral">{t('web.library.run.exists')}</span>
-                  {:else if operation.status === 'failed'}
-                    <span class="chip chip-danger" title={blocked(operation)}
-                      >{t('web.library.run.blocked')}</span
-                    >
-                  {/if}
-                </td>
-                <td class="mono dest">{operation.destination}</td>
-              </tr>
-            {/each}
-          {/each}
-        </tbody>
-      </table>
+    <p class="muted root">{t('web.library.run.root', { path: preview?.root ?? '' })}</p>
+    <div class="list">
+      {#each preview?.items ?? [] as item (item.entryId)}
+        {#if folded}
+          <details class="film" open={item.failed}>
+            <summary>
+              <span class="summary-main">
+                <span class="name">{nameOf(byEntry.get(item.entryId), item.entryId)}</span>
+                <span class="mono dim">{item.folders[0]?.path}/</span>
+              </span>
+              {#if item.failed}
+                <span class="chip chip-danger">{t('web.library.run.blocked')}</span>
+              {/if}
+              <span class="muted count">{t('web.library.run.files', { count: item.count })}</span>
+            </summary>
+            {@render folders(item)}
+          </details>
+        {:else}
+          <div class="film">
+            <div class="head">
+              <span class="name">{nameOf(byEntry.get(item.entryId), item.entryId)}</span>
+              {#if item.failed}
+                <span class="chip chip-danger">{t('web.library.run.blocked')}</span>
+              {/if}
+            </div>
+            {@render folders(item)}
+          </div>
+        {/if}
+      {/each}
     </div>
   {/if}
 
@@ -194,16 +236,10 @@
     overflow: hidden;
   }
 
-  .table-wrap {
+  .list {
     flex: 1 1 auto;
     min-height: 0;
     overflow: auto;
-  }
-
-  thead th {
-    position: sticky;
-    top: 0;
-    background: var(--surface);
   }
 
   .actions {
@@ -233,27 +269,92 @@
     margin: 0 0 8px;
   }
 
-  table {
-    width: 100%;
-    border-collapse: collapse;
+  .root {
+    font-size: 12.5px;
   }
 
-  th,
-  td {
-    padding: 6px 10px;
-    border-bottom: 1px solid var(--border);
-    text-align: left;
-    vertical-align: top;
+  .film {
+    padding: 10px 0;
+    border-top: 1px solid var(--border);
   }
 
-  th {
+  .film:first-child {
+    border-top: 0;
+  }
+
+  .head,
+  summary {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 12px;
+  }
+
+  summary {
+    cursor: pointer;
+  }
+
+  .summary-main {
+    flex: 1 1 0;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .name {
+    font-weight: 600;
+  }
+
+  .dim,
+  .count {
     color: var(--muted);
     font-size: 12px;
   }
 
-  .dest {
+  .folders {
+    margin-top: 6px;
+    min-width: 0;
+  }
+
+  .folder {
+    margin: 4px 0 2px;
+    font-size: 12px;
+    overflow-wrap: anywhere;
+  }
+
+  .files {
+    list-style: none;
+    margin: 0 0 0 10px;
+    padding: 0 0 0 12px;
+    border-left: 2px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .files li {
+    display: flex;
+    gap: 8px;
+    align-items: baseline;
+    min-width: 0;
+  }
+
+  .files .mono {
     font-size: 11.5px;
     overflow-wrap: anywhere;
+  }
+
+  .tag {
+    flex: none;
+    width: 4.5em;
+    color: var(--muted);
+    font-size: 11px;
+  }
+
+  .written {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px 12px;
+    align-items: baseline;
   }
 
   .actions {
