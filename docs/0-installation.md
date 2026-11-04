@@ -46,7 +46,13 @@ runs as that user, so what it moves, copies or links belongs to you. It gives `/
 at start and never touches the permissions of the media folders, which that user must be able to
 read and write.
 
-- **TrueNAS**: use the `apps` user (568).
+- **TrueNAS**: use the `apps` user (568). Kinoshelf moves, links and writes files, so that user
+  needs write access to the datasets holding your libraries and arrival folders: make it their
+  owner, or grant it in the dataset's ACL. Without it, a scan works (read only) and the renames then
+  fail with `EACCES`. Put the libraries and the arrival folders in the **same dataset**: two
+  datasets are two file systems, and a hardlink cannot cross them (see below). For `/config`, a
+  volume managed by TrueNAS needs nothing; with a host path, the start-up `chown` may fail (a
+  warning in the log), so apply the ACL to that path.
 - **`user:` instead**: start the container with `user: "1026:100"` (Compose) or `--user`. `PUID`
   and `PGID` are then ignored, and `/config` must already belong to that user.
 - Do not mount `/config` read-only.
