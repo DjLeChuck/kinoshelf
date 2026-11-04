@@ -65,7 +65,6 @@ const IMAGE_SIZES: Record<ImageSize, string> = {
 };
 // An NFO lists the main cast; TMDB sends hundreds of people for a long-running series.
 const CAST_LIMIT = 20;
-const PERSON_PAGE = 'https://www.themoviedb.org/person';
 const WRITER_JOBS = new Set(['Screenplay', 'Writer', 'Story']);
 
 /** TMDB reports 0 and 0 votes for a work nobody rated: that is no rating, not a zero. */
@@ -207,7 +206,6 @@ export class TmdbProvider implements MetadataProvider {
       | {
           cast?:
             | readonly {
-                id?: number | null | undefined;
                 name: string;
                 character?: string | null | undefined;
                 order?: number | null | undefined;
@@ -221,7 +219,6 @@ export class TmdbProvider implements MetadataProvider {
   }) {
     const cast: Person[] = (r.credits?.cast ?? []).slice(0, CAST_LIMIT).map((p) => ({
       name: p.name,
-      ...(p.id != null && { id: p.id, profileUrl: `${PERSON_PAGE}/${p.id}` }),
       ...(p.character && { role: p.character }),
       ...(p.order != null && { order: p.order }),
       ...imageField('profilePath', p.profile_path),

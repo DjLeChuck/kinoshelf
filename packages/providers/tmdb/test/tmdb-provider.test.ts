@@ -365,8 +365,6 @@ describe('getMovieDetails and getSeriesDetails', () => {
       role: 'Role 0',
       order: 0,
       profilePath: '/p0.jpg',
-      id: 9001,
-      profileUrl: 'https://www.themoviedb.org/person/9001',
     });
     expect(movie?.cast[1]).toEqual({ name: 'No Photo', order: 1 });
     expect(movie?.cast[19]?.name).toBe('Actor 19');

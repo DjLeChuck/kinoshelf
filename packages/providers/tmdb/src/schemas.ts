@@ -71,7 +71,6 @@ const credits = z.object({
   cast: z
     .array(
       z.object({
-        id: z.number().int().nullish(),
         name: z.string(),
         character: z.string().nullish(),
         order: z.number().int().nullish(),
