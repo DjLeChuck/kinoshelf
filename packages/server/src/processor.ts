@@ -1,3 +1,4 @@
+import { detectLocale } from '@kinoshelf/i18n';
 import { stat } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import type { Database } from 'better-sqlite3';
@@ -65,7 +66,7 @@ async function process(deps: ProcessorDeps, job: Job): Promise<ProcessedJob> {
       source: library ? library.source : job.path,
       sourceIsFile: library ? false : isFile,
       defaultToSource: false,
-      defaultMetadataLanguage: metadataLanguageFor(deps.config.locale),
+      defaultMetadataLanguage: defaultMetadataLanguage(deps),
     },
   );
 
@@ -123,6 +124,11 @@ async function process(deps: ProcessorDeps, job: Job): Promise<ProcessedJob> {
  * request already in flight.
  */
 const shared = new WeakMap<Database, { cache: SqliteHttpCache; pool: RequestPool }>();
+
+/** Language asked of TMDB when no setting names one: the locale as the server detects it (config, then LANG). */
+export function defaultMetadataLanguage(deps: ProcessorDeps): string {
+  return metadataLanguageFor(detectLocale(undefined, deps.config.locale, deps.env));
+}
 
 export function makeProvider(deps: ProcessorDeps, language: string): MetadataProvider {
   if (deps.createProvider) {

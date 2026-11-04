@@ -1,7 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { lstat } from 'node:fs/promises';
 import {
-  metadataLanguageFor,
   libraryProfile,
   createPlan,
   GuessitParser,
@@ -41,7 +40,7 @@ import type { Execution, ExecutionStore } from './executions.js';
 import type { Job, JobStore, PlanSettings } from './jobs.js';
 import type { LibrarySnapshot } from './library-items.js';
 import type { ExecutionOutcome, OutcomeFile } from './notify/message.js';
-import { makeProvider, type ProcessorDeps } from './processor.js';
+import { defaultMetadataLanguage, makeProvider, type ProcessorDeps } from './processor.js';
 
 export interface OperationReport {
   readonly type: Operation['type'];
@@ -222,7 +221,7 @@ export class Service {
 
   private provider(): MetadataProvider {
     const { config } = this.deps;
-    return makeProvider(this.deps, config.metadataLanguage ?? metadataLanguageFor(config.locale));
+    return makeProvider(this.deps, config.metadataLanguage ?? defaultMetadataLanguage(this.deps));
   }
 
   /**
