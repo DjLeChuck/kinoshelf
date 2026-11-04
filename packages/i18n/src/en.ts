@@ -301,6 +301,7 @@ export const en = {
   'web.library.run.cancel': 'Cancel',
   'web.library.run.started': 'Started: the batch is in the history.',
   'web.library.run.op.transfer': 'Video',
+  'web.library.run.op.sidecar': 'Companion file',
   'web.library.run.op.write-file': 'NFO file',
   'web.library.run.op.download': 'Image file',
   'web.library.run.exists': 'Already there',

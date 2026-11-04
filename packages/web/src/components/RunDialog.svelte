@@ -143,7 +143,11 @@
               <tr>
                 <td>{index === 0 ? nameOf(byEntry.get(entry.entryId), entry.entryId) : ''}</td>
                 <td>
-                  {t(`web.library.run.op.${operation.type}`)}
+                  {t(
+                    operation.type === 'transfer' && operation.role === 'sidecar'
+                      ? 'web.library.run.op.sidecar'
+                      : `web.library.run.op.${operation.type}`,
+                  )}
                   {#if operation.status === 'skipped'}
                     <span class="chip chip-neutral">{t('web.library.run.exists')}</span>
                   {:else if operation.status === 'failed'}

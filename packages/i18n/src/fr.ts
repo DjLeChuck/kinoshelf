@@ -315,6 +315,7 @@ export const fr: Record<keyof typeof en, string> = {
   'web.library.run.cancel': 'Annuler',
   'web.library.run.started': 'Lancé : le lot est dans l’historique.',
   'web.library.run.op.transfer': 'Vidéo',
+  'web.library.run.op.sidecar': 'Fichier associé',
   'web.library.run.op.write-file': 'Fichier NFO',
   'web.library.run.op.download': 'Image',
   'web.library.run.exists': 'Déjà présent',
