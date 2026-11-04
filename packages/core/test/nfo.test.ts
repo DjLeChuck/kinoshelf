@@ -24,6 +24,7 @@ const movie: MovieDetails = {
   ],
   releaseDate: '2021-09-15',
   runtime: 155,
+  certification: { country: 'FR', value: '12' },
   directors: ['Denis Villeneuve'],
   writers: ['Jon Spaihts', 'Eric Roth'],
   collection: { name: 'Dune Collection', overview: 'Spice.' },
@@ -88,6 +89,7 @@ describe('NFO writer', () => {
     <plot>Paul Atreides.</plot>
     <tagline>It begins.</tagline>
     <runtime>155</runtime>
+    <mpaa>FR:12</mpaa>
     <id>438631</id>
     <uniqueid type="tmdb" default="true">438631</uniqueid>
     <uniqueid type="imdb">tt1160419</uniqueid>
@@ -207,6 +209,24 @@ describe('NFO writer', () => {
     expect(xml).toContain('<plot>He said &quot;go&quot; &apos;now&apos; ok\nnext</plot>');
     expect(wellFormed(xml)).toBe(true);
     expect(at(parse(xml), 'movie', 'title')).toBe('Fast & Furious <3');
+  });
+
+  it('prefixes a bare number with its country, and leaves a named rating as it is', () => {
+    const rated = (value: string): string =>
+      renderMovieNfo({ ...movie, certification: { country: 'FR', value } });
+    expect(rated('16')).toContain('<mpaa>FR:16</mpaa>');
+    expect(rated('18+')).toContain('<mpaa>FR:18+</mpaa>');
+    // TMDB sometimes sends a minus sign for "under": a `-` separator would give `FR--18`.
+    expect(rated('-18')).toContain('<mpaa>FR:-18</mpaa>');
+    expect(rated('U')).toContain('<mpaa>U</mpaa>');
+    expect(rated('PG-13')).toContain('<mpaa>PG-13</mpaa>');
+    expect(rated('  ')).not.toContain('<mpaa>');
+  });
+
+  it('writes the rating of a series', () => {
+    const xml = renderSeriesNfo({ ...series, certification: { country: 'US', value: 'TV-MA' } });
+    expect(xml).toContain('<mpaa>TV-MA</mpaa>');
+    expect(renderSeriesNfo(series)).not.toContain('<mpaa>');
   });
 
   it('keeps astral characters', () => {

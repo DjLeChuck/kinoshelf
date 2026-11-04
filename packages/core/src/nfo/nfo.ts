@@ -1,4 +1,10 @@
-import type { MovieDetails, Person, Rating, SeriesDetails } from '../types/details.js';
+import type {
+  Certification,
+  MovieDetails,
+  Person,
+  Rating,
+  SeriesDetails,
+} from '../types/details.js';
 import type { EpisodeInfo } from '../types/provider.js';
 
 /**
@@ -103,6 +109,17 @@ function ratings(rating: Rating | undefined): XmlNode[] {
   ];
 }
 
+/**
+ * `<mpaa>`, the one rating tag Plex and Jellyfin read. A bare number (`16`, `-18`, `18+`) means
+ * nothing without its country, so it gets one (`FR:16`, `FR:-18`); `PG-13` and `TV-MA` already say
+ * where they come from. The separator is not `-`, which TMDB's own `-18` would double.
+ */
+function mpaa(certification: Certification | undefined): XmlNode[] {
+  if (!certification) return [];
+  const value = certification.value.trim();
+  return leaf('mpaa', /^-?\d+\+?$/.test(value) ? `${certification.country}:${value}` : value);
+}
+
 /** `2021-09-15` gives `2021`; anything else gives nothing rather than a guess. */
 function yearOf(date: string | undefined): string | undefined {
   return date !== undefined && /^\d{4}-\d{2}-\d{2}/.test(date) ? date.slice(0, 4) : undefined;
@@ -148,6 +165,7 @@ export function renderMovieNfo(details: MovieDetails, options: NfoOptions = {}):
         ...leaf('plot', details.overview),
         ...leaf('tagline', details.tagline),
         ...leaf('runtime', details.runtime),
+        ...mpaa(details.certification),
         ...leaf('id', details.id.id),
         ...uniqueIds(details),
         ...repeated('genre', details.genres),
@@ -186,6 +204,7 @@ export function renderSeriesNfo(details: SeriesDetails, options: NfoOptions = {}
         ...ratings(details.rating),
         ...leaf('plot', details.overview),
         ...leaf('tagline', details.tagline),
+        ...mpaa(details.certification),
         ...leaf('id', details.id.id),
         ...uniqueIds(details),
         ...repeated('genre', details.genres),

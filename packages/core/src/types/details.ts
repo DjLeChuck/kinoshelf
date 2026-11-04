@@ -15,6 +15,12 @@ export interface Person {
   readonly profilePath?: string;
 }
 
+/** An age rating as a provider gives it: `16` in `FR`, `PG-13` in `US`. */
+export interface Certification {
+  readonly country: string;
+  readonly value: string;
+}
+
 /** A vote average on a 0 to 10 scale. */
 export interface Rating {
   readonly value: number;
@@ -37,6 +43,7 @@ interface DetailsBase {
   /** Country names (not codes): what Kodi-format files carry. */
   readonly countries: readonly string[];
   readonly rating?: Rating;
+  readonly certification?: Certification;
   /** Billing order. */
   readonly cast: readonly Person[];
   readonly posterPath?: string;
