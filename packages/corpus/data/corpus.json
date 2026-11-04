@@ -1957,6 +1957,16 @@
     }
   },
   {
+    "path": "Le Seigneur des anneaux - La Communauté de l'anneau - Extended Edition (2001) - 2160p/Le Seigneur des anneaux - La Communauté de l'anneau - Extended Edition (2001) TrueHD Atmos.mkv",
+    "language": "fr",
+    "note": "from a real library (French): an edition after the subtitle made guessit return a list, the subtitle was lost and the 1978 film won on its exact title",
+    "expect": {
+      "status": "matched",
+      "tmdb": 120,
+      "kind": "movie"
+    }
+  },
+  {
     "path": "Tenet (2020)/Tenet (2020) - TF Multi 1080 HDL.mkv",
     "language": "fr",
     "note": "from a real library (French)",

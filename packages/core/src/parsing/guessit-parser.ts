@@ -186,7 +186,11 @@ export class GuessitParser implements Parser {
     const screenSize = text(guess.screen_size);
     const source = text(guess.source);
     const country = countryOf(guess.country);
-    const subtitle = text(guess.alternative_title);
+    // `Title - Subtitle - Extended Edition` gives a list: the subtitle comes first, what follows
+    // is an edition or another label, which does not belong to the title.
+    const subtitle = toList(guess.alternative_title)
+      .map(text)
+      .find((t) => t !== undefined);
     // guessit calls it a volume (`Vol.2`) or a part (`Part.2`); a title names it either way.
     const volume = count(guess.volume) ?? count(guess.part);
     const otherTitles = title === undefined ? [] : otherTitlesOf(title);

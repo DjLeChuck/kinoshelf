@@ -221,6 +221,19 @@ describe('GuessitParser', () => {
       expect(parser.parse(path)).toMatchObject({ kind: 'movie', title, subtitle });
     });
 
+    it('keeps the subtitle when an edition follows it', () => {
+      expect(
+        parser.parse(
+          "Le Seigneur des anneaux - La Communauté de l'anneau - Extended Edition (2001) TrueHD Atmos.mkv",
+        ),
+      ).toMatchObject({
+        kind: 'movie',
+        title: 'Le Seigneur des anneaux',
+        subtitle: "La Communauté de l'anneau",
+        year: 2001,
+      });
+    });
+
     it('has none when there is no dash', () => {
       expect(parser.parse('Dune.2021.2160p.mkv').subtitle).toBeUndefined();
     });
