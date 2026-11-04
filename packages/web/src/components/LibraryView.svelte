@@ -259,6 +259,7 @@
     {#if isSeries}
       <ShowsTree
         libraryId={library.id}
+        source={library.source}
         writes={page.library.writes}
         query={searched}
         {filter}
@@ -389,6 +390,7 @@
             {#key open.id}
               <ItemPanel
                 libraryId={library.id}
+                source={library.source}
                 item={open}
                 ondone={(message: string) => {
                   notice = message;

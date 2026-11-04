@@ -1,6 +1,7 @@
 import type { Locale } from '@kinoshelf/i18n';
 import type { ErrorBody } from './arrivals.js';
 import type { Library } from './libraries.js';
+import { isBelow } from './paths.js';
 import type { Mode } from './settings.js';
 
 export type JobStatus = 'queued' | 'running' | 'done' | 'failed';
@@ -170,18 +171,22 @@ export function rootsOf(root: NonNullable<JobDetail['settings']>['destinationRoo
 
 /**
  * How to send a job again. A scan of a library's whole source goes through the library's own
- * route, which refuses a second scan at once and refreshes the library's rows; anything else
- * (a release, a path sent by hand) is submitted as it was. A library deleted since falls back to
+ * route, which refuses a second scan at once and refreshes the library's rows, and so does a folder
+ * of a typed library read on its own; anything else (a release, a path sent by hand) is submitted
+ * as it was. A library deleted since falls back to
  * the plain submission: its scan job only needs its path.
  */
 export function resendRequest(
   job: Pick<JobDetail, 'path' | 'apply' | 'libraryId'>,
-  libraries: readonly Pick<Library, 'id' | 'source'>[],
+  libraries: readonly Pick<Library, 'id' | 'source' | 'type'>[],
 ): { readonly url: string; readonly body: Record<string, unknown> } {
-  const scanned = libraries.find(
-    (library) => library.id === job.libraryId && library.source === job.path,
-  );
-  return scanned
-    ? { url: `/api/libraries/${scanned.id}/scan`, body: {} }
-    : { url: '/api/jobs', body: { path: job.path, apply: job.apply } };
+  const library = libraries.find(({ id }) => id === job.libraryId);
+  if (library?.source === job.path) {
+    return { url: `/api/libraries/${library.id}/scan`, body: {} };
+  }
+  // A folder of a typed library (a movie, a show) is read again as such, not as a loose path.
+  if (library?.type && isBelow(job.path, library.source)) {
+    return { url: `/api/libraries/${library.id}/rescan`, body: { path: job.path } };
+  }
+  return { url: '/api/jobs', body: { path: job.path, apply: job.apply } };
 }

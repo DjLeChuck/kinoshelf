@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { baseName } from '../lib/paths.js';
+  import { baseName, rescanPath } from '../lib/paths.js';
   import { untrack } from 'svelte';
   import { messageOf } from '../lib/errors.js';
   import { refetchOn } from '../lib/events.svelte.js';
@@ -20,17 +20,21 @@
   } from '../lib/library-items.js';
   import Chevron from './Chevron.svelte';
   import ItemPanel from './ItemPanel.svelte';
+  import RescanButton from './RescanButton.svelte';
   import RunDialog from './RunDialog.svelte';
   import ShowPanel from './ShowPanel.svelte';
 
   let {
     libraryId,
+    source,
     writes,
     query,
     filter,
     onsettled,
   }: {
     libraryId: string;
+    /** The library's folder: what a scan of one show or season must stay inside. */
+    source: string;
     writes: { nfo: boolean; artwork: boolean };
     query: string;
     /** The tab: the shows it keeps, and the files waiting for a person (`review`, `unrecognized`). */
@@ -424,6 +428,18 @@
                           ? t('web.library.season.specials')
                           : t('web.library.season', { season: season.season })}
                       </button>
+                      <RescanButton
+                        {libraryId}
+                        path={rescanPath(
+                          season.episodes.flatMap(({ item }) => (item ? [item.path] : [])),
+                          source,
+                        )}
+                        name={`${show.title ?? ''} · ${season.season === 0 ? t('web.library.season.specials') : t('web.library.season', { season: season.season })}`}
+                        ondone={(message: string) => {
+                          onsettled(message);
+                          void load();
+                        }}
+                      />
                       {#if listed > 0}
                         <span
                           class="chip {present === 0
@@ -515,6 +531,7 @@
         {#key selection.item.id}
           <ItemPanel
             {libraryId}
+            {source}
             item={selection.item}
             ondone={(message: string) => {
               selection = undefined;
@@ -525,7 +542,16 @@
         {/key}
       {:else if chosenShow}
         {#key chosenShow.tmdbId}
-          <ShowPanel show={chosenShow} detail={details[chosenShow.tmdbId]} />
+          <ShowPanel
+            {libraryId}
+            {source}
+            show={chosenShow}
+            detail={details[chosenShow.tmdbId]}
+            ondone={(message: string) => {
+              onsettled(message);
+              void load();
+            }}
+          />
         {/key}
       {:else}
         <p class="muted">{t('web.library.pick')}</p>

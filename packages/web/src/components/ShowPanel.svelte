@@ -2,9 +2,35 @@
   import { imageUrl } from '../lib/arrivals.js';
   import { t } from '../lib/i18n.svelte.js';
   import type { Show, ShowDetail } from '../lib/library-items.js';
+  import { rescanPath } from '../lib/paths.js';
+  import RescanButton from './RescanButton.svelte';
   import WorkCard from './WorkCard.svelte';
 
-  let { show, detail }: { show: Show; detail: ShowDetail | undefined } = $props();
+  let {
+    libraryId,
+    source,
+    show,
+    detail,
+    ondone,
+  }: {
+    libraryId: string;
+    source: string;
+    show: Show;
+    detail: ShowDetail | undefined;
+    /** The analysis was queued: what to tell the user. */
+    ondone: (message: string) => void;
+  } = $props();
+
+  // The folder that holds every file of the show; unknown until its page is read.
+  const folder = $derived(
+    detail &&
+      rescanPath(
+        detail.seasons.flatMap(({ episodes }) =>
+          episodes.flatMap(({ item }) => (item ? [item.path] : [])),
+        ),
+        source,
+      ),
+  );
 
   const poster = $derived(imageUrl('w154', detail?.posterPath));
   const backdrop = $derived(imageUrl('w780', detail?.backdropPath));
@@ -41,6 +67,9 @@
     {#if !detail.determined}
       <p class="alert" role="status">{t('web.library.shows.undetermined')}</p>
     {/if}
+    <div>
+      <RescanButton {libraryId} path={folder} name={show.title ?? ''} {ondone} />
+    </div>
   {/if}
 </WorkCard>
 

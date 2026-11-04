@@ -71,7 +71,8 @@ describe('originOf', () => {
 });
 
 describe('resendRequest', () => {
-  const films = { id: 'films', source: '/media/films' };
+  const films = { id: 'films', source: '/media/films', type: 'movie' as const };
+  const arrivals = { id: 'incoming', source: '/downloads', type: null };
 
   it('sends the scan of a library through the library, which refuses a second one', () => {
     expect(
@@ -79,9 +80,23 @@ describe('resendRequest', () => {
     ).toEqual({ url: '/api/libraries/films/scan', body: {} });
   });
 
+  it('sends the scan of one folder of a library through the library too', () => {
+    expect(
+      resendRequest({ path: '/media/films/Dune (2021)', apply: false, libraryId: 'films' }, [
+        films,
+      ]),
+    ).toEqual({
+      url: '/api/libraries/films/rescan',
+      body: { path: '/media/films/Dune (2021)' },
+    });
+  });
+
   it('submits a release of an arrival folder as it was, with its choice to apply', () => {
     expect(
-      resendRequest({ path: '/downloads/Dune.2021', apply: true, libraryId: 'films' }, [films]),
+      resendRequest({ path: '/downloads/Dune.2021', apply: true, libraryId: 'incoming' }, [
+        films,
+        arrivals,
+      ]),
     ).toEqual({ url: '/api/jobs', body: { path: '/downloads/Dune.2021', apply: true } });
   });
 

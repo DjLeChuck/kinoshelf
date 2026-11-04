@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { baseName } from '../lib/paths.js';
+  import { baseName, rescanPath } from '../lib/paths.js';
   import { imageUrl } from '../lib/arrivals.js';
   import { api } from '../lib/api.js';
   import { messageOf } from '../lib/errors.js';
@@ -15,15 +15,19 @@
     type LibraryItem,
   } from '../lib/library-items.js';
   import ArrivalDetail from './ArrivalDetail.svelte';
+  import RescanButton from './RescanButton.svelte';
   import RunDialog from './RunDialog.svelte';
   import WorkCard from './WorkCard.svelte';
 
   let {
     libraryId,
+    source,
     item,
     ondone,
   }: {
     libraryId: string;
+    /** The library's folder: what a scan of one movie must stay inside. */
+    source: string;
     item: LibraryItem;
     /** The file was settled (transferred or set aside): what to tell the user. */
     ondone: (message: string) => void;
@@ -109,6 +113,16 @@
         >
           {t(item.state === 'rename' ? 'web.library.run.rename' : 'web.library.run.refresh')}
         </button>
+      </div>
+    {/if}
+    {#if item.kind === 'movie'}
+      <div>
+        <RescanButton
+          {libraryId}
+          path={rescanPath([item.path], source)}
+          name={item.title ?? baseName(item.path)}
+          {ondone}
+        />
       </div>
     {/if}
     {#if canNameVersion(item)}
