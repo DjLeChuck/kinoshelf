@@ -329,7 +329,7 @@ describe('getMovieDetails and getSeriesDetails', () => {
     expect(requests).toHaveLength(1);
     expect(Object.fromEntries(requests[0]?.url.searchParams ?? [])).toEqual({
       language: 'fr',
-      append_to_response: 'credits,external_ids,keywords',
+      append_to_response: 'credits,external_ids,keywords,release_dates',
     });
     expect(movie).toMatchObject({
       kind: 'movie',
@@ -353,6 +353,20 @@ describe('getMovieDetails and getSeriesDetails', () => {
     expect(movie?.collection).not.toHaveProperty('overview');
     // Keywords come as given by TMDB: blanks and repeats are dropped, nothing is translated.
     expect(movie?.tags).toEqual(['desert', 'based on novel or book']);
+  });
+
+  it("rates a movie for the request's language, then for the United States", async () => {
+    const { provider } = make(detailRoutes);
+
+    expect((await provider.getMovieDetails(movieId, 'fr'))?.certification).toEqual({
+      country: 'FR',
+      value: '12',
+    });
+    // Germany is listed without a rating: the American one comes next.
+    expect((await provider.getMovieDetails(movieId, 'de'))?.certification).toEqual({
+      country: 'US',
+      value: 'PG-13',
+    });
   });
 
   it('keeps the 20 first cast members, in order, without empty fields', async () => {
@@ -394,6 +408,16 @@ describe('getMovieDetails and getSeriesDetails', () => {
     expect(series).not.toHaveProperty('backdropPath'); // null
     expect(series?.cast).toHaveLength(3);
     expect(series?.tags).toEqual(['chef', 'restaurant']);
+  });
+
+  it('rates a series from its content ratings', async () => {
+    const { provider, requests } = make(detailRoutes);
+    const series = await provider.getSeriesDetails(tvId, 'fr');
+
+    expect(requests[0]?.url.searchParams.get('append_to_response')).toBe(
+      'credits,external_ids,keywords,content_ratings',
+    );
+    expect(series?.certification).toEqual({ country: 'FR', value: '16' });
   });
 
   it('reads the imdb id of a series from external_ids', async () => {

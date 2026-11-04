@@ -105,6 +105,24 @@ export const movieFullDetailsSchema = z.object({
   belongs_to_collection: named.nullish(),
   // `append_to_response=keywords`: the movie endpoint answers with `keywords`, the TV one with `results`.
   keywords: z.object({ keywords: z.array(named).nullish() }).nullish(),
+  // `append_to_response=release_dates`: one entry per country, each with its releases.
+  release_dates: z
+    .object({
+      results: z
+        .array(
+          z.object({
+            iso_3166_1: z.string(),
+            release_dates: z.array(
+              z.object({
+                certification: z.string().nullish(),
+                type: z.number().int().nullish(),
+              }),
+            ),
+          }),
+        )
+        .nullish(),
+    })
+    .nullish(),
 });
 
 export const tvFullDetailsSchema = z.object({
@@ -115,6 +133,14 @@ export const tvFullDetailsSchema = z.object({
   status: z.string().nullish(),
   external_ids: z.object({ imdb_id: z.string().nullish() }).nullish(),
   keywords: z.object({ results: z.array(named).nullish() }).nullish(),
+  // `append_to_response=content_ratings`: one rating per country.
+  content_ratings: z
+    .object({
+      results: z
+        .array(z.object({ iso_3166_1: z.string(), rating: z.string().nullish() }))
+        .nullish(),
+    })
+    .nullish(),
   seasons: z
     .array(
       z.object({

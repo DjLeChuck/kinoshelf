@@ -12,6 +12,7 @@ import {
   type SeasonInfo,
   type SeriesCandidate,
 } from '@kinoshelf/core';
+import { movieRating, pickCertification } from './certification.js';
 import { TmdbClient, type TmdbClientOptions } from './client.js';
 import {
   movieAlternativeTitlesSchema,
@@ -132,7 +133,10 @@ export class TmdbProvider implements MetadataProvider {
     // One request for everything: credits and external ids come with the details.
     const r = await this.client.get(
       `/3/movie/${id.id}`,
-      { language: language ?? this.language, append_to_response: 'credits,external_ids,keywords' },
+      {
+        language: language ?? this.language,
+        append_to_response: 'credits,external_ids,keywords,release_dates',
+      },
       movieFullDetailsSchema,
       { ttlMs: DETAIL_TTL_MS, nullOn404: true },
     );
@@ -140,6 +144,13 @@ export class TmdbProvider implements MetadataProvider {
       return null;
     }
     const rating = ratingOf(r.vote_average, r.vote_count);
+    const certification = pickCertification(
+      (r.release_dates?.results ?? []).map((c) => ({
+        country: c.iso_3166_1,
+        value: movieRating(c.release_dates),
+      })),
+      language ?? this.language,
+    );
     return {
       kind: 'movie',
       id: { provider: this.name, id: r.id },
@@ -147,6 +158,7 @@ export class TmdbProvider implements MetadataProvider {
       originalTitle: r.original_title,
       ...this.commonDetails(r),
       tags: names(r.keywords?.keywords),
+      ...(certification && { certification }),
       ...(r.imdb_id && { imdbId: r.imdb_id }),
       ...(rating && { rating }),
       ...(r.release_date && { releaseDate: r.release_date }),
@@ -161,7 +173,10 @@ export class TmdbProvider implements MetadataProvider {
     this.requireOwn(id);
     const r = await this.client.get(
       `/3/tv/${id.id}`,
-      { language: language ?? this.language, append_to_response: 'credits,external_ids,keywords' },
+      {
+        language: language ?? this.language,
+        append_to_response: 'credits,external_ids,keywords,content_ratings',
+      },
       tvFullDetailsSchema,
       { ttlMs: DETAIL_TTL_MS, nullOn404: true },
     );
@@ -170,6 +185,10 @@ export class TmdbProvider implements MetadataProvider {
     }
     const rating = ratingOf(r.vote_average, r.vote_count);
     const imdbId = r.external_ids?.imdb_id;
+    const certification = pickCertification(
+      (r.content_ratings?.results ?? []).map((c) => ({ country: c.iso_3166_1, value: c.rating })),
+      language ?? this.language,
+    );
     return {
       kind: 'series',
       id: { provider: this.name, id: r.id },
@@ -177,6 +196,7 @@ export class TmdbProvider implements MetadataProvider {
       originalTitle: r.original_name,
       ...this.commonDetails(r),
       tags: names(r.keywords?.results),
+      ...(certification && { certification }),
       ...(imdbId && { imdbId }),
       ...(rating && { rating }),
       ...(r.first_air_date && { firstAirDate: r.first_air_date }),
