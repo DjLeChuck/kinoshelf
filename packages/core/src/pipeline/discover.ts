@@ -53,6 +53,12 @@ export interface DiscoverOptions {
   /** The scanned folder holds releases side by side: each child is one (a loose file is its own). */
   readonly splitReleases?: boolean;
   /**
+   * The folder the parser's paths start from, when the scanned one is only a part of it: a season
+   * read on its own still names the show's folder and the library's, as a scan of the whole would.
+   * Defaults to the scanned folder.
+   */
+  readonly parserRoot?: string;
+  /**
    * Told of a folder under the root that could not be read (`lost+found` owned by root), which is
    * left out: one such folder must not fail the scan of a whole library. The root itself still does.
    */
@@ -142,7 +148,7 @@ export async function discoverVideos(
   return paths.map((path) => ({
     path,
     displayPath: info.isDirectory() ? relative(root, path) : basename(path),
-    parserPath: relative(dirname(base), path),
+    parserPath: relative(dirname(options.parserRoot ? resolve(options.parserRoot) : base), path),
     release: releaseOf(path),
   }));
 }

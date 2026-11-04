@@ -106,6 +106,21 @@ describe('discoverVideos', () => {
     expect(file?.displayPath).toBe(join('Season 2', '02x05.mkv'));
   });
 
+  it('starts the parser’s path from a given root when one folder of it is scanned', async () => {
+    const library = join(await makeDir(), 'Series');
+    await put(join(library, 'Breaking Bad', 'Season 2', '02x05.mkv'));
+    const [file] = await discoverVideos(
+      join(library, 'Breaking Bad', 'Season 2'),
+      undefined,
+      undefined,
+      {
+        parserRoot: library,
+      },
+    );
+    expect(file?.parserPath).toBe(join('Series', 'Breaking Bad', 'Season 2', '02x05.mkv'));
+    expect(file?.release).toBe(join(library, 'Breaking Bad', 'Season 2'));
+  });
+
   it('accepts a single file', async () => {
     const dir = join(await makeDir(), 'Movies');
     const path = await put(join(dir, 'Dune.2021.mkv'));
