@@ -11,251 +11,55 @@
   </a>
 </p>
 
-Identifies video files (movies, series) **already on disk**, renames them to match your player's
-conventions (Plex, Jellyfin) and writes their metadata (NFO, artwork). A web-native equivalent of
-tinyMediaManager and a companion to Radarr/Sonarr: it never downloads anything.
+Kinoshelf identifies video files (movies, series) **already on disk**, renames them to match your
+player's conventions (Plex, Jellyfin) and writes their metadata (NFO, artwork). It is a web-native
+equivalent of tinyMediaManager and a companion to Radarr/Sonarr: it never downloads anything.
 
 > **Status: work in progress, no stable release yet.** The core, the CLI, the REST server, the
 > Docker image and the web UI (libraries, arrivals, history, settings) all work, as do the folder
-> watcher and the NFO and artwork writers for Plex and Jellyfin. The recommended way to run it is the
-> [Docker image](#docker); the CLI below is the same core without the server.
+> watcher and the NFO and artwork writers for Plex and Jellyfin.
 
-## Command line
+<p align="center">
+  <img alt="The Libraries page: a movie library with its filters and the page of one film" src="docs/images/libraries.png" width="900">
+</p>
 
-The CLI ships in the Docker image (`docker compose exec kinoshelf kinoshelf …`); outside Docker it is
-built from source (see [Development](#development)).
+## Features
 
-```sh
-export TMDB_API_KEY=...            # your own key, from themoviedb.org
-kinoshelf scan ~/Downloads --dest-movies /media/Movies --dest-series /media/TV
-kinoshelf process ~/Downloads --dest-movies /media/Movies --dest-series /media/TV            # dry run
-kinoshelf process ~/Downloads --dest-movies /media/Movies --dest-series /media/TV --apply
-kinoshelf undo --apply             # revert the last batch
-```
+- **Libraries** organized in place: filters (to validate, to rename, unrecognized, missing NFO or
+  images, missing episodes), a series tree (show, season, episode), a page per item with `ffprobe`.
+- **Arrivals**: the files Kinoshelf could not place with confidence wait here, with their TMDB
+  candidates and score. You pick the candidate and the destination library.
+- **Safe by design**: a preview before every write, no existing file ever overwritten, every batch
+  can be undone, no silent copy when a hardlink fails.
+- **Profiles** for Plex (`plex`, `plex-no-id`, `plex-nfo`) and Jellyfin, with NFO and artwork.
+- **Getting downloads in** from your client's "on completion" hook, or by watching a folder.
+- **Notifications**: Plex and Jellyfin library refresh, webhooks (generic, Gotify, ntfy, Discord).
+- French and English, dark and light themes, multi-arch Docker image (`amd64`, `arm64`).
 
-Nothing is written without `--apply`, an existing file is never overwritten, and a failed
-hardlink is reported instead of silently copying. Settings can live in
-`~/.config/kinoshelf/config.yaml`. The tool speaks French or English (`--lang fr|en`, or your
-locale).
-
-## Server
-
-`kinoshelf-server` is a REST API over the same core as the CLI: a post-download script makes one
-HTTP call instead of running a tool. The API is published as OpenAPI at `/api/openapi.json`;
-`GET /health` is public, everything under `/api` (the OpenAPI document included) needs the API key
-as `Authorization: Bearer <key>`.
-On a first launch with no key, the web UI's sign-in page can create it for you (shown once, then you
-sign in with it), when the server is reached by a local name: an IP address, `localhost`, a name
-without a dot or ending in `.local`, `.lan`, `.home.arpa` or `.internal` (add others to
-`KINOSHELF_ALLOWED_HOSTS`). A page on the internet could otherwise point a name of its own at your
-server and take the key first. The commands below do the same without a browser. An address that
-gives ten wrong keys within ten minutes (sign-in or `Bearer`) is refused with a 429 until those ten
-minutes are over. Behind a reverse proxy, set `KINOSHELF_TRUST_PROXY` to its address: otherwise
-every request seems to come from the proxy, and the server sees neither the browser's host name nor
-HTTPS.
+## Quick start
 
 ```sh
-kinoshelf-server api-key create        # prints a key once (it replaces the previous one)
-# or set KINOSHELF_API_KEY (32 characters at least) in the environment
-
-curl -X POST localhost:8484/api/jobs -H "Authorization: Bearer $KEY" \
-  -H 'content-type: application/json' -d '{"path": "/media/downloads/Dune.2021.1080p.mkv", "apply": true}'
-```
-
-A job analyzes a file or a folder (parse, match, plan). Without `apply` nothing is written: its
-files wait in the web UI's Arrivals, to be checked and validated there. With `apply`, the files
-matched with confidence are transferred in one batch and the others wait among the arrivals
-(`GET /api/arrivals`), where
-`POST /api/entries/{id}/match` picks a candidate found with `GET /api/search` (for a series, the other episodes of the same release follow). Every batch can be
-undone with `POST /api/batches/{id}/undo`. Transfers are queued, survive a crash and resume at the
-next start.
-
-| Setting                   | Where                                                                   |
-| ------------------------- | ----------------------------------------------------------------------- |
-| `TMDB_API_KEY`            | environment, or `apiKey.tmdb` in `config.yaml`                          |
-| `KINOSHELF_API_KEY`       | environment (otherwise `api-key create`)                                |
-| `KINOSHELF_ALLOWED_HOSTS` | more host names the first key may be created through (comma-separated)  |
-| `KINOSHELF_TRUST_PROXY`   | proxy addresses or ranges whose `X-Forwarded-*` are believed, or `true` |
-| `KINOSHELF_HOST`          | address to listen on (default `0.0.0.0`)                                |
-| `KINOSHELF_PORT`          | port (default `8484`)                                                   |
-| config directory          | `KINOSHELF_CONFIG_DIR`; holds `config.yaml` and `kinoshelf.sqlite`      |
-| `KINOSHELF_WEB_DIR`       | built web UI to serve (found by itself in the Docker image)             |
-
-`profile` is a shipped id or the path of your own YAML file:
-
-- `plex`: names for Plex's default agents, with the TMDB id as `{tmdb-<id>}`; `plex-no-id` is the
-  same layout without it, which leaves Plex matching on title and year alone. Neither writes
-  metadata files: Plex fetches its own.
-- `jellyfin`: names with `[tmdbid-<id>]`, plus a Kodi-format NFO (`movie.nfo`, `tvshow.nfo`, one
-  per episode) and `poster.jpg` / `fanart.jpg` next to the videos.
-- `plex-nfo`: for Plex's optional "Plex NFO" agents (Plex Media Server 1.43.1 or later): the same
-  layout as `plex-no-id`, with NFO, `poster.jpg` and `background.jpg`.
-
-Several qualities of one movie (a 1080p and a 2160p) live side by side in the movie's folder, as Plex
-and Jellyfin expect: `Nightbitch (2024) {tmdb-728949} - 2160p.mkv`. The label is the picture size found
-in the file name, and a file already in its folder is never renamed unless you ask for it, from the
-movie's page ("Add the version to the name").
-
-Metadata files are never overwritten (one already there is left as it is and reported), and `undo`
-removes the ones a batch wrote.
-
-`config.yaml` is the one source of the other settings (`libraries`, `profile`, `mode`,
-`threshold`, `locale`, `metadataLanguage`, `retentionDays`) and of the notifications:
-
-```yaml
-libraries:
-  - { id: films, name: Films, type: movie, source: /media/Movies }
-  - { id: series, name: Series, type: series, source: /media/TV }
-  - {
-      id: downloads,
-      name: Downloads,
-      source: /downloads/complete,
-      into: { movie: films, series: series },
-      watch: true,
-    }
-notify:
-  plex: { url: 'http://plex:32400' } # token in apiKey.plex
-  jellyfin: { url: 'http://jellyfin:8096' } # key in apiKey.jellyfin
-  webhooks:
-    - { url: 'https://ntfy.sh/my-topic', format: ntfy, on: [transferred, failed, needs-review] }
-```
-
-To reach TMDB through a proxy (or a fake one in tests), set `KINOSHELF_TMDB_URL` (default
-`https://api.themoviedb.org`) and `KINOSHELF_TMDB_IMAGES_URL` (default `https://image.tmdb.org/t/p`).
-
-After a transfer, Plex or Jellyfin is asked to refresh only the libraries concerned, and each
-webhook (`generic`, `gotify`, `ntfy`, `discord`) is told what happened. If the media server sees
-the folders under other paths, map them with `paths: [{ from, to }]`. Check the setup without
-starting the server: `kinoshelf-server notify test`.
-
-### Getting downloads in
-
-Kinoshelf never polls a download folder: a file that stopped growing may be a finished download or
-a dead torrent, and the disk cannot tell. Three ways instead, from the most to the least precise.
-
-**1. Let the client say it is done.** Run `kinoshelf submit <path>` (or `POST /api/jobs`) from the
-client's "on completion" hook. It reads `KINOSHELF_API_KEY` and `KINOSHELF_URL` (default
-`http://localhost:8484`) from the environment, so a secret never sits in a command line; `--apply`
-also transfers what is matched with confidence.
-
-| Client       | Where                                                  | Command                                                                                                |
-| ------------ | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------ |
-| qBittorrent  | Options › Downloads › Run external program on finished | `kinoshelf submit "%F"`                                                                                |
-| Transmission | `script-torrent-done-filename` (a script)              | `kinoshelf submit "$TR_TORRENT_DIR/$TR_TORRENT_NAME"`                                                  |
-| Deluge       | Execute plugin, event _Torrent Complete_               | `kinoshelf submit "$3/$2"` (save path, torrent name)                                                   |
-| SABnzbd      | post-processing script                                 | `kinoshelf submit "$1"` (final folder)                                                                 |
-| rTorrent     | `.rtorrent.rc`                                         | `method.set_key = event.download.finished,kinoshelf,"execute.throw.bg=kinoshelf,submit,$d.base_path="` |
-
-When the client runs elsewhere (another container), it has no `kinoshelf` command: make the same
-call with `curl -fsS -X POST http://kinoshelf:8484/api/jobs -H "Authorization: Bearer $KEY" -H
-'content-type: application/json' -d '{"path": "/downloads/Dune.2021.mkv"}'`. Either way **the path
-is read by Kinoshelf**: mount the downloads at the same path in both containers.
-
-**2. Watch the folder downloads end up in, with the incomplete ones kept elsewhere.** This only
-works if your client writes unfinished downloads **outside** the watched folder, which it does not
-do by default: enable qBittorrent's "Keep incomplete torrents in" (or Transmission's incomplete
-folder) and set it to a different folder than "Save files to location" (Transmission's download
-folder). A download moves to the final folder only once it is complete, and that final folder is the
-one to watch. Without this, a stalled torrent and a finished one look the same in it.
-
-```yaml
-libraries:
-  - id: downloads
-    name: Downloads
-    source: /downloads/complete
-    watch: true # also settable from the Libraries page
-watch:
-  settleSeconds: 30 # a release is submitted once none of its files changed for this long
-  pollSeconds: 0 # 0 listens for changes (no disk reads); 120 scans every 2 minutes
-  apply: false # true also transfers what is matched with confidence
-```
-
-The kernel's change notifications only wake a scan, which then decides whether a release is
-complete: all its files stable, none still named `.!qB`, `.part` and the like. A release is
-submitted once; a file that is replaced is submitted again. Network shares (NFS, SMB) announce no
-change, so give them a `pollSeconds`. What is already in the folder when watching starts is
-submitted too. Prefer the `hardlink` or `copy` mode: `move` takes the file from under its torrent.
-
-**3. Ask by hand.** `POST /api/watch/scan` scans the watched folders without waiting for files to
-settle (`GET /api/watch` says what is watched). The web has the same thing: **Check now**, at the top of the Arrivals tab (disabled when no folder is watched).
-
-## Web UI
-
-The server also serves a web UI on the same port (`http://localhost:8484`), in French or English
-(follows your browser, switchable in the header), with a dark and a light theme. Sign in with the
-API key: the browser keeps a session cookie for 7 days, so the key itself is not stored.
-
-- **Welcome** (`/`, until you leave it). On a new install, a four-step setup (TMDB key, Plex or
-  Jellyfin, your movies and series folders, first files), each step ticking itself once the
-  configuration says so; the server remembers what you skipped. The app then opens on Libraries.
-- **Libraries.** One tab per library organized in place (movies, series) and an **Arrivals** tab.
-  A library lists what its last scan saw, with filters (to validate, to rename, unrecognized,
-  missing NFO or images, and, for a series library, missing episodes or missing show files; kept in the address as `?state=…`, so a link or a reload keeps it), a search, the scan progress and a page per item (summary, `ffprobe`). A
-  series library reads as a tree (show, season, episode) with its missing episodes and, at each level, the NFO and images the profile writes (`tvshow.nfo`, poster, fanart, season poster). **Rename** and
-  **Refresh** open a preview first; nothing is written until you confirm, and an existing file is
-  never overwritten. Arrivals hold the files Kinoshelf could not place with confidence, with their
-  TMDB candidates and score, a manual search and the destination a choice would give: **Validate**
-  sends the file to the library you pick, **Ignore** sets it
-  aside.
-- **History.** Every transfer as a batch with its files, and the analyses that are waiting or
-  failed, with their cause and a way to send them again. Analyses that finished and moved nothing
-  are hidden until you ask for them. **Undo** shows what would be restored, then asks for
-  confirmation; a file moved or replaced since is left alone.
-- **Settings.** The TMDB key, languages, output profile, file mode, threshold, your libraries and
-  arrival folders, Plex, Jellyfin, webhooks (with a test) and the API key. They are saved in `config.yaml` and apply
-  at once, without a restart. Secrets are never shown again.
-
-The screens update by themselves when a job ends or a file is validated elsewhere. Posters come
-through the server, which fetches each one from TMDB once and keeps it in `/config/images`: your
-browser never contacts TMDB.
-
-## Docker
-
-```sh
-cp compose.example.yaml compose.yaml   # adjust the paths, PUID/PGID and the keys
+curl -O https://raw.githubusercontent.com/DjLeChuck/kinoshelf/main/compose.example.yaml
+mv compose.example.yaml compose.yaml   # adjust the paths and PUID/PGID
 docker compose up -d
-docker compose exec kinoshelf kinoshelf-server api-key create
 ```
 
-Images are published on GHCR for `linux/amd64` and `linux/arm64`. The container keeps its database
-and `config.yaml` in `/config`, listens on `8484`, and its `HEALTHCHECK` calls `/health`. Inside it,
-`kinoshelf` (the CLI) and `kinoshelf-server` are on the PATH.
+Open `http://<your-server>:8484`: the welcome page asks for your TMDB key (your own, from
+[themoviedb.org](https://www.themoviedb.org/settings/api)), creates the API key and walks you
+through your first library.
 
-- **User.** Set `PUID` and `PGID` to the owner of your media folders (`id <user>`; 1000 by
-  default): Kinoshelf runs as that user, so what it moves, copies or links belongs to you. It
-  gives `/config` to this user at start and never touches the media folders, which that user must
-  be able to read and write. On TrueNAS, use the `apps` user (568).
-  Alternatively start the container with `user: "1026:100"` (Compose) or `--user`: `PUID` and
-  `PGID` are then ignored, and `/config` must already belong to that user. Do not mount it read-only.
-- **Hardlinks** work only inside one file system: mount downloads and library under a common
-  parent (`/srv/media:/media`), not as two separate volumes. When they cannot link, Kinoshelf
-  fails with an explicit error and does not copy instead.
-- **Stopping.** A copy can last minutes and a stop waits for it, while Docker kills the container
-  after 10 s by default. Set `stop_grace_period` (the example uses 5 minutes). A task cut short is
-  resumed at the next start.
+## Documentation
 
-## Development
-
-With Nix: `nix develop` (or direnv). Otherwise: Node.js 26 and pnpm.
-
-```sh
-pnpm install
-pnpm typecheck && pnpm lint && pnpm test
-```
-
-To run the CLI or the server from the sources, build once (`pnpm build`) and call the compiled
-entry points: `node packages/cli/dist/main.js scan <folder>` and
-`node packages/server/dist/main.js` (`make dev-server` does the build and starts the server).
-
-`pnpm test` includes the matching corpus. The web UI is tested in a real browser with Playwright,
-against the real server and a fake TMDB: `pnpm test:e2e` (the Nix shell provides the browsers; elsewhere
-run `pnpm --filter @kinoshelf/e2e exec playwright install chromium` once). To work on the UI, start
-the server (`make dev-server`) and `make dev-web`, which proxies the API to it.
-
-A `Makefile` wraps these scripts: `make help` lists the targets, `make check` runs the whole
-pre-merge suite.
-
-See [AGENTS.md](AGENTS.md) for the project conventions.
+| Page                                                   | What is in it                                          |
+| ------------------------------------------------------ | ------------------------------------------------------ |
+| [Installation](docs/0-installation.md)                 | Docker, user and permissions, hardlinks, reverse proxy |
+| [Concepts and web UI](docs/1-web-ui.md)                | Libraries, Arrivals, History, Settings                 |
+| [Getting downloads in](docs/2-getting-downloads-in.md) | Download client hooks, folder watcher                  |
+| [Output profiles](docs/3-profiles.md)                  | Plex and Jellyfin naming, NFO and artwork              |
+| [Configuration](docs/4-configuration.md)               | `config.yaml`, environment variables, notifications    |
+| [Command line](docs/5-cli.md)                          | `kinoshelf scan`, `process`, `undo`, `submit`          |
+| [REST API](docs/6-api.md)                              | Authentication, jobs, arrivals, batches                |
+| [Development](docs/7-development.md)                   | Building, testing, conventions                         |
 
 ## License
 
