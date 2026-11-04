@@ -65,6 +65,7 @@ const IMAGE_SIZES: Record<ImageSize, string> = {
 };
 // An NFO lists the main cast; TMDB sends hundreds of people for a long-running series.
 const CAST_LIMIT = 20;
+const PERSON_PAGE = 'https://www.themoviedb.org/person';
 const WRITER_JOBS = new Set(['Screenplay', 'Writer', 'Story']);
 
 /** TMDB reports 0 and 0 votes for a work nobody rated: that is no rating, not a zero. */
@@ -76,6 +77,11 @@ const crewNames = (
   jobs: ReadonlySet<string>,
 ): string[] => [
   ...new Set((crew ?? []).filter((c) => c.job != null && jobs.has(c.job)).map((c) => c.name)),
+];
+
+/** Names of a list of `{ name }`, blanks and repeats left out. */
+const names = (items: readonly { name: string }[] | null | undefined): string[] => [
+  ...new Set((items ?? []).map((i) => i.name.trim()).filter((n) => n !== '')),
 ];
 
 const yearOf = (date: string | null | undefined): number | undefined => {
@@ -127,7 +133,7 @@ export class TmdbProvider implements MetadataProvider {
     // One request for everything: credits and external ids come with the details.
     const r = await this.client.get(
       `/3/movie/${id.id}`,
-      { language: language ?? this.language, append_to_response: 'credits,external_ids' },
+      { language: language ?? this.language, append_to_response: 'credits,external_ids,keywords' },
       movieFullDetailsSchema,
       { ttlMs: DETAIL_TTL_MS, nullOn404: true },
     );
@@ -141,6 +147,7 @@ export class TmdbProvider implements MetadataProvider {
       title: r.title,
       originalTitle: r.original_title,
       ...this.commonDetails(r),
+      tags: names(r.keywords?.keywords),
       ...(r.imdb_id && { imdbId: r.imdb_id }),
       ...(rating && { rating }),
       ...(r.release_date && { releaseDate: r.release_date }),
@@ -155,7 +162,7 @@ export class TmdbProvider implements MetadataProvider {
     this.requireOwn(id);
     const r = await this.client.get(
       `/3/tv/${id.id}`,
-      { language: language ?? this.language, append_to_response: 'credits,external_ids' },
+      { language: language ?? this.language, append_to_response: 'credits,external_ids,keywords' },
       tvFullDetailsSchema,
       { ttlMs: DETAIL_TTL_MS, nullOn404: true },
     );
@@ -170,6 +177,7 @@ export class TmdbProvider implements MetadataProvider {
       title: r.name,
       originalTitle: r.original_name,
       ...this.commonDetails(r),
+      tags: names(r.keywords?.results),
       ...(imdbId && { imdbId }),
       ...(rating && { rating }),
       ...(r.first_air_date && { firstAirDate: r.first_air_date }),
@@ -199,6 +207,7 @@ export class TmdbProvider implements MetadataProvider {
       | {
           cast?:
             | readonly {
+                id?: number | null | undefined;
                 name: string;
                 character?: string | null | undefined;
                 order?: number | null | undefined;
@@ -212,6 +221,7 @@ export class TmdbProvider implements MetadataProvider {
   }) {
     const cast: Person[] = (r.credits?.cast ?? []).slice(0, CAST_LIMIT).map((p) => ({
       name: p.name,
+      ...(p.id != null && { id: p.id, profileUrl: `${PERSON_PAGE}/${p.id}` }),
       ...(p.character && { role: p.character }),
       ...(p.order != null && { order: p.order }),
       ...imageField('profilePath', p.profile_path),

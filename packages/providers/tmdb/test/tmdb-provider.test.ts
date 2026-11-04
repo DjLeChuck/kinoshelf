@@ -329,7 +329,7 @@ describe('getMovieDetails and getSeriesDetails', () => {
     expect(requests).toHaveLength(1);
     expect(Object.fromEntries(requests[0]?.url.searchParams ?? [])).toEqual({
       language: 'fr',
-      append_to_response: 'credits,external_ids',
+      append_to_response: 'credits,external_ids,keywords',
     });
     expect(movie).toMatchObject({
       kind: 'movie',
@@ -351,6 +351,8 @@ describe('getMovieDetails and getSeriesDetails', () => {
     // A person credited twice appears once; a novelist or a composer is no writer.
     expect(movie?.writers).toEqual(['Denis Villeneuve', 'Jon Spaihts', 'Eric Roth']);
     expect(movie?.collection).not.toHaveProperty('overview');
+    // Keywords come as given by TMDB: blanks and repeats are dropped, nothing is translated.
+    expect(movie?.tags).toEqual(['desert', 'based on novel or book']);
   });
 
   it('keeps the 20 first cast members, in order, without empty fields', async () => {
@@ -363,6 +365,8 @@ describe('getMovieDetails and getSeriesDetails', () => {
       role: 'Role 0',
       order: 0,
       profilePath: '/p0.jpg',
+      id: 9001,
+      profileUrl: 'https://www.themoviedb.org/person/9001',
     });
     expect(movie?.cast[1]).toEqual({ name: 'No Photo', order: 1 });
     expect(movie?.cast[19]?.name).toBe('Actor 19');
@@ -391,6 +395,7 @@ describe('getMovieDetails and getSeriesDetails', () => {
     expect(series).not.toHaveProperty('tagline'); // `""`
     expect(series).not.toHaveProperty('backdropPath'); // null
     expect(series?.cast).toHaveLength(3);
+    expect(series?.tags).toEqual(['chef', 'restaurant']);
   });
 
   it('reads the imdb id of a series from external_ids', async () => {

@@ -46,6 +46,7 @@
   "credits": {
     "cast": [
       {
+        "id": 9001,
         "name": "Actor 0",
         "character": "Role 0",
         "order": 0,
@@ -65,5 +66,17 @@
       }
     ],
     "crew": []
+  },
+  "keywords": {
+    "results": [
+      {
+        "id": 5,
+        "name": "chef"
+      },
+      {
+        "id": 6,
+        "name": "restaurant"
+      }
+    ]
   }
 }

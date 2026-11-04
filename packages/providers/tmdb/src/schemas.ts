@@ -66,11 +66,12 @@ export const tvAlternativeTitlesSchema = z.object({
 
 const named = z.object({ name: z.string() });
 
-// What `append_to_response=credits,external_ids` adds; `cast` can hold hundreds of people.
+// What `append_to_response=credits,external_ids,keywords` adds; `cast` can hold hundreds of people.
 const credits = z.object({
   cast: z
     .array(
       z.object({
+        id: z.number().int().nullish(),
         name: z.string(),
         character: z.string().nullish(),
         order: z.number().int().nullish(),
@@ -103,6 +104,8 @@ export const movieFullDetailsSchema = z.object({
   runtime: z.number().nullish(),
   imdb_id: z.string().nullish(),
   belongs_to_collection: named.nullish(),
+  // `append_to_response=keywords`: the movie endpoint answers with `keywords`, the TV one with `results`.
+  keywords: z.object({ keywords: z.array(named).nullish() }).nullish(),
 });
 
 export const tvFullDetailsSchema = z.object({
@@ -112,6 +115,7 @@ export const tvFullDetailsSchema = z.object({
   first_air_date: date,
   status: z.string().nullish(),
   external_ids: z.object({ imdb_id: z.string().nullish() }).nullish(),
+  keywords: z.object({ results: z.array(named).nullish() }).nullish(),
   seasons: z
     .array(
       z.object({
