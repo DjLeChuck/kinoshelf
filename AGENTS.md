@@ -330,6 +330,16 @@ refuses to delete a library an arrival folder points at (`library.in-use`). Ther
   (`counts(libraryId, series)`) and always show the tree: `GET .../shows?state=rename|missing-nfo|missing-artwork`
   keeps the shows holding a file of that state. The exception is `review` and `unrecognized`: those files belong
   to no show, so their tabs list only the "To validate" node and count files. A movie library counts files.
+- **Scan one folder again** (`POST /api/libraries/:id/rescan`, body `{ path }`, server migration 023
+  `jobs.rescan`): a movie's folder, a show's or a season's, from the movie page, the show panel and the
+  season row. The path must be strictly inside the source (422 `library.outside`; a file loose in the
+  source is read alone). The job is read as a scan of the source would read it (`parserRoot` keeps the
+  show's and the library's folder names in the parser's paths) and, when it ends, `LibraryItemStore.replace`
+  swaps only the rows under that path, probes kept. It shares the guard of a whole scan
+  (`library.scan-in-progress`, both ways) and `lastScan`, so its progress and failure show as a scan's.
+  TMDB is asked as for any scan (one search per release, seasons cached), nothing more. The web builds
+  the path from the files it knows (`rescanPath`): a show whose files lie loose in the source has none,
+  and no button. "Send again" of a failed one goes through the same route (`resendRequest`).
 - **Rename and refresh** (`POST /api/libraries/:id/execute`, body `{ items, dryRun? }`): the items are
   the `id`s of the library's list. The server finds each one's entry and scan job (`entryId`,
   `scan_job_id` of its row), keeps what is still executable, and runs one plan per job under one batch

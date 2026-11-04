@@ -1,4 +1,5 @@
 import { stat } from 'node:fs/promises';
+import { resolve } from 'node:path';
 import {
   errnoCode,
   libraryProfile,
@@ -15,6 +16,7 @@ import {
 import type { FastifyInstance } from 'fastify';
 import { ApiError } from './api-error.js';
 import { isSystemPath } from './system-paths.js';
+import { isInside } from './notify/paths.js';
 import type { SeriesFilesStore } from './series-files.js';
 import { compare, missingOf, type Completeness, type EpisodeReport } from './completeness.js';
 import type { Execution } from './executions.js';
@@ -397,6 +399,56 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
         throw new ApiError(409, 'library.scan-in-progress');
       }
       const job = jobs.create(library.source, false, library.id);
+      events.emit('jobs');
+      runner.kick();
+      return reply.code(202).send(ctx.presentJob(job));
+    },
+  );
+
+  api.post<{ Params: { id: string }; Body: { path: string } }>(
+    '/api/libraries/:id/rescan',
+    {
+      schema: {
+        summary: 'Scan one folder of a library again',
+        description:
+          'Queues an analysis of a movie’s folder, a show’s or a season’s (or a file), read as it ' +
+          'would be inside a scan of the whole source. When it ends, the rows under that path ' +
+          'replace the library’s; the others stay. The library must hold a type. 422 ' +
+          '`library.outside` for a path that is not strictly inside the source, `fs.not-found` for ' +
+          'one that is gone; 409 `library.scan-in-progress` while a scan of this library is queued ' +
+          'or running.',
+        params: idParams,
+        body: {
+          type: 'object',
+          required: ['path'],
+          properties: { path: { type: 'string', minLength: 1 } },
+          additionalProperties: false,
+        },
+        response: {
+          202: jobSchema,
+          401: errorSchema,
+          404: errorSchema,
+          409: errorSchema,
+          422: errorSchema,
+        },
+      },
+    },
+    async (request, reply) => {
+      const library = find(store.config, request.params.id);
+      if (library.type === undefined) {
+        throw new ApiError(409, 'library.not-typed');
+      }
+      const path = resolve(request.body.path);
+      if (path === library.source || !isInside(path, library.source)) {
+        throw new ApiError(422, 'library.outside');
+      }
+      await stat(path).catch(() => {
+        throw new ApiError(422, 'fs.not-found', { path });
+      });
+      if (jobs.scanPending(library.id, library.source)) {
+        throw new ApiError(409, 'library.scan-in-progress');
+      }
+      const job = jobs.create(path, false, library.id, true);
       events.emit('jobs');
       runner.kick();
       return reply.code(202).send(ctx.presentJob(job));

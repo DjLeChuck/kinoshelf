@@ -147,19 +147,32 @@ interface ShowFilter {
 export class LibraryItemStore {
   constructor(private readonly database: Database) {}
 
-  /** A scan ended: what it saw replaces what the library held, as a whole. */
-  replace(libraryId: string, items: readonly LibraryItem[]): void {
+  /**
+   * A scan ended: what it saw replaces what the library held, as a whole, or only what lay under
+   * `folder` when one folder was scanned (a file, when that is what was).
+   */
+  replace(libraryId: string, items: readonly LibraryItem[], folder?: string): void {
+    // A range on the primary key: every path under `folder/` sorts between `folder/` and `folder0`.
+    const scope =
+      folder === undefined
+        ? { where: '', args: [] as string[] }
+        : {
+            where: ' AND (path = ? OR (path >= ? AND path < ?))',
+            args: [folder, `${folder}/`, `${folder}0`],
+          };
     this.database.transaction(() => {
       // A file that is still there keeps what was probed of it: its size and date say if it changed.
       const kept = new Map(
         this.database
-          .prepare<[string], ProbeRow>(
-            `SELECT ${PROBE_COLUMNS} FROM library_items WHERE library_id = ?`,
+          .prepare<string[], ProbeRow>(
+            `SELECT ${PROBE_COLUMNS} FROM library_items WHERE library_id = ?${scope.where}`,
           )
-          .all(libraryId)
+          .all(libraryId, ...scope.args)
           .map((row) => [row.path, row]),
       );
-      this.database.prepare('DELETE FROM library_items WHERE library_id = ?').run(libraryId);
+      this.database
+        .prepare(`DELETE FROM library_items WHERE library_id = ?${scope.where}`)
+        .run(libraryId, ...scope.args);
       // Prepared once: preparing per row costs more than the insert itself on a large library.
       const put = this.putStatement();
       const restore = this.database.prepare(
@@ -726,10 +739,15 @@ export class LibrarySnapshot {
     },
   ) {}
 
-  /** The typed library a job scanned in full, if it is one. */
+  /** The typed library a job scanned, in full or one folder of it, if it is one. */
   private libraryOf(job: Job | undefined): LibraryConfig | undefined {
     const library = this.deps.config().libraries?.find(({ id }) => id === job?.libraryId);
-    return library?.type !== undefined && library.source === job?.path ? library : undefined;
+    if (library?.type === undefined || job === undefined) {
+      return undefined;
+    }
+    return library.source === job.path || (job.rescan && isInside(job.path, library.source))
+      ? library
+      : undefined;
   }
 
   private async profileOf(jobId: string): Promise<Profile | undefined> {
@@ -737,7 +755,7 @@ export class LibrarySnapshot {
     return settings && loadProfile(settings.profile);
   }
 
-  /** A scan of a library's whole source is done. */
+  /** A scan of a library's whole source, or of one folder of it, is done. */
   async scanned(job: Job): Promise<void> {
     const library = this.libraryOf(job);
     const profile = await this.profileOf(job.id);
@@ -748,6 +766,7 @@ export class LibrarySnapshot {
     this.deps.store.replace(
       library.id,
       this.deps.entries.mapList(job.id, (entry) => itemOf(entry, profile, library.id, now)),
+      job.path === library.source ? undefined : job.path,
     );
     this.deps.changed?.(library.id);
   }

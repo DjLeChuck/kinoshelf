@@ -1,4 +1,4 @@
-import { readFile } from 'node:fs/promises';
+import { readFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { loadConfig } from '@kinoshelf/core';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -427,6 +427,66 @@ describe('scanning a library', () => {
     expect((await h.request('POST', '/api/libraries/ghost/scan')).statusCode).toBe(404);
   });
 
+  it('scans one folder again: only the rows under it are replaced', async () => {
+    const h = await served();
+    const root = await makeDir();
+    const alien = join(root, 'Alien (1979) {tmdb-348}');
+    const dune = join(root, 'Dune (2021) {tmdb-438631}');
+    await put(join(alien, 'Alien (1979) {tmdb-348}.mkv'), 'alien');
+    await put(join(dune, 'Dune (2021) {tmdb-438631}.mkv'), 'dune');
+    await h.request('POST', '/api/libraries', { name: 'Home', source: root, type: 'movie' });
+    await scan(h, 'home');
+    const titles = async (): Promise<string[]> =>
+      (await h.request('GET', '/api/libraries/home/items'))
+        .json<{ items: { title: string }[] }>()
+        .items.map((item) => item.title)
+        .sort();
+    expect(await titles()).toEqual(['Alien', 'Dune']);
+
+    // Dune is gone from the disk, but only Alien's folder is read again: Dune's row stays.
+    await rm(dune, { recursive: true });
+    const again = await h.request('POST', '/api/libraries/home/rescan', { path: alien });
+    expect(again.statusCode).toBe(202);
+    await h.app.jobs.idle();
+    expect(await titles()).toEqual(['Alien', 'Dune']);
+
+    // Read on its own, the emptied folder loses its rows.
+    await put(join(dune, 'notes.txt'), 'x');
+    expect((await h.request('POST', '/api/libraries/home/rescan', { path: dune })).statusCode).toBe(
+      202,
+    );
+    await h.app.jobs.idle();
+    expect(await titles()).toEqual(['Alien']);
+  });
+
+  it('refuses to scan again what is not strictly inside the library', async () => {
+    const h = await served();
+    const root = await makeDir();
+    await put(join(root, 'Alien (1979) {tmdb-348}', 'Alien (1979) {tmdb-348}.mkv'), 'alien');
+    await h.request('POST', '/api/libraries', { name: 'Home', source: root, type: 'movie' });
+    const code = async (path: string): Promise<[number, string]> => {
+      const response = await h.request('POST', '/api/libraries/home/rescan', { path });
+      return [response.statusCode, response.json<{ error: { code: string } }>().error.code];
+    };
+    expect(await code(root)).toEqual([422, 'library.outside']);
+    expect(await code(`${root}2`)).toEqual([422, 'library.outside']);
+    expect(await code(await makeDir())).toEqual([422, 'library.outside']);
+    expect(await code(join(root, 'Gone'))).toEqual([422, 'fs.not-found']);
+  });
+
+  it('refuses a scan of one folder while a scan of the library is queued', async () => {
+    const h = await served();
+    const root = await makeDir();
+    const alien = join(root, 'Alien (1979) {tmdb-348}');
+    await put(join(alien, 'Alien (1979) {tmdb-348}.mkv'), 'alien');
+    await h.request('POST', '/api/libraries', { name: 'Home', source: root, type: 'movie' });
+    expect((await h.request('POST', '/api/libraries/home/scan')).statusCode).toBe(202);
+    const refused = await h.request('POST', '/api/libraries/home/rescan', { path: alien });
+    expect(refused.statusCode).toBe(409);
+    expect(refused.json()).toEqual({ error: { code: 'library.scan-in-progress' } });
+    await h.app.jobs.idle();
+  });
+
   it('falls back to the global settings when the job’s library is gone', async () => {
     const source = await makeDir();
     await put(join(source, 'Dune.2021.mkv'));
@@ -443,6 +503,7 @@ describe('scanning a library', () => {
       libraryId: 'removed',
       status: 'running',
       apply: false,
+      rescan: false,
       createdAt: '',
       startedAt: null,
       finishedAt: null,

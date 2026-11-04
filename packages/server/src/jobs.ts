@@ -30,6 +30,8 @@ export interface Job {
   readonly status: JobStatus;
   /** Execute the matched files as soon as the analysis is done. */
   readonly apply: boolean;
+  /** A scan of one folder of the library: it replaces the rows under that folder, not all. */
+  readonly rescan: boolean;
   readonly createdAt: string;
   readonly startedAt: string | null;
   readonly finishedAt: string | null;
@@ -42,13 +44,15 @@ interface JobRow {
   library_id: string | null;
   status: JobStatus;
   apply: number;
+  rescan: number;
   created_at: string;
   started_at: string | null;
   finished_at: string | null;
   error: string | null;
 }
 
-const COLUMNS = 'id, path, library_id, status, apply, created_at, started_at, finished_at, error';
+const COLUMNS =
+  'id, path, library_id, status, apply, rescan, created_at, started_at, finished_at, error';
 
 function toJob(row: JobRow): Job {
   return {
@@ -57,6 +61,7 @@ function toJob(row: JobRow): Job {
     libraryId: row.library_id,
     status: row.status,
     apply: row.apply === 1,
+    rescan: row.rescan === 1,
     createdAt: row.created_at,
     startedAt: row.started_at,
     finishedAt: row.finished_at,
@@ -72,13 +77,13 @@ export class JobStore {
     private readonly executions: ExecutionStore,
   ) {}
 
-  create(path: string, apply = false, libraryId?: string): Job {
+  create(path: string, apply = false, libraryId?: string, rescan = false): Job {
     const id = randomUUID();
     this.database
       .prepare(
-        "INSERT INTO jobs (id, path, library_id, status, apply, created_at) VALUES (?, ?, ?, 'queued', ?, ?)",
+        "INSERT INTO jobs (id, path, library_id, status, apply, rescan, created_at) VALUES (?, ?, ?, 'queued', ?, ?, ?)",
       )
-      .run(id, path, libraryId ?? null, apply ? 1 : 0, new Date().toISOString());
+      .run(id, path, libraryId ?? null, apply ? 1 : 0, rescan ? 1 : 0, new Date().toISOString());
     return this.require(id);
   }
 
@@ -105,25 +110,25 @@ export class JobStore {
       .map(toJob);
   }
 
-  /** Whether a scan of the library's whole source is queued or running. */
+  /** Whether a scan of the library's whole source, or of a folder of it, is queued or running. */
   scanPending(libraryId: string, source: string): boolean {
     return (
       this.database
         .prepare<[string, string], { id: string }>(
-          "SELECT id FROM jobs WHERE library_id = ? AND path = ? AND status IN ('queued', 'running') LIMIT 1",
+          "SELECT id FROM jobs WHERE library_id = ? AND (path = ? OR rescan = 1) AND status IN ('queued', 'running') LIMIT 1",
         )
         .get(libraryId, source) !== undefined
     );
   }
 
   /**
-   * The latest scan of the whole library (not a release its folder submitted), whatever became of
-   * it: one still running or failed is what a user comes back to find.
+   * The latest scan of the library, whole or of one folder (not a release its folder submitted),
+   * whatever became of it: one still running or failed is what a user comes back to find.
    */
   lastScan(libraryId: string, source: string): Job | undefined {
     const row = this.database
       .prepare<[string, string], JobRow>(
-        `SELECT ${COLUMNS} FROM jobs WHERE library_id = ? AND path = ? ORDER BY seq DESC LIMIT 1`,
+        `SELECT ${COLUMNS} FROM jobs WHERE library_id = ? AND (path = ? OR rescan = 1) ORDER BY seq DESC LIMIT 1`,
       )
       .get(libraryId, source);
     return row && toJob(row);

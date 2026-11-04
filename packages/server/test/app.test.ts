@@ -48,6 +48,7 @@ describe('GET /api/openapi.json', () => {
       '/api/libraries/{id}/execute',
       '/api/libraries/{id}/items',
       '/api/libraries/{id}/items/{itemId}',
+      '/api/libraries/{id}/rescan',
       '/api/libraries/{id}/scan',
       '/api/libraries/{id}/shows',
       '/api/libraries/{id}/shows/{tmdbId}',

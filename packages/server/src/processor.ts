@@ -79,7 +79,12 @@ async function process(deps: ProcessorDeps, job: Job): Promise<ProcessedJob> {
     (found) => {
       progress?.found(job.id, found);
     },
-    { splitReleases, ...(deps.onUnreadable && { onUnreadable: deps.onUnreadable }) },
+    {
+      splitReleases,
+      // A folder of the library read alone is parsed as it would be inside a scan of the source.
+      ...(library && job.rescan && { parserRoot: library.source }),
+      ...(deps.onUnreadable && { onUnreadable: deps.onUnreadable }),
+    },
   );
   progress?.discovered(job.id, files.length);
   const analysis = await analyze(files, {

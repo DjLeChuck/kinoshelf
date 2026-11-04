@@ -218,6 +218,8 @@ export const en = {
   'error.library.item-not-found':
     'This file is no longer in the library. Update the source and try again.',
   'error.library.not-found': 'This library no longer exists. Reload the page.',
+  'error.library.outside':
+    'This folder is not inside the library (or is the library itself: scan the library instead).',
   'error.library.scan-in-progress': 'A scan of this library is already queued or running.',
   'error.library.source-taken': 'The library “{name}” already reads this folder.',
   'error.library.wrong-type': 'The library “{name}” does not hold this kind of work.',
@@ -239,6 +241,10 @@ export const en = {
   'web.nav.history': 'History',
   'web.nav.settings': 'Settings',
   'web.library.tabs': 'Libraries and arrivals',
+  'web.library.rescan': 'Scan again',
+  'web.library.rescan.hint':
+    'Reads this folder again, and only it: the rest of the library is kept.',
+  'web.library.rescan.started': 'Scan of “{name}” started.',
   'web.library.scan': 'Update from source',
   'web.library.scan.running': 'Scan…',
   'web.library.scan.running.percent': 'Scan · {percent}%',

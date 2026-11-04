@@ -305,6 +305,12 @@ export const SERVER_MIGRATIONS: readonly { readonly name: string; readonly sql: 
     sql: `CREATE INDEX library_items_order
       ON library_items (library_id, lower(COALESCE(title, path)), path);`,
   },
+  {
+    // A scan of one folder of a typed library (a movie, a show, a season): its rows replace those
+    // under that folder only, where a scan of the whole source replaces the library's.
+    name: 'server:023-job-rescan',
+    sql: 'ALTER TABLE jobs ADD COLUMN rescan INTEGER NOT NULL DEFAULT 0;',
+  },
 ];
 
 /** Opens the single SQLite file of the config directory, shared with the CLI and the cache. */

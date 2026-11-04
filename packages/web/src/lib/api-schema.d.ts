@@ -1684,6 +1684,195 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/libraries/{id}/rescan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Scan one folder of a library again
+         * @description Queues an analysis of a movie’s folder, a show’s or a season’s (or a file), read as it would be inside a scan of the whole source. When it ends, the rows under that path replace the library’s; the others stay. The library must hold a type. 422 `library.outside` for a path that is not strictly inside the source, `fs.not-found` for one that is gone; 409 `library.scan-in-progress` while a scan of this library is queued or running.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        path: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                202: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            path: string;
+                            libraryId: string | null;
+                            /** @enum {string} */
+                            status: "queued" | "running" | "done" | "failed";
+                            apply: boolean;
+                            /** Format: date-time */
+                            startedAt: string | null;
+                            /** Format: date-time */
+                            finishedAt: string | null;
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            } | null;
+                            execution: {
+                                /** Format: uuid */
+                                id: string;
+                                /** Format: uuid */
+                                jobId: string;
+                                /** @enum {string} */
+                                status: "queued" | "running" | "done" | "failed";
+                                progress?: {
+                                    done: number;
+                                    total: number;
+                                    current: string | null;
+                                } | null;
+                                /** Format: date-time */
+                                createdAt: string;
+                                /** Format: date-time */
+                                startedAt: string | null;
+                                /** Format: date-time */
+                                finishedAt: string | null;
+                                batchId: string | null;
+                                summary: {
+                                    done: number;
+                                    failed: number;
+                                } | null;
+                                error: {
+                                    code: string;
+                                    params?: {
+                                        [key: string]: string | number;
+                                    };
+                                } | null;
+                            } | null;
+                            summary: {
+                                compliant: number;
+                                "to-rename": number;
+                                conflict: number;
+                                ambiguous: number;
+                                unrecognized: number;
+                            } | null;
+                            progress: {
+                                /** @enum {string} */
+                                phase: "discover" | "read" | "identify" | "plan";
+                                found: number;
+                                done: number;
+                                total: number;
+                                current: string | null;
+                                idleSeconds: number;
+                            } | null;
+                            transfer?: {
+                                done: number;
+                                total: number;
+                                current: string | null;
+                            } | null;
+                            settings: {
+                                profile: string;
+                                /** @enum {string} */
+                                mode: "copy" | "hardlink" | "move";
+                                destinationRoot: string | {
+                                    movie: string;
+                                    series: string;
+                                };
+                            } | null;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Default Response */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Default Response */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Default Response */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/libraries/{id}/items": {
         parameters: {
             query?: never;

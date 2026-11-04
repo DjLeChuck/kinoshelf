@@ -228,6 +228,8 @@ export const fr: Record<keyof typeof en, string> = {
   'error.library.item-not-found':
     'Ce fichier n’est plus dans la bibliothèque. Mettez la source à jour et réessayez.',
   'error.library.not-found': 'Cette bibliothèque n’existe plus. Rechargez la page.',
+  'error.library.outside':
+    'Ce dossier n’est pas dans la bibliothèque (ou c’est la bibliothèque elle-même : analysez plutôt la bibliothèque).',
   'error.library.scan-in-progress':
     'Une analyse de cette bibliothèque est déjà en attente ou en cours.',
   'error.library.source-taken': 'La bibliothèque « {name} » lit déjà ce dossier.',
@@ -251,6 +253,10 @@ export const fr: Record<keyof typeof en, string> = {
   'web.nav.history': 'Historique',
   'web.nav.settings': 'Réglages',
   'web.library.tabs': 'Bibliothèques et arrivées',
+  'web.library.rescan': 'Réanalyser',
+  'web.library.rescan.hint':
+    'Relit ce dossier, et lui seul : le reste de la bibliothèque est conservé.',
+  'web.library.rescan.started': 'Analyse de « {name} » lancée.',
   'web.library.scan': 'Mettre à jour la source',
   'web.library.scan.running': 'Scan…',
   'web.library.scan.running.percent': 'Scan · {percent} %',
