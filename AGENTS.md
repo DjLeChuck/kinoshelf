@@ -233,7 +233,16 @@ format follows the Kodi wiki's templates, saved pages are not in the repository)
   `fanart` of `GET /api/libraries/{id}/items`), a dry run counts them apart from the ones already
   there, and a batch's detail lists what was written
   (`extras` of `GET /api/batches/{id}`, from the journal's `generated` and `downloaded` entries).
-- Not done: no certification (`<mpaa>`), no collection overview, no episode `uniqueid`.
+- **What the NFO carries beyond the basics.** `<tag>` (TMDB keywords, English, not translated) and
+  `<mpaa>` (age rating), both read by Plex and Jellyfin; both come with the details request
+  (`append_to_response`), so no extra call. The rating's country follows the metadata language (`fr`
+  gives `FR`, `en` gives `US`, `en-GB` gives `GB`), then the US, then the first one TMDB lists
+  (`providers/tmdb/src/certification.ts`); a movie takes its theatrical release's. A bare number is
+  written with its country (`FR:16`, `FR:-18`), a named one as is (`PG-13`, `TV-MA`): the separator is
+  a colon because TMDB sometimes sends `-18`. The format of the prefix is our choice, neither player
+  documents one. Left out on purpose: TMM's `<crew>`, `<producer>` and the actor `<profile>` /
+  `<tmdbid>`, which neither player's documentation lists.
+- Not done: no collection overview, no episode `uniqueid`, no `<fileinfo>` (the player reads the file).
 
 ## Libraries and scan
 
