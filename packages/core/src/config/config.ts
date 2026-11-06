@@ -102,6 +102,11 @@ const configSchema = z
     profile: z.string().min(1).optional(),
     mode: z.enum(['copy', 'hardlink', 'move']).optional(),
     threshold: z.number().min(0).max(100).optional(),
+    /**
+     * Read a video's picture size with ffprobe when its name says none and another file of the
+     * same work is in the way (default on). Off, the size is given by hand.
+     */
+    detectPictureSize: z.boolean().optional(),
     /** Server: who is told what happened, and which media servers are asked to look again. */
     notify: z
       .strictObject({

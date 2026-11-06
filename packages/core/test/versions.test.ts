@@ -15,7 +15,7 @@ import {
   type PlanItem,
   type Profile,
 } from '../src/index.js';
-import { movie } from './fake-provider.js';
+import { movie, series } from './fake-provider.js';
 import { cleanup, counter, makeDir, put } from './workspace.js';
 
 afterEach(cleanup);
@@ -402,6 +402,237 @@ describe('naming a version on request', () => {
     });
 
     expect(items[0]?.status).toBe('conflict');
+  });
+});
+
+describe('several qualities of one episode', () => {
+  const foundation = series(93740, 'Foundation', 2021);
+  const SEASON = 'Foundation (2021) {tmdb-93740}/Season 01';
+  const episode = (path: string): PlanInput => ({
+    parsed: parser.parse(path),
+    candidate: foundation,
+  });
+  const planEpisodes = (
+    inputs: PlanInput[],
+    lib: string,
+    extra: { sizeOf?: (path: string) => Promise<string | undefined>; profile?: Profile } = {},
+  ) =>
+    createPlan(inputs, {
+      profile: extra.profile ?? plex,
+      destinationRoot: lib,
+      mode: 'copy',
+      newId: counter(),
+      ...(extra.sizeOf && { sizeOf: extra.sizeOf }),
+    });
+  const stem = 'Foundation (2021) - s01e01';
+
+  it('names an episode that arrives with its quality', async () => {
+    const [src, lib] = [await makeDir(), await makeDir()];
+    const file = await put(join(src, 'Foundation.S01E01.1080p.WEB-DL-GRP.mkv'));
+
+    const { items } = await planEpisodes([episode(file)], lib);
+
+    expect(items[0]?.operations[0]?.destination).toBe(join(lib, SEASON, `${stem} - 1080p.mkv`));
+  });
+
+  it('puts two qualities of an episode side by side, whatever their order', async () => {
+    const [src, lib] = [await makeDir(), await makeDir()];
+    const low = await put(join(src, 'a', 'Foundation.S01E01.1080p.WEB-DL-GRP.mkv'));
+    const high = await put(join(src, 'b', 'Foundation.S01E01.2160p.WEB-DL-GRP.mkv'));
+
+    for (const order of [
+      [low, high],
+      [high, low],
+    ] as const) {
+      const { items } = await planEpisodes(order.map(episode), lib);
+      expect(items.map((item) => item.status)).toEqual(['ready', 'ready']);
+      expect(items.flatMap(names).sort()).toEqual([`${stem} - 1080p.mkv`, `${stem} - 2160p.mkv`]);
+    }
+  });
+
+  it('does not mix up two different episodes', async () => {
+    const [src, lib] = [await makeDir(), await makeDir()];
+    const one = await put(join(src, 'Foundation.S01E01.1080p.WEB-DL-GRP.mkv'));
+    const two = await put(join(src, 'Foundation.S01E02.1080p.WEB-DL-GRP.mkv'));
+
+    const { items } = await planEpisodes([episode(one), episode(two)], lib);
+
+    expect(items.flatMap(names)).toEqual([
+      'Foundation (2021) - s01e01 - 1080p.mkv',
+      'Foundation (2021) - s01e02 - 1080p.mkv',
+    ]);
+  });
+
+  it('leaves an episode in its season folder alone, labelled or not, but renames one with a title', async () => {
+    const lib = await makeDir();
+    const bare = await put(join(lib, SEASON, `${stem}.mkv`));
+    const labelled = await put(join(lib, SEASON, `${stem} - 2160p.mkv`));
+
+    const { items } = await planEpisodes([episode(bare), episode(labelled)], lib);
+    expect(items.map((item) => item.status)).toEqual(['in-place', 'in-place']);
+
+    // Alone, a title is not a version: the profile names it as it names any episode.
+    const alone = await makeDir();
+    const titled = await put(join(alone, SEASON, `${stem} - The Emperor's Peace.mkv`));
+    expect((await planEpisodes([episode(titled)], alone)).items[0]?.status).toBe('ready');
+
+    // Beside the bare one, whatever follows is a second version.
+    const extended = await put(join(lib, SEASON, `${stem} - Extended.mkv`));
+    expect((await planEpisodes([episode(extended)], lib)).items[0]?.status).toBe('in-place');
+  });
+
+  it('keeps one file per episode for a profile without a version template', async () => {
+    const [src, lib] = [await makeDir(), await makeDir()];
+    const file = await put(join(src, 'Foundation.S01E01.1080p.WEB-DL-GRP.mkv'));
+    const templates: Profile['templates'] = {
+      movieFolder: plex.templates.movieFolder,
+      movieFile: plex.templates.movieFile,
+      seriesFolder: plex.templates.seriesFolder,
+      seasonFolder: plex.templates.seasonFolder,
+      episodeFile: plex.templates.episodeFile,
+    };
+
+    const { items } = await planEpisodes([episode(file)], lib, {
+      profile: { ...plex, templates },
+    });
+
+    expect(names(items[0])).toEqual([`${stem}.mkv`]);
+  });
+
+  describe('when the name says no size', () => {
+    it('reads it from the file once another file already holds the name', async () => {
+      const [src, lib] = [await makeDir(), await makeDir()];
+      await put(join(lib, SEASON, `${stem}.mkv`), 'the 1080p');
+      const file = await put(join(src, 'Foundation - S01E01 - La paix.mkv'), 'the 4K');
+      const asked: string[] = [];
+
+      const { items } = await planEpisodes([episode(file)], lib, {
+        sizeOf: (path) => {
+          asked.push(path);
+          return Promise.resolve('2160p');
+        },
+      });
+
+      expect(asked).toEqual([file]);
+      expect(items[0]?.status).toBe('ready');
+      expect(names(items[0])).toEqual([`${stem} - 2160p.mkv`]);
+    });
+
+    it('reads it once another version of the work sits beside where it would go', async () => {
+      const [src, lib] = [await makeDir(), await makeDir()];
+      await put(join(lib, SEASON, `${stem} - 1080p.mkv`), 'the 1080p');
+      const file = await put(join(src, 'Foundation - S01E01 - La paix.mkv'), 'the 4K');
+
+      const { items } = await planEpisodes([episode(file)], lib, {
+        sizeOf: () => Promise.resolve('2160p'),
+      });
+
+      expect(names(items[0])).toEqual([`${stem} - 2160p.mkv`]);
+    });
+
+    it('tells apart two such files of one batch', async () => {
+      const [src, lib] = [await makeDir(), await makeDir()];
+      const one = await put(join(src, 'a', 'Foundation - S01E01.mkv'), 'one');
+      const two = await put(join(src, 'b', 'Foundation - S01E01.mkv'), 'two');
+      const sizes = new Map([
+        [one, '1080p'],
+        [two, '2160p'],
+      ]);
+
+      const { items } = await planEpisodes([episode(one), episode(two)], lib, {
+        sizeOf: (path) => Promise.resolve(sizes.get(path)),
+      });
+
+      expect(items.flatMap(names)).toEqual([`${stem} - 1080p.mkv`, `${stem} - 2160p.mkv`]);
+    });
+
+    it('reads it when a mate of the batch says its own', async () => {
+      const [src, lib] = [await makeDir(), await makeDir()];
+      const named = await put(join(src, 'a', 'Foundation.S01E01.1080p.WEB-DL-GRP.mkv'));
+      const bare = await put(join(src, 'b', 'Foundation - S01E01 - La paix.mkv'));
+
+      const { items } = await planEpisodes([episode(named), episode(bare)], lib, {
+        sizeOf: () => Promise.resolve('2160p'),
+      });
+
+      expect(items.flatMap(names)).toEqual([`${stem} - 1080p.mkv`, `${stem} - 2160p.mkv`]);
+    });
+
+    it('does not read a file nobody competes with', async () => {
+      const [src, lib] = [await makeDir(), await makeDir()];
+      const file = await put(join(src, 'Foundation - S01E01.mkv'));
+      let asked = 0;
+
+      const { items } = await planEpisodes([episode(file)], lib, {
+        sizeOf: () => {
+          asked++;
+          return Promise.resolve('2160p');
+        },
+      });
+
+      expect(asked).toBe(0);
+      expect(names(items[0])).toEqual([`${stem}.mkv`]);
+    });
+
+    it('stays a conflict when the size cannot be read', async () => {
+      const [src, lib] = [await makeDir(), await makeDir()];
+      await put(join(lib, SEASON, `${stem}.mkv`), 'the 1080p');
+      const file = await put(join(src, 'Foundation - S01E01.mkv'), 'the 4K');
+
+      const { items } = await planEpisodes([episode(file)], lib, {
+        sizeOf: () => Promise.resolve(undefined),
+      });
+
+      expect(items[0]?.status).toBe('conflict');
+      expect(items[0]?.conflicts[0]?.reason).toBe('destination-exists');
+    });
+
+    it('does not read a file that already says its size', async () => {
+      const [src, lib] = [await makeDir(), await makeDir()];
+      await put(join(lib, SEASON, `${stem} - 1080p.mkv`), 'the 1080p');
+      const file = await put(join(src, 'Foundation.S01E01.2160p.mkv'), 'the 4K');
+      let asked = 0;
+
+      await planEpisodes([episode(file)], lib, {
+        sizeOf: () => {
+          asked++;
+          return Promise.resolve('1080p');
+        },
+      });
+
+      expect(asked).toBe(0);
+    });
+
+    it('reads a movie’s size too', async () => {
+      const [src, lib] = [await makeDir(), await makeDir()];
+      await put(join(lib, FOLDER, `${FOLDER} - 1080p.mkv`), 'the 1080p');
+      const file = await put(join(src, 'Nightbitch.2024.mkv'), 'the 4K');
+
+      const { items } = await createPlan([input(file)], {
+        profile: plex,
+        destinationRoot: lib,
+        mode: 'copy',
+        sizeOf: () => Promise.resolve('2160p'),
+      });
+
+      expect(names(items[0])).toEqual([`${FOLDER} - 2160p.mkv`]);
+    });
+  });
+
+  it('names an episode already in its folder on request', async () => {
+    const lib = await makeDir();
+    const file = await put(join(lib, SEASON, `${stem}.mkv`));
+    const parsed = { ...parser.parse(file), screenSize: '2160p' };
+
+    const { items } = await createPlan([{ parsed, candidate: foundation, applyVersion: true }], {
+      profile: plex,
+      destinationRoot: lib,
+      mode: 'move',
+    });
+
+    expect(items[0]?.operations[0]).toMatchObject({
+      destination: join(lib, SEASON, `${stem} - 2160p.mkv`),
+    });
   });
 });
 

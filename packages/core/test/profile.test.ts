@@ -27,7 +27,7 @@ function codeOf(fn: () => unknown): string | undefined {
 
 function path(
   profile: Profile,
-  key: Exclude<keyof Profile['templates'], 'movieVersion'>,
+  key: Exclude<keyof Profile['templates'], 'movieVersion' | 'episodeVersion'>,
   vars: TemplateVariables,
 ) {
   return renderTemplate(parseTemplate(profile.templates[key]), vars, {

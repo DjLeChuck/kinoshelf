@@ -14,6 +14,7 @@ export const profileSchema = z.strictObject({
     seriesFolder: text,
     seasonFolder: text,
     episodeFile: text,
+    episodeVersion: text.optional(),
   }),
   nfo: z
     .strictObject({

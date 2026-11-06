@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { GuessitParser, versionLabel, versionLabels } from '../src/index.js';
+import { GuessitParser, pictureSize, versionLabel, versionLabels } from '../src/index.js';
 
 const parse = (name: string) => new GuessitParser().parse(name);
 
@@ -59,5 +59,22 @@ describe('versionLabels', () => {
       undefined,
       '1080p',
     ]);
+  });
+});
+
+describe('pictureSize', () => {
+  it.each([
+    [3840, 2160, '2160p'],
+    [3840, 1600, '2160p'],
+    [4096, 2160, '2160p'],
+    [1920, 1080, '1080p'],
+    [1920, 800, '1080p'],
+    [1280, 720, '720p'],
+    [1280, 536, '720p'],
+    [720, 576, '576p'],
+    [640, 480, '480p'],
+    [2560, 1440, '1440p'],
+  ])('calls a %ix%i frame %s', (width, height, expected) => {
+    expect(pictureSize(width, height)).toBe(expected);
   });
 });

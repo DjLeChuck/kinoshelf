@@ -58,6 +58,8 @@ export interface AnalyzeOptions {
   readonly mode: TransferMode;
   readonly matching?: Partial<MatchingConfig>;
   readonly sidecarExtensions?: readonly string[];
+  /** Reads a picture size from a file, for a name that says none (see `PlannerOptions.sizeOf`). */
+  readonly sizeOf?: (path: string) => Promise<string | undefined>;
   /** Files matched at the same time (each may issue several provider requests). */
   readonly concurrency?: number;
   /** One more file matched; `file` is the one that just was. */
@@ -213,6 +215,7 @@ export async function analyze(
     mode: options.mode,
     ...(loader.needsMetadata && { imageUrl: options.provider.imageUrl.bind(options.provider) }),
     ...(options.sidecarExtensions && { sidecarExtensions: options.sidecarExtensions }),
+    ...(options.sizeOf && { sizeOf: options.sizeOf }),
   });
 
   // Plan items follow the order of `inputs`, i.e. of the matched entries.

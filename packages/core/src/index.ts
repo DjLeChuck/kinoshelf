@@ -41,9 +41,10 @@ export {
   selectItems,
   type PlanInput,
   type PlannerOptions,
+  hasVersionSibling,
 } from './planning/planner.js';
 export { type Sidecar } from './planning/sidecars.js';
-export { versionLabel, versionLabels } from './planning/version.js';
+export { pictureSize, versionLabel, versionLabels } from './planning/version.js';
 export { executePlan, type ExecuteOptions } from './execution/executor.js';
 export { MemoryJournal } from './journal/memory-journal.js';
 export { SqliteJournal } from './journal/sqlite-journal.js';

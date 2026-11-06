@@ -1,9 +1,14 @@
 import { randomUUID } from 'node:crypto';
-import { lstat, stat } from 'node:fs/promises';
-import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
+import { lstat, readdir, stat } from 'node:fs/promises';
+import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { KinoshelfError } from '../errors.js';
 import { exists, nearestExistingDevice } from '../execution/fs-ops.js';
-import { renderProfileTemplate, type TemplateVariables } from '../profiles/template.js';
+import { VIDEO_EXTENSIONS } from '../pipeline/discover.js';
+import {
+  parseTemplate,
+  renderProfileTemplate,
+  type TemplateVariables,
+} from '../profiles/template.js';
 import type { Details, ImageSize } from '../types/details.js';
 import type { ErrorInfo } from '../types/errors.js';
 import type { ParsedMedia } from '../types/media.js';
@@ -43,6 +48,12 @@ export interface PlannerOptions {
   readonly imageUrl?: (path: string, size: ImageSize) => string;
   readonly newId?: () => string;
   readonly now?: () => Date;
+  /**
+   * Reads a video's picture size (`2160p`) from the file itself, for one whose name says none.
+   * Asked only when it matters: the movie or episode already has another file under its name, or
+   * the file collides with one. Absent, or `undefined` as an answer, the file stays unlabelled.
+   */
+  readonly sizeOf?: (path: string) => Promise<string | undefined>;
 }
 
 const blocked = (conflict: Conflict, base: Omit<PlanItem, 'status' | 'conflicts'>): PlanItem => ({
@@ -50,6 +61,16 @@ const blocked = (conflict: Conflict, base: Omit<PlanItem, 'status' | 'conflicts'
   status: 'conflict',
   conflicts: [conflict],
 });
+
+/** The profile's naming of a second quality for this kind of work, if it has one. */
+const versionTemplateOf = (profile: Profile, kind: 'movie' | 'series'): string | undefined =>
+  kind === 'movie' ? profile.templates.movieVersion : profile.templates.episodeVersion;
+
+/** The text of the version template that comes before `{version}`: what a labelled name shows. */
+function versionPrefixOf(template: string): string {
+  const first = parseTemplate(template).tokens[0];
+  return first?.kind === 'text' ? first.text : '';
+}
 
 /**
  * Room left after the stem for what follows it: the video's extension, and also a sidecar's
@@ -80,16 +101,19 @@ function targetSegments(
     renderProfileTemplate(profile, template, variables, reserveBytes);
   const { templates } = profile;
 
+  // A rendered segment loses its leading spaces, which ` - {version}` starts with: the suffix is
+  // rendered behind a placeholder that is cut off again.
+  const suffixOf = (template: string | undefined): string =>
+    version !== undefined && template !== undefined
+      ? renderProfileTemplate(profile, `_${template}`, { ...variables, version })
+          .join('')
+          .slice(1)
+      : '';
+
   if (candidate.kind === 'movie') {
     const folders = render(templates.movieFolder);
-    // A rendered segment loses its leading spaces, which ` - {version}` starts with: the suffix is
-    // rendered behind a placeholder that is cut off again. Its size is kept out of the title's.
-    const suffix =
-      version !== undefined && templates.movieVersion !== undefined
-        ? renderProfileTemplate(profile, `_${templates.movieVersion}`, { ...variables, version })
-            .join('')
-            .slice(1)
-        : '';
+    // The suffix's size is kept out of the title's, which is the part that gives way.
+    const suffix = suffixOf(templates.movieVersion);
     return {
       folders,
       stem: `${render(templates.movieFile, extensionBytes + Buffer.byteLength(suffix)).join('')}${suffix}`,
@@ -100,9 +124,10 @@ function targetSegments(
     throw new KinoshelfError('plan.episode-numbers-missing');
   }
   const seriesFolders = render(templates.seriesFolder);
+  const suffix = suffixOf(templates.episodeVersion);
   return {
     folders: [...seriesFolders, ...render(templates.seasonFolder)],
-    stem: render(templates.episodeFile, extensionBytes).join(''),
+    stem: `${render(templates.episodeFile, extensionBytes + Buffer.byteLength(suffix)).join('')}${suffix}`,
     workDepth: seriesFolders.length,
   };
 }
@@ -141,6 +166,40 @@ async function sameSize(first: string, second: string): Promise<boolean> {
   return a !== null && b !== null && a.size === b.size;
 }
 
+/** What a version label starts with: a picture size (`2160p`, `1080i`, `4K`). */
+const SIZE_AT_START = /^(\d{3,4}[pi]|4k|uhd)(?![a-z0-9])/i;
+
+/** Items for which a size read from the file would settle a name (see `PlannerOptions.sizeOf`). */
+const wantingSize = new WeakSet<PlanItem>();
+
+/** Whether the folder already holds another video of this work: bare, or under a version label. */
+async function hasSibling(
+  folder: string,
+  stem: string,
+  prefix: string,
+  except: string,
+): Promise<boolean> {
+  const names = await readdir(folder).catch(() => []);
+  return names.some((name) => {
+    const found = extname(name);
+    const other = basename(name, found);
+    return (
+      name !== basename(except) &&
+      VIDEO_EXTENSIONS.includes(found.slice(1).toLowerCase()) &&
+      (other === stem || (other.startsWith(`${stem}${prefix}`) && other.length > stem.length))
+    );
+  });
+}
+
+/**
+ * Whether another video of the same work sits beside this stem (bare or labelled). For a caller
+ * that wants to know if a plan made earlier may be stale: it cannot tell the profile's labels, so
+ * it errs on the side of saying yes, which only costs a plan made again.
+ */
+export function hasVersionSibling(folder: string, stem: string, except: string): Promise<boolean> {
+  return hasSibling(folder, stem, '', except);
+}
+
 async function planItem(
   input: PlanInput,
   options: PlannerOptions,
@@ -148,7 +207,9 @@ async function planItem(
   listings: Map<string, Promise<string[]>>,
   versionLevel?: number,
 ): Promise<PlanItem> {
-  const forced = input.applyVersion === true && input.candidate.kind === 'movie';
+  const kind = input.candidate.kind;
+  const versionTemplate = versionTemplateOf(options.profile, kind);
+  const forced = input.applyVersion === true;
   if (forced && versionLevel === undefined) {
     return blocked(
       {
@@ -205,21 +266,34 @@ async function planItem(
   }
 
   let state = await classify(source, destination, mode);
-  if (versionLevel !== undefined && input.candidate.kind === 'movie') {
-    // A file already in the movie's folder under the profile's name, with or without a version
-    // after it, is where it belongs: a library is never renamed behind its owner's back.
+  const prefix = versionTemplate === undefined ? '' : versionPrefixOf(versionTemplate);
+  if (versionTemplate !== undefined) {
+    // A file already in the work's folder under the profile's name, with or without a version
+    // after it, is where it belongs: a library is never renamed behind its owner's back. A movie
+    // may carry anything after a separator (`[1080p]`); an episode only the profile's own version
+    // text, since a title after `S01E01` is something the profile does rename.
     const sourceStem = basename(source, extension);
     const rest = sourceStem.slice(target.stem.length);
+    const labelled =
+      kind === 'movie'
+        ? rest === '' || /^[\s._[(-]/.test(rest)
+        : rest === '' ||
+          (rest.startsWith(prefix) &&
+            rest.length > prefix.length &&
+            // ` - The Emperor's Peace` is a title, ` - 2160p` a version, and so is anything else
+            // when the bare name is another file's: this one is the work's second.
+            (SIZE_AT_START.test(rest.slice(prefix.length)) ||
+              ('conflict' in state && state.conflict.reason === 'destination-exists')));
     if (
       !forced &&
       dirname(source) === dirname(destination) &&
       sourceStem.startsWith(target.stem) &&
-      (rest === '' || /^[\s._[(-]/.test(rest))
+      labelled
     ) {
       target = { ...target, stem: sourceStem };
       destination = source;
       state = { status: 'in-place' };
-    } else {
+    } else if (versionLevel !== undefined) {
       // The shortest label that is free: a file of the same size already there asks for the
       // source, then the group, before it is called a conflict.
       for (let level = versionLevel; level <= MAX_VERSION_LEVEL; level++) {
@@ -247,8 +321,23 @@ async function planItem(
       }
     }
   }
+  // Nothing in the name says its size, but the work already has another file beside where it would
+  // go: reading the size from the file would let both be told apart.
+  const needsSize =
+    options.sizeOf !== undefined &&
+    versionLevel === undefined &&
+    versionTemplate !== undefined &&
+    !forced &&
+    (('conflict' in state && state.conflict.reason === 'destination-exists') ||
+      ('status' in state &&
+        state.status === 'ready' &&
+        (await hasSibling(dirname(destination), target.stem, prefix, source))));
   if ('conflict' in state) {
-    return blocked(state.conflict, base);
+    const item = blocked(state.conflict, base);
+    if (needsSize) {
+      wantingSize.add(item);
+    }
+    return item;
   }
   const place = {
     root,
@@ -297,7 +386,11 @@ async function planItem(
       (operation) => !taken.has(operation.destination.toLowerCase()),
     ),
   );
-  return { ...base, operations, status: 'ready', conflicts: [] };
+  const item: PlanItem = { ...base, operations, status: 'ready', conflicts: [] };
+  if (needsSize) {
+    wantingSize.add(item);
+  }
+  return item;
 }
 
 /**
@@ -375,20 +468,30 @@ function shareCompanions(items: readonly PlanItem[]): PlanItem[] {
 }
 
 /**
- * How much of its quality each movie's name says (see `versionLabel`), for a profile that keeps
- * several qualities of a movie in one folder. The files of one movie in the batch are told apart
- * together, so the result does not depend on their order. `undefined`: no suffix (no such profile,
- * not a movie, or a file that never says its size).
+ * How much of its quality each file's name says (see `versionLabel`), for a profile that keeps
+ * several qualities of a movie or an episode in one folder. The files of one work in the batch are
+ * told apart together, so the result does not depend on their order. `undefined`: no suffix (no
+ * such profile, or a file that never says its size).
  */
+/** One work for a movie, one episode (or double episode) of a show for a series. */
+function workKeyOf(input: PlanInput): string {
+  const { id } = input.candidate;
+  const episode =
+    input.candidate.kind === 'movie'
+      ? ''
+      : `:${String(input.parsed.season)}:${input.parsed.episodes.join(',')}`;
+  return `${id.provider}:${String(id.id)}${episode}`;
+}
+
 function versionLevels(inputs: readonly PlanInput[], profile: Profile): (number | undefined)[] {
   const levels: (number | undefined)[] = inputs.map(() => undefined);
-  if (profile.templates.movieVersion === undefined) {
-    return levels;
-  }
   const groups = new Map<string, number[]>();
   inputs.forEach((input, index) => {
-    if (input.candidate.kind === 'movie' && input.parsed.screenSize !== undefined) {
-      const key = `${input.candidate.id.provider}:${String(input.candidate.id.id)}`;
+    if (
+      versionTemplateOf(profile, input.candidate.kind) !== undefined &&
+      input.parsed.screenSize !== undefined
+    ) {
+      const key = workKeyOf(input);
       groups.set(key, [...(groups.get(key) ?? []), index]);
     }
   });
@@ -431,6 +534,61 @@ async function inBatches<T, R>(
   return results;
 }
 
+/** Files read at once for their size: ffprobe is a process each. */
+const SIZES_AT_ONCE = 4;
+
+/** The items of a batch, with the duplicates held back, and which of them want a size read. */
+async function buildItems(
+  inputs: readonly PlanInput[],
+  options: PlannerOptions,
+  ids: readonly string[],
+): Promise<{ items: PlanItem[]; wanting: boolean[] }> {
+  const listings = new Map<string, Promise<string[]>>();
+  const levels = versionLevels(inputs, options.profile);
+  const planned = await inBatches(inputs, ITEMS_AT_ONCE, (input, index) =>
+    planItem(input, options, ids[index] as string, listings, levels[index]),
+  );
+
+  // Case-insensitive: libraries are often shared with systems that cannot tell the names apart.
+  const byDestination = new Map<string, PlanItem[]>();
+  for (const item of planned) {
+    const main = item.operations[0];
+    // An item with only companion files has no main transfer: nothing to collide on.
+    if (item.status === 'ready' && main?.type === 'transfer') {
+      const key = main.destination.toLowerCase();
+      byDestination.set(key, [...(byDestination.get(key) ?? []), item]);
+    }
+  }
+  const duplicated = new Set(
+    [...byDestination.values()].filter((group) => group.length > 1).flat(),
+  );
+  const items = planned.map((item): PlanItem => {
+    const main = item.operations[0];
+    return duplicated.has(item) && main && 'destination' in main
+      ? {
+          ...item,
+          status: 'conflict',
+          conflicts: [{ reason: 'duplicate-destination', path: main.destination }],
+        }
+      : item;
+  });
+  // Two files of one work in the batch, one of which says nothing of its size, are versions of
+  // each other: reading it is what tells them apart (and two that say nothing collide anyway).
+  const perWork = new Map<string, number>();
+  for (const input of inputs) {
+    perWork.set(workKeyOf(input), (perWork.get(workKeyOf(input)) ?? 0) + 1);
+  }
+  const wanting = planned.map((item, index) => {
+    const input = inputs[index] as PlanInput;
+    return (
+      (wantingSize.has(item) || duplicated.has(item) || (perWork.get(workKeyOf(input)) ?? 0) > 1) &&
+      input.parsed.screenSize === undefined &&
+      versionTemplateOf(options.profile, input.candidate.kind) !== undefined
+    );
+  });
+  return { items, wanting };
+}
+
 /**
  * Builds the plan for a batch of matched files. It reads the disk (existing destinations,
  * sidecars, devices) but never writes. Items sharing a destination are all held back.
@@ -444,25 +602,34 @@ export async function createPlan(
   const newId = options.newId ?? randomUUID;
   // Ids are drawn in input order whatever the order the disk answers in.
   const ids = inputs.map(() => newId());
-  const listings = new Map<string, Promise<string[]>>();
-  const levels = versionLevels(inputs, profile);
-  const items = await inBatches(inputs, ITEMS_AT_ONCE, (input, index) =>
-    planItem(input, options, ids[index] as string, listings, levels[index]),
-  );
-
-  // Case-insensitive: libraries are often shared with systems that cannot tell the names apart.
-  const byDestination = new Map<string, PlanItem[]>();
-  for (const item of items) {
-    const main = item.operations[0];
-    // An item with only companion files has no main transfer: nothing to collide on.
-    if (item.status === 'ready' && main?.type === 'transfer') {
-      const key = main.destination.toLowerCase();
-      byDestination.set(key, [...(byDestination.get(key) ?? []), item]);
+  let used = inputs;
+  let built = await buildItems(used, options, ids);
+  if (options.sizeOf) {
+    // A file whose name says no size but whose place is taken is read once, and the batch planned
+    // again with what was found, so every file of the work is told apart together.
+    const wanting = built.wanting.flatMap((wants, index) => (wants ? [index] : []));
+    const sizes = new Map<number, string>();
+    for (let start = 0; start < wanting.length; start += SIZES_AT_ONCE) {
+      await Promise.all(
+        wanting.slice(start, start + SIZES_AT_ONCE).map(async (index) => {
+          const size = await options.sizeOf?.(resolve((used[index] as PlanInput).parsed.path));
+          if (size !== undefined) {
+            sizes.set(index, size);
+          }
+        }),
+      );
+    }
+    if (sizes.size > 0) {
+      used = used.map((input, index) => {
+        const size = sizes.get(index);
+        return size === undefined
+          ? input
+          : { ...input, parsed: { ...input.parsed, screenSize: size } };
+      });
+      built = await buildItems(used, options, ids);
     }
   }
-  const duplicated = new Set(
-    [...byDestination.values()].filter((group) => group.length > 1).flat(),
-  );
+  const { items } = built;
 
   return {
     id: newId(),
@@ -476,17 +643,6 @@ export async function createPlan(
             series: resolve(options.destinationRoot.series),
           },
     mode: options.mode,
-    items: shareCompanions(
-      items.map((item): PlanItem => {
-        const main = item.operations[0];
-        return duplicated.has(item) && main && 'destination' in main
-          ? {
-              ...item,
-              status: 'conflict',
-              conflicts: [{ reason: 'duplicate-destination', path: main.destination }],
-            }
-          : item;
-      }),
-    ),
+    items: shareCompanions(items),
   };
 }

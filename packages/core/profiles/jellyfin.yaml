@@ -18,6 +18,8 @@ templates:
   # `Season 01`, never `S01`; specials go in `Season 00`.
   seasonFolder: 'Season {season:02}'
   episodeFile: '{title} ({year}) S{season:02}E{episode:02}'
+  # Several qualities of an episode share its season folder: `<file> - 2160p`.
+  episodeVersion: ' - {version}'
 
 # Kodi-format NFO: `movie.nfo`, `tvshow.nfo`, and `<video>.nfo` for an episode. Local metadata
 # and images win over Jellyfin's providers.

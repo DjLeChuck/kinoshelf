@@ -28,7 +28,7 @@ export interface SettingsContext {
 /** What a profile writes, rendered from its own templates so the UI never repeats them. */
 function exampleOf(profile: Profile): { movie: string; series: string } {
   const render = (
-    key: Exclude<keyof Profile['templates'], 'movieVersion'>,
+    key: Exclude<keyof Profile['templates'], 'movieVersion' | 'episodeVersion'>,
     variables: TemplateVariables,
   ): string[] => renderProfileTemplate(profile, profile.templates[key], variables);
   const movie = { title: 'Dune', year: 2021, tmdb: 438631 };

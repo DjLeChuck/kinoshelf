@@ -219,8 +219,8 @@ export class GuessitParser implements Parser {
       ...(country !== undefined && { country }),
       ...(releaseGroup !== undefined && { releaseGroup }),
       ...(languages.length > 0 && { languages }),
-      ...(kind === 'movie' && screenSize !== undefined && { screenSize }),
-      ...(kind === 'movie' && source !== undefined && { source }),
+      ...(kind !== 'unknown' && screenSize !== undefined && { screenSize }),
+      ...(kind !== 'unknown' && source !== undefined && { source }),
     };
   }
 }

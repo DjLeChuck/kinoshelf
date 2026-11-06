@@ -20,6 +20,8 @@ templates:
   # The English word "Season" is mandatory, whatever the content language.
   seasonFolder: 'Season {season:02}'
   episodeFile: '{title} ({year}) - s{season:02}e{episode:02}'
+  # Several qualities of an episode share its season folder: `<file> - 2160p`.
+  episodeVersion: ' - {version}'
 
 # Targets Plex's default agents, which fetch their own metadata and artwork and ignore NFO files.
 nfo: null

@@ -37,3 +37,25 @@ export function versionLabels(files: readonly ParsedMedia[]): (string | undefine
     label !== undefined && finest.indexOf(label) !== finest.lastIndexOf(label) ? null : label,
   );
 }
+
+const SIZE_STEPS = [
+  { name: '2160p', width: 3400, height: 2000 },
+  { name: '1440p', width: 2500, height: 1300 },
+  { name: '1080p', width: 1800, height: 1000 },
+  { name: '720p', width: 1200, height: 680 },
+  { name: '576p', width: 700, height: 540 },
+] as const;
+
+/**
+ * The picture size a video's frame is called by, as a release name would. The width counts as much
+ * as the height: a 2.39:1 film in 1080p is 1920x800 (the bars are cut), a 4K one 3840x1600, and
+ * both are told by the width. Whichever of the two reads the larger size wins.
+ */
+export function pictureSize(width: number, height: number): string {
+  const step = (axis: 'width' | 'height', value: number): number => {
+    const found = SIZE_STEPS.findIndex((candidate) => value >= candidate[axis]);
+    return found === -1 ? SIZE_STEPS.length : found;
+  };
+  const index = Math.min(step('width', width), step('height', height));
+  return SIZE_STEPS[index]?.name ?? '480p';
+}

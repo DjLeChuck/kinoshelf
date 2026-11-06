@@ -71,6 +71,14 @@ describe('loadConfig', () => {
     });
   });
 
+  it('reads whether to detect the picture size, and rejects anything but a boolean', async () => {
+    const dir = await makeDir();
+    await put(join(dir, 'config.yaml'), 'detectPictureSize: false\n');
+    expect(await loadConfig(dir)).toEqual({ detectPictureSize: false });
+    await put(join(dir, 'config.yaml'), 'detectPictureSize: maybe\n');
+    await expect(loadConfig(dir)).rejects.toThrow();
+  });
+
   it('reads the retention and rejects a negative or fractional one', async () => {
     const dir = await makeDir();
     await put(join(dir, 'config.yaml'), 'retentionDays: 30\n');

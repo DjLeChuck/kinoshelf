@@ -36,6 +36,12 @@ export interface PathTemplates {
   readonly seasonFolder: string;
   /** File name without extension. */
   readonly episodeFile: string;
+  /**
+   * What follows `episodeFile` when the same episode is kept in several qualities in its season
+   * folder (` - {version}`: `Show S01E01 - 2160p`). Absent: a second file for an episode is a
+   * conflict. Only `{version}` is known to it.
+   */
+  readonly episodeVersion?: string;
 }
 
 export interface NfoSpec {

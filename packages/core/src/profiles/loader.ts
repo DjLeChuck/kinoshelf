@@ -48,6 +48,12 @@ function checkTemplates(file: ProfileFile): void {
     allowed: VARIABLES.movieFile,
     folder: false,
   });
+  if (templates.episodeVersion !== undefined) {
+    checkTemplate('templates.episodeVersion', templates.episodeVersion, {
+      allowed: VARIABLES.episodeVersion,
+      folder: false,
+    });
+  }
   if (templates.movieVersion !== undefined) {
     checkTemplate('templates.movieVersion', templates.movieVersion, {
       allowed: VARIABLES.movieVersion,
@@ -123,6 +129,9 @@ export function parseProfile(yamlText: string): Profile {
       seriesFolder: file.templates.seriesFolder,
       seasonFolder: file.templates.seasonFolder,
       episodeFile: file.templates.episodeFile,
+      ...(file.templates.episodeVersion !== undefined && {
+        episodeVersion: file.templates.episodeVersion,
+      }),
     },
     nfo: file.nfo && {
       format: file.nfo.format,
