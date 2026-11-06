@@ -493,7 +493,7 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
         response: {
           200: {
             type: 'object',
-            required: ['library', 'scannedAt', 'scan', 'counts', 'total', 'items'],
+            required: ['library', 'scannedAt', 'scan', 'counts', 'total', 'groups', 'items'],
             properties: {
               library: {
                 type: 'object',
@@ -534,6 +534,12 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
                 ),
               },
               total: { type: 'integer', description: 'Items matching the filters, for paging.' },
+              groups: {
+                type: 'integer',
+                description:
+                  'The same items counted as a validation settles them: the episodes of one release ' +
+                  'and series are one.',
+              },
               items: { type: 'array', items: libraryItemSchema },
             },
           },
@@ -579,6 +585,7 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
           : null,
         counts: items.counts(library.id, library.type === 'series'),
         total: page.total,
+        groups: page.groups,
         items: page.items.map((item) =>
           presentItem(item, item.entryId === null ? undefined : releases.get(item.entryId)),
         ),

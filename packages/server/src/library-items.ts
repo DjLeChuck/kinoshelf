@@ -354,7 +354,7 @@ export class LibraryItemStore {
   page(
     libraryId: string,
     options: { filter?: ItemFilter; query?: string; limit: number; offset: number },
-  ): { total: number; items: LibraryItem[] } {
+  ): { total: number; groups: number; items: LibraryItem[] } {
     const where = [
       'library_id = ?',
       ...(options.filter ? [FILTER_SQL[options.filter]] : []),
@@ -374,6 +374,17 @@ export class LibraryItemStore {
           `SELECT COUNT(*) AS total FROM library_items WHERE ${where}`,
         )
         .get(...params)?.total ?? 0;
+    // What a validation settles at once: the episodes of one release and series are one group
+    // (`settleKey` in the web), anything else a group of its own.
+    const groups =
+      this.database
+        .prepare<unknown[], { groups: number }>(
+          `SELECT COUNT(DISTINCT CASE WHEN i.kind = 'series' AND e.release IS NOT NULL
+                  THEN e.release || '|' || e.cluster ELSE i.path END) AS groups
+           FROM (SELECT path, kind, entry_id FROM library_items WHERE ${where}) i
+           LEFT JOIN job_entries e ON e.id = i.entry_id`,
+        )
+        .get(...params)?.groups ?? 0;
     const items = this.database
       .prepare<unknown[], Row>(
         `SELECT ${COLUMNS} FROM library_items WHERE ${where}
@@ -381,7 +392,7 @@ export class LibraryItemStore {
       )
       .all(...params, options.limit, options.offset)
       .map(toItem);
-    return { total, items };
+    return { total, groups, items };
   }
 
   /** What each filter holds, for the tabs of the page. */

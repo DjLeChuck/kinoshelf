@@ -480,6 +480,33 @@ describe('the lookups of the item store', () => {
     ...extra,
   });
 
+  it('counts the files to validate as a validation settles them: a release is one', () => {
+    const database = migrated(new Database(':memory:'));
+    const store = new LibraryItemStore(database);
+    const entry = database.prepare(
+      `INSERT INTO job_entries (id, job_id, path, classification, parsed, outcome, release, cluster)
+       VALUES (?, 'j', ?, 'review', '{}', '{}', ?, ?)`,
+    );
+    const waiting = (path: string, id: string | null, kind: 'series' | 'movie' = 'series') =>
+      row(path, { kind, state: 'review', entryId: id });
+    for (const [id, path, release, cluster] of [
+      ['a', '/in/Foundation/1.mkv', '/in/Foundation', 0],
+      ['b', '/in/Foundation/2.mkv', '/in/Foundation', 0],
+      ['c', '/in/Foundation/3.mkv', '/in/Foundation', 1],
+    ] as const) {
+      entry.run(id, path, release, cluster);
+      store.put(waiting(path, id));
+    }
+    store.put(waiting('/in/Film.mkv', null, 'movie'));
+    store.put(waiting('/in/Odd.mkv', null));
+
+    const page = store.page('shows', { filter: 'review', limit: 1, offset: 0 });
+    expect(page.total).toBe(5);
+    // Foundation (main), Foundation (set apart), the film, the lone episode: the page cut changes nothing.
+    expect(page.groups).toBe(4);
+    expect(page.items).toHaveLength(1);
+  });
+
   it('finds the videos of one folder, not of its sub-folders nor of a folder named alike', () => {
     const store = new LibraryItemStore(migrated(new Database(':memory:')));
     for (const path of [

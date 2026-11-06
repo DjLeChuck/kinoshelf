@@ -1951,6 +1951,8 @@ export interface paths {
                             };
                             /** @description Items matching the filters, for paging. */
                             total: number;
+                            /** @description The same items counted as a validation settles them: the episodes of one release and series are one. */
+                            groups: number;
                             items: {
                                 /** @description Stable for a path: `GET /api/libraries/{id}/items/{itemId}`. */
                                 id: string;
