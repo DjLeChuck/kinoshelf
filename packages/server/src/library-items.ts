@@ -148,9 +148,7 @@ export class LibraryItemStore {
   constructor(private readonly database: Database) {
     // SQLite's lower() only folds ASCII, so "Ça" would sort after "Z": the key drops accents too.
     database.function('sort_key', { deterministic: true }, (value: unknown) =>
-      typeof value === 'string'
-        ? value.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase()
-        : null,
+      typeof value === 'string' ? sortKey(value) : null,
     );
   }
 
@@ -366,13 +364,13 @@ export class LibraryItemStore {
       'library_id = ?',
       ...(options.filter ? [FILTER_SQL[options.filter]] : []),
       ...(options.query
-        ? ["(lower(title) LIKE ? ESCAPE '\\' OR lower(path) LIKE ? ESCAPE '\\')"]
+        ? ["(sort_key(title) LIKE ? ESCAPE '\\' OR sort_key(path) LIKE ? ESCAPE '\\')"]
         : []),
     ].join(' AND ');
     const params: (string | number)[] = [
       libraryId,
       ...(options.query
-        ? [contains(options.query.toLowerCase()), contains(options.query.toLowerCase())]
+        ? [contains(sortKey(options.query)), contains(sortKey(options.query))]
         : []),
     ];
     const total =
@@ -480,7 +478,7 @@ export class LibraryItemStore {
   ): { grouped: string; params: (string | number)[] } {
     const where = [
       "i.library_id = ? AND i.kind = 'series' AND i.tmdb_id IS NOT NULL",
-      ...(options.query ? ["lower(i.title) LIKE ? ESCAPE '\\'"] : []),
+      ...(options.query ? ["sort_key(i.title) LIKE ? ESCAPE '\\'"] : []),
       // The filter's columns are unqualified: inside the sub-query they are the inner table's.
       ...(options.state
         ? [
@@ -499,7 +497,7 @@ export class LibraryItemStore {
     const having = options.missing ? 'HAVING MAX(c.missing) > 0' : '';
     const params: (string | number)[] = [
       libraryId,
-      ...(options.query ? [contains(options.query.toLowerCase())] : []),
+      ...(options.query ? [contains(sortKey(options.query))] : []),
     ];
     const grouped = `
       SELECT i.tmdb_id AS tmdb_id, MIN(i.title) AS title, MIN(i.year) AS year,
@@ -607,6 +605,10 @@ interface ShowQuery {
   poster: number | null;
   fanart: number | null;
 }
+
+/** Lower case without accents: what titles are ordered and searched by (`sort_key` in SQL). */
+const sortKey = (text: string): string =>
+  text.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
 
 /** A LIKE pattern that matches the text itself, `%` and `_` included. */
 const contains = (text: string): string => `%${text.replace(/[\\%_]/g, '\\$&')}%`;

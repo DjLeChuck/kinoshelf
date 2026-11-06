@@ -275,6 +275,24 @@ describe('GET /api/libraries/:id/items', () => {
     ]);
   });
 
+  it('searches without caring for accents or case', async () => {
+    const { h, store, root } = await scanned();
+    const [base] = store.all('films');
+    if (!base) {
+      throw new Error('the scan stored nothing');
+    }
+    store.replace('films', [
+      { ...base, path: join(root, 'ca.mkv'), title: 'Ça : Bienvenue à Derry' },
+      { ...base, path: join(root, 'casablanca.mkv'), title: 'Casablanca' },
+    ]);
+    const titles = async (q: string) =>
+      (await list(h, `?q=${encodeURIComponent(q)}`)).items.map((item) => item.title);
+    expect(await titles('ÇA :')).toEqual(['Ça : Bienvenue à Derry']);
+    expect(await titles('ca')).toEqual(['Ça : Bienvenue à Derry', 'Casablanca']);
+    expect(await titles('bienvenue a derry')).toEqual(['Ça : Bienvenue à Derry']);
+    expect(await titles('casa')).toEqual(['Casablanca']);
+  });
+
   it('filters by state or missing file, searches, and pages', async () => {
     const { h, dune, alien } = await scanned();
     expect((await list(h, '?state=rename')).items.map((i) => i.path)).toEqual([dune]);
