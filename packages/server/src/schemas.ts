@@ -866,6 +866,9 @@ export const libraryItemSchema = {
     'poster',
     'fanart',
     'entryId',
+    'release',
+    'cluster',
+    'releaseFiles',
   ],
   properties: {
     id: {
@@ -902,6 +905,24 @@ export const libraryItemSchema = {
     poster: { type: 'boolean', nullable: true },
     fanart: { type: 'boolean', nullable: true },
     entryId: { type: 'string', nullable: true, description: 'To validate or change the match.' },
+    release: {
+      type: 'string',
+      nullable: true,
+      description:
+        'The folder the file came in: files sharing it (and its `cluster`) are validated together. ' +
+        'Filled by the list of items only.',
+    },
+    cluster: {
+      type: 'integer',
+      nullable: true,
+      description: 'Which series of the release: 0 the main one, 1 and up the others.',
+    },
+    releaseFiles: {
+      type: 'integer',
+      nullable: true,
+      description:
+        'Files a validation of this one settles: itself and the rest of its series in the release.',
+    },
   },
 } as const;
 

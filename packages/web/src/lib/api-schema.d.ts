@@ -1977,6 +1977,12 @@ export interface paths {
                                 fanart: boolean | null;
                                 /** @description To validate or change the match. */
                                 entryId: string | null;
+                                /** @description The folder the file came in: files sharing it (and its `cluster`) are validated together. Filled by the list of items only. */
+                                release: string | null;
+                                /** @description Which series of the release: 0 the main one, 1 and up the others. */
+                                cluster: number | null;
+                                /** @description Files a validation of this one settles: itself and the rest of its series in the release. */
+                                releaseFiles: number | null;
                             }[];
                         };
                     };
@@ -2110,6 +2116,12 @@ export interface paths {
                             fanart: boolean | null;
                             /** @description To validate or change the match. */
                             entryId: string | null;
+                            /** @description The folder the file came in: files sharing it (and its `cluster`) are validated together. Filled by the list of items only. */
+                            release: string | null;
+                            /** @description Which series of the release: 0 the main one, 1 and up the others. */
+                            cluster: number | null;
+                            /** @description Files a validation of this one settles: itself and the rest of its series in the release. */
+                            releaseFiles: number | null;
                             overview: string | null;
                             runtime: number | null;
                             genres: string[];
@@ -2367,6 +2379,12 @@ export interface paths {
                                         fanart: boolean | null;
                                         /** @description To validate or change the match. */
                                         entryId: string | null;
+                                        /** @description The folder the file came in: files sharing it (and its `cluster`) are validated together. Filled by the list of items only. */
+                                        release: string | null;
+                                        /** @description Which series of the release: 0 the main one, 1 and up the others. */
+                                        cluster: number | null;
+                                        /** @description Files a validation of this one settles: itself and the rest of its series in the release. */
+                                        releaseFiles: number | null;
                                     } | null;
                                 }[];
                             }[];

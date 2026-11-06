@@ -161,7 +161,14 @@ function requireSourceFree(
   }
 }
 
-const presentItem = (item: LibraryItem): unknown => ({
+/** The folder a file came in and which series of it: only the list of items fills it in. */
+interface ReleaseOf {
+  readonly release: string | null;
+  readonly cluster: number;
+  readonly files: number;
+}
+
+const presentItem = (item: LibraryItem, release?: ReleaseOf): unknown => ({
   id: itemId(item.path),
   path: item.path,
   state: item.state,
@@ -177,6 +184,9 @@ const presentItem = (item: LibraryItem): unknown => ({
   poster: item.poster,
   fanart: item.fanart,
   entryId: item.entryId,
+  release: release?.release ?? null,
+  cluster: release ? release.cluster : null,
+  releaseFiles: release ? release.files : null,
 });
 
 /** The year of an ISO date, if there is one. */
@@ -548,6 +558,9 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
         limit,
         offset,
       });
+      const releases = ctx.entries.releasesOf(
+        page.items.flatMap((item) => (item.entryId === null ? [] : [item.entryId])),
+      );
       const last = jobs.lastScan(library.id, library.source);
       const running = last?.status === 'queued' || last?.status === 'running' ? last : undefined;
       return {
@@ -566,7 +579,9 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
           : null,
         counts: items.counts(library.id, library.type === 'series'),
         total: page.total,
-        items: page.items.map(presentItem),
+        items: page.items.map((item) =>
+          presentItem(item, item.entryId === null ? undefined : releases.get(item.entryId)),
+        ),
       };
     },
   );

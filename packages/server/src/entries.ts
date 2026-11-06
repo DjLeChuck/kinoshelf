@@ -280,6 +280,33 @@ export class EntryStore {
       .filter((other) => other.parsed.kind === 'episode');
   }
 
+  /**
+   * The release and series of each entry, and how many files a validation of it settles (itself and
+   * its `releaseMates`), for the lists that group files the way Arrivals does.
+   */
+  releasesOf(
+    ids: readonly string[],
+  ): Map<string, { release: string | null; cluster: number; files: number }> {
+    const found = new Map<string, { release: string | null; cluster: number; files: number }>();
+    if (ids.length === 0) {
+      return found;
+    }
+    const rows = this.database
+      .prepare<string[], { id: string; release: string | null; cluster: number; files: number }>(
+        `SELECT e.id, e.release, e.cluster,
+                CASE WHEN e.release IS NULL THEN 1 ELSE (
+                  SELECT COUNT(*) FROM job_entries o
+                  WHERE o.job_id = e.job_id AND o.release = e.release AND o.cluster = e.cluster
+                    AND o.resolution IS NULL AND o.classification != 'compliant') END AS files
+         FROM job_entries e WHERE e.id IN (${ids.map(() => '?').join(', ')})`,
+      )
+      .all(...ids);
+    for (const { id, release, cluster, files } of rows) {
+      found.set(id, { release, cluster, files: Math.max(files, 1) });
+    }
+    return found;
+  }
+
   /** Where a file goes once transferred, chosen by hand; null: the default. */
   setDestination(id: string, libraryId: string | null): void {
     this.database
