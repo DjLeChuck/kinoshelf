@@ -555,6 +555,7 @@ export const en = {
     'Taken from the file name, then read from the file when another version of the same movie or episode is in the way. Choose one to name this file’s version yourself.',
   'web.queue.destination': 'Destination path',
   'web.queue.destination.pick': 'Choose a candidate to see where the file would go.',
+  'web.queue.destination.folder': 'The {count} files go into this folder, each in its own place.',
   'web.queue.destination.loading': 'Checking the destination…',
   'web.queue.conflicts': 'This choice cannot be applied: {reasons}.',
   'web.queue.validate': 'Validate',

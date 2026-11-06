@@ -326,7 +326,7 @@ refuses to delete a library an arrival folder points at (`library.in-use`). Ther
 - **The "To validate" node of a series library groups like Arrivals.** The items of `GET .../items` carry
   `release` and `cluster` (filled by that list only, from `job_entries`; `null` elsewhere): `groupSettling`
   (`lib/library-items.ts`) makes one row per release and series, and the panel says how many files the
-  choice covers. Once validated or ignored, a group stays locked ("Transfer started") until a reload no longer lists it.
+  choice covers (the preview shows the series' folder, `folder` of `POST /api/entries/{id}/preview`, rather than one episode). Once validated or ignored, a group stays locked ("Transfer started") until a reload no longer lists it.
 - **Series** (`completeness.ts`, server migration 014): a row of a series library carries `season`,
   `episode` and `episodeEnd` (a file holding `S01E02E03` is one row, `episode` its first and
   `episodeEnd` its last). `GET /api/libraries/:id/shows` lists one row per work (files nobody identified
@@ -351,7 +351,8 @@ refuses to delete a library an arrival folder points at (`library.in-use`). Ther
   keeps the shows lacking a file of their own or a season poster. **A series library's tabs count shows**
   (`counts(libraryId, series)`) and always show the tree: `GET .../shows?state=rename|missing-nfo|missing-artwork`
   keeps the shows holding a file of that state. The exception is `review` and `unrecognized`: those files belong
-  to no show, so their tabs list only the "To validate" node and count files. A movie library counts files.
+  to no show, so their tabs list only the "To validate" node and count it as the node does (`groups`: a release's
+  episodes once). A movie library counts files.
 - **Scan one folder again** (`POST /api/libraries/:id/rescan`, body `{ path }`, server migration 023
   `jobs.rescan`): a movie's folder, a show's or a season's, from the movie page, the show panel and the
   season row. The path must be strictly inside the source (422 `library.outside`; a file loose in the

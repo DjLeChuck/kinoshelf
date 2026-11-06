@@ -66,6 +66,8 @@ export interface ArrivalPage {
 
 export interface Preview {
   readonly destination: string | null;
+  /** The series' folder when other episodes of the release go along: the file alone would stand for them. */
+  readonly folder: string | null;
   readonly conflicts: readonly ConflictBody[];
 }
 

@@ -454,6 +454,7 @@
                           : t('web.library.season', { season: season.season })}
                       </button>
                       <RescanButton
+                        compact
                         {libraryId}
                         path={rescanPath(
                           season.episodes.flatMap(({ item }) => (item ? [item.path] : [])),

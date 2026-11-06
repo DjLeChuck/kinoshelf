@@ -7,6 +7,7 @@
     libraryId,
     path,
     name,
+    compact = false,
     ondone,
   }: {
     libraryId: string;
@@ -14,6 +15,8 @@
     path: string | undefined;
     /** What the notice calls the work. */
     name: string;
+    /** A line of a list rather than a panel: a small button, set apart from what precedes it. */
+    compact?: boolean;
     /** The analysis was queued: what to tell the user. */
     ondone: (message: string) => void;
   } = $props();
@@ -42,6 +45,7 @@
   <button
     type="button"
     class="btn"
+    class:compact
     disabled={starting}
     title={t('web.library.rescan.hint')}
     onclick={() => void start()}>{t('web.library.rescan')}</button
@@ -50,3 +54,13 @@
     <span class="alert alert-danger" role="alert">{messageOf(t, failure)}</span>
   {/if}
 {/if}
+
+<style>
+  .compact {
+    min-height: 28px;
+    padding: 0 10px;
+    margin-inline: 12px 8px;
+    border-radius: 8px;
+    font-size: 13px;
+  }
+</style>

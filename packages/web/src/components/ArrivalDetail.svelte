@@ -299,7 +299,12 @@
     {:else if previewing}
       <p class="muted">{t('web.queue.destination.loading')}</p>
     {:else if preview}
-      {#if preview.destination}<p class="mono">{preview.destination}</p>{/if}
+      {#if siblings > 1 && preview.folder}
+        <p class="mono">{preview.folder}</p>
+        <p class="muted">{t('web.queue.destination.folder', { count: siblings })}</p>
+      {:else if preview.destination}
+        <p class="mono">{preview.destination}</p>
+      {/if}
       {#if conflicts.length > 0}
         <p class="alert alert-danger">
           {t('web.queue.conflicts', { reasons: reasons(conflicts) })}

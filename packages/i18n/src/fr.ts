@@ -577,6 +577,7 @@ export const fr: Record<keyof typeof en, string> = {
     'Prise dans le nom du fichier, puis lue dans le fichier quand une autre version du même film ou épisode est déjà là. Choisissez-en une pour nommer vous-même la version de ce fichier.',
   'web.queue.destination': 'Chemin de destination',
   'web.queue.destination.pick': 'Choisissez un candidat pour voir où irait le fichier.',
+  'web.queue.destination.folder': 'Les {count} fichiers vont dans ce dossier, chacun à sa place.',
   'web.queue.destination.loading': 'Vérification de la destination…',
   'web.queue.conflicts': 'Ce choix ne peut pas être appliqué : {reasons}.',
   'web.queue.validate': 'Valider',
