@@ -63,7 +63,7 @@
   let details = $state<Readonly<Record<number, ShowDetail>>>({});
   /** A show that could not be opened says so in its own row: the rest of the tree stays. */
   let showFailures = $state<Readonly<Record<number, unknown>>>({});
-  /** How many files wait for a person, the server's count (the list shows the first ones). */
+  /** How many validations wait for a person (a release counts once), the server's count. */
   let settleTotal = $state(0);
   // What is open lives in the URL (`?open=<tmdb ids>&seasons=<tmdb id>:<season>,…`): a reload or a
   // shared link opens the same shows.
@@ -172,7 +172,7 @@
         settling = pages.flatMap((page) => page.items);
         const present = new Set(settling.map(settleKey));
         startedKeys = startedKeys.filter((key) => present.has(key));
-        settleTotal = pages.reduce((sum, page) => sum + page.total, 0);
+        settleTotal = pages.reduce((sum, page) => sum + page.groups, 0);
         // Only what is open is kept: a closed show is read again when it opens.
         details = Object.fromEntries(
           Object.entries({

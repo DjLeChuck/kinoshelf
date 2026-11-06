@@ -91,6 +91,8 @@ export interface ItemsPage {
   } | null;
   readonly counts: Counts;
   readonly total: number;
+  /** `total` as a validation settles it: a release's episodes count once. */
+  readonly groups: number;
   readonly items: readonly LibraryItem[];
 }
 
