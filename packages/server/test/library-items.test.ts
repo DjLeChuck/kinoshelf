@@ -505,6 +505,9 @@ describe('the lookups of the item store', () => {
     // Foundation (main), Foundation (set apart), the film, the lone episode: the page cut changes nothing.
     expect(page.groups).toBe(4);
     expect(page.items).toHaveLength(1);
+    // The tab says what the node does, not the number of files.
+    expect(store.counts('shows', true).review).toBe(4);
+    expect(store.counts('shows').review).toBe(5);
   });
 
   it('finds the videos of one folder, not of its sub-folders nor of a folder named alike', () => {

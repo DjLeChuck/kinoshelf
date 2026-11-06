@@ -374,17 +374,7 @@ export class LibraryItemStore {
           `SELECT COUNT(*) AS total FROM library_items WHERE ${where}`,
         )
         .get(...params)?.total ?? 0;
-    // What a validation settles at once: the episodes of one release and series are one group
-    // (`settleKey` in the web), anything else a group of its own.
-    const groups =
-      this.database
-        .prepare<unknown[], { groups: number }>(
-          `SELECT COUNT(DISTINCT CASE WHEN i.kind = 'series' AND e.release IS NOT NULL
-                  THEN e.release || '|' || e.cluster ELSE i.path END) AS groups
-           FROM (SELECT path, kind, entry_id FROM library_items WHERE ${where}) i
-           LEFT JOIN job_entries e ON e.id = i.entry_id`,
-        )
-        .get(...params)?.groups ?? 0;
+    const groups = this.groupsWhere(where, params);
     const items = this.database
       .prepare<unknown[], Row>(
         `SELECT ${COLUMNS} FROM library_items WHERE ${where}
@@ -393,6 +383,23 @@ export class LibraryItemStore {
       .all(...params, options.limit, options.offset)
       .map(toItem);
     return { total, groups, items };
+  }
+
+  /**
+   * The rows a condition keeps, counted as a validation settles them: the episodes of one release
+   * and series are one group (`settleKey` in the web), anything else a group of its own.
+   */
+  private groupsWhere(where: string, params: readonly unknown[]): number {
+    return (
+      this.database
+        .prepare<unknown[], { groups: number }>(
+          `SELECT COUNT(DISTINCT CASE WHEN i.kind = 'series' AND e.release IS NOT NULL
+                  THEN e.release || '|' || e.cluster ELSE i.path END) AS groups
+           FROM (SELECT path, kind, entry_id FROM library_items WHERE ${where}) i
+           LEFT JOIN job_entries e ON e.id = i.entry_id`,
+        )
+        .get(...params)?.groups ?? 0
+    );
   }
 
   /** What each filter holds, for the tabs of the page. */
@@ -409,13 +416,15 @@ export class LibraryItemStore {
       counts[filter] = count(` AND ${FILTER_SQL[filter]}`);
     }
     if (series) {
-      // A series library reads as a tree of shows, so its tabs count shows. Only the files that
-      // wait for a person stay in files: they belong to no show (they are one node of the tree).
+      // A series library reads as a tree of shows, so its tabs count shows. The files that wait
+      // for a person belong to no show (they are one node of the tree): the tabs count them as
+      // that node does, a release once.
       counts.all = this.countShows(libraryId, {});
       for (const filter of ITEM_FILTERS) {
-        if (filter !== 'review' && filter !== 'unrecognized') {
-          counts[filter] = this.countShows(libraryId, { state: filter });
-        }
+        counts[filter] =
+          filter === 'review' || filter === 'unrecognized'
+            ? this.groupsWhere(`library_id = ? AND ${FILTER_SQL[filter]}`, [libraryId])
+            : this.countShows(libraryId, { state: filter });
       }
     }
     // Counted in shows, not files: it is the list of shows that this filter narrows.

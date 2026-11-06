@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { lstat } from 'node:fs/promises';
-import { basename, dirname, extname } from 'node:path';
+import { basename, dirname, extname, join, relative } from 'node:path';
 import {
   libraryProfile,
   createPlan,
@@ -302,6 +302,34 @@ export class Service {
       lenient: true,
       libraryId: this.chosenLibrary(entry, candidate, libraryId),
     });
+  }
+
+  /**
+   * The folder a release of episodes goes into, when the preview of one of its files would
+   * otherwise stand for all of them: the first folder under the library's root. `null` for a file
+   * alone, a movie, or a layout with no folder of the series.
+   */
+  previewFolder(
+    entryId: string,
+    candidate: Candidate,
+    destination: string | null,
+    libraryId?: string,
+  ): string | null {
+    const entry = this.pendingEntry(entryId);
+    if (candidate.kind !== 'series' || destination === null) {
+      return null;
+    }
+    if (this.deps.entries.releaseMates(entry).length === 0) {
+      return null;
+    }
+    // The root the planner used, so the folder is the one the preview's path is in.
+    const roots = this.settingsFor(
+      entry,
+      this.chosenLibrary(entry, candidate, libraryId),
+    ).destinationRoot;
+    const root = typeof roots === 'string' ? roots : roots.series;
+    const [first, ...rest] = relative(root, destination).split('/');
+    return first && first !== '..' && rest.length > 0 ? join(root, first) : null;
   }
 
   /**

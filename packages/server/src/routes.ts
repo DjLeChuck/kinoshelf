@@ -408,13 +408,23 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
       },
     },
     async (request) => {
+      const candidate = toCandidate(request.body);
       const item = await service.preview(
         request.params.id,
-        toCandidate(request.body),
+        candidate,
         request.body.libraryId,
         request.body.screenSize,
       );
-      return presentPlan(item);
+      const plan = presentPlan(item);
+      return {
+        ...plan,
+        folder: service.previewFolder(
+          request.params.id,
+          candidate,
+          plan.destination,
+          request.body.libraryId,
+        ),
+      };
     },
   );
 

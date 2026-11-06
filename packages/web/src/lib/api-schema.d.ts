@@ -3764,6 +3764,8 @@ export interface paths {
                                     };
                                 } | null;
                             }[];
+                            /** @description The folder of the series when several episodes of a release go along with this one: the destination alone would stand for one of them. */
+                            folder: string | null;
                         };
                     };
                 };

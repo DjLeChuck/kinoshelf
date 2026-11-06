@@ -122,7 +122,7 @@ describe('validation queue', () => {
 
     const preview = await h.request('POST', `/api/entries/${mystery.id}/preview`, DUNE);
     expect(preview.statusCode).toBe(200);
-    expect(preview.json()).toEqual({ destination: duneTarget(h), conflicts: [] });
+    expect(preview.json()).toEqual({ destination: duneTarget(h), conflicts: [], folder: null });
     expect((await queue(h))[0]).toMatchObject({ id: mystery.id, state: 'unrecognized' });
 
     await put(duneTarget(h), 'already here');

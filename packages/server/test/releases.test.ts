@@ -1,6 +1,14 @@
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { cleanup, harness, jobEntries, makeDir, put, type Harness } from './harness.js';
+import {
+  cleanup,
+  harness,
+  jobEntries,
+  librariesAt,
+  makeDir,
+  put,
+  type Harness,
+} from './harness.js';
 
 afterEach(cleanup);
 
@@ -74,6 +82,24 @@ describe('validating a release', () => {
     expect((await named('Zorp.S01E02.mkv')).classification).toBe('to-rename');
     expect((await named('Zorp.S01E03.mkv')).classification).toBe('to-rename');
     expect((await named('Quux.S01E01.mkv')).classification).toBe('unrecognized');
+  });
+
+  it('previews the series folder when the release goes along', async () => {
+    const root = await makeDir();
+    const h = await harness({ config: { libraries: [...librariesAt(root)] } });
+    const { named } = await scan(h);
+    const preview = async (name: string) =>
+      (
+        await h.request('POST', `/api/entries/${(await named(name)).id}/preview`, {
+          ...ZORP,
+          id: { provider: 'tmdb', id: name.startsWith('Zorp') ? 77 : 78 },
+        })
+      ).json<{ destination: string; folder: string | null }>();
+
+    const group = await preview('Zorp.S01E01.mkv');
+    expect(group.folder).not.toBeNull();
+    expect(group.destination.startsWith(`${group.folder}/`)).toBe(true);
+    expect(group.folder?.startsWith(root)).toBe(true);
   });
 
   it('validates the other show of the folder as a group of its own', async () => {

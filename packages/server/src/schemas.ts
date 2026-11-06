@@ -289,10 +289,17 @@ export const entrySchema = {
 /** Where a file would go, and what would stop it. */
 export const previewSchema = {
   type: 'object',
-  required: ['destination', 'conflicts'],
+  required: ['destination', 'conflicts', 'folder'],
   properties: {
     destination: entrySchema.properties.destination,
     conflicts: entrySchema.properties.conflicts,
+    folder: {
+      type: 'string',
+      nullable: true,
+      description:
+        'The folder of the series when several episodes of a release go along with this one: ' +
+        'the destination alone would stand for one of them.',
+    },
   },
 } as const;
 
