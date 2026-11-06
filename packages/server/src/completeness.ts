@@ -62,19 +62,23 @@ export function compare(
     .map((season): SeasonReport => {
       const known = seasons.find((candidate) => candidate.season === season);
       const files = held.filter((item) => item.season === season);
-      const covering = (episode: number): LibraryItem | undefined =>
-        files.find((item) => (item.episode ?? 0) <= episode && episode <= last(item));
-      const listed = (known?.episodes ?? []).map((info): EpisodeReport => {
-        const item = covering(info.episode) ?? null;
+      const covering = (episode: number): LibraryItem[] =>
+        files.filter((item) => (item.episode ?? 0) <= episode && episode <= last(item));
+      // Several files may hold one episode (versions of it): each one is a row, so none is taken
+      // for a file the provider does not know.
+      const listed = (known?.episodes ?? []).flatMap((info): EpisodeReport[] => {
+        const holders = covering(info.episode);
         const aired = info.airDate !== undefined && info.airDate <= today;
-        return {
+        const base = {
           season,
           episode: info.episode,
           title: info.title ?? null,
           airDate: info.airDate ?? null,
-          state: item ? 'present' : season > 0 && aired ? 'missing' : 'unaired',
-          item,
         };
+        if (holders.length === 0) {
+          return [{ ...base, state: season > 0 && aired ? 'missing' : 'unaired', item: null }];
+        }
+        return holders.map((item) => ({ ...base, state: 'present', item }));
       });
       // The specials a library lacks are not worth listing; the ones it has are.
       const shown = season === 0 ? listed.filter(({ item }) => item !== null) : listed;

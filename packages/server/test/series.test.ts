@@ -331,6 +331,22 @@ describe('comparing the files with the provider', () => {
     expect(season?.missing).toBe(1);
   });
 
+  it('lists each version of an episode as present, never as unknown to the provider', () => {
+    const version = { ...row(1, 1), path: '/s1e1 - 2160p.mkv' };
+    const [season] = compare(
+      [row(1, 1), version],
+      [{ season: 1, episodes: [episode(1, 1, '2020-01-01'), episode(1, 2, '2020-01-08')] }],
+      [],
+      '2026-01-01',
+    );
+    expect(season?.episodes.map((e) => [e.episode, e.state, e.item?.path])).toEqual([
+      [1, 'present', '/s1e1.mkv'],
+      [1, 'present', '/s1e1 - 2160p.mkv'],
+      [2, 'missing', undefined],
+    ]);
+    expect(season?.missing).toBe(1);
+  });
+
   it('is the same signature for the same episodes in any order, another when one changes', () => {
     expect(signatureOf([row(1, 1), row(1, 2)])).toBe(signatureOf([row(1, 2), row(1, 1)]));
     expect(signatureOf([row(1, 1), row(1, 2)])).not.toBe(signatureOf([row(1, 1), row(1, 2, 3)]));
