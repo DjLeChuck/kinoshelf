@@ -236,22 +236,28 @@ export const PICTURE_SIZES = ['2160p', '1440p', '1080p', '720p', '576p', '480p']
 
 /** Naming a version: the size to use (chosen by hand, or the one the name says). */
 export interface VersionRequest {
-  readonly screenSize: string;
+  /** `undefined`: the server reads it from the file name, then from the file. */
+  readonly screenSize?: string;
 }
 
 const versionBody = (version: VersionRequest | undefined) =>
-  version === undefined ? {} : { version: true, screenSize: version.screenSize };
+  version === undefined
+    ? {}
+    : {
+        version: true,
+        ...(version.screenSize !== undefined && { screenSize: version.screenSize }),
+      };
 
 /** The size to start from for an item: the one its name says, when it is one that can be picked. */
 export const sizeOfItem = (item: Pick<LibraryItem, 'resolution'>): string =>
   PICTURE_SIZES.find((size) => size === item.resolution) ?? '';
 
 /**
- * A movie can be asked to name its version (`- 2160p`) whatever its state: the size is the one its
- * file name says, or one chosen by hand.
+ * A movie or an episode can be asked to name its version (`- 2160p`) whatever its state: the size
+ * is the one its file name says, then the one read from the file, or one chosen by hand.
  */
 export const canNameVersion = (item: Pick<LibraryItem, 'kind' | 'entryId' | 'state'>): boolean =>
-  item.kind === 'movie' &&
+  item.kind !== null &&
   item.entryId !== null &&
   item.state !== 'review' &&
   item.state !== 'unrecognized';

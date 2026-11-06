@@ -11,6 +11,7 @@
     type LibraryItem,
     type ReportOperation,
     type RunReport,
+    type VersionRequest,
   } from '../lib/library-items.js';
   import { FOLD_FROM, previewOf, type PreviewFile, type PreviewItem } from '../lib/run-preview.js';
 
@@ -43,20 +44,20 @@
     dialog?.showModal();
   });
 
-  // Naming a version needs a size: the name's, when it says one, else the owner's pick. It only
-  // starts from the item's (the dialog is mounted for one selection); the menu then owns it.
+  // Naming a version: the size is the name's, when it says one (the menu starts there), else the
+  // server reads it from the file; picking one overrides both. It only starts from the item's (the
+  // dialog is mounted for one selection); the menu then owns it.
   /* svelte-ignore state_referenced_locally */
   let size = $state(items[0] ? sizeOfItem(items[0]) : '');
-  const version = $derived(mode === 'version' && size !== '' ? { screenSize: size } : undefined);
+  const version = $derived<VersionRequest | undefined>(
+    mode !== 'version' ? undefined : size === '' ? {} : { screenSize: size },
+  );
 
   let latest = 0;
   async function load(): Promise<void> {
     const ticket = ++latest;
     report = undefined;
     failure = undefined;
-    if (mode === 'version' && version === undefined) {
-      return;
-    }
     try {
       const answer = await libraryItems.preview(libraryId, ids, version);
       // An answer that comes after another choice of size is stale.
@@ -156,7 +157,7 @@
           void load();
         }}
       >
-        <option value="" disabled>{t('web.library.run.size.pick')}</option>
+        <option value="">{t('web.library.run.size.auto')}</option>
         {#each PICTURE_SIZES as option (option)}
           <option value={option}>{option}</option>
         {/each}
@@ -166,8 +167,6 @@
 
   {#if failure}
     <p class="alert alert-danger" role="alert">{messageOf(t, failure)}</p>
-  {:else if mode === 'version' && version === undefined}
-    <p class="muted">{t('web.library.run.size.needed')}</p>
   {:else if report === undefined || totals === undefined}
     <p class="muted" role="status">{t('web.loading')}</p>
   {:else}

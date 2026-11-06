@@ -109,14 +109,15 @@ describe('canRun and partition', () => {
 describe('canNameVersion', () => {
   const movie = { kind: 'movie', entryId: 'e', state: 'ok' } as const;
 
-  it('is offered for a movie, whatever its state and whether or not its name says a size', () => {
+  it('is offered for a movie or an episode, whatever its state and its name', () => {
     expect(canNameVersion(movie)).toBe(true);
+    expect(canNameVersion({ ...movie, kind: 'series' })).toBe(true);
     expect(canNameVersion({ ...movie, state: 'rename' })).toBe(true);
   });
 
   it('is not offered when the server would refuse', () => {
     expect(canNameVersion({ ...movie, entryId: null })).toBe(false);
-    expect(canNameVersion({ ...movie, kind: 'series' })).toBe(false);
+    expect(canNameVersion({ ...movie, kind: null })).toBe(false);
     expect(canNameVersion({ ...movie, state: 'review' })).toBe(false);
   });
 

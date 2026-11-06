@@ -26,6 +26,7 @@
   let profile = $state(profileForm(processing.profile, settings.profiles));
   let mode = $state<Mode | ''>(processing.mode ?? '');
   let threshold = $state(processing.threshold === null ? '' : String(processing.threshold));
+  let detectPictureSize = $state(processing.detectPictureSize);
 
   // The default is Plex; "my own file" is the user's to explain.
   const shown = $derived(
@@ -46,6 +47,8 @@
         profile: chosen,
         mode: mode === '' ? null : mode,
         threshold: limit,
+        // On is the default: a box left ticked writes nothing.
+        detectPictureSize: detectPictureSize ? null : false,
       },
     });
   }
@@ -121,6 +124,14 @@
       bind:value={threshold}
     />
     <span class="muted hint">{t('web.settings.processing.threshold.hint')}</span>
+  </div>
+
+  <div class="field">
+    <label class="check">
+      <input type="checkbox" bind:checked={detectPictureSize} />
+      {t('web.settings.processing.detect-size')}
+    </label>
+    <span class="muted hint">{t('web.settings.processing.detect-size.hint')}</span>
   </div>
 </SettingsSection>
 

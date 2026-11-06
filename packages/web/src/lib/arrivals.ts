@@ -214,6 +214,8 @@ export interface Choice {
   readonly candidate: Candidate;
   /** Send the file to this library rather than the default one, for this file only. */
   readonly libraryId?: string | undefined;
+  /** The picture size of this file when its name says none; `undefined`: read it automatically. */
+  readonly screenSize?: string | undefined;
 }
 
 export type ValidateOutcome =
@@ -239,6 +241,7 @@ export async function validate(
   }>(`/api/entries/${arrival.id}/match`, {
     ...toMatchBody(choice.candidate),
     ...(choice.libraryId !== undefined && { libraryId: choice.libraryId }),
+    ...(choice.screenSize !== undefined && { screenSize: choice.screenSize }),
   });
   if (matched.classification !== 'to-rename') {
     return { status: 'conflict', conflicts: matched.conflicts };

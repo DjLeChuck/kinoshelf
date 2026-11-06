@@ -222,7 +222,7 @@ export const fr: Record<keyof typeof en, string> = {
   'error.library.invalid': 'Cette bibliothèque n’est pas valide : {detail}',
   'error.library.nothing-to-do': 'Cette sélection n’a plus rien à faire.',
   'error.library.version-unavailable':
-    'Ces films ne peuvent pas recevoir de version : le nom du fichier n’indique pas la taille d’image, ou le profil ne prévoit pas de nom pour les versions.',
+    'Ces fichiers ne peuvent pas recevoir de version : aucune taille d’image n’a été trouvée (dans le nom du fichier, ni dans le fichier si la lecture ffprobe est activée), ou le profil ne prévoit pas de nom pour les versions. Choisissez une taille.',
   'error.library.not-series': 'Cette bibliothèque ne contient pas de séries.',
   'error.library.not-typed': 'C’est un dossier d’arrivée : il ne contient pas de bibliothèque.',
   'error.library.item-not-found':
@@ -302,10 +302,9 @@ export const fr: Record<keyof typeof en, string> = {
   'web.library.run.title.version': 'Aperçu du nom avec la version',
   'web.library.run.version': 'Ajouter la version au nom…',
   'web.library.run.version.hint':
-    'Nomme le fichier avec sa taille d’image à côté du nom de son dossier, pour qu’une autre qualité du même film puisse cohabiter. La taille est proposée d’après le nom du fichier ; vous pouvez en choisir une autre.',
+    'Nomme le fichier avec sa taille d’image à côté du nom de son dossier, pour qu’une autre qualité du même film puisse cohabiter. La taille vient du nom du fichier, puis du fichier lui-même ; vous pouvez en choisir une autre.',
   'web.library.run.size': 'Taille d’image',
-  'web.library.run.size.pick': 'Choisir…',
-  'web.library.run.size.needed': 'Choisissez la taille d’image pour voir ce qui sera renommé.',
+  'web.library.run.size.auto': 'Automatique (nom du fichier, puis le fichier lui-même)',
   'web.library.run.title.refresh': 'Aperçu de l’actualisation',
   'web.library.run.summary':
     '{transfers} à déplacer · {written} à écrire · {skipped} laissés tels quels',
@@ -571,6 +570,10 @@ export const fr: Record<keyof typeof en, string> = {
   'web.queue.search.searching': 'Recherche…',
   'web.queue.search.none': 'Rien trouvé pour cette recherche.',
   'web.queue.search.results': 'Résultats de la recherche',
+  'web.queue.size': 'Taille d’image',
+  'web.queue.size.auto': 'Automatique',
+  'web.queue.size.hint':
+    'Prise dans le nom du fichier, puis lue dans le fichier quand une autre version du même film ou épisode est déjà là. Choisissez-en une pour nommer vous-même la version de ce fichier.',
   'web.queue.destination': 'Chemin de destination',
   'web.queue.destination.pick': 'Choisissez un candidat pour voir où irait le fichier.',
   'web.queue.destination.loading': 'Vérification de la destination…',
@@ -697,6 +700,9 @@ export const fr: Record<keyof typeof en, string> = {
   'web.settings.processing.mode.hardlink': 'Lien dur',
   'web.settings.processing.mode.move': 'Déplacement',
   'web.settings.processing.threshold': 'Seuil automatique (0–100)',
+  'web.settings.processing.detect-size': 'Lire la taille d’image avec ffprobe',
+  'web.settings.processing.detect-size.hint':
+    'Quand le nom d’une vidéo n’indique pas sa taille (2160p, 1080p…) et qu’un autre fichier du même film ou du même épisode est déjà là, la taille est lue dans le fichier, pour garder les deux côte à côte. Décochez pour l’indiquer vous-même, depuis la fiche du fichier ou à la validation d’une arrivée.',
   'web.settings.processing.threshold.hint':
     'Une correspondance sous ce score vous attend dans les Arrivées. Vide : la valeur par défaut.',
   'web.settings.invalid.threshold': 'Le seuil est un nombre de 0 à 100.',

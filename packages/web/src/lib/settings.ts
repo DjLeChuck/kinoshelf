@@ -43,6 +43,7 @@ export interface Settings {
     readonly profile: string | null;
     readonly mode: Mode | null;
     readonly threshold: number | null;
+    readonly detectPictureSize: boolean;
   };
   readonly apiKey: { readonly source: 'env' | 'database' | null };
   /** The profiles shipped with Kinoshelf. */

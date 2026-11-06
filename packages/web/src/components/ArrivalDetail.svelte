@@ -13,6 +13,7 @@
     type ConflictBody,
     type Preview,
   } from '../lib/arrivals.js';
+  import { PICTURE_SIZES } from '../lib/library-items.js';
   import type { MessageKey } from '@kinoshelf/i18n';
   import CandidateList from './CandidateList.svelte';
 
@@ -43,6 +44,8 @@
   let busy = $state(false);
   /* svelte-ignore state_referenced_locally */
   let library = $state(entry.destination.libraryId ?? entry.destinationOptions[0]?.id ?? '');
+  /** `''`: automatic, from the name and then from the file. */
+  let screenSize = $state('');
   let failure = $state<unknown>(undefined);
   let refused = $state<readonly ConflictBody[]>([]);
 
@@ -52,6 +55,7 @@
   const chosenLibrary = $derived(
     library !== '' && library !== entry.destination.libraryId ? library : undefined,
   );
+  const chosenSize = $derived(screenSize === '' ? undefined : screenSize);
   const conflicts = $derived(preview?.conflicts ?? []);
   const canValidate = $derived(
     selected !== undefined &&
@@ -70,6 +74,7 @@
   $effect(() => {
     const candidate = selected;
     const destination = chosenLibrary;
+    const size = chosenSize;
     const ticket = ++latest;
     preview = undefined;
     refused = [];
@@ -82,6 +87,7 @@
       .post<Preview>(`/api/entries/${entry.id}/preview`, {
         ...toMatchBody(candidate),
         ...(destination !== undefined && { libraryId: destination }),
+        ...(size !== undefined && { screenSize: size }),
       })
       .then((answer) => {
         if (ticket === latest) {
@@ -134,6 +140,7 @@
         {
           candidate: selected,
           libraryId: chosenLibrary,
+          screenSize: chosenSize,
         },
         api.post,
       );
@@ -323,6 +330,19 @@
           <option value={option.id}>{option.name}</option>
         {/each}
       </select>
+    </section>
+  {/if}
+
+  {#if selected}
+    <section aria-labelledby="size-title">
+      <h3 id="size-title">{t('web.queue.size')}</h3>
+      <select id="arrival-size" class="input" aria-labelledby="size-title" bind:value={screenSize}>
+        <option value="">{t('web.queue.size.auto')}</option>
+        {#each PICTURE_SIZES as option (option)}
+          <option value={option}>{option}</option>
+        {/each}
+      </select>
+      <p class="muted hint">{t('web.queue.size.hint')}</p>
     </section>
   {/if}
 

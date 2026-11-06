@@ -212,7 +212,7 @@ export const en = {
   'error.library.invalid': 'This library is not valid: {detail}',
   'error.library.nothing-to-do': 'This selection has nothing left to do.',
   'error.library.version-unavailable':
-    'These movies cannot be given a version: their file name does not say the picture size, or the profile has no naming for versions.',
+    'These files cannot be given a version: no picture size could be found (in the file name, or in the file when ffprobe reading is on), or the profile has no naming for versions. Choose a size.',
   'error.library.not-series': 'This library does not hold series.',
   'error.library.not-typed': 'This is an arrival folder: it holds no library of its own.',
   'error.library.item-not-found':
@@ -289,10 +289,9 @@ export const en = {
   'web.library.run.title.version': 'Version naming preview',
   'web.library.run.version': 'Add the version to the name…',
   'web.library.run.version.hint':
-    'Names the file with its picture size beside its folder’s name, so another quality of the same movie can sit next to it. The size is proposed from the file name; you can choose another.',
+    'Names the file with its picture size beside its folder’s name, so another quality of the same movie can sit next to it. The size comes from the file name, then from the file itself; you can choose another.',
   'web.library.run.size': 'Picture size',
-  'web.library.run.size.pick': 'Choose…',
-  'web.library.run.size.needed': 'Choose the picture size to see what will be renamed.',
+  'web.library.run.size.auto': 'Automatic (file name, then the file itself)',
   'web.library.run.title.refresh': 'Refresh preview',
   'web.library.run.summary': '{transfers} to move · {written} to write · {skipped} left alone',
   'web.library.run.skipped':
@@ -549,6 +548,10 @@ export const en = {
   'web.queue.search.searching': 'Searching…',
   'web.queue.search.none': 'Nothing found for this search.',
   'web.queue.search.results': 'Search results',
+  'web.queue.size': 'Picture size',
+  'web.queue.size.auto': 'Automatic',
+  'web.queue.size.hint':
+    'Taken from the file name, then read from the file when another version of the same movie or episode is in the way. Choose one to name this file’s version yourself.',
   'web.queue.destination': 'Destination path',
   'web.queue.destination.pick': 'Choose a candidate to see where the file would go.',
   'web.queue.destination.loading': 'Checking the destination…',
@@ -674,6 +677,9 @@ export const en = {
   'web.settings.processing.mode.hardlink': 'Hardlink',
   'web.settings.processing.mode.move': 'Move',
   'web.settings.processing.threshold': 'Automatic threshold (0–100)',
+  'web.settings.processing.detect-size': 'Read the picture size with ffprobe',
+  'web.settings.processing.detect-size.hint':
+    'When a video’s name says no size (2160p, 1080p…) and another file of the same movie or episode is in the way, its size is read from the file, so both can be kept side by side. Untick to give the size yourself, from the file’s page or when validating an arrival.',
   'web.settings.processing.threshold.hint':
     'A match scoring below it waits for you in Arrivals. Empty: the default.',
   'web.settings.invalid.threshold': 'The threshold is a number from 0 to 100.',

@@ -22,8 +22,8 @@ test('names the version of a movie from its page, with the size picked in the di
   await page.getByRole('button', { name: 'Add the version to the name…' }).click();
 
   const dialog = page.getByRole('dialog', { name: 'Version naming preview' });
-  // Nothing to preview until a size is picked.
-  await expect(dialog.getByText('Choose the picture size')).toBeVisible();
+  // Automatic: the name says no size and the file is no real video, so nothing can be found.
+  await expect(dialog.getByRole('alert')).toContainText('Choose a size');
   await expect(dialog.getByRole('button', { name: 'Run' })).toBeDisabled();
 
   await dialog.getByLabel('Picture size').selectOption('1080p');
