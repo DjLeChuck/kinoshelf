@@ -405,7 +405,7 @@
           {/if}
         </div>
 
-        <div>
+        <div class="side">
           {#if open}
             {#key open.id}
               <ItemPanel
@@ -512,6 +512,14 @@
     grid-template-columns: minmax(0, 1.2fr) minmax(280px, 1fr);
     gap: 16px;
     align-items: start;
+  }
+
+  /* Floats beside the list while it scrolls; a tall panel scrolls on its own rather than past the screen. */
+  .side {
+    position: sticky;
+    top: 16px;
+    max-height: calc(100vh - 32px);
+    overflow-y: auto;
   }
 
   .table-wrap {
