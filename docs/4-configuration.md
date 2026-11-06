@@ -36,6 +36,7 @@ profile: plex # see Output profiles
 mode: hardlink # copy, hardlink or move
 threshold: 85 # minimum score for an automatic match, 0 to 100
 retentionDays: 30 # days after which a settled job is forgotten, 0 keeps all
+detectPictureSize: true # read a video's size with ffprobe when its name says none (default)
 
 libraries:
   - { id: films, name: Films, type: movie, source: /media/Movies }

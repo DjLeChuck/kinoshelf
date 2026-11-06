@@ -82,26 +82,44 @@ contains no player-specific rule.
   must start with its folder's name), `SxxExx` episodes, `movie.nfo`, `tvshow.nfo`, `<file>.nfo`,
   `poster.jpg` and `fanart.jpg`. A season's poster is a plain `poster.jpg` in its folder: Jellyfin's
   documentation does not list Kodi's `seasonNN-poster.jpg`.
-- **Versions of a movie** (`templates.movieVersion`, e.g. `' - {version}'`, every shipped profile has
-  it; only `{version}` is known to it, and a profile without it keeps one file per movie). Plex and
-  Jellyfin take several qualities of one movie in **one folder**, `<name> - <label>` (Jellyfin: the
-  file starts with its folder's name, id included). A movie that **arrives** is always named with its
-  label when its file name gives a picture size (`ParsedMedia.screenSize`, `source`; guessit reads
-  `4K` as `2160p`): `Nightbitch (2024) {tmdb-728949} - 2160p.mkv`. The label (`planning/version.ts`)
-  is the size; files of one movie in a batch that share it add the source, then the release group
-  (the batch takes one level for all of them, so the result does not depend on the order); files
-  nothing tells apart are a `duplicate-destination` conflict, never numbered. A file **already in
-  its movie folder** under the profile's name, with or without a label after it, is `in-place`:
-  the library is never renamed behind its owner's back. The label is also found by trying finer
-  levels when the name is taken on the disk, unless the file there has the **same size** (most likely
-  the same release again: conflict). The folder's `movie.nfo`, poster and fanart are written once
-  (the first version; later ones leave them, so undoing a later batch does not remove them), while
-  a `{file}.nfo` follows each version. Guessit does not tell WEB-DL from WEBRip (`Web`) nor read
-  Remux, so two such files differ by their group or conflict. Not done: a size read by `ffprobe`
-  when the name says none, a choice of size at the validation of an arrival, a batch action in the
-  web. The page of one movie has "Add the version to the name": a dialog whose size menu starts from
-  the name's and can be changed (`POST /api/libraries/{id}/execute` with `version: true` and
-  `screenSize`, which wins over the name).
+- **Versions of a movie or an episode** (`templates.movieVersion` and `templates.episodeVersion`, both
+  `' - {version}'` in every shipped profile; only `{version}` is known to them, and a profile without
+  one keeps one file per work). Plex and Jellyfin take several qualities of one movie in **one
+  folder**, `<name> - <label>` (Jellyfin: the file starts with its folder's name, id included), and
+  Jellyfin's documentation gives the same for an episode in its season folder (`Series Name S01E01 - 1080p.mkv`,
+  matched by `SxxExx`, no prefix rule); Plex is taken to work the same way (not verified
+  against its documentation, which names only movies). A file that **arrives** is always named with
+  its label when its file name gives a picture size (`ParsedMedia.screenSize`, `source`; guessit
+  reads `4K` as `2160p`): `Nightbitch (2024) {tmdb-728949} - 2160p.mkv`, `Foundation (2021) S01E01 - 2160p.mkv`.
+  The label (`planning/version.ts`) is the size; files of one work (a movie, or
+  one episode: series id, season and episode numbers) in a batch that share it add the source, then
+  the release group (the batch takes one level for all of them, so the result does not depend on the
+  order); files nothing tells apart are a `duplicate-destination` conflict, never numbered. A file
+  **already in its folder** under the profile's name, with or without a label after it, is
+  `in-place`: the library is never renamed behind its owner's back. A movie may carry anything after a
+  separator, an episode only a label that starts with a size, or any suffix when the bare name is
+  another file's (` - The Emperor's Peace` alone is a title, which the profile renames). The label is
+  also found by trying finer levels when the name is taken on the disk, unless the file there has the
+  **same size** (most likely the same release again: conflict). The folder's `movie.nfo`, poster and
+  fanart are written once (the first version; later ones leave them, so undoing a later batch does not
+  remove them), while a `{file}.nfo` follows each version. Guessit does not tell WEB-DL from WEBRip
+  (`Web`) nor read Remux, so two such files differ by their group or conflict.
+- **A size read from the file** (`PlannerOptions.sizeOf`, `AnalyzeOptions.sizeOf`; the server's is
+  `probePictureSize`, ffprobe's frame by `pictureSize(width, height)`, the larger of the sizes the
+  width and the height read, so a 1920x800 film is 1080p). It is asked only for a file whose name
+  says none and which has company: another file of the same work in the batch, a destination already
+  taken, or a version of the work beside where it would go. `createPlan` then plans again with what
+  it found, so the whole work is told apart together; a file nobody competes with is never read and
+  keeps its bare name. The setting `detectPictureSize` (`config.yaml`, "Read the picture size with
+  ffprobe" in the settings, **on** by default) turns it off: the size is then given by hand, from the
+  page of a movie or an episode (below) or when validating an arrival (`screenSize` in the body of
+  `POST /api/entries/{id}/match` and `/preview`, for that file only and kept in its stored plan). A
+  missing ffprobe, or a file it cannot read, gives no size and the planner falls back to a conflict.
+  The page of a movie or an episode has "Add the version to the name": a dialog whose size menu starts
+  from the name's, or "Automatic", and can be changed (`POST /api/libraries/{id}/execute` with
+  `version: true` and `screenSize`, which wins over the name, which wins over the file). Not done:
+  a batch action in the web, and the size of a file already in place in the library list (it is read
+  from the name).
 - `ParsedMedia.knownIds` (ids found in names) is a hint, not a truth: a candidate whose id matches
   is boosted only if its type, title, season/episode and year agree. If the id designates a
   candidate yet another one scores higher (`Dune (2021) {tmdb-841}`: 841 is the 1984 film), the
@@ -351,17 +369,19 @@ refuses to delete a library an arrival folder points at (`library.in-use`). Ther
   unknown); otherwise 202 with the executions, and the batch shows in the history and can be undone.
   409 `library.nothing-to-do` when nothing is left. The web's "Rename preview" dialog (`RunDialog`)
   is the dry run, then the run. Rows added by an arrival carry no entry: they have nothing to run.
-  With `version: true` (movie libraries) the chosen movies are planned again with `applyVersion`,
+  With `version: true` the chosen movies and episodes are planned again with `applyVersion`,
   named with their label though already in place (a `move` in the same folder, undoable); the size
   is the request's `screenSize` when given, else the one in the stored `parsed` of the scan, so
-  without either (an older scan, a name with no size) the movie is refused
+  without either (an older scan, a name with no size) the file is read with ffprobe when the
+  setting is on, else refused
   (409 `library.version-unavailable` when all are, else `skipped`). A dry run changes nothing; the run
   stores the new plans (`commitVersions`) then queues the execution as any other.
 - **A stored plan is as old as its analysis.** Two releases of one movie are two jobs planned before
-  either moves, so `Service.prepare` plans a movie again, against the disk as it is, when its main
-  destination exists by the time it runs (`refreshed`); a movie left without a free name waits in
-  Arrivals as a `destination-exists` conflict (also when the name is taken between the plan and the
-  write), it is not marked failed. Transfers run one at a time, so the second job sees the first.
+  either moves, so `Service.prepare` plans a movie or an episode again, against the disk as it is,
+  when its main destination exists by the time it runs, or when it says no size and another version of
+  the work now sits beside it (`refreshed`); one left without a free name waits in Arrivals as a
+  `destination-exists` conflict (also when the name is taken between the plan and the write), it is
+  not marked failed. Transfers run one at a time, so the second job sees the first.
 - **Scan progress** (`progress.ts`): `GET /api/jobs/:id` and the `scan` of
   `GET /api/libraries/:id/items` carry `progress` (`phase` discover|read|identify|plan, `found`, `done`,
   `total`, `current`, `idleSeconds`) while an analysis runs, `null` otherwise. It lives in the

@@ -19,5 +19,9 @@ the path of your own YAML file.
 
 - Metadata files are never overwritten: one already there is left as it is and reported.
 - `undo` removes the metadata files a batch wrote.
-- Several versions of one movie sit side by side in its folder, with the picture size as a label:
-  `Nightbitch (2024) {tmdb-728949} - 2160p.mkv`.
+- Several versions of one movie or one episode sit side by side in its folder, with the picture
+  size as a label: `Nightbitch (2024) {tmdb-728949} - 2160p.mkv`, or `Foundation (2021) S01E01 -
+2160p.mkv` in its season folder. The label comes from the file name. When the name says none and
+  another version is already there, the size is read from the video with `ffprobe` (see
+  `detectPictureSize` in the [configuration](4-configuration.md)); a file already in its folder is
+  never renamed unless you ask for it, from its page ("Add the version to the name").
