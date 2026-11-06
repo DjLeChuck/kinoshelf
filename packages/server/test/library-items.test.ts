@@ -244,6 +244,37 @@ describe('GET /api/libraries/:id/items', () => {
     expect(body.items[1]).toMatchObject({ title: 'Dune', nfo: false, state: 'rename' });
   });
 
+  it('sorts an accented title with its letter, not after Z', async () => {
+    const { h, store, root } = await scanned();
+    const [base] = store.all('films');
+    if (!base) {
+      throw new Error('the scan stored nothing');
+    }
+    const make = (title: string, name: string): LibraryItem => ({
+      ...base,
+      path: join(root, name),
+      title,
+      tmdbId: null,
+      entryId: null,
+      scanJobId: null,
+    });
+    store.replace('films', [
+      make('Zodiac', 'zodiac.mkv'),
+      make('Ça : Bienvenue à Derry', 'ca.mkv'),
+      make('Casablanca', 'casablanca.mkv'),
+      make('Alien', 'alien.mkv'),
+      make('Élite', 'elite.mkv'),
+    ]);
+    const body = await list(h);
+    expect(body.items.map((item) => item.title)).toEqual([
+      'Alien',
+      'Ça : Bienvenue à Derry',
+      'Casablanca',
+      'Élite',
+      'Zodiac',
+    ]);
+  });
+
   it('filters by state or missing file, searches, and pages', async () => {
     const { h, dune, alien } = await scanned();
     expect((await list(h, '?state=rename')).items.map((i) => i.path)).toEqual([dune]);

@@ -145,7 +145,14 @@ interface ShowFilter {
 }
 
 export class LibraryItemStore {
-  constructor(private readonly database: Database) {}
+  constructor(private readonly database: Database) {
+    // SQLite's lower() only folds ASCII, so "Ça" would sort after "Z": the key drops accents too.
+    database.function('sort_key', { deterministic: true }, (value: unknown) =>
+      typeof value === 'string'
+        ? value.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase()
+        : null,
+    );
+  }
 
   /**
    * A scan ended: what it saw replaces what the library held, as a whole, or only what lay under
@@ -378,7 +385,7 @@ export class LibraryItemStore {
     const items = this.database
       .prepare<unknown[], Row>(
         `SELECT ${COLUMNS} FROM library_items WHERE ${where}
-         ORDER BY lower(COALESCE(title, path)), path LIMIT ? OFFSET ?`,
+         ORDER BY sort_key(COALESCE(title, path)), path LIMIT ? OFFSET ?`,
       )
       .all(...params, options.limit, options.offset)
       .map(toItem);
@@ -444,7 +451,9 @@ export class LibraryItemStore {
     const { grouped, params } = this.groupedShows(libraryId, options);
     const total = this.countShows(libraryId, options);
     const rows = this.database
-      .prepare<unknown[], ShowQuery>(`${grouped} ORDER BY lower(title), tmdb_id LIMIT ? OFFSET ?`)
+      .prepare<unknown[], ShowQuery>(
+        `${grouped} ORDER BY sort_key(title), tmdb_id LIMIT ? OFFSET ?`,
+      )
       .all(...params, options.limit, options.offset);
     return {
       total,
