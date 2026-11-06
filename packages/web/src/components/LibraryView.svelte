@@ -95,6 +95,7 @@
   });
 
   const open = $derived(page?.items.find(({ id }) => id === chosen));
+  const busy = $derived(page?.transfer != null);
   const scanning = $derived(page?.scan != null || library.scanning);
   const percent = $derived(scanPercent(page?.scan?.progress ?? null));
 
@@ -157,7 +158,8 @@
     }
   }
 
-  refetchOn(['progress'], () => void follow());
+  // A transfer has no job of its own to read: the page is read again, at the pace of the events.
+  refetchOn(['progress'], () => void (page?.scan ? follow() : load()));
 
   async function scan(): Promise<void> {
     starting = true;
@@ -220,6 +222,23 @@
 
   {#if page?.scan}<ScanProgress progress={page.scan.progress} transfer={page.scan.transfer} />{/if}
 
+  {#if page?.transfer && !page.scan}
+    <div class="card transfer" role="status" aria-live="polite">
+      <progress
+        max={Math.max(page.transfer.total, 1)}
+        value={page.transfer.done}
+        aria-label={t('web.library.transfer.label')}
+      ></progress>
+      <p class="muted">
+        {t('web.library.transfer.running', {
+          done: page.transfer.done,
+          total: page.transfer.total,
+        })}
+        <Link href="/history">{t('web.library.transfer.link')}</Link>
+      </p>
+    </div>
+  {/if}
+
   {#if notice}<p class="alert notice" role="status">{notice}</p>{/if}
 
   {#if failure}
@@ -263,6 +282,7 @@
         writes={page.library.writes}
         query={searched}
         {filter}
+        {busy}
         onsettled={(message: string) => {
           notice = message;
           void load();
@@ -292,7 +312,7 @@
             <button
               type="button"
               class="btn btn-primary"
-              disabled={split.rename.length === 0}
+              disabled={split.rename.length === 0 || busy}
               onclick={() => {
                 running = 'rename';
               }}
@@ -302,7 +322,7 @@
             <button
               type="button"
               class="btn"
-              disabled={split.refresh.length === 0}
+              disabled={split.refresh.length === 0 || busy}
               onclick={() => {
                 running = 'refresh';
               }}
@@ -392,6 +412,7 @@
                 libraryId={library.id}
                 source={library.source}
                 item={open}
+                {busy}
                 ondone={(message: string) => {
                   notice = message;
                   chosen = undefined;
@@ -426,6 +447,11 @@
 {/if}
 
 <style>
+  .transfer progress {
+    width: 100%;
+    accent-color: var(--accent);
+  }
+
   .stack {
     display: flex;
     flex-direction: column;

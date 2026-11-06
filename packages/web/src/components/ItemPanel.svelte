@@ -24,6 +24,7 @@
     source,
     item,
     siblings = 1,
+    busy = false,
     ondone,
   }: {
     libraryId: string;
@@ -32,6 +33,8 @@
     item: LibraryItem;
     /** Files validated together with this one (itself included). */
     siblings?: number;
+    /** A transfer is going on: renaming again what it may hold would stack the same work. */
+    busy?: boolean;
     /** The file was settled (transferred or set aside): what to tell the user. */
     ondone: (message: string) => void;
   } = $props();
@@ -110,6 +113,7 @@
         <button
           type="button"
           class="btn btn-primary"
+          disabled={busy}
           onclick={() => {
             running = item.state === 'rename' ? 'rename' : 'refresh';
           }}
@@ -133,6 +137,7 @@
         <button
           type="button"
           class="btn"
+          disabled={busy}
           onclick={() => {
             running = 'version';
           }}

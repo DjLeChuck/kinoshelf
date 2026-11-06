@@ -32,6 +32,7 @@
     query,
     filter,
     onsettled,
+    busy = false,
   }: {
     libraryId: string;
     /** The library's folder: what a scan of one show or season must stay inside. */
@@ -42,6 +43,8 @@
     filter: ShowFilter | undefined;
     /** A file was settled: what to tell the user, and the library to read again. */
     onsettled: (message: string) => void;
+    /** A transfer is going on: nothing new is started until it ends. */
+    busy?: boolean;
   } = $props();
 
   const EPISODE_CHIP: Record<Exclude<EpisodeState, 'present'>, string> = {
@@ -275,7 +278,7 @@
         <button
           type="button"
           class="btn btn-primary"
-          disabled={toRename === 0 || starting}
+          disabled={toRename === 0 || starting || busy}
           onclick={() => void start('rename')}
         >
           {t('web.library.run.rename')}
@@ -283,7 +286,7 @@
         <button
           type="button"
           class="btn"
-          disabled={toRefresh === 0 || starting}
+          disabled={toRefresh === 0 || starting || busy}
           onclick={() => void start('refresh')}
         >
           {t('web.library.run.refresh')}
@@ -566,6 +569,7 @@
             {libraryId}
             {source}
             item={chosenItem}
+            {busy}
             siblings={settleGroups.find((group) => group.key === settleKey(chosenItem))?.files ?? 1}
             ondone={(message: string) => {
               // A validation lets the whole group go: lock it until the transfer empties the list.
