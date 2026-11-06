@@ -3,8 +3,7 @@
   import { untrack } from 'svelte';
   import { messageOf } from '../lib/errors.js';
   import { refetchOn } from '../lib/events.svelte.js';
-  import { locale, t } from '../lib/i18n.svelte.js';
-  import { formatDay } from '../lib/history.js';
+  import { t } from '../lib/i18n.svelte.js';
   import { router } from '../lib/router.svelte.js';
   import { listOf, listParam } from '../lib/routes.js';
   import {
@@ -245,7 +244,7 @@
     });
   }
 
-  const columns = $derived(5 + (writes.nfo ? 1 : 0) + (writes.artwork ? 2 : 0));
+  const columns = $derived(6 + (writes.nfo ? 1 : 0) + (writes.artwork ? 2 : 0));
 </script>
 
 {#if failure}
@@ -301,6 +300,7 @@
             <th>{t('web.library.col.year')}</th>
             <th>{t('web.library.col.seasons')}</th>
             <th>{t('web.library.col.episodes')}</th>
+            <th>{t('web.library.col.quality')}</th>
             {#if writes.nfo}<th>NFO</th>{/if}
             {#if writes.artwork}
               <th>{t('web.library.col.poster')}</th>
@@ -403,6 +403,7 @@
               <td>{show.year ?? ''}</td>
               <td>{show.seasons}</td>
               <td>{show.episodes}</td>
+              <td></td>
               {#if writes.nfo}<td>{presenceMark(show.nfo)}</td>{/if}
               {#if writes.artwork}
                 <td>{presenceMark(show.poster)}</td>
@@ -436,10 +437,15 @@
                   {@const empty = !season.episodes.some(
                     ({ state }) => state === 'present' || state === 'extra',
                   )}
-                  {@const present = season.episodes.filter((e) => e.state === 'present').length}
-                  {@const listed = season.episodes.filter((e) => e.state !== 'extra').length}
+                  <!-- Versions of one episode are several rows: count the episodes, not the files. -->
+                  {@const present = new Set(
+                    season.episodes.filter((e) => e.state === 'present').map((e) => e.episode),
+                  ).size}
+                  {@const listed = new Set(
+                    season.episodes.filter((e) => e.state !== 'extra').map((e) => e.episode),
+                  ).size}
                   <tr class="child season" class:empty>
-                    <td colspan="4">
+                    <td colspan="3">
                       <button
                         type="button"
                         class="link indent"
@@ -466,6 +472,8 @@
                           void load();
                         }}
                       />
+                    </td>
+                    <td>
                       {#if listed > 0}
                         <span
                           class="chip {present === 0
@@ -476,6 +484,7 @@
                         >
                       {/if}
                     </td>
+                    <td></td>
                     {#if writes.nfo}<td></td>{/if}
                     {#if writes.artwork}
                       <td>{presenceMark(season.poster)}</td>
@@ -496,7 +505,7 @@
                         class="child episode"
                         class:current={selection?.kind === 'item' && item?.id === selection.item.id}
                       >
-                        <td class="indent2">
+                        <td class="indent2" colspan="3">
                           {#if item}
                             <button
                               type="button"
@@ -512,17 +521,14 @@
                               {episode.title ?? ''}
                             </span>
                           {/if}
-                        </td>
-                        <td class="muted">
-                          {episode.airDate ? formatDay(episode.airDate, locale.value) : ''}
-                        </td>
-                        <td colspan="2">
                           {#if episode.state !== 'present'}
                             <span class="chip {EPISODE_CHIP[episode.state]}"
                               >{t(`web.library.episode.${episode.state}`)}</span
                             >
                           {/if}
                         </td>
+                        <td></td>
+                        <td>{item?.resolution ?? ''}</td>
                         {#if writes.nfo}<td>{presenceMark(item?.nfo ?? null)}</td>{/if}
                         {#if writes.artwork}<td></td><td></td>{/if}
                         <td></td>

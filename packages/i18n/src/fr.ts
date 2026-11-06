@@ -327,6 +327,7 @@ export const fr: Record<keyof typeof en, string> = {
   'web.library.pick': 'Choisissez un fichier pour voir sa fiche.',
   'web.library.col.title': 'Titre',
   'web.library.col.year': 'Année',
+  'web.library.col.quality': 'Qualité',
   'web.library.col.video': 'Vidéo',
   'web.library.col.poster': 'Affiche',
   'web.library.col.fanart': 'Fanart',

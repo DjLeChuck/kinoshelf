@@ -313,6 +313,7 @@ export const en = {
   'web.library.pick': 'Pick a file to see its page.',
   'web.library.col.title': 'Title',
   'web.library.col.year': 'Year',
+  'web.library.col.quality': 'Quality',
   'web.library.col.video': 'Video',
   'web.library.col.poster': 'Poster',
   'web.library.col.fanart': 'Fanart',
