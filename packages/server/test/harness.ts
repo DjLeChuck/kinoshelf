@@ -107,6 +107,8 @@ export async function harness(
     ...(!realProvider && { createProvider: () => fakeProvider }),
     // Nothing in a test is a real video: the real `ffprobe` has its own test.
     prober: fakeProber,
+    // Nothing is probed for a size either, unless a test gives the sizes it wants.
+    sizeReader: () => Promise.resolve(undefined),
     ...options,
   });
   apps.push(app);

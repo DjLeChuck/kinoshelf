@@ -25,6 +25,7 @@ import {
   notificationTestSchema,
   paging,
   previewSchema,
+  sizeSchema,
   undoSchema,
   type Paging,
   MAX_SELECTION,
@@ -342,7 +343,7 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
 
   api.post<{
     Params: { id: string };
-    Body: CandidateBody & { libraryId?: string };
+    Body: CandidateBody & { libraryId?: string; screenSize?: string };
   }>(
     '/api/entries/:id/match',
     {
@@ -354,13 +355,15 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
           'a series, the other episodes of the same release follow the choice (the ones of ' +
           'the same `cluster`); `followers` lists them. ' +
           "`libraryId` sends the file to that library (of the work's kind) rather than to the " +
-          'default one, for this file only.',
+          "default one, for this file only. `screenSize` (`2160p`…) names the file's quality " +
+          'when its name says none, and wins over what the name says; it is for this file only.',
         params: idParams,
         body: {
           ...matchBodySchema,
           properties: {
             ...matchBodySchema.properties,
             libraryId: { type: 'string' },
+            screenSize: sizeSchema,
           },
         },
         response: { 200: matchResultSchema, 401: errorSchema, 404: errorSchema, 409: errorSchema },
@@ -372,6 +375,7 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
         toCandidate(request.body),
         {
           ...(request.body.libraryId !== undefined && { libraryId: request.body.libraryId }),
+          ...(request.body.screenSize !== undefined && { screenSize: request.body.screenSize }),
         },
       );
       events.emit('arrivals');
@@ -379,7 +383,10 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
     },
   );
 
-  api.post<{ Params: { id: string }; Body: CandidateBody & { libraryId?: string } }>(
+  api.post<{
+    Params: { id: string };
+    Body: CandidateBody & { libraryId?: string; screenSize?: string };
+  }>(
     '/api/entries/:id/preview',
     {
       schema: {
@@ -391,7 +398,11 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
         params: idParams,
         body: {
           ...matchBodySchema,
-          properties: { ...matchBodySchema.properties, libraryId: { type: 'string' } },
+          properties: {
+            ...matchBodySchema.properties,
+            libraryId: { type: 'string' },
+            screenSize: sizeSchema,
+          },
         },
         response: { 200: previewSchema, 401: errorSchema, 404: errorSchema, 409: errorSchema },
       },
@@ -401,6 +412,7 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
         request.params.id,
         toCandidate(request.body),
         request.body.libraryId,
+        request.body.screenSize,
       );
       return presentPlan(item);
     },

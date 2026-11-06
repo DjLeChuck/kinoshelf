@@ -1,6 +1,6 @@
 import { execFile } from 'node:child_process';
 import { stat } from 'node:fs/promises';
-import { errnoCode } from '@kinoshelf/core';
+import { errnoCode, pictureSize } from '@kinoshelf/core';
 import type { LibraryItemStore } from './library-items.js';
 
 /** What `ffprobe` tells of a video, plus the file's size and date, which tell when to look again. */
@@ -57,6 +57,52 @@ export function summarize(output: string, file: { size: number; mtime: number })
 }
 
 const TIMEOUT_MS = 30_000;
+
+/** Pure, so the shape of ffprobe's JSON is tested without running it. */
+export function sizeFromStreams(output: string): string | undefined {
+  const { streams = [] } = JSON.parse(output) as {
+    streams?: { codec_type?: string; width?: number; height?: number }[];
+  };
+  const video = streams.find(({ codec_type }) => codec_type === 'video');
+  return video?.width !== undefined && video.height !== undefined && video.width > 0
+    ? pictureSize(video.width, video.height)
+    : undefined;
+}
+
+/**
+ * The picture size of a video (`2160p`), read from its frame. Nothing when ffprobe is missing or
+ * cannot read the file: the caller then has no size, which is not an error for it.
+ */
+export type SizeReader = (path: string) => Promise<string | undefined>;
+
+export const probePictureSize: SizeReader = (path) =>
+  new Promise((resolve) => {
+    execFile(
+      'ffprobe',
+      [
+        '-v',
+        'error',
+        '-protocol_whitelist',
+        'file',
+        '-select_streams',
+        'v:0',
+        '-show_entries',
+        'stream=codec_type,width,height',
+        '-print_format',
+        'json',
+        '--',
+        path,
+      ],
+      { timeout: TIMEOUT_MS, maxBuffer: 1_000_000 },
+      (error, stdout) => {
+        try {
+          resolve(error ? undefined : sizeFromStreams(stdout));
+        } catch {
+          resolve(undefined);
+        }
+      },
+    );
+  });
 
 export const ffprobe: Prober = async (path, stamp) => {
   const info = stamp ?? (await stat(path));

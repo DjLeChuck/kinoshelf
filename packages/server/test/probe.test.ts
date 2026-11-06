@@ -9,6 +9,8 @@ import {
   ffprobe,
   ProbeQueue,
   ProbeUnavailableError,
+  probePictureSize,
+  sizeFromStreams,
   summarize,
   type Probe,
   type Prober,
@@ -46,6 +48,57 @@ describe('summarize', () => {
         mtime: 2,
       }).audio,
     ).toBe('dts 3ch');
+  });
+});
+
+describe('sizeFromStreams', () => {
+  const streams = (...list: object[]): string => JSON.stringify({ streams: list });
+
+  it('calls a frame by the size a release name would', () => {
+    expect(sizeFromStreams(streams({ codec_type: 'video', width: 3840, height: 1600 }))).toBe(
+      '2160p',
+    );
+    expect(sizeFromStreams(streams({ codec_type: 'video', width: 1920, height: 800 }))).toBe(
+      '1080p',
+    );
+  });
+
+  it('reads the video stream, not the audio one', () => {
+    expect(
+      sizeFromStreams(
+        streams({ codec_type: 'audio' }, { codec_type: 'video', width: 1280, height: 720 }),
+      ),
+    ).toBe('720p');
+  });
+
+  it('has nothing to say of a file with no frame', () => {
+    expect(sizeFromStreams(streams({ codec_type: 'audio' }))).toBeUndefined();
+    expect(sizeFromStreams(streams())).toBeUndefined();
+  });
+});
+
+describe('probePictureSize', () => {
+  it('reads a real file, made with ffmpeg', async () => {
+    const dir = await makeDir();
+    const clip = join(dir, 'clip.mkv');
+    await promisify(execFile)('ffmpeg', [
+      '-v',
+      'error',
+      '-f',
+      'lavfi',
+      '-i',
+      'testsrc=duration=1:size=1920x800:rate=5',
+      '-c:v',
+      'mpeg4',
+      clip,
+    ]);
+    expect(await probePictureSize(clip)).toBe('1080p');
+  });
+
+  it('says nothing of a file that is not a video, or is not there', async () => {
+    const dir = await makeDir();
+    expect(await probePictureSize(await put(join(dir, 'notes.mkv'), 'text'))).toBeUndefined();
+    expect(await probePictureSize(join(dir, 'missing.mkv'))).toBeUndefined();
   });
 });
 

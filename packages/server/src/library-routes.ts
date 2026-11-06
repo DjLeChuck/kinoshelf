@@ -46,6 +46,7 @@ import {
   paging,
   selectionReportSchema,
   selectionRunSchema,
+  sizeSchema,
   progressSchema,
   transferProgressSchema,
   seasonSchema,
@@ -856,7 +857,7 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
             },
             dryRun: { type: 'boolean' },
             version: { type: 'boolean' },
-            screenSize: { type: 'string', pattern: '^[0-9]{3,4}[pi]$' },
+            screenSize: sizeSchema,
           },
         },
         response: {
@@ -876,10 +877,7 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
       const rows = items.byItemIds(library.id, request.body.items);
       const skipped = new Set(request.body.items);
       if (request.body.version) {
-        if (library.type !== 'movie') {
-          throw new ApiError(409, 'library.not-typed');
-        }
-        // The files that can take a version: movies nobody settled, whatever the scan made of them.
+        // The files that can take a version: movies and episodes nobody settled, whatever the scan made of them.
         const eligible = new Map<string, Set<string>>();
         const byJob = new Map<string, string[]>();
         for (const row of rows) {

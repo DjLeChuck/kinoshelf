@@ -51,6 +51,7 @@ export interface SettingsPatch {
     profile?: Nullable<string>;
     mode?: Nullable<'copy' | 'hardlink' | 'move'>;
     threshold?: Nullable<number>;
+    detectPictureSize?: Nullable<boolean>;
   };
 }
 
@@ -109,6 +110,8 @@ export function presentSettings(config: Config, env: Env): unknown {
       profile: config.profile ?? null,
       mode: config.mode ?? null,
       threshold: config.threshold ?? null,
+      // Read from the file when it is named, so on unless turned off.
+      detectPictureSize: config.detectPictureSize ?? true,
     },
   };
 }

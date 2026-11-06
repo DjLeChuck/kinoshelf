@@ -1,9 +1,11 @@
 import { randomUUID } from 'node:crypto';
 import { lstat } from 'node:fs/promises';
+import { basename, dirname, extname } from 'node:path';
 import {
   libraryProfile,
   createPlan,
   GuessitParser,
+  hasVersionSibling,
   loadProfile,
   type Profile,
   MetadataLoader,
@@ -23,6 +25,7 @@ import {
   type SeasonInfo,
   type SeriesDetails,
   type Operation,
+  type TransferOperation,
   type OperationResult,
   type Plan,
   type PlanItem,
@@ -40,7 +43,13 @@ import type { Execution, ExecutionStore } from './executions.js';
 import type { Job, JobStore, PlanSettings } from './jobs.js';
 import type { LibrarySnapshot } from './library-items.js';
 import type { ExecutionOutcome, OutcomeFile } from './notify/message.js';
-import { defaultMetadataLanguage, makeProvider, type ProcessorDeps } from './processor.js';
+import {
+  defaultMetadataLanguage,
+  makeProvider,
+  sizeReaderOf,
+  withSizeReader,
+  type ProcessorDeps,
+} from './processor.js';
 
 export interface OperationReport {
   readonly type: Operation['type'];
@@ -132,14 +141,15 @@ export class Service {
   async match(
     entryId: string,
     candidate: Candidate,
-    options: { libraryId?: string } = {},
+    options: { libraryId?: string; screenSize?: string } = {},
   ): Promise<MatchResult> {
     const entry = this.pendingEntry(entryId);
     const asked = options.libraryId;
     const libraryId = this.chosenLibrary(entry, candidate, asked);
     // A release of 200 episodes reads its profile once, not 200 times.
     const profiles = new Map<string, Promise<Profile>>();
-    await this.applyChoice(entry, candidate, libraryId, profiles);
+    // A size picked by hand is this file's: its release mates have their own.
+    await this.applyChoice(entry, candidate, libraryId, profiles, options.screenSize);
     // The choice is about the series, so the rest of the release follows; one that cannot (the
     // provider is down, say) stays as it was and can be settled on its own.
     const followers: string[] = [];
@@ -164,8 +174,11 @@ export class Service {
     candidate: Candidate,
     libraryId: string | null,
     profiles?: Map<string, Promise<Profile>>,
+    screenSize?: string,
   ): Promise<Classification> {
-    const item = await this.planWith(entry, candidate, {
+    const named =
+      screenSize === undefined ? entry : { ...entry, parsed: { ...entry.parsed, screenSize } };
+    const item = await this.planWith(named, candidate, {
       libraryId,
       ...(profiles && { profiles }),
     });
@@ -265,6 +278,7 @@ export class Service {
         destinationRoot: settings.destinationRoot,
         mode: settings.mode,
         ...(loader.needsMetadata && { imageUrl: provider.imageUrl.bind(provider) }),
+        ...withSizeReader(this.deps),
       },
     );
     const item = plan.items[0];
@@ -275,8 +289,15 @@ export class Service {
   }
 
   /** Where the file would go with this candidate, without recording anything. */
-  async preview(entryId: string, candidate: Candidate, libraryId?: string): Promise<PlanItem> {
-    const entry = this.pendingEntry(entryId);
+  async preview(
+    entryId: string,
+    candidate: Candidate,
+    libraryId?: string,
+    screenSize?: string,
+  ): Promise<PlanItem> {
+    const found = this.pendingEntry(entryId);
+    const entry =
+      screenSize === undefined ? found : { ...found, parsed: { ...found.parsed, screenSize } };
     return this.planWith(entry, candidate, {
       lenient: true,
       libraryId: this.chosenLibrary(entry, candidate, libraryId),
@@ -486,12 +507,16 @@ export class Service {
     for (const id of entryIds) {
       const entry = this.deps.entries.get(id);
       const stored = entry?.candidates.find(({ id: c }) => c.id === entry.item?.externalId.id);
-      if (!entry || entry.jobId !== jobId || entry.parsed.kind !== 'movie' || !stored) {
+      if (!entry || entry.jobId !== jobId || entry.parsed.kind === 'unknown' || !stored) {
         continue;
       }
-      // A size chosen by hand wins over what the name says: it is what the owner means.
+      // A size chosen by hand wins over what the name says, which wins over what the file shows.
+      const size =
+        screenSize ??
+        withQuality(entry.parsed).screenSize ??
+        (await sizeReaderOf(this.deps)?.(entry.parsed.path));
       const named =
-        screenSize === undefined ? entry : { ...entry, parsed: { ...entry.parsed, screenSize } };
+        size === undefined ? entry : { ...entry, parsed: { ...entry.parsed, screenSize: size } };
       const item = await this.planWith(named, toCandidate(stored), {
         applyVersion: true,
         profiles,
@@ -689,17 +714,28 @@ export class Service {
     persist: boolean,
   ): Promise<Entry | { held: string }> {
     const main = entry.item?.operations.find(
-      (operation) => operation.type === 'transfer' && operation.role === 'main',
+      (operation): operation is TransferOperation =>
+        operation.type === 'transfer' && operation.role === 'main',
     );
-    if (!entry.item || !main || entry.parsed.kind !== 'movie') {
+    if (!entry.item || !main || entry.parsed.kind === 'unknown') {
       return entry;
     }
-    if (
-      !(await lstat(main.destination).then(
-        () => true,
-        () => false,
-      ))
-    ) {
+    const taken = await lstat(main.destination).then(
+      () => true,
+      () => false,
+    );
+    // A name that is free may still have a version of the work beside it now, which a file saying
+    // no size should be told apart from (reading it is what `planWith` does when it can).
+    const crowded =
+      !taken &&
+      entry.item.parsed.screenSize === undefined &&
+      sizeReaderOf(this.deps) !== undefined &&
+      (await hasVersionSibling(
+        dirname(main.destination),
+        basename(main.destination, extname(main.destination)),
+        main.source,
+      ));
+    if (!taken && !crowded) {
       return entry;
     }
     const stored = entry.candidates.find(({ id }) => id.id === entry.item?.externalId.id);
@@ -862,7 +898,7 @@ const parser = new GuessitParser();
  * added, so a size chosen by hand is kept.
  */
 function withQuality(parsed: ParsedMedia): ParsedMedia {
-  if (parsed.kind !== 'movie' || parsed.screenSize !== undefined) {
+  if (parsed.kind === 'unknown' || parsed.screenSize !== undefined) {
     return parsed;
   }
   const { screenSize, source } = parser.parse(parsed.path);

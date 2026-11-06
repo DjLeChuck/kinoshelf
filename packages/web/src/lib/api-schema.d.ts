@@ -399,6 +399,7 @@ export interface paths {
                                 /** @enum {string|null} */
                                 mode: "copy" | "hardlink" | "move" | null;
                                 threshold: number | null;
+                                detectPictureSize: boolean;
                             };
                             /** @description The profiles shipped with Kinoshelf; `processing.profile` may also be a path. */
                             profiles: {
@@ -503,6 +504,7 @@ export interface paths {
                             /** @enum {string|null} */
                             mode?: "copy" | "hardlink" | "move" | null;
                             threshold?: number | null;
+                            detectPictureSize?: boolean | null;
                         };
                     };
                 };
@@ -559,6 +561,7 @@ export interface paths {
                                 /** @enum {string|null} */
                                 mode: "copy" | "hardlink" | "move" | null;
                                 threshold: number | null;
+                                detectPictureSize: boolean;
                             };
                             /** @description The profiles shipped with Kinoshelf; `processing.profile` may also be a path. */
                             profiles: {
@@ -3523,7 +3526,7 @@ export interface paths {
         put?: never;
         /**
          * Validate a match
-         * @description Plans the file with a candidate returned by `GET /api/search`; it overrides the score. The file ends up `to-rename`, or in `conflict` if its target cannot be used. For a series, the other episodes of the same release follow the choice (the ones of the same `cluster`); `followers` lists them. `libraryId` sends the file to that library (of the work's kind) rather than to the default one, for this file only.
+         * @description Plans the file with a candidate returned by `GET /api/search`; it overrides the score. The file ends up `to-rename`, or in `conflict` if its target cannot be used. For a series, the other episodes of the same release follow the choice (the ones of the same `cluster`); `followers` lists them. `libraryId` sends the file to that library (of the work's kind) rather than to the default one, for this file only. `screenSize` (`2160p`…) names the file's quality when its name says none, and wins over what the name says; it is for this file only.
          */
         post: {
             parameters: {
@@ -3553,6 +3556,7 @@ export interface paths {
                         popularity?: number;
                         countries?: string[];
                         libraryId?: string;
+                        screenSize?: string;
                     };
                 };
             };
@@ -3717,6 +3721,7 @@ export interface paths {
                         popularity?: number;
                         countries?: string[];
                         libraryId?: string;
+                        screenSize?: string;
                     };
                 };
             };

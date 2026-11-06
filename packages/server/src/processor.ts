@@ -16,6 +16,7 @@ import {
 } from '@kinoshelf/core';
 import { RequestPool, SqliteHttpCache, tmdbFromEnv } from '@kinoshelf/provider-tmdb';
 import type { Job, ProcessedJob } from './jobs.js';
+import { probePictureSize, type SizeReader } from './probe.js';
 import type { ProgressTracker } from './progress.js';
 
 export interface ProcessorDeps {
@@ -25,6 +26,8 @@ export interface ProcessorDeps {
   readonly env: Readonly<Record<string, string | undefined>>;
   /** Replaces TMDB, for tests. */
   readonly createProvider?: (options: { language: string }) => MetadataProvider;
+  /** Replaces `ffprobe` for the size of a file whose name says none, for tests. */
+  readonly sizeReader?: SizeReader;
   /** Told where each analysis is; none for the CLI and the tests that do not look. */
   readonly progress?: ProgressTracker;
   /** Told of a folder a scan had to leave out because it could not be read. */
@@ -35,6 +38,26 @@ export interface ProcessorDeps {
  * parse → match → plan for the path of a job. Read-only: executing the plan is a separate,
  * explicit step, so nothing touches the disk without having been validated.
  */
+/**
+ * How to read a size from a file, or nothing when the settings turned it off. Read on each call:
+ * the configuration is updated in place, so a change applies to the next analysis.
+ */
+export function sizeReaderOf(
+  deps: Pick<ProcessorDeps, 'config' | 'sizeReader'>,
+): SizeReader | undefined {
+  return deps.config.detectPictureSize === false
+    ? undefined
+    : (deps.sizeReader ?? probePictureSize);
+}
+
+/** The `sizeOf` option of the core, when the settings allow reading a size. */
+export function withSizeReader(deps: Pick<ProcessorDeps, 'config' | 'sizeReader'>): {
+  sizeOf?: SizeReader;
+} {
+  const sizeOf = sizeReaderOf(deps);
+  return sizeOf ? { sizeOf } : {};
+}
+
 export function createProcessor(deps: ProcessorDeps): (job: Job) => Promise<ProcessedJob> {
   return async (job) => {
     deps.progress?.start(job.id);
@@ -107,6 +130,7 @@ async function process(deps: ProcessorDeps, job: Job): Promise<ProcessedJob> {
       progress?.planning(job.id);
     },
     ...(settings.threshold !== undefined && { matching: { threshold: settings.threshold } }),
+    ...withSizeReader(deps),
   });
   return {
     analysis,

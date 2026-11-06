@@ -23,7 +23,12 @@ interface SettingsBody {
   plex: { url: string; section: number | null; tokenConfigured: boolean } | null;
   jellyfin: { url: string; tokenConfigured: boolean } | null;
   webhooks: { id: string; target: string; format: string; on: string[] }[];
-  processing: { profile: string | null; mode: string | null; threshold: number | null };
+  processing: {
+    profile: string | null;
+    mode: string | null;
+    threshold: number | null;
+    detectPictureSize: boolean;
+  };
   apiKey: { source: string | null };
 }
 
@@ -294,6 +299,23 @@ describe('PATCH /api/settings', () => {
     expect(h.app.notifier.targets.webhooks).toBe(0);
     await h.patch({ webhooks: [{ url: 'https://example.org/hook' }] });
     expect(h.app.notifier.targets.webhooks).toBe(1);
+  });
+
+  it('reads the size with ffprobe unless it is turned off, and goes back to that when unset', async () => {
+    const h = await withConfig(`${librariesYaml('/media')}locale: en\n`);
+    expect((await h.request('GET', '/api/settings')).json<SettingsBody>().processing).toMatchObject(
+      {
+        detectPictureSize: true,
+      },
+    );
+
+    const off = await h.patch({ processing: { detectPictureSize: false } });
+    expect(off.json<SettingsBody>().processing.detectPictureSize).toBe(false);
+    expect(await h.file()).toMatch(/detectPictureSize: false/);
+
+    const on = await h.patch({ processing: { detectPictureSize: null } });
+    expect(on.json<SettingsBody>().processing.detectPictureSize).toBe(true);
+    expect(await h.file()).not.toMatch(/detectPictureSize/);
   });
 
   it('lets the processor see a changed setting on its next job', async () => {

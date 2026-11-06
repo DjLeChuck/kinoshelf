@@ -186,6 +186,9 @@ export const candidateSchema = {
   },
 } as const;
 
+/** A picture size as a release names it: `2160p`, `1080p`, `1080i`. */
+export const sizeSchema = { type: 'string', pattern: '^[0-9]{3,4}[pi]$' } as const;
+
 /** The body of a manual match: only what the planner needs is required. */
 export const matchBodySchema = {
   type: 'object',
@@ -579,11 +582,12 @@ export const settingsSchema = {
     },
     processing: {
       type: 'object',
-      required: ['profile', 'mode', 'threshold'],
+      required: ['profile', 'mode', 'threshold', 'detectPictureSize'],
       properties: {
         profile: { type: 'string', nullable: true },
         mode: { type: 'string', enum: ['copy', 'hardlink', 'move'], nullable: true },
         threshold: { type: 'number', nullable: true },
+        detectPictureSize: { type: 'boolean' },
       },
     },
     profiles: {
@@ -688,6 +692,8 @@ export const settingsPatchSchema = {
         profile: nullable({ type: 'string', minLength: 1 }),
         mode: nullable({ type: 'string', enum: ['copy', 'hardlink', 'move'] }),
         threshold: nullable({ type: 'number', minimum: 0, maximum: 100 }),
+        // On unless turned off: `null` goes back to that default.
+        detectPictureSize: nullable({ type: 'boolean' }),
       },
     },
   },
