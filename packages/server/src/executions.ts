@@ -136,6 +136,28 @@ export class ExecutionStore {
     );
   }
 
+  /**
+   * What the transfers waiting or running hold, by job: the entries they were queued with, or
+   * `null` for a whole job. Running the same entries again would stack the same work.
+   */
+  pendingEntries(): Map<string, Set<string> | null> {
+    const pending = new Map<string, Set<string> | null>();
+    const rows = this.database
+      .prepare<[], { job_id: string; entry_ids: string | null }>(
+        "SELECT job_id, entry_ids FROM executions WHERE status IN ('queued', 'running')",
+      )
+      .all();
+    for (const { job_id: jobId, entry_ids: entryIds } of rows) {
+      const known = pending.get(jobId);
+      if (entryIds === null || known === null) {
+        pending.set(jobId, null);
+      } else {
+        pending.set(jobId, new Set([...(known ?? []), ...(JSON.parse(entryIds) as string[])]));
+      }
+    }
+    return pending;
+  }
+
   latestOf(jobId: string): Execution | undefined {
     const row = this.database
       .prepare<[string], ExecutionRow>(

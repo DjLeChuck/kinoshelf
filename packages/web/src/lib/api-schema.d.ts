@@ -1938,6 +1938,11 @@ export interface paths {
                                     current: string | null;
                                 } | null;
                             } | null;
+                            transfer: {
+                                done: number;
+                                total: number;
+                                current: string | null;
+                            } | null;
                             /** @description A movie library counts files. A series library counts shows, except `review` and `unrecognized`: those files belong to no show, so they stay counted as files. */
                             counts: {
                                 all: number;
@@ -2462,7 +2467,7 @@ export interface paths {
         put?: never;
         /**
          * Rename or complete a selection of the items of a library
-         * @description Runs what the last scan planned for the chosen items (`id` of `GET /api/libraries/{id}/items`): the videos to rename, and the NFO and images missing beside the ones already in place. It writes only what is planned and never overwrites a file. One plan per scan job the items come from, under one batch. With `dryRun` every precondition is checked and nothing is written (200, the report of `POST /api/plans/{id}/execute`, entries being the items’ `entryId`); otherwise the transfers are queued (202) and the batch appears in the history. Items with nothing to do (done, never scanned, unknown) are listed in `skipped`; 409 `library.nothing-to-do` when none is left. With `version`, the movies chosen are renamed to say their version (`Title (2021) - 2160p`) even when they are already named as the profile wants; the size comes from the file name, and a movie whose name gives none is skipped (409 `library.version-unavailable` when that is all of them). `screenSize` (`1080p`, `2160p`…) names the size when the file name gives none, or corrects it.
+         * @description Runs what the last scan planned for the chosen items (`id` of `GET /api/libraries/{id}/items`): the videos to rename, and the NFO and images missing beside the ones already in place. It writes only what is planned and never overwrites a file. One plan per scan job the items come from, under one batch. With `dryRun` every precondition is checked and nothing is written (200, the report of `POST /api/plans/{id}/execute`, entries being the items’ `entryId`); otherwise the transfers are queued (202) and the batch appears in the history. Items with nothing to do (done, never scanned, unknown) are listed in `skipped`; 409 `library.nothing-to-do` when none is left, 409 `library.transfer-in-progress` when a batch still waiting or running holds one of them. With `version`, the movies chosen are renamed to say their version (`Title (2021) - 2160p`) even when they are already named as the profile wants; the size comes from the file name, and a movie whose name gives none is skipped (409 `library.version-unavailable` when that is all of them). `screenSize` (`1080p`, `2160p`…) names the size when the file name gives none, or corrects it.
          */
         post: {
             parameters: {

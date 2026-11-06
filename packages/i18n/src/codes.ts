@@ -50,6 +50,7 @@ export const API_ERROR_CODES = [
   'library.version-unavailable',
   'library.not-typed',
   'library.scan-in-progress',
+  'library.transfer-in-progress',
   'library.source-taken',
   'library.wrong-type',
   'queue.entry-not-found',

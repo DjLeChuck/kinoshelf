@@ -230,6 +230,8 @@ export const fr: Record<keyof typeof en, string> = {
   'error.library.not-found': 'Cette bibliothèque n’existe plus. Rechargez la page.',
   'error.library.outside':
     'Ce dossier n’est pas dans la bibliothèque (ou c’est la bibliothèque elle-même : analysez plutôt la bibliothèque).',
+  'error.library.transfer-in-progress':
+    'Un transfert contient déjà certains de ces éléments. Attendez qu’il se termine avant de les relancer.',
   'error.library.scan-in-progress':
     'Une analyse de cette bibliothèque est déjà en attente ou en cours.',
   'error.library.source-taken': 'La bibliothèque « {name} » lit déjà ce dossier.',
@@ -314,6 +316,9 @@ export const fr: Record<keyof typeof en, string> = {
   'web.library.run.confirm': 'Lancer',
   'web.library.run.cancel': 'Annuler',
   'web.library.run.started': 'Lancé : le lot est dans l’historique.',
+  'web.library.transfer.running': 'Transfert en cours : {done} fichiers sur {total} traités',
+  'web.library.transfer.label': 'Avancement du transfert',
+  'web.library.transfer.link': 'Voir l’historique',
   'web.library.run.tag.main': 'Vidéo',
   'web.library.run.tag.sidecar': 'Associé',
   'web.library.run.tag.written': 'Écrits',

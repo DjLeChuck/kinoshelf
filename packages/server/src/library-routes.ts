@@ -19,7 +19,7 @@ import { isSystemPath } from './system-paths.js';
 import { isInside } from './notify/paths.js';
 import type { SeriesFilesStore } from './series-files.js';
 import { compare, missingOf, type Completeness, type EpisodeReport } from './completeness.js';
-import type { Execution } from './executions.js';
+import type { Execution, ExecutionStore } from './executions.js';
 import type { ProbeQueue } from './probe.js';
 import type { ExecutionReport } from './service.js';
 import type { EntryStore } from './entries.js';
@@ -61,6 +61,7 @@ export interface LibraryContext {
   readonly jobs: JobStore;
   readonly entries: EntryStore;
   readonly items: LibraryItemStore;
+  readonly executions: ExecutionStore;
   readonly probes: ProbeQueue;
   /** The missing episodes of a show, counted on opening it (and in the background otherwise). */
   readonly completeness: Completeness;
@@ -493,7 +494,16 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
         response: {
           200: {
             type: 'object',
-            required: ['library', 'scannedAt', 'scan', 'counts', 'total', 'groups', 'items'],
+            required: [
+              'library',
+              'scannedAt',
+              'scan',
+              'transfer',
+              'counts',
+              'total',
+              'groups',
+              'items',
+            ],
             properties: {
               library: {
                 type: 'object',
@@ -520,6 +530,8 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
                   transfer: transferProgressSchema,
                 },
               },
+              /** The transfer going on (the queue runs one at a time), so a page shows a batch it started. */
+              transfer: transferProgressSchema,
               counts: {
                 type: 'object',
                 required: ['all', ...ITEM_FILTERS, 'missing-episodes', 'missing-show-files'],
@@ -583,6 +595,7 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
                 running.status === 'queued' ? (ctx.progress.runningTransfer() ?? null) : null,
             }
           : null,
+        transfer: ctx.progress.runningTransfer() ?? null,
         counts: items.counts(library.id, library.type === 'series'),
         total: page.total,
         groups: page.groups,
@@ -860,7 +873,7 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
           'is written (200, the report of `POST /api/plans/{id}/execute`, entries being the items’ ' +
           '`entryId`); otherwise the transfers are queued (202) and the batch appears in the history. ' +
           'Items with nothing to do (done, never scanned, unknown) are listed in `skipped`; 409 ' +
-          '`library.nothing-to-do` when none is left. With `version`, the movies chosen are renamed ' +
+          '`library.nothing-to-do` when none is left, 409 `library.transfer-in-progress` when a batch still waiting or running holds one of them. With `version`, the movies chosen are renamed ' +
           'to say their version (`Title (2021) - 2160p`) even when they are already named as the ' +
           'profile wants; the size comes from the file name, and a movie whose name gives none is ' +
           'skipped (409 `library.version-unavailable` when that is all of them). `screenSize` ' +
@@ -897,6 +910,20 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
         throw new ApiError(409, 'library.not-typed');
       }
       const rows = items.byItemIds(library.id, request.body.items);
+      if (!request.body.dryRun) {
+        // A batch still waiting or running holds its entries: a second one would do the same work twice.
+        const pending = ctx.executions.pendingEntries();
+        const held = rows.some(({ scanJobId, entryId }) => {
+          if (scanJobId === null || !pending.has(scanJobId)) {
+            return false;
+          }
+          const entryIds = pending.get(scanJobId);
+          return entryIds === null || (entryId !== null && entryIds?.has(entryId) === true);
+        });
+        if (held) {
+          throw new ApiError(409, 'library.transfer-in-progress');
+        }
+      }
       const skipped = new Set(request.body.items);
       if (request.body.version) {
         // The files that can take a version: movies and episodes nobody settled, whatever the scan made of them.

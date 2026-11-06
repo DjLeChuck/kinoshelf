@@ -479,6 +479,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
       jobs,
       entries,
       items,
+      executions,
       probes,
       completeness,
       seriesFiles: seriesFilesStore,

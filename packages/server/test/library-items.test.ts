@@ -451,6 +451,27 @@ describe('POST /api/libraries/:id/execute', () => {
     expect((await dryRun(h, [itemId(dune)])).statusCode).toBe(409);
   });
 
+  it('refuses to queue again an item a batch still holds', async () => {
+    const { h, dune, alien } = await scanned();
+    const first = await h.request('POST', '/api/libraries/films/execute', {
+      items: [itemId(dune)],
+    });
+    expect(first.statusCode).toBe(202);
+    // The first batch has not ended: the same item, alone or in a bigger selection, is held.
+    for (const items of [[itemId(dune)], [itemId(dune), itemId(alien)]]) {
+      const again = await h.request('POST', '/api/libraries/films/execute', { items });
+      expect(again.statusCode).toBe(409);
+      expect(again.json()).toEqual({ error: { code: 'library.transfer-in-progress' } });
+    }
+    // Another item is free, and a preview never writes: both stay allowed.
+    expect((await dryRun(h, [itemId(dune)])).statusCode).toBe(200);
+    expect(
+      (await h.request('POST', '/api/libraries/films/execute', { items: [itemId(alien)] }))
+        .statusCode,
+    ).toBe(202);
+    await h.app.jobs.idle();
+  });
+
   it('refuses an empty selection', async () => {
     const { h } = await scanned();
     expect(

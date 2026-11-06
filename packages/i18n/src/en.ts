@@ -220,6 +220,8 @@ export const en = {
   'error.library.not-found': 'This library no longer exists. Reload the page.',
   'error.library.outside':
     'This folder is not inside the library (or is the library itself: scan the library instead).',
+  'error.library.transfer-in-progress':
+    'A transfer already holds some of these items. Wait for it to end before running them again.',
   'error.library.scan-in-progress': 'A scan of this library is already queued or running.',
   'error.library.source-taken': 'The library “{name}” already reads this folder.',
   'error.library.wrong-type': 'The library “{name}” does not hold this kind of work.',
@@ -300,6 +302,9 @@ export const en = {
   'web.library.run.confirm': 'Run',
   'web.library.run.cancel': 'Cancel',
   'web.library.run.started': 'Started: the batch is in the history.',
+  'web.library.transfer.running': 'Transfer in progress: {done} of {total} files done',
+  'web.library.transfer.label': 'Transfer progress',
+  'web.library.transfer.link': 'See the history',
   'web.library.run.tag.main': 'Video',
   'web.library.run.tag.sidecar': 'Companion',
   'web.library.run.tag.written': 'Written',

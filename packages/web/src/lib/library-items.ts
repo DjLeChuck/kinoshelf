@@ -89,6 +89,8 @@ export interface ItemsPage {
     /** The transfer this scan waits behind, if any. */
     readonly transfer: TransferProgress | null;
   } | null;
+  /** The transfer going on, whichever batch it belongs to. */
+  readonly transfer: TransferProgress | null;
   readonly counts: Counts;
   readonly total: number;
   /** `total` as a validation settles it: a release's episodes count once. */
