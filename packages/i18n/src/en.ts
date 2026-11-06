@@ -263,6 +263,7 @@ export const en = {
   'web.library.filter.missing-artwork': 'Missing images',
   'web.library.filter.missing-episodes': 'Missing episodes',
   'web.library.filter.missing-show-files': 'Missing show files',
+  'web.library.settle.started': 'Transfer started',
   'web.library.shows.settle': 'To validate',
   'web.library.col.seasons': 'Seasons',
   'web.library.col.episodes': 'Episodes',

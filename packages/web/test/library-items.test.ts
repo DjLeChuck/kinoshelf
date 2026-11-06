@@ -6,6 +6,8 @@ import {
   sizeOfItem,
   canRun,
   episodeLabel,
+  groupSettling,
+  type LibraryItem,
   isSettling,
   isStalled,
   itemsUrl,
@@ -174,5 +176,45 @@ describe('inChunks', () => {
     });
     expect(asked).toEqual([0]);
     expect(page.items).toEqual([1, 2, 3]);
+  });
+});
+
+describe('groupSettling', () => {
+  const file = (path: string, over: Partial<LibraryItem> = {}): LibraryItem =>
+    ({
+      id: path,
+      path,
+      state: 'review',
+      kind: 'series',
+      release: '/lib/Foundation',
+      cluster: 0,
+      releaseFiles: null,
+      ...over,
+    }) as LibraryItem;
+
+  it('puts the episodes of one release and series together, in order of appearance', () => {
+    const groups = groupSettling([
+      file('/lib/Foundation/S01E01.mkv'),
+      file('/lib/Other/E1.mkv', { release: '/lib/Other' }),
+      file('/lib/Foundation/S01E02.mkv'),
+      file('/lib/Foundation/Odd.mkv', { cluster: 1 }),
+    ]);
+    expect(groups.map((g) => g.items.length)).toEqual([2, 1, 1]);
+    expect(groups[0]?.name).toBe('/lib/Foundation');
+    expect(groups[2]?.detached).toBe(true);
+  });
+
+  it('counts the whole release when the list holds only a part of it', () => {
+    const [group] = groupSettling([file('/lib/Foundation/S01E01.mkv', { releaseFiles: 30 })]);
+    expect(group?.files).toBe(30);
+  });
+
+  it('never groups movies, nor files whose release is unknown', () => {
+    const groups = groupSettling([
+      file('/lib/a.mkv', { kind: 'movie' }),
+      file('/lib/b.mkv', { kind: 'movie' }),
+      file('/lib/c.mkv', { release: null, cluster: null }),
+    ]);
+    expect(groups).toHaveLength(3);
   });
 });

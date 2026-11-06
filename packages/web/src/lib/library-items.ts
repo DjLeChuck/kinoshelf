@@ -39,6 +39,11 @@ export interface LibraryItem {
   readonly fanart: boolean | null;
   /** What settles it: `GET /api/entries/{id}`. */
   readonly entryId: string | null;
+  /** The folder it came in; files sharing it and `cluster` are validated together. `null`: not told. */
+  readonly release: string | null;
+  readonly cluster: number | null;
+  /** How many files validating this one settles, the whole release even past the page read. */
+  readonly releaseFiles: number | null;
 }
 
 /** The page of one item: the work as TMDB knows it, and the file as `ffprobe` read it. */
@@ -203,6 +208,46 @@ export function episodeLabel(
 /** Files that wait for a person: they have no show to sit under. */
 export const isSettling = (item: Pick<LibraryItem, 'state'>): boolean =>
   item.state === 'review' || item.state === 'unrecognized';
+
+/** Files validated together: one release's episodes of one series, or a file alone. */
+export interface SettleGroup {
+  readonly key: string;
+  /** The folder's path, or the file's own when it stands alone. */
+  readonly name: string;
+  readonly items: readonly LibraryItem[];
+  /** Files the validation settles: the server's count, since the list holds only its first page. */
+  readonly files: number;
+  /** Another series than the main one of its folder. */
+  readonly detached: boolean;
+}
+
+/** Only episodes are validated as a release (the server leaves movies alone). */
+export const settleKey = (item: LibraryItem): string =>
+  item.release !== null && item.cluster !== null && item.kind === 'series'
+    ? `${item.release}|${item.cluster}`
+    : item.path;
+
+/** Groups the files that wait for a person the way the server settles them, in order of appearance. */
+export function groupSettling(items: readonly LibraryItem[]): SettleGroup[] {
+  const groups = new Map<string, LibraryItem[]>();
+  for (const item of items) {
+    const key = settleKey(item);
+    groups.set(key, [...(groups.get(key) ?? []), item]);
+  }
+  return [...groups].map(([key, files]) => {
+    const [first] = files;
+    return {
+      key,
+      name:
+        (first?.releaseFiles ?? files.length) > 1 && first?.release
+          ? first.release
+          : (first?.path ?? key),
+      items: files,
+      files: Math.max(files.length, first?.releaseFiles ?? 1),
+      detached: (first?.cluster ?? 0) > 0,
+    };
+  });
+}
 
 /** What a dry run of a selection says of one file: each operation, checked and not run. */
 export interface ReportOperation {

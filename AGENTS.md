@@ -323,6 +323,10 @@ refuses to delete a library an arrival folder points at (`library.in-use`). Ther
   `q`, paging, counts); `/items/:itemId` adds the work's details and `ffprobe`. An arrival folder
   has no snapshot; what an arrival sends to a typed library is added to that library's rows once
   transferred.
+- **The "To validate" node of a series library groups like Arrivals.** The items of `GET .../items` carry
+  `release` and `cluster` (filled by that list only, from `job_entries`; `null` elsewhere): `groupSettling`
+  (`lib/library-items.ts`) makes one row per release and series, and the panel says how many files the
+  choice covers. Once validated or ignored, a group stays locked ("Transfer started") until a reload no longer lists it.
 - **Series** (`completeness.ts`, server migration 014): a row of a series library carries `season`,
   `episode` and `episodeEnd` (a file holding `S01E02E03` is one row, `episode` its first and
   `episodeEnd` its last). `GET /api/libraries/:id/shows` lists one row per work (files nobody identified

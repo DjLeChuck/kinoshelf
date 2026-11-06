@@ -23,12 +23,15 @@
     libraryId,
     source,
     item,
+    siblings = 1,
     ondone,
   }: {
     libraryId: string;
     /** The library's folder: what a scan of one movie must stay inside. */
     source: string;
     item: LibraryItem;
+    /** Files validated together with this one (itself included). */
+    siblings?: number;
     /** The file was settled (transferred or set aside): what to tell the user. */
     ondone: (message: string) => void;
   } = $props();
@@ -65,7 +68,7 @@
 {#if failure}
   <p class="alert alert-danger" role="alert">{messageOf(t, failure)}</p>
 {:else if entry}
-  <ArrivalDetail {entry} {ondone} />
+  <ArrivalDetail {entry} {siblings} {ondone} />
 {:else if detail}
   <WorkCard
     title={`${detail.title ?? baseName(detail.path)}${detail.year ? ` (${detail.year})` : ''}`}

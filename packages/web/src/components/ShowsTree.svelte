@@ -11,7 +11,9 @@
     PAGE_SIZE,
     episodeLabel,
     presenceMark,
+    groupSettling,
     libraryItems,
+    settleKey,
     type EpisodeState,
     type LibraryItem,
     type Show,
@@ -55,6 +57,9 @@
 
   let shows = $state<{ total: number; items: readonly Show[] } | undefined>(undefined);
   let settling = $state<readonly LibraryItem[]>([]);
+  const settleGroups = $derived(groupSettling(settling));
+  /** Groups whose validation went through: they stay locked until the list no longer holds them. */
+  let startedKeys = $state<readonly string[]>([]);
   let details = $state<Readonly<Record<number, ShowDetail>>>({});
   /** A show that could not be opened says so in its own row: the rest of the tree stays. */
   let showFailures = $state<Readonly<Record<number, unknown>>>({});
@@ -121,6 +126,8 @@
     }
   }
 
+  const selectedItem = $derived(selection?.kind === 'item' ? selection.item : undefined);
+
   const chosenShow = $derived.by(() => {
     const chosen = selection;
     return chosen?.kind === 'show'
@@ -163,6 +170,8 @@
       if (ticket === latest) {
         shows = answer;
         settling = pages.flatMap((page) => page.items);
+        const present = new Set(settling.map(settleKey));
+        startedKeys = startedKeys.filter((key) => present.has(key));
         settleTotal = pages.reduce((sum, page) => sum + page.total, 0);
         // Only what is open is kept: a closed show is read again when it opens.
         details = Object.fromEntries(
@@ -317,28 +326,44 @@
               </td>
             </tr>
             {#if settleOpen}
-              {#each settling as item (item.id)}
-                <tr
-                  class="child"
-                  class:current={selection?.kind === 'item' && selection.item.id === item.id}
-                >
-                  <td colspan={columns}>
-                    <button
-                      type="button"
-                      class="link"
-                      onclick={() => (selection = { kind: 'item', item })}
-                    >
-                      {baseName(item.path)}
-                    </button>
-                    <span class="chip {item.state === 'review' ? 'chip-warn' : 'chip-danger'}"
-                      >{t(
-                        item.state === 'review'
-                          ? 'web.library.state.review'
-                          : 'web.library.state.unrecognized',
-                      )}</span
-                    >
-                  </td>
-                </tr>
+              {#each settleGroups as group (group.key)}
+                {@const lead = group.items[0]}
+                {@const started = startedKeys.includes(group.key)}
+                {#if lead}
+                  <tr
+                    class="child"
+                    class:current={selection?.kind === 'item' &&
+                      group.items.some((item) => item.id === selectedItem?.id)}
+                  >
+                    <td colspan={columns}>
+                      {#if started}
+                        <span class="muted">{baseName(group.name)}</span>
+                        <span class="chip chip-neutral">{t('web.library.settle.started')}</span>
+                      {:else}
+                        <button
+                          type="button"
+                          class="link"
+                          onclick={() => (selection = { kind: 'item', item: lead })}
+                        >
+                          {baseName(group.name)}
+                        </button>
+                        <span class="chip {lead.state === 'review' ? 'chip-warn' : 'chip-danger'}"
+                          >{t(
+                            lead.state === 'review'
+                              ? 'web.library.state.review'
+                              : 'web.library.state.unrecognized',
+                          )}</span
+                        >
+                        {#if group.detached}<span class="chip chip-neutral"
+                            >{t('web.arrivals.detached')}</span
+                          >{/if}
+                        {#if group.files > 1}<span class="muted"
+                            >{t('web.arrivals.files', { count: group.files })}</span
+                          >{/if}
+                      {/if}
+                    </td>
+                  </tr>
+                {/if}
               {/each}
             {/if}
           {/if}
@@ -528,12 +553,16 @@
 
     <div class="side">
       {#if selection?.kind === 'item'}
-        {#key selection.item.id}
+        {@const chosenItem = selection.item}
+        {#key chosenItem.id}
           <ItemPanel
             {libraryId}
             {source}
-            item={selection.item}
+            item={chosenItem}
+            siblings={settleGroups.find((group) => group.key === settleKey(chosenItem))?.files ?? 1}
             ondone={(message: string) => {
+              // A validation lets the whole group go: lock it until the transfer empties the list.
+              startedKeys = [...startedKeys, settleKey(chosenItem)];
               selection = undefined;
               onsettled(message);
               void load();
