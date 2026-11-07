@@ -14,7 +14,20 @@
       ];
       forAllSystems = f: nixpkgs.lib.genAttrs systems (system: f nixpkgs.legacyPackages.${system});
 
-      # `players <up|down|logs|status> [jellyfin|plex]`: no player named means both.
+      # Tiny clips named like releases, to give Kinoshelf something to organize (see seed.sh).
+      seed =
+        pkgs:
+        pkgs.writeShellApplication {
+          name = "seed";
+          runtimeInputs = [
+            pkgs.ffmpeg-headless
+            pkgs.coreutils
+            pkgs.findutils
+          ];
+          text = builtins.readFile ./seed.sh;
+        };
+
+      # `players <up|down|logs|status|seed> [jellyfin|plex]`: no player named means both.
       players =
         pkgs:
         pkgs.writeShellApplication {
@@ -34,6 +47,7 @@
 
             cmd=''${1:-}
             shift || true
+            if [ "$cmd" = seed ]; then exec ${seed pkgs}/bin/seed; fi
             case "''${1:-all}" in
               jellyfin | plex | all) profile=''${1:-all} ;;
               *) echo "unknown player: $1 (jellyfin, plex or nothing for both)" >&2; exit 2 ;;
@@ -53,7 +67,7 @@
               down) "''${compose[@]}" down ;;
               logs) "''${compose[@]}" logs -f ;;
               status) "''${compose[@]}" ps ;;
-              *) echo "usage: players <up|down|logs|status> [jellyfin|plex]" >&2; exit 2 ;;
+              *) echo "usage: players <up|down|logs|status|seed> [jellyfin|plex]" >&2; exit 2 ;;
             esac
           '';
         };

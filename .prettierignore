@@ -3,3 +3,4 @@ coverage
 pnpm-lock.yaml
 flake.lock
 packages/web/src/lib/api-schema.d.ts
+.work

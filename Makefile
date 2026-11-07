@@ -7,7 +7,7 @@ IMAGE ?= kinoshelf:dev
 .DEFAULT_GOAL := help
 
 .PHONY: help hooks install build build-web dev-server dev-web typecheck lint format format-check test test-corpus \
-        test-e2e test-live corpus-report corpus-record check docker-build players-up players-down flake-check clean
+        test-e2e test-live corpus-report corpus-record check docker-build players-up players-down players-seed flake-check clean
 
 help: ## List the targets
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}'
@@ -70,6 +70,9 @@ players-up: ## Start Jellyfin (:8096) and Plex (:32400) in Docker, media in .wor
 
 players-down: ## Stop them (their state in .work/players is kept)
 	nix run ./dev/players -- down
+
+players-seed: ## Put tiny clips named like releases in .work/media/arrivals, for Kinoshelf to organize
+	nix run ./dev/players -- seed
 
 flake-check: ## Validate the Nix flake (new files must be `git add -N`)
 	nixfmt --check flake.nix dev/players/flake.nix

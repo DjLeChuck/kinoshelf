@@ -9,6 +9,8 @@ export default tseslint.config(
       '**/dist/**',
       '**/coverage/**',
       'node_modules/**',
+      // Local state of the dev players (dev/players): not ours, and not always JavaScript.
+      '.work/**',
       'packages/web/src/lib/api-schema.d.ts',
     ],
   },
