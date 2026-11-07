@@ -149,7 +149,8 @@ export function parseProfile(yamlText: string): Profile {
       kind: image.kind,
       name: image.name,
       ...(image.specialsName !== undefined && { specialsName: image.specialsName }),
-      size: image.size ?? (image.kind === 'fanart' ? 'original' : 'standard'),
+      size:
+        image.size ?? (image.kind === 'fanart' || image.kind === 'logo' ? 'original' : 'standard'),
     })),
     filesystem: file.filesystem,
   };

@@ -52,7 +52,7 @@ export interface NfoSpec {
   readonly series?: string;
 }
 
-export type ArtworkKind = 'poster' | 'fanart' | 'season-poster';
+export type ArtworkKind = 'poster' | 'fanart' | 'logo' | 'season-poster';
 
 export interface ArtworkSpec {
   readonly kind: ArtworkKind;

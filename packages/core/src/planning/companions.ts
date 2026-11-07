@@ -133,9 +133,16 @@ export function companionOperations(
       }
       continue;
     }
-    const path = image.kind === 'poster' ? details.posterPath : details.backdropPath;
-    // A show's poster and fanart are its own, in its folder: only a movie can lack one.
-    if (path && (details.kind === 'series' || written[image.kind])) {
+    const path =
+      image.kind === 'poster'
+        ? details.posterPath
+        : image.kind === 'logo'
+          ? details.logoPath
+          : details.backdropPath;
+    // A show's images are its own, in its folder: only a movie can lack one. A movie written flat
+    // has no folder of its own, and every movie would claim the same `logo.png`.
+    const folderOwned = image.kind === 'logo' ? !flat : written[image.kind];
+    if (path && (details.kind === 'series' || folderOwned)) {
       download(place.workFolders, render(image.name, {}), path, image.size);
     }
   }

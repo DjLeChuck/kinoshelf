@@ -33,10 +33,12 @@ nfo:
 # movie or a show. For a season it only says a season folder may hold the same names, so the
 # season poster is a plain `poster.jpg` there. Its code (`LocalImageProvider`) also reads Kodi's
 # `seasonNN-poster.jpg` from the show folder (`season-specials-poster.jpg` for season 0), never
-# Plex's `SeasonNN.jpg`.
+# Plex's `SeasonNN.jpg`. It also reads `logo` (the title art, a transparent PNG) for a movie or a
+# show.
 artwork:
   - { kind: poster, name: poster.jpg }
   - { kind: fanart, name: background.jpg }
+  - { kind: logo, name: logo.png }
   - { kind: season-poster, name: poster.jpg }
 
 filesystem:

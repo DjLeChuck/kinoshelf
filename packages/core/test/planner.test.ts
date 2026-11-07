@@ -462,6 +462,85 @@ describe('createPlan: NFO and artwork', () => {
     expect(items[0]?.operations[0]?.type).toBe('transfer');
   });
 
+  describe('logo', () => {
+    const withLogo = (profile: Profile = kodi()): Profile => ({
+      ...profile,
+      artwork: [...profile.artwork, { kind: 'logo', name: 'logo.png', size: 'original' }],
+    });
+    const logoOps = (item: PlanItem | undefined) =>
+      companions(item).filter((op) => op.destination.endsWith('logo.png'));
+
+    it('downloads a movie’s logo into its folder, at its original size', async () => {
+      const [src, lib] = [await makeDir(), await makeDir()];
+      const source = await put(join(src, 'Dune.2021.mkv'));
+      const details = { ...duneDetails, logoPath: '/dune-logo.png' };
+
+      const { items } = await planWith(
+        [{ parsed: parsedMovie(source), candidate: dune, details }],
+        lib,
+        withLogo(),
+      );
+
+      expect(logoOps(items[0]).map((op) => [op.type, op.destination])).toEqual([
+        ['download', join(lib, 'Dune (2021)', 'logo.png')],
+      ]);
+      expect(logoOps(items[0]).map((op) => (op.type === 'download' ? op.url : ''))).toEqual([
+        'https://img.test/original/dune-logo.png',
+      ]);
+    });
+
+    it('writes nothing when the provider has no logo', async () => {
+      const [src, lib] = [await makeDir(), await makeDir()];
+      const source = await put(join(src, 'Dune.2021.mkv'));
+
+      const { items } = await planWith(
+        [{ parsed: parsedMovie(source), candidate: dune, details: duneDetails }],
+        lib,
+        withLogo(),
+      );
+
+      expect(logoOps(items[0])).toEqual([]);
+      expect(items[0]?.status).toBe('ready');
+    });
+
+    it('gives a movie written flat no logo, and a show one in its folder, once', async () => {
+      const [src, lib] = [await makeDir(), await makeDir()];
+      const source = await put(join(src, 'Dune.2021.mkv'));
+      const details = { ...duneDetails, logoPath: '/dune-logo.png' };
+      const flat = parseProfile(`
+id: flat
+name: Flat
+episodeRangeSeparator: '-e'
+templates:
+  movieFolder: ''
+  movieFile: '{title} ({year})'
+  seriesFolder: '{title}'
+  seasonFolder: 'S{season:02}'
+  episodeFile: '{title}'
+nfo: null
+artwork:
+  - { kind: logo, name: logo.png }
+filesystem: { forbidden: posix, replacement: '', maxSegmentBytes: 255 }
+`);
+      const input = { parsed: parsedMovie(source), candidate: dune, details };
+      expect(companions((await planWith([input], lib, flat)).items[0])).toEqual([]);
+
+      const files = await Promise.all(['a', 'b'].map((name) => put(join(src, `${name}.mkv`))));
+      const show = { ...bearDetails, logoPath: '/bear-logo.png' };
+      const episodes = await planWith(
+        [
+          { parsed: parsedEpisode(files[0] ?? '', 1, [1]), candidate: bear, details: show },
+          { parsed: parsedEpisode(files[1] ?? '', 1, [2]), candidate: bear, details: show },
+        ],
+        lib,
+        withLogo(),
+      );
+      expect(episodes.items.flatMap((item) => logoOps(item).map((op) => op.destination))).toEqual([
+        join(lib, 'The Bear (2022)', 'logo.png'),
+      ]);
+    });
+  });
+
   it('plans nothing beside a file whose details are unknown, or without an image resolver', async () => {
     const [src, lib] = [await makeDir(), await makeDir()];
     const source = await put(join(src, 'Dune.2021.mkv'));

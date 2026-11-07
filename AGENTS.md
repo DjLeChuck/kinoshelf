@@ -76,13 +76,13 @@ contains no player-specific rule.
   is a second profile rather than a template syntax for optional parts.
 - Plex has two modes: the default agents ignore NFO (profile `plex`), the optional "Plex NFO"
   agent (PMS 1.43.1+) reads Kodi-format NFO, `movie.nfo`, `tvshow.nfo`, per-episode `<file>.nfo`
-  (as `jellyfin`; no season NFO, Plex ignores it), `poster.jpg`, `background.jpg` and a season
+  (as `jellyfin`; no season NFO, Plex ignores it), `poster.jpg`, `background.jpg`, `logo.png` and a season
   poster `Season01.jpg`, or `season-specials-poster.jpg` for season 0 (the artwork's
   `specialsName`) (profile `plex-nfo`: no id in the names, since the NFO carries
   `<uniqueid type="tmdb">`).
 - Profile `jellyfin`: `[tmdbid-<id>]` in the movie and series folders and in the movie file (the file
   must start with its folder's name), `SxxExx` episodes, `movie.nfo`, `tvshow.nfo`, `<file>.nfo`,
-  `poster.jpg` and `background.jpg`. A season's poster is a plain `poster.jpg` in its folder: the
+  `poster.jpg`, `background.jpg` and `logo.png`. A season's poster is a plain `poster.jpg` in its folder: the
   documentation lists nothing more, though Jellyfin's code also reads Kodi's `seasonNN-poster.jpg`
   from the show folder, and never Plex's `SeasonNN.jpg`.
 - **Versions of a movie or an episode** (`templates.movieVersion` and `templates.episodeVersion`, both
@@ -103,8 +103,8 @@ contains no player-specific rule.
   separator, an episode only a label that starts with a size, or any suffix when the bare name is
   another file's (` - The Emperor's Peace` alone is a title, which the profile renames). The label is
   also found by trying finer levels when the name is taken on the disk, unless the file there has the
-  **same size** (most likely the same release again: conflict). The folder's `movie.nfo`, poster and
-  fanart are written once (the first version; later ones leave them, so undoing a later batch does not
+  **same size** (most likely the same release again: conflict). The folder's `movie.nfo`, poster,
+  fanart and logo are written once (the first version; later ones leave them, so undoing a later batch does not
   remove them), while a `{file}.nfo` follows each version. Guessit does not tell WEB-DL from WEBRip
   (`Web`) nor read Remux, so two such files differ by their group or conflict.
 - **A size read from the file** (`PlannerOptions.sizeOf`, `AnalyzeOptions.sizeOf`; the server's is
@@ -226,8 +226,8 @@ format follows the Kodi wiki's templates, saved pages are not in the repository)
   existing file is `skipped` (`destination.exists`) in the item's results and never fails the item,
   nor sends the video back to the queue. A `.nfo` the user already had travels as a sidecar and
   wins over the generated one. A movie written flat (no folder) gets no fixed-name file
-  (`movie.nfo`, `poster.jpg`), which every movie would share.
-- **Show-level files** (`tvshow.nfo`, the show's poster and fanart, a season's poster) come with
+  (`movie.nfo`, `poster.jpg`, `logo.png`), which every movie would share.
+- **Show-level files** (`tvshow.nfo`, the show's poster, fanart and logo, a season's poster) come with
   every episode, marked `shared`; the planner keeps the first one of the batch (`shareCompanions`).
   Running only some items (`selectItems`, the server's `prepare`) hands them from an episode left out
   to a chosen one whose video lies in the same folder, so a partial selection still writes them.
@@ -239,7 +239,7 @@ format follows the Kodi wiki's templates, saved pages are not in the repository)
   directories it created. A copy or hardlink whose original is gone (or replaced) is kept
   (`undo.last-copy`): it is the only one left. An undo that fails partway marks the entries it did
   revert, and a retry leaves them alone. Images come with `ImageSize` (`preview`, `standard`, `original`; `size`
-  in the profile, `standard` by default and `original` for a fanart) through `provider.imageUrl`.
+  in the profile, `standard` by default and `original` for a fanart or a logo) through `provider.imageUrl`.
 - **A move cleans behind it** (`execution/prune.ts`): after an item's `move`, the folder the video left
   (and its parents, up to but never including the plan's destination root) is removed when everything
   in it is a file Kinoshelf made (`Journal.madeFileIdentity`: a `generated`/`downloaded` entry not
@@ -263,6 +263,15 @@ format follows the Kodi wiki's templates, saved pages are not in the repository)
   a colon because TMDB sometimes sends `-18`. The format of the prefix is our choice, neither player
   documents one. Left out on purpose: TMM's `<crew>`, `<producer>` and the actor `<profile>` /
   `<tmdbid>`, which neither player's documentation lists.
+- **The logo** (`kind: logo`, `logo.png` in `jellyfin` and `plex-nfo`): TMDB's `images` come with the
+  details request (`append_to_response`; `include_image_language` is the metadata language, then English,
+  then textless), so no extra call. `pickLogo` (`providers/tmdb`) takes the metadata language first, then
+  English, then a textless one, the best voted of each (PNG or JPEG only) as `Details.logoPath`. A work
+  with none writes nothing, and a movie written flat gets none (every movie would claim the same file).
+  TMDB serves logos in widths of its own, with no `w780`: the profile loader refuses any `size` but
+  `original`. **Not tracked** like the poster and fanart: no presence column, no filter, and a work
+  missing only its logo stays `ok`; it is written with its next rename, or a refresh a missing file
+  triggers.
 - Not done: no collection overview, no episode `uniqueid`, no `<fileinfo>` (the player reads the file).
 
 ## Libraries and scan

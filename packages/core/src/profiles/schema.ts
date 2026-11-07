@@ -29,7 +29,7 @@ export const profileSchema = z.strictObject({
     .array(
       z
         .strictObject({
-          kind: z.enum(['poster', 'fanart', 'season-poster']),
+          kind: z.enum(['poster', 'fanart', 'logo', 'season-poster']),
           name: text,
           // Only a season poster has one: the file name of season 0, for a player that names it apart.
           specialsName: text.optional(),
@@ -38,6 +38,11 @@ export const profileSchema = z.strictObject({
         .refine((image) => image.specialsName === undefined || image.kind === 'season-poster', {
           message: '`specialsName` only applies to a season-poster',
           path: ['specialsName'],
+        })
+        // TMDB serves logos in a few widths of its own (no w780): only the original always exists.
+        .refine((image) => image.kind !== 'logo' || (image.size ?? 'original') === 'original', {
+          message: 'a logo is only served at its original size',
+          path: ['size'],
         }),
     )
     .default([]),

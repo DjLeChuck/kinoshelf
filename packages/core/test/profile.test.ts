@@ -125,6 +125,7 @@ describe('jellyfin profile', () => {
     expect(profile.artwork.map(({ kind, name, size }) => [kind, name, size])).toEqual([
       ['poster', 'poster.jpg', 'standard'],
       ['fanart', 'background.jpg', 'original'],
+      ['logo', 'logo.png', 'original'],
       ['season-poster', 'poster.jpg', 'standard'],
     ]);
   });
@@ -147,9 +148,10 @@ describe('plex-nfo profile', () => {
     expect(profile.artwork.map(({ kind, name }) => [kind, name])).toEqual([
       ['poster', 'poster.jpg'],
       ['fanart', 'background.jpg'],
+      ['logo', 'logo.png'],
       ['season-poster', 'Season{season:02}.jpg'],
     ]);
-    expect(profile.artwork[2]?.specialsName).toBe('season-specials-poster.jpg');
+    expect(profile.artwork[3]?.specialsName).toBe('season-specials-poster.jpg');
   });
 });
 
@@ -176,6 +178,14 @@ describe('parseProfile', () => {
         ),
       ),
     ).toBe('profile.unknown-variable');
+  });
+
+  it('serves a logo at its original size only', () => {
+    const artwork = (spec: string) => `${base}artwork:\n  - ${spec}\n`;
+    expect(parseProfile(artwork('{ kind: logo, name: logo.png }')).artwork[0]?.size).toBe(
+      'original',
+    );
+    expect(() => parseProfile(artwork('{ kind: logo, name: logo.png, size: standard }'))).toThrow();
   });
 
   it('rejects a double-quoted template with a backslash escape', () => {

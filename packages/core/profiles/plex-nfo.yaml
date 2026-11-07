@@ -32,10 +32,11 @@ nfo:
 
 # Plex documents `poster.jpg` and `background.jpg` for a movie or a show, and `SeasonXX.jpg` for a
 # season (XX is the season number, zero-padded). The specials (season 0) take
-# `season-specials-poster`.
+# `season-specials-poster`. A show's title art is `logo.png` (Plex reads `clearlogo` or `logo`).
 artwork:
   - { kind: poster, name: poster.jpg }
   - { kind: fanart, name: background.jpg }
+  - { kind: logo, name: logo.png }
   - kind: season-poster
     name: 'Season{season:02}.jpg'
     specialsName: season-specials-poster.jpg

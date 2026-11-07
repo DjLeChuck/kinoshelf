@@ -105,6 +105,7 @@ export class FakeProvider implements MetadataProvider {
             cast: [],
             posterPath: '/poster.jpg',
             backdropPath: '/backdrop.jpg',
+            logoPath: '/logo.png',
             directors: [],
             writers: [],
             ...(found.year !== undefined && { releaseDate: `${found.year}-01-01` }),
@@ -132,6 +133,7 @@ export class FakeProvider implements MetadataProvider {
             cast: [],
             posterPath: '/poster.jpg',
             backdropPath: '/backdrop.jpg',
+            logoPath: '/logo.png',
             seasons: [],
             ...(found.year !== undefined && { firstAirDate: `${found.year}-01-01` }),
           }
