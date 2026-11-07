@@ -9,7 +9,7 @@ the path of your own YAML file.
 | `plex`       | Plex's default agents                  | `{tmdb-<id>}`       | no  | no                             |
 | `plex-no-id` | Plex, matching on title and year alone | no                  | no  | no                             |
 | `plex-nfo`   | Plex's "Plex NFO" agents (PMS 1.43.1+) | no                  | yes | `poster.jpg`, `background.jpg` |
-| `jellyfin`   | Jellyfin                               | `[tmdbid-<id>]`     | yes | `poster.jpg`, `fanart.jpg`     |
+| `jellyfin`   | Jellyfin                               | `[tmdbid-<id>]`     | yes | `poster.jpg`, `background.jpg` |
 
 - `plex` and `plex-no-id` write no metadata files: Plex fetches its own.
 - `jellyfin` and `plex-nfo` write the same Kodi-format NFO: `movie.nfo`, `tvshow.nfo`, and one per

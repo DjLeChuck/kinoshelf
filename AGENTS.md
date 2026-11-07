@@ -81,8 +81,9 @@ contains no player-specific rule.
   Plex documents none).
 - Profile `jellyfin`: `[tmdbid-<id>]` in the movie and series folders and in the movie file (the file
   must start with its folder's name), `SxxExx` episodes, `movie.nfo`, `tvshow.nfo`, `<file>.nfo`,
-  `poster.jpg` and `fanart.jpg`. A season's poster is a plain `poster.jpg` in its folder: Jellyfin's
-  documentation does not list Kodi's `seasonNN-poster.jpg`.
+  `poster.jpg` and `background.jpg`. A season's poster is a plain `poster.jpg` in its folder: the
+  documentation lists nothing more, though Jellyfin's code also reads Kodi's `seasonNN-poster.jpg`
+  from the show folder, and never Plex's `SeasonNN.jpg`.
 - **Versions of a movie or an episode** (`templates.movieVersion` and `templates.episodeVersion`, both
   `' - {version}'` in every shipped profile; only `{version}` is known to them, and a profile without
   one keeps one file per work). Plex and Jellyfin take several qualities of one movie in **one

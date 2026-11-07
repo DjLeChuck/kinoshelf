@@ -29,12 +29,14 @@ nfo:
   episode: '{file}.nfo'
   series: tvshow.nfo
 
-# Jellyfin documents `poster` and `fanart` (among others) for a movie or a show. For a season it
-# only says a season folder may hold the same names, so the season poster is a plain `poster.jpg`
-# there (Kodi's `seasonNN-poster.jpg` is not in Jellyfin's documentation).
+# Jellyfin documents `poster` and `backdrop` (`background`, `fanart`… are accepted names) for a
+# movie or a show. For a season it only says a season folder may hold the same names, so the
+# season poster is a plain `poster.jpg` there. Its code (`LocalImageProvider`) also reads Kodi's
+# `seasonNN-poster.jpg` from the show folder (`season-specials-poster.jpg` for season 0), never
+# Plex's `SeasonNN.jpg`.
 artwork:
   - { kind: poster, name: poster.jpg }
-  - { kind: fanart, name: fanart.jpg }
+  - { kind: fanart, name: background.jpg }
   - { kind: season-poster, name: poster.jpg }
 
 filesystem:

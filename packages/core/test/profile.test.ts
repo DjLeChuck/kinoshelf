@@ -124,7 +124,7 @@ describe('jellyfin profile', () => {
     });
     expect(profile.artwork.map(({ kind, name, size }) => [kind, name, size])).toEqual([
       ['poster', 'poster.jpg', 'standard'],
-      ['fanart', 'fanart.jpg', 'original'],
+      ['fanart', 'background.jpg', 'original'],
       ['season-poster', 'poster.jpg', 'standard'],
     ]);
   });
