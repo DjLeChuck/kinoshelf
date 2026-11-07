@@ -138,7 +138,12 @@ describe('plex-nfo profile', () => {
     const vars = { title: 'The Bear', year: 2022, tmdb: 136315, season: 3, episode: 4 };
     expect(path(profile, 'movieFolder', vars)).toEqual(['The Bear (2022)']);
     expect(path(profile, 'episodeFile', vars)).toEqual(['The Bear (2022) - s03e04']);
-    expect(profile.nfo?.series).toBe('tvshow.nfo');
+    expect(profile.nfo).toEqual({
+      format: 'kodi',
+      movie: 'movie.nfo',
+      episode: '{file}.nfo',
+      series: 'tvshow.nfo',
+    });
     expect(profile.artwork.map(({ kind, name }) => [kind, name])).toEqual([
       ['poster', 'poster.jpg'],
       ['fanart', 'background.jpg'],

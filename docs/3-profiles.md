@@ -12,7 +12,8 @@ the path of your own YAML file.
 | `jellyfin`   | Jellyfin                               | `[tmdbid-<id>]`     | yes | `poster.jpg`, `fanart.jpg`     |
 
 - `plex` and `plex-no-id` write no metadata files: Plex fetches its own.
-- `jellyfin` writes a Kodi-format NFO: `movie.nfo`, `tvshow.nfo`, and one per episode.
+- `jellyfin` and `plex-nfo` write the same Kodi-format NFO: `movie.nfo`, `tvshow.nfo`, and one per
+  episode. No season NFO: Plex ignores it.
 - `plex-nfo` uses the same layout as `plex-no-id`, with NFO and artwork.
 
 ## Rules that hold for every profile
