@@ -48,6 +48,8 @@ interface DetailsBase {
   readonly cast: readonly Person[];
   readonly posterPath?: string;
   readonly backdropPath?: string;
+  /** The title art (a transparent PNG), in the metadata language when the provider has one. */
+  readonly logoPath?: string;
 }
 
 export interface MovieDetails extends DetailsBase {

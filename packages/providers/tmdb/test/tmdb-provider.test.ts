@@ -329,7 +329,8 @@ describe('getMovieDetails and getSeriesDetails', () => {
     expect(requests).toHaveLength(1);
     expect(Object.fromEntries(requests[0]?.url.searchParams ?? [])).toEqual({
       language: 'fr',
-      append_to_response: 'credits,external_ids,keywords,release_dates',
+      append_to_response: 'credits,external_ids,keywords,release_dates,images',
+      include_image_language: 'fr,en,null',
     });
     expect(movie).toMatchObject({
       kind: 'movie',
@@ -415,7 +416,7 @@ describe('getMovieDetails and getSeriesDetails', () => {
     const series = await provider.getSeriesDetails(tvId, 'fr');
 
     expect(requests[0]?.url.searchParams.get('append_to_response')).toBe(
-      'credits,external_ids,keywords,content_ratings',
+      'credits,external_ids,keywords,content_ratings,images',
     );
     expect(series?.certification).toEqual({ country: 'FR', value: '16' });
   });
@@ -433,6 +434,48 @@ describe('getMovieDetails and getSeriesDetails', () => {
     const body = { ...(fixtureJson('details-movie-438631.json') as object), imdb_id: '' };
     const { provider } = make([at('/3/movie/438631', () => json(JSON.stringify(body)))]);
     expect(await provider.getMovieDetails(movieId)).not.toHaveProperty('imdbId');
+  });
+
+  describe('logo', () => {
+    const logo = (file: string, lang: string | null, votes = 0, width = 500) => ({
+      file_path: `/${file}.png`,
+      iso_639_1: lang,
+      vote_average: votes,
+      width,
+    });
+    const movieWith = async (logos: readonly object[], language?: string) => {
+      const body = { ...(fixtureJson('details-movie-438631.json') as object), images: { logos } };
+      const { provider } = make([at('/3/movie/438631', () => json(JSON.stringify(body)))]);
+      return provider.getMovieDetails(movieId, language);
+    };
+
+    it('takes the one in the metadata language before English and textless ones', async () => {
+      const logos = [logo('en', 'en', 9), logo('none', null, 9), logo('fr', 'fr', 1)];
+      expect((await movieWith(logos, 'fr-FR'))?.logoPath).toBe('/fr.png');
+      expect((await movieWith(logos, 'de'))?.logoPath).toBe('/en.png');
+      expect((await movieWith([logo('none', null)], 'fr'))?.logoPath).toBe('/none.png');
+    });
+
+    it('takes the best voted of a language, then the widest', async () => {
+      const logos = [logo('a', 'en', 3), logo('b', 'en', 5, 300), logo('c', 'en', 5, 900)];
+      expect((await movieWith(logos, 'en'))?.logoPath).toBe('/c.png');
+    });
+
+    it('drops a file that is not a PNG or JPEG, and has none when TMDB lists none', async () => {
+      const svg = { ...logo('x', 'en', 9), file_path: '/x.svg' };
+      expect(await movieWith([svg, logo('png', 'en', 1)])).toMatchObject({ logoPath: '/png.png' });
+      expect(await movieWith([svg])).not.toHaveProperty('logoPath');
+      expect(await movieWith([])).not.toHaveProperty('logoPath');
+    });
+
+    it('reads the logo of a series too', async () => {
+      const body = {
+        ...(fixtureJson('details-tv-136315.json') as object),
+        images: { logos: [logo('bear', 'en', 2)] },
+      };
+      const { provider } = make([at('/3/tv/136315', () => json(JSON.stringify(body)))]);
+      expect((await provider.getSeriesDetails(tvId, 'en'))?.logoPath).toBe('/bear.png');
+    });
   });
 
   it('returns null for an unknown work', async () => {

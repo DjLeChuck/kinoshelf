@@ -81,6 +81,20 @@ const credits = z.object({
   crew: z.array(crewMember).nullish(),
 });
 
+// What `append_to_response=images` adds: the logos, one per language and look.
+const images = z.object({
+  logos: z
+    .array(
+      z.object({
+        file_path: z.string(),
+        iso_639_1: z.string().nullish(),
+        vote_average: z.number().nullish(),
+        width: z.number().nullish(),
+      }),
+    )
+    .nullish(),
+});
+
 const detailsBase = {
   id: z.number().int(),
   overview: z.string().nullish(),
@@ -93,6 +107,7 @@ const detailsBase = {
   production_companies: z.array(named).nullish(),
   production_countries: z.array(named).nullish(),
   credits: credits.nullish(),
+  images: images.nullish(),
 };
 
 export const movieFullDetailsSchema = z.object({

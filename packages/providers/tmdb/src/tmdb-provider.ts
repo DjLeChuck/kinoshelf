@@ -80,6 +80,45 @@ const crewNames = (
 ];
 
 /** Names of a list of `{ name }`, blanks and repeats left out. */
+interface Logo {
+  file_path: string;
+  iso_639_1?: string | null | undefined;
+  vote_average?: number | null | undefined;
+  width?: number | null | undefined;
+}
+
+/** `fr-FR` asks for French images: the language part alone. */
+const primaryLanguage = (language: string | undefined): string =>
+  language?.split('-')[0]?.toLowerCase() ?? '';
+
+/**
+ * The languages TMDB is asked for logos in (`include_image_language`): the metadata language, then
+ * English, then the textless ones.
+ */
+const logoLanguages = (language: string | undefined): string =>
+  [...new Set([primaryLanguage(language), 'en', 'null'])].filter(Boolean).join(',');
+
+/**
+ * The logo to write: the metadata language first, then English, then a textless one, and within a
+ * language the best voted (the widest breaks a tie). A file that is not a PNG or JPEG is dropped.
+ */
+function pickLogo(
+  logos: readonly Logo[] | null | undefined,
+  language: string | undefined,
+): string | undefined {
+  const wanted = primaryLanguage(language);
+  const rank = (logo: Logo): number =>
+    logo.iso_639_1 === wanted ? 0 : logo.iso_639_1 === 'en' ? 1 : 2;
+  return [...(logos ?? [])]
+    .filter((logo) => IMAGE_PATH.test(logo.file_path))
+    .sort(
+      (a, b) =>
+        rank(a) - rank(b) ||
+        (b.vote_average ?? 0) - (a.vote_average ?? 0) ||
+        (b.width ?? 0) - (a.width ?? 0),
+    )[0]?.file_path;
+}
+
 const names = (items: readonly { name: string }[] | null | undefined): string[] => [
   ...new Set((items ?? []).map((i) => i.name.trim()).filter((n) => n !== '')),
 ];
@@ -135,7 +174,8 @@ export class TmdbProvider implements MetadataProvider {
       `/3/movie/${id.id}`,
       {
         language: language ?? this.language,
-        append_to_response: 'credits,external_ids,keywords,release_dates',
+        append_to_response: 'credits,external_ids,keywords,release_dates,images',
+        include_image_language: logoLanguages(language ?? this.language),
       },
       movieFullDetailsSchema,
       { ttlMs: DETAIL_TTL_MS, nullOn404: true },
@@ -156,7 +196,7 @@ export class TmdbProvider implements MetadataProvider {
       id: { provider: this.name, id: r.id },
       title: r.title,
       originalTitle: r.original_title,
-      ...this.commonDetails(r),
+      ...this.commonDetails(r, language ?? this.language),
       tags: names(r.keywords?.keywords),
       ...(certification && { certification }),
       ...(r.imdb_id && { imdbId: r.imdb_id }),
@@ -175,7 +215,8 @@ export class TmdbProvider implements MetadataProvider {
       `/3/tv/${id.id}`,
       {
         language: language ?? this.language,
-        append_to_response: 'credits,external_ids,keywords,content_ratings',
+        append_to_response: 'credits,external_ids,keywords,content_ratings,images',
+        include_image_language: logoLanguages(language ?? this.language),
       },
       tvFullDetailsSchema,
       { ttlMs: DETAIL_TTL_MS, nullOn404: true },
@@ -194,7 +235,7 @@ export class TmdbProvider implements MetadataProvider {
       id: { provider: this.name, id: r.id },
       title: r.name,
       originalTitle: r.original_name,
-      ...this.commonDetails(r),
+      ...this.commonDetails(r, language ?? this.language),
       tags: names(r.keywords?.results),
       ...(certification && { certification }),
       ...(imdbId && { imdbId }),
@@ -214,29 +255,33 @@ export class TmdbProvider implements MetadataProvider {
   }
 
   /** The fields movies and series share, whatever their TMDB spelling. */
-  private commonDetails(r: {
-    overview?: string | null | undefined;
-    tagline?: string | null | undefined;
-    poster_path?: string | null | undefined;
-    backdrop_path?: string | null | undefined;
-    genres?: readonly { name: string }[] | null | undefined;
-    production_companies?: readonly { name: string }[] | null | undefined;
-    production_countries?: readonly { name: string }[] | null | undefined;
-    credits?:
-      | {
-          cast?:
-            | readonly {
-                name: string;
-                character?: string | null | undefined;
-                order?: number | null | undefined;
-                profile_path?: string | null | undefined;
-              }[]
-            | null
-            | undefined;
-        }
-      | null
-      | undefined;
-  }) {
+  private commonDetails(
+    r: {
+      overview?: string | null | undefined;
+      tagline?: string | null | undefined;
+      poster_path?: string | null | undefined;
+      backdrop_path?: string | null | undefined;
+      genres?: readonly { name: string }[] | null | undefined;
+      production_companies?: readonly { name: string }[] | null | undefined;
+      production_countries?: readonly { name: string }[] | null | undefined;
+      credits?:
+        | {
+            cast?:
+              | readonly {
+                  name: string;
+                  character?: string | null | undefined;
+                  order?: number | null | undefined;
+                  profile_path?: string | null | undefined;
+                }[]
+              | null
+              | undefined;
+          }
+        | null
+        | undefined;
+      images?: { logos?: readonly Logo[] | null | undefined } | null | undefined;
+    },
+    language: string | undefined,
+  ) {
     const cast: Person[] = (r.credits?.cast ?? []).slice(0, CAST_LIMIT).map((p) => ({
       name: p.name,
       ...(p.character && { role: p.character }),
@@ -252,6 +297,7 @@ export class TmdbProvider implements MetadataProvider {
       ...(r.tagline && { tagline: r.tagline }),
       ...imageField('posterPath', r.poster_path),
       ...imageField('backdropPath', r.backdrop_path),
+      ...imageField('logoPath', pickLogo(r.images?.logos, language)),
     };
   }
 
