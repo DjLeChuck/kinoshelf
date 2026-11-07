@@ -77,7 +77,8 @@ contains no player-specific rule.
 - Plex has two modes: the default agents ignore NFO (profile `plex`), the optional "Plex NFO"
   agent (PMS 1.43.1+) reads Kodi-format NFO, `movie.nfo`, `tvshow.nfo`, per-episode `<file>.nfo`
   (as `jellyfin`; no season NFO, Plex ignores it), `poster.jpg`, `background.jpg` and a season
-  poster `Season01.jpg` (profile `plex-nfo`: no id in the names, since the NFO carries
+  poster `Season01.jpg`, or `season-specials-poster.jpg` for season 0 (the artwork's
+  `specialsName`) (profile `plex-nfo`: no id in the names, since the NFO carries
   `<uniqueid type="tmdb">`).
 - Profile `jellyfin`: `[tmdbid-<id>]` in the movie and series folders and in the movie file (the file
   must start with its folder's name), `SxxExx` episodes, `movie.nfo`, `tvshow.nfo`, `<file>.nfo`,

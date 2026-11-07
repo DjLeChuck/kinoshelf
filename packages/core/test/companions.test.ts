@@ -96,6 +96,13 @@ describe('showFileNames', () => {
     expect(names.seasonPoster(3)).toBe('season03-poster.jpg');
   });
 
+  it('gives season 0 its own poster name when the profile has one', async () => {
+    const names = showFileNames(await loadBundledProfile('plex-nfo'));
+    expect(names.seasonPoster(1)).toBe('Season01.jpg');
+    expect(names.seasonPoster(0)).toBe('season-specials-poster.jpg');
+    expect(showFileNames(await loadBundledProfile('jellyfin')).seasonPoster(0)).toBe('poster.jpg');
+  });
+
   it('has no name for what the profile does not write', async () => {
     const names = showFileNames(await loadBundledProfile('plex'));
     expect(names).toMatchObject({ nfo: undefined, poster: undefined, fanart: undefined });

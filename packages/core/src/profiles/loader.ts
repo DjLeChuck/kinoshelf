@@ -87,6 +87,12 @@ function checkTemplates(file: ProfileFile): void {
       allowed: image.kind === 'season-poster' ? VARIABLES.seasonArtworkName : VARIABLES.artworkName,
       folder: false,
     });
+    if (image.specialsName !== undefined) {
+      checkTemplate(`artwork.${index}.specialsName`, image.specialsName, {
+        allowed: [],
+        folder: false,
+      });
+    }
   });
 }
 
@@ -142,6 +148,7 @@ export function parseProfile(yamlText: string): Profile {
     artwork: file.artwork.map((image) => ({
       kind: image.kind,
       name: image.name,
+      ...(image.specialsName !== undefined && { specialsName: image.specialsName }),
       size: image.size ?? (image.kind === 'fanart' ? 'original' : 'standard'),
     })),
     filesystem: file.filesystem,

@@ -4,7 +4,7 @@ import { parseTemplate, renderProfileTemplate, templateVariables } from '../prof
 import type { Details, ImageSize } from '../types/details.js';
 import type { ParsedMedia } from '../types/media.js';
 import type { Operation } from '../types/operation.js';
-import type { ArtworkKind, Profile } from '../types/profile.js';
+import type { ArtworkKind, ArtworkSpec, Profile } from '../types/profile.js';
 import type { EpisodeInfo } from '../types/provider.js';
 
 export interface CompanionInput {
@@ -126,7 +126,7 @@ export function companionOperations(
       if (path && season !== undefined) {
         download(
           [...place.workFolders, ...place.seasonFolders],
-          render(image.name, { season }),
+          render(seasonPosterTemplate(image, season), { season }),
           path,
           image.size,
         );
@@ -140,6 +140,11 @@ export function companionOperations(
     }
   }
   return operations;
+}
+
+/** The name template of a season's poster: season 0 may have a name of its own. */
+function seasonPosterTemplate(spec: ArtworkSpec, season: number): string {
+  return season === 0 && spec.specialsName !== undefined ? spec.specialsName : spec.name;
 }
 
 /** A file a profile writes beside a video, as a library page counts it. */
@@ -207,7 +212,7 @@ export function showFileNames(profile: Profile): {
 } {
   const image = (kind: ArtworkKind, season = 0): string | undefined => {
     const spec = profile.artwork.find((candidate) => candidate.kind === kind);
-    return spec && companionName(profile, spec.name, { season });
+    return spec && companionName(profile, seasonPosterTemplate(spec, season), { season });
   };
   return {
     nfo:

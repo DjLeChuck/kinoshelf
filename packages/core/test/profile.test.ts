@@ -149,12 +149,33 @@ describe('plex-nfo profile', () => {
       ['fanart', 'background.jpg'],
       ['season-poster', 'Season{season:02}.jpg'],
     ]);
+    expect(profile.artwork[2]?.specialsName).toBe('season-specials-poster.jpg');
   });
 });
 
 describe('parseProfile', () => {
   it('accepts a minimal valid profile', () => {
     expect(parseProfile(base).nfo).toBeNull();
+  });
+
+  it('keeps the specials name of a season poster, and refuses it elsewhere', () => {
+    const artwork = (spec: string) => `${base}artwork:\n  - ${spec}\n`.replace('nfo: null\n', '');
+    const ok = parseProfile(
+      artwork("{ kind: season-poster, name: 'S{season:02}.jpg', specialsName: specials.jpg }"),
+    );
+    expect(ok.artwork[0]?.specialsName).toBe('specials.jpg');
+    expect(() =>
+      parseProfile(artwork('{ kind: poster, name: poster.jpg, specialsName: specials.jpg }')),
+    ).toThrow();
+    expect(
+      codeOf(() =>
+        parseProfile(
+          artwork(
+            "{ kind: season-poster, name: 'S{season:02}.jpg', specialsName: '{season}.jpg' }",
+          ),
+        ),
+      ),
+    ).toBe('profile.unknown-variable');
   });
 
   it('rejects a double-quoted template with a backslash escape', () => {

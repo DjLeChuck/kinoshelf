@@ -27,11 +27,18 @@ export const profileSchema = z.strictObject({
     .default(null),
   artwork: z
     .array(
-      z.strictObject({
-        kind: z.enum(['poster', 'fanart', 'season-poster']),
-        name: text,
-        size: z.enum(['preview', 'standard', 'original']).optional(),
-      }),
+      z
+        .strictObject({
+          kind: z.enum(['poster', 'fanart', 'season-poster']),
+          name: text,
+          // Only a season poster has one: the file name of season 0, for a player that names it apart.
+          specialsName: text.optional(),
+          size: z.enum(['preview', 'standard', 'original']).optional(),
+        })
+        .refine((image) => image.specialsName === undefined || image.kind === 'season-poster', {
+          message: '`specialsName` only applies to a season-poster',
+          path: ['specialsName'],
+        }),
     )
     .default([]),
   filesystem: z.strictObject({

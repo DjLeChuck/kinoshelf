@@ -58,6 +58,8 @@ export interface ArtworkSpec {
   readonly kind: ArtworkKind;
   /** File name; a season poster may use `{season}`. */
   readonly name: string;
+  /** Season 0's poster name when the player does not take `name` for it (no variable). */
+  readonly specialsName?: string;
   /** What the provider serves: a backdrop is worth its full size, a poster rarely is. */
   readonly size: ImageSize;
 }
