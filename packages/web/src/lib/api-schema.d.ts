@@ -3183,12 +3183,12 @@ export interface paths {
         };
         /**
          * Files that wait for a destination or a choice
-         * @description What the arrival folders (and paths sent by hand) hold that Kinoshelf could not settle alone: `review` (candidates to choose from, a conflict, a failed transfer) and `unrecognized`. Each file says where it would go (`destination`) and the libraries it could go to instead. `total` counts every file of the filter, for the badge of the navigation; `limit` and `offset` count releases.
+         * @description What the arrival folders (and paths sent by hand) hold that waits for a human: `review` (candidates to choose from, a conflict, a failed transfer), `unrecognized`, and `ready` (matched with confidence, but the analysis did not transfer it: `apply` is off; `POST /api/plans/{id}/execute` starts it). Each file says where it would go (`destination`) and the libraries it could go to instead. `total` counts every file of the filter, for the badge of the navigation; `limit` and `offset` count releases.
          */
         get: {
             parameters: {
                 query?: {
-                    state?: "review" | "unrecognized";
+                    state?: "ready" | "review" | "unrecognized";
                     limit?: number;
                     offset?: number;
                 };
@@ -3230,7 +3230,7 @@ export interface paths {
                                 /** @description Another series than the main one of the folder (`cluster` above 0). */
                                 detached: boolean;
                                 /** @enum {string} */
-                                state: "review" | "unrecognized";
+                                state: "ready" | "review" | "unrecognized";
                                 /** @enum {string|null} */
                                 kind: "movie" | "series" | null;
                                 resolution: string | null;
@@ -3351,7 +3351,7 @@ export interface paths {
                             /** @description Another series than the main one of the folder (`cluster` above 0). */
                             detached: boolean;
                             /** @enum {string} */
-                            state: "review" | "unrecognized";
+                            state: "ready" | "review" | "unrecognized";
                             /** @enum {string|null} */
                             kind: "movie" | "series" | null;
                             resolution: string | null;

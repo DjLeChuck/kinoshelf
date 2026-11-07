@@ -84,10 +84,14 @@ describe('GET /api/arrivals', () => {
     await scanDownloads(h);
 
     const found = await arrivals(h);
-    expect(found.total).toBe(1);
+    // Dune is matched but the scan only reads: it waits for a go, like the film nobody found.
+    expect(found.total).toBe(2);
     expect(found.sources).toEqual([{ id: 'downloads', name: 'Downloads', path: downloads }]);
-    expect(found.items).toHaveLength(1);
-    expect(found.items[0]).toMatchObject({
+    expect(found.items.map((item) => [item.file, item.state])).toEqual([
+      ['Dune.2021.mkv', 'ready'],
+      ['Mystery.Home.Video.2160p.mkv', 'unrecognized'],
+    ]);
+    expect(found.items[1]).toMatchObject({
       file: 'Mystery.Home.Video.2160p.mkv',
       state: 'unrecognized',
       resolution: '2160p',
@@ -96,8 +100,11 @@ describe('GET /api/arrivals', () => {
       destination: { libraryId: 'films' },
     });
     // Only the libraries of its kind are offered.
-    expect(found.items[0]?.destinationOptions.map((o) => o.id)).toEqual(['films', 'films-4k']);
+    expect(found.items[1]?.destinationOptions.map((o) => o.id)).toEqual(['films', 'films-4k']);
     expect((await arrivals(h, '?state=review')).items).toEqual([]);
+    expect((await arrivals(h, '?state=ready')).items.map((item) => item.file)).toEqual([
+      'Dune.2021.mkv',
+    ]);
     expect((await arrivals(h, '?state=unrecognized')).total).toBe(1);
     expect(roots.films).not.toBe(roots.uhd);
   });

@@ -37,7 +37,7 @@ export interface Arrival {
   readonly cluster: number;
   /** Another series than the main one of its folder (`cluster` above 0). */
   readonly detached: boolean;
-  readonly state: 'review' | 'unrecognized';
+  readonly state: 'ready' | 'review' | 'unrecognized';
   readonly kind: 'movie' | 'series' | null;
   readonly resolution: string | null;
   /** What the parser read of the name: where a manual search starts. */
@@ -71,7 +71,7 @@ export interface Preview {
   readonly conflicts: readonly ConflictBody[];
 }
 
-export type QueueStatus = 'to-validate' | 'nothing-found' | 'conflict' | 'failed';
+export type QueueStatus = 'ready' | 'to-validate' | 'nothing-found' | 'conflict' | 'failed';
 
 /** What a file is waiting for. A failed transfer says so first: it needs a look, not a choice. */
 export function statusOf(arrival: Pick<Arrival, 'state' | 'error' | 'conflicts'>): QueueStatus {
@@ -80,12 +80,15 @@ export function statusOf(arrival: Pick<Arrival, 'state' | 'error' | 'conflicts'>
   }
   return arrival.state === 'unrecognized'
     ? 'nothing-found'
-    : arrival.conflicts.length > 0
-      ? 'conflict'
-      : 'to-validate';
+    : arrival.state === 'ready'
+      ? 'ready'
+      : arrival.conflicts.length > 0
+        ? 'conflict'
+        : 'to-validate';
 }
 
 export const STATUS_LABEL: Record<QueueStatus, MessageKey> = {
+  ready: 'web.queue.status.ready',
   'to-validate': 'web.queue.status.to-validate',
   'nothing-found': 'web.queue.status.nothing-found',
   conflict: 'web.queue.status.conflict',
@@ -93,6 +96,7 @@ export const STATUS_LABEL: Record<QueueStatus, MessageKey> = {
 };
 
 export const QUEUE_CHIP: Record<QueueStatus, string> = {
+  ready: 'chip-ok',
   'to-validate': 'chip-warn',
   'nothing-found': 'chip-neutral',
   conflict: 'chip-danger',
@@ -251,4 +255,23 @@ export async function validate(
   const followers = matched.followers ?? [];
   await post(`/api/plans/${arrival.jobId}/execute`, { entries: [arrival.id, ...followers] });
   return { status: 'started', followed: followers.length };
+}
+
+/**
+ * Starts the transfer of files matched with confidence as the analysis planned them, with no new
+ * choice: one execution per job (a release is a job), each asked for its own files. Returns how
+ * many files were queued.
+ */
+export async function startPlanned(
+  files: readonly Pick<Arrival, 'id' | 'jobId'>[],
+  post: Post,
+): Promise<number> {
+  const byJob = new Map<string, string[]>();
+  for (const { id, jobId } of files) {
+    byJob.set(jobId, [...(byJob.get(jobId) ?? []), id]);
+  }
+  for (const [jobId, entries] of byJob) {
+    await post(`/api/plans/${jobId}/execute`, { entries });
+  }
+  return files.length;
 }

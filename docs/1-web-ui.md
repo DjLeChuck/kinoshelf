@@ -63,11 +63,19 @@ page (**Add the version to the name**).
 
 ## Arrivals
 
-Arrivals hold the files Kinoshelf could not place with confidence, that is with a score under the
-threshold (85 by default). For each one you see:
+Arrivals hold the files that wait for you, in three states:
 
-- its TMDB candidates and their score, and a manual search;
-- the destination a choice would give.
+- **Ready to transfer**: matched with confidence (a score at or above the threshold, 85 by
+  default), but not moved because the analysis only reads. That is what a watched folder or a scan
+  does while the setting "Transfer what is identified with confidence" is off. **Transfer** runs the
+  plan as it is, or pick another candidate, library or size and **Validate** instead; **Transfer
+  all the files that are ready** (at the top, once the whole list is loaded) starts them all.
+- **To validate**: Kinoshelf could not place the file with confidence, or a conflict or a failed
+  transfer needs a look.
+- **Not recognized**: nothing was found.
+
+For each file you see its TMDB candidates and their score, a manual search, and the destination a
+choice would give.
 
 **Validate** sends the file to the library you pick. **Ignore** sets it aside. A series is
 validated as a release: the other episodes of the same release follow.

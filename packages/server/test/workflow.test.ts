@@ -74,7 +74,7 @@ const duneTarget = (h: Harness): string =>
 
 interface ArrivalBody {
   id: string;
-  state: 'review' | 'unrecognized';
+  state: 'ready' | 'review' | 'unrecognized';
   error: { code: string } | null;
   conflicts?: { reason: string }[];
 }
@@ -84,17 +84,47 @@ const queue = async (h: Harness): Promise<ArrivalBody[]> =>
   (await h.request('GET', '/api/arrivals')).json<{ items: ArrivalBody[] }>().items;
 
 describe('validation queue', () => {
-  it('holds what a human must decide, not what matched', async () => {
+  it('holds what a human must decide, and what matched but nobody started', async () => {
     const h = await harness();
-    const { mystery } = await analyzed(h);
+    const { dune, mystery } = await analyzed(h);
     const waiting = await queue(h);
-    expect(waiting.map((e) => e.id)).toEqual([mystery.id]);
-    expect(waiting[0]).toMatchObject({ state: 'unrecognized' });
+    expect(waiting.map((e) => [e.id, e.state])).toEqual([
+      [dune.id, 'ready'],
+      [mystery.id, 'unrecognized'],
+    ]);
+    const only = async (state: string): Promise<string[]> =>
+      (await h.request('GET', `/api/arrivals?state=${state}`))
+        .json<{ items: { id: string }[] }>()
+        .items.map((e) => e.id);
+    expect(await only('ready')).toEqual([dune.id]);
+    expect(await only('review')).toEqual([]);
+    expect(await only('unrecognized')).toEqual([mystery.id]);
+  });
+
+  it('does not offer a file whose analysis already queued its transfer', async () => {
+    const h = await harness();
+    const { mystery } = await analyzed(h, true);
+    // `apply` queued the execution with the analysis: only what could not be matched waits.
+    expect((await queue(h)).map((e) => e.id)).toEqual([mystery.id]);
+    await h.app.jobs.idle();
+    expect((await queue(h)).map((e) => e.id)).toEqual([mystery.id]);
+  });
+
+  it('starts a ready file as planned, and stops offering it while that transfer waits', async () => {
+    const h = await harness();
+    const { dune, jobId } = await analyzed(h);
+    const queued = await h.request('POST', `/api/plans/${jobId}/execute`, { entries: [dune.id] });
+    expect(queued.statusCode).toBe(202);
+    // Queued, not yet run: no second click can stack the same work.
+    expect((await queue(h)).map((e) => e.state)).toEqual(['unrecognized']);
+    await h.app.jobs.idle();
+    expect(await readFile(duneTarget(h), 'utf8')).toBe('dune');
+    expect((await queue(h)).map((e) => e.state)).toEqual(['unrecognized']);
   });
 
   it('lets a human pick a candidate found by a manual search', async () => {
     const h = await harness();
-    const { mystery } = await analyzed(h);
+    const { dune, mystery } = await analyzed(h);
 
     const found = await h.request('GET', '/api/search?query=Dune');
     expect(found.statusCode).toBe(200);
@@ -113,7 +143,11 @@ describe('validation queue', () => {
       classification: 'to-rename',
       destination: duneTarget(h),
     });
-    expect(await queue(h)).toEqual([]);
+    // Matched, so no longer unrecognized: like the other film it only waits for its go.
+    expect((await queue(h)).map((e) => [e.id, e.state])).toEqual([
+      [dune.id, 'ready'],
+      [mystery.id, 'ready'],
+    ]);
   });
 
   it('previews where a candidate would send a file, without recording anything', async () => {
@@ -123,7 +157,9 @@ describe('validation queue', () => {
     const preview = await h.request('POST', `/api/entries/${mystery.id}/preview`, DUNE);
     expect(preview.statusCode).toBe(200);
     expect(preview.json()).toEqual({ destination: duneTarget(h), conflicts: [], folder: null });
-    expect((await queue(h))[0]).toMatchObject({ id: mystery.id, state: 'unrecognized' });
+    expect((await queue(h)).find((e) => e.id === mystery.id)).toMatchObject({
+      state: 'unrecognized',
+    });
 
     await put(duneTarget(h), 'already here');
     const taken = (await h.request('POST', `/api/entries/${mystery.id}/preview`, DUNE)).json<{
@@ -147,10 +183,10 @@ describe('validation queue', () => {
 
   it('sets a file aside', async () => {
     const h = await harness();
-    const { mystery } = await analyzed(h);
+    const { dune, mystery } = await analyzed(h);
     const ignored = await h.request('POST', `/api/entries/${mystery.id}/ignore`);
     expect(ignored.json<EntryBody>().resolution).toBe('ignored');
-    expect(await queue(h)).toEqual([]);
+    expect((await queue(h)).map((e) => e.id)).toEqual([dune.id]);
 
     const again = await h.request('POST', `/api/entries/${mystery.id}/match`, DUNE);
     expect(again.statusCode).toBe(409);

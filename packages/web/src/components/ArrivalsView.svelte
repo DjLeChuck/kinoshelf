@@ -13,6 +13,7 @@
     groupReleases,
     readArrivals,
     releaseKey,
+    startPlanned,
     statusOf,
     type Arrival,
     type ArrivalPage,
@@ -20,8 +21,8 @@
   import type { WatchScan, WatchStatus } from '../lib/watch.js';
   import ArrivalDetail from './ArrivalDetail.svelte';
 
-  type Filter = 'all' | 'review' | 'unrecognized';
-  const FILTERS: readonly Filter[] = ['all', 'review', 'unrecognized'];
+  type Filter = 'all' | 'ready' | 'review' | 'unrecognized';
+  const FILTERS: readonly Filter[] = ['all', 'ready', 'review', 'unrecognized'];
 
   const PAGE = 50;
 
@@ -61,13 +62,35 @@
       groups[0]?.others[0]?.files[0],
   );
   /** The files that go along with the open one: those of its series in the release. */
-  const siblings = $derived(
+  const mates = $derived(
     open
       ? (page?.items.filter(
           (item) => releaseKey(item) === releaseKey(open) && item.cluster === open.cluster,
-        ).length ?? 1)
-      : 1,
+        ) ?? [])
+      : [],
   );
+  const siblings = $derived(Math.max(mates.length, 1));
+  /** Everything matched with confidence that only waits for a go. */
+  const ready = $derived(page?.items.filter(({ state }) => state === 'ready') ?? []);
+  // Only when the list is whole: "all" must not leave the files of a later page behind.
+  const canTransferAll = $derived(
+    ready.length > 0 && page !== undefined && page.total === page.items.length,
+  );
+  let starting = $state(false);
+
+  async function transferAll(): Promise<void> {
+    starting = true;
+    try {
+      const count = await startPlanned(ready, api.post);
+      notice = t('web.arrivals.transfer-all.done', { count });
+      loaded.failure = undefined;
+    } catch (error) {
+      loaded.failure = error;
+    } finally {
+      starting = false;
+    }
+    void load();
+  }
 
   /** Whether the open file is of the same series of the same release. */
   function inSeriesOfOpen(arrival: Arrival): boolean {
@@ -139,6 +162,20 @@
       >
     {/each}
   </div>
+
+  {#if canTransferAll}
+    <div>
+      <button
+        type="button"
+        class="btn btn-primary"
+        disabled={starting}
+        onclick={() => void transferAll()}
+        >{starting
+          ? t('web.arrivals.transfer-all.running')
+          : t('web.arrivals.transfer-all', { count: ready.length })}</button
+      >
+    </div>
+  {/if}
 
   {#if notice}<p class="alert notice" role="status">{notice}</p>{/if}
 
@@ -235,6 +272,7 @@
             <ArrivalDetail
               entry={open}
               {siblings}
+              {mates}
               ondone={(message: string) => {
                 notice = message;
                 void load();

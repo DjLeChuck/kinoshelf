@@ -8,7 +8,7 @@ import type {
   ScoredCandidate,
 } from '@kinoshelf/core';
 import type { Database } from 'better-sqlite3';
-import { openEntry, REVIEW_ENTRY, UNRECOGNIZED_ENTRY } from './entry-sql.js';
+import { openEntry, READY_ENTRY, REVIEW_ENTRY, UNRECOGNIZED_ENTRY } from './entry-sql.js';
 
 /** How a file left the queue: transferred, failed (needs a human again) or set aside. */
 export type Resolution = 'done' | 'failed' | 'ignored';
@@ -212,24 +212,21 @@ export class EntryStore {
 
   /**
    * Files of the arrival folders (and of jobs sent by hand, which belong to none) that wait for a
-   * human: a file to choose a work for, or one whose transfer failed. A scan of a library
+   * human: a file to choose a work for, one whose transfer failed, or one matched with confidence
+   * whose transfer nobody started (`ready`). A scan of a library
    * organized in place never lands here: what it holds is already where it lives.
    */
   arrivals(options: {
     arrivalIds: readonly string[];
-    state?: 'review' | 'unrecognized';
+    state?: 'ready' | 'review' | 'unrecognized';
     limit: number;
     offset: number;
   }): { total: number; entries: Entry[] } {
     const marks = options.arrivalIds.map(() => '?').join(', ');
-    const review = REVIEW_ENTRY;
-    const unrecognized = UNRECOGNIZED_ENTRY;
-    const state =
-      options.state === 'review'
-        ? review
-        : options.state === 'unrecognized'
-          ? unrecognized
-          : `(${review} OR ${unrecognized})`;
+    const states = { ready: READY_ENTRY, review: REVIEW_ENTRY, unrecognized: UNRECOGNIZED_ENTRY };
+    const state = options.state
+      ? states[options.state]
+      : `(${READY_ENTRY} OR ${REVIEW_ENTRY} OR ${UNRECOGNIZED_ENTRY})`;
     const where = `${state} AND job_id IN (
       SELECT id FROM jobs WHERE library_id IS NULL${marks ? ` OR library_id IN (${marks})` : ''})`;
     const total =

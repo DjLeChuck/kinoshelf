@@ -319,9 +319,14 @@ refuses to delete a library an arrival folder points at (`library.in-use`). Ther
   roots of the executable entries). A scan replaces a library's rows as a whole, so one running while
   files move into the library would leave a stale view. Without a verdict, or when it cannot be told,
   they stay serial. The idle hook (probing, completeness) fires only when both lanes are free.
-- **Arrivals** (`GET /api/arrivals`, `?state=review|unrecognized`): what the arrival folders (and paths
+- **Arrivals** (`GET /api/arrivals`, `?state=ready|review|unrecognized`): what the arrival folders (and paths
   sent by hand, which belong to none) hold that needs a human; a library organized in place never
-  lands there. Each item carries its `release` and `detached`; the web groups them (one line per release,
+  lands there. `ready` is a file matched with confidence (`to-rename`) that no transfer holds: its job
+  was an analysis only (`watch.apply` off) and nothing queued it, so without this state it had no way out
+  of the UI. `READY_ENTRY` (`entry-sql.ts`) leaves out a file a queued or running execution holds, so a
+  click never stacks the same work. The web's "Transfer" and "Transfer all" are
+  `POST /api/plans/{id}/execute` with `entries` (`startPlanned`), with no new match; changing the
+  candidate, library or size goes through `match` as before. Each item carries its `release` and `detached`; the web groups them (one line per release,
   the detached listed under it). `POST /api/entries/:id/{match,preview,ignore}` settle a file or its release. The destination of an
   arrival is the library of its kind in the folder's `into` (the first of its type for a path sent
   by hand), unless `libraryId` picks another one of the work's kind (422 `library.wrong-type`): it is

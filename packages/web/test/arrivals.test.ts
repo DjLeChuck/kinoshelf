@@ -10,6 +10,7 @@ import {
   sameCandidate,
   statusOf,
   toMatchBody,
+  startPlanned,
   validate,
   type Arrival,
   type Candidate,
@@ -43,6 +44,7 @@ describe('statusOf', () => {
   it.each([
     [{}, 'to-validate'],
     [{ state: 'unrecognized' }, 'nothing-found'],
+    [{ state: 'ready' }, 'ready'],
     [{ conflicts: conflict }, 'conflict'],
     [{ error: { code: 'x' } }, 'failed'],
     // A transfer that failed after a conflict is first a failure.
@@ -241,5 +243,32 @@ describe('readArrivals', () => {
       [1, 2],
     ]);
     expect(page.items).toHaveLength(6);
+  });
+});
+
+describe('startPlanned', () => {
+  it('asks each job once for its own files, with no new choice', async () => {
+    const calls: [string, unknown][] = [];
+    const post = <T>(url: string, body?: unknown): Promise<T> => {
+      calls.push([url, body]);
+      return Promise.resolve(undefined as T);
+    };
+    const started = await startPlanned(
+      [
+        { id: 'a', jobId: 'j1' },
+        { id: 'b', jobId: 'j2' },
+        { id: 'c', jobId: 'j1' },
+      ],
+      post,
+    );
+    expect(started).toBe(3);
+    expect(calls).toEqual([
+      ['/api/plans/j1/execute', { entries: ['a', 'c'] }],
+      ['/api/plans/j2/execute', { entries: ['b'] }],
+    ]);
+  });
+
+  it('does nothing for no file', async () => {
+    expect(await startPlanned([], () => Promise.reject(new Error('no call')))).toBe(0);
   });
 });

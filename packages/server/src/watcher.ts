@@ -9,7 +9,7 @@ import {
   type WatchConfig,
 } from '@kinoshelf/core';
 import type { Database } from 'better-sqlite3';
-import { REVIEW_ENTRY, UNRECOGNIZED_ENTRY } from './entry-sql.js';
+import { READY_ENTRY, REVIEW_ENTRY, UNRECOGNIZED_ENTRY } from './entry-sql.js';
 
 /** What download clients append to a file while it is not complete. */
 const INCOMPLETE_EXTENSIONS = ['!qb', 'part', 'crdownload', 'tmp', '!ut', 'bc!', 'aria2'];
@@ -316,7 +316,7 @@ export class FolderWatcher {
     const entries = this.deps.database
       .prepare<[string, string], { path: string }>(
         `SELECT DISTINCT path FROM job_entries
-         WHERE (${REVIEW_ENTRY} OR ${UNRECOGNIZED_ENTRY}) AND path >= ? AND path < ?`,
+         WHERE (${READY_ENTRY} OR ${REVIEW_ENTRY} OR ${UNRECOGNIZED_ENTRY}) AND path >= ? AND path < ?`,
       )
       .all(from, to);
     return new Set([...jobs, ...entries].map((row) => row.path));

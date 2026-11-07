@@ -817,7 +817,7 @@ export const arrivalsSchema = {
             type: 'boolean',
             description: 'Another series than the main one of the folder (`cluster` above 0).',
           },
-          state: { type: 'string', enum: ['review', 'unrecognized'] },
+          state: { type: 'string', enum: ['ready', 'review', 'unrecognized'] },
           kind: { type: 'string', enum: ['movie', 'series'], nullable: true },
           /** The picture size the name announces (`2160p`), null when it says none. */
           resolution: { type: 'string', nullable: true },

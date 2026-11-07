@@ -4,7 +4,10 @@
   import { t } from '../lib/i18n.svelte.js';
   import {
     folderOf,
+    QUEUE_CHIP,
+    STATUS_LABEL,
     releaseName,
+    startPlanned,
     statusOf,
     toMatchBody,
     validate,
@@ -20,11 +23,14 @@
   let {
     entry,
     siblings = 1,
+    mates = [],
     ondone,
   }: {
     entry: Arrival;
     /** Files validated together with this one: its release's (1 for a movie or a lone episode). */
     siblings?: number;
+    /** Those files themselves, this one included: what "Transfer" starts when it is ready. */
+    mates?: readonly Arrival[];
     /** The file left the list (transferred or set aside): what to tell the user. */
     ondone: (message: string) => void;
   } = $props();
@@ -57,6 +63,16 @@
   );
   const chosenSize = $derived(screenSize === '' ? undefined : screenSize);
   const conflicts = $derived(preview?.conflicts ?? []);
+  /**
+   * A file matched with confidence goes as planned, unless another candidate, library or size is
+   * picked: that is a new choice, which "Validate" matches again.
+   */
+  const asPlanned = $derived(
+    status === 'ready' &&
+      selected === entry.candidates[0] &&
+      chosenLibrary === undefined &&
+      chosenSize === undefined,
+  );
   const canValidate = $derived(
     selected !== undefined &&
       !busy &&
@@ -135,6 +151,16 @@
     busy = true;
     failure = undefined;
     try {
+      if (asPlanned) {
+        const files = mates.length > 0 ? mates : [entry];
+        await startPlanned(files, api.post);
+        ondone(
+          files.length > 1
+            ? t('web.queue.validated.followed', { name, count: files.length - 1 })
+            : t('web.queue.validated', { name }),
+        );
+        return;
+      }
       const outcome = await validate(
         entry,
         {
@@ -187,17 +213,12 @@
       <h2 class="mono release">{name}</h2>
       <p class="muted mono folder">{folderOf(entry.path)}</p>
     </div>
-    <span
-      class="chip chip-{status === 'to-validate'
-        ? 'warn'
-        : status === 'nothing-found'
-          ? 'neutral'
-          : 'danger'}"
-    >
-      {t(`web.queue.status.${status}`)}
-    </span>
+    <span class="chip {QUEUE_CHIP[status]}">{t(STATUS_LABEL[status])}</span>
   </header>
 
+  {#if status === 'ready'}
+    <p class="alert" role="note">{t('web.queue.ready')}</p>
+  {/if}
   {#if entry.detached}
     <p class="alert" role="note">
       {t('web.queue.detached', { release: entry.release ? releaseName(entry.release) : '' })}
@@ -358,7 +379,11 @@
       disabled={!canValidate}
       onclick={() => void confirm()}
     >
-      {busy ? t('web.queue.validating') : t('web.queue.validate')}
+      {busy
+        ? t('web.queue.validating')
+        : asPlanned
+          ? t('web.queue.transfer')
+          : t('web.queue.validate')}
     </button>
     <button type="button" class="btn" disabled={busy} onclick={() => void ignore()}>
       {t('web.queue.ignore')}

@@ -108,6 +108,15 @@ export function presentEntry(entry: Entry): unknown {
   };
 }
 
+/** What an arriving file waits for: a transfer to start, a choice, or a name nobody found. */
+function arrivalState(entry: Entry): 'ready' | 'review' | 'unrecognized' {
+  return entry.classification === 'unrecognized'
+    ? 'unrecognized'
+    : entry.classification === 'to-rename' && entry.resolution === null
+      ? 'ready'
+      : 'review';
+}
+
 /** One file of an arrival: what it is called, how sure the match is, where it would go. */
 function presentArrival(
   entry: Entry,
@@ -126,7 +135,7 @@ function presentArrival(
     release: entry.release,
     cluster: entry.cluster,
     detached: entry.detached,
-    state: entry.classification === 'unrecognized' ? 'unrecognized' : 'review',
+    state: arrivalState(entry),
     kind,
     resolution: resolutionOf(entry.path),
     title: entry.parsed.title ?? null,
@@ -246,19 +255,23 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
     },
   );
 
-  api.get<{ Querystring: Paging & { state?: 'review' | 'unrecognized' } }>(
+  api.get<{ Querystring: Paging & { state?: 'ready' | 'review' | 'unrecognized' } }>(
     '/api/arrivals',
     {
       schema: {
         summary: 'Files that wait for a destination or a choice',
         description:
-          'What the arrival folders (and paths sent by hand) hold that Kinoshelf could not settle ' +
-          'alone: `review` (candidates to choose from, a conflict, a failed transfer) and ' +
-          '`unrecognized`. Each file says where it would go (`destination`) and the libraries it could go to instead. `total` counts ' +
+          'What the arrival folders (and paths sent by hand) hold that waits for a human: `review` ' +
+          '(candidates to choose from, a conflict, a failed transfer), `unrecognized`, and `ready` ' +
+          '(matched with confidence, but the analysis did not transfer it: `apply` is off; ' +
+          '`POST /api/plans/{id}/execute` starts it). Each file says where it would go (`destination`) and the libraries it could go to instead. `total` counts ' +
           'every file of the filter, for the badge of the navigation; `limit` and `offset` count releases.',
         querystring: {
           type: 'object',
-          properties: { state: { type: 'string', enum: ['review', 'unrecognized'] }, ...paging },
+          properties: {
+            state: { type: 'string', enum: ['ready', 'review', 'unrecognized'] },
+            ...paging,
+          },
         },
         response: { 200: arrivalsSchema, 401: errorSchema },
       },

@@ -367,13 +367,18 @@ export const fr: Record<keyof typeof en, string> = {
   'web.library.none.link': 'Ouvrir les réglages',
   'web.arrivals.title': 'Arrivées',
   'web.arrivals.intro':
-    'Les téléchargements que Kinoshelf n’a pas pu trancher seul. Choisissez leur œuvre et leur bibliothèque.',
+    'Les téléchargements qui vous attendent : lancez le transfert de ceux que Kinoshelf a identifiés, ou choisissez l’œuvre et la bibliothèque des autres.',
   'web.arrivals.filter.label': 'Filtrer par état',
   'web.arrivals.filter.all': 'Tout',
+  'web.arrivals.filter.ready': 'Prêts à transférer',
   'web.arrivals.filter.review': 'À valider',
   'web.arrivals.filter.unrecognized': 'Non reconnus',
   'web.arrivals.list.label': 'Fichiers à trancher',
   'web.arrivals.empty': 'Rien n’attend votre décision.',
+  'web.arrivals.transfer-all': 'Transférer tous les fichiers prêts ({count})',
+  'web.arrivals.transfer-all.running': 'Lancement…',
+  'web.arrivals.transfer-all.done':
+    '{count, plural, one {Transfert lancé pour # fichier} other {Transfert lancé pour # fichiers}}.',
   'web.arrivals.from': 'depuis {source}',
   'web.arrivals.select': 'Choisissez un fichier pour le trancher.',
   'web.arrivals.check': 'Vérifier maintenant',
@@ -555,6 +560,7 @@ export const fr: Record<keyof typeof en, string> = {
     'Désactivé, tout attend dans les Arrivées jusqu’à ce que vous l’appliquiez.',
   'web.settings.invalid.watch-seconds':
     'Indiquez un nombre entier de secondes, ou laissez le champ vide.',
+  'web.queue.status.ready': 'Prêt à transférer',
   'web.queue.status.to-validate': 'À valider',
   'web.queue.status.nothing-found': 'Rien trouvé',
   'web.queue.status.conflict': 'Conflit',
@@ -587,6 +593,9 @@ export const fr: Record<keyof typeof en, string> = {
   'web.queue.destination.folder': 'Les {count} fichiers vont dans ce dossier, chacun à sa place.',
   'web.queue.destination.loading': 'Vérification de la destination…',
   'web.queue.conflicts': 'Ce choix ne peut pas être appliqué : {reasons}.',
+  'web.queue.ready':
+    'Identifié avec confiance, mais pas transféré : l’analyse ne fait que lire (le transfert automatique est désactivé dans les réglages). Transférez-le tel que prévu, ou choisissez un autre candidat à valider.',
+  'web.queue.transfer': 'Transférer',
   'web.queue.validate': 'Valider',
   'web.queue.validating': 'Validation…',
   'web.queue.ignore': 'Ignorer',

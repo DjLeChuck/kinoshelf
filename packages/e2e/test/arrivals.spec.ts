@@ -45,6 +45,40 @@ test('validates an arrival and finds it in the library it was sent to', async ({
   await expect(page.getByRole('button', { name: /Dune/ })).toBeVisible();
 });
 
+test('transfers a file Kinoshelf matched but the scan only read, as planned', async ({
+  page,
+  request,
+}) => {
+  // Its own name and picture size: other tests leave an Alien of their own waiting in Arrivals.
+  const folder = incoming('arrivals-ready');
+  const release = 'Alien.1979.2160p-READY';
+  const alien = library('films', 'Alien (1979) {tmdb-348}', 'Alien (1979) {tmdb-348} - 2160p.mkv');
+  await mkdir(`${folder}/${release}`, { recursive: true });
+  await writeFile(`${folder}/${release}/${release}.mkv`, 'video');
+  const created = await request.post('/api/libraries', {
+    headers: AUTH_HEADERS,
+    data: { name: 'Ready drop', source: folder, into: { movie: 'films', series: 'series' } },
+  });
+  expect(created.status()).toBe(201);
+  const { id } = (await created.json()) as { id: string };
+  expect(
+    (await request.post(`/api/libraries/${id}/scan`, { headers: AUTH_HEADERS })).status(),
+  ).toBe(202);
+
+  await signIn(page);
+  await page.goto('/arrivals?state=ready');
+  const row = page.getByRole('button', { name: new RegExp(release.replaceAll('.', '\\.')) });
+  await expect(row).toContainText('Ready to transfer');
+
+  // Nothing to choose: the match is kept, and "Transfer" runs the plan as it is.
+  await row.click();
+  await expect(page.getByText(alien)).toBeVisible();
+  await page.getByRole('button', { name: 'Transfer', exact: true }).click();
+  await expect(page.getByRole('status').filter({ hasText: 'Transfer started' })).toBeVisible();
+  await expect.poll(() => exists(alien)).toBe(true);
+  await expect(row).toHaveCount(0);
+});
+
 test('the Check now button is disabled while no folder is watched', async ({ page }) => {
   await signIn(page);
   await page.goto('/arrivals');
