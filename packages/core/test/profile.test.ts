@@ -147,6 +147,7 @@ describe('plex-nfo profile', () => {
     expect(profile.artwork.map(({ kind, name }) => [kind, name])).toEqual([
       ['poster', 'poster.jpg'],
       ['fanart', 'background.jpg'],
+      ['season-poster', 'Season{season:02}.jpg'],
     ]);
   });
 });

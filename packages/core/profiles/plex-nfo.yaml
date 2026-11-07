@@ -30,11 +30,12 @@ nfo:
   episode: '{file}.nfo'
   series: tvshow.nfo
 
-# Plex documents `poster.jpg` and `background.jpg` for a movie or a show; it names nothing for a
-# season, so none is written.
+# Plex documents `poster.jpg` and `background.jpg` for a movie or a show, and `SeasonXX.jpg` for a
+# season (XX is the season number, zero-padded).
 artwork:
   - { kind: poster, name: poster.jpg }
   - { kind: fanart, name: background.jpg }
+  - { kind: season-poster, name: 'Season{season:02}.jpg' }
 
 filesystem:
   # Libraries are often shared over SMB: avoid characters Windows cannot store.
