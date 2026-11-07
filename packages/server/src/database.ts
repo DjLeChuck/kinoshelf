@@ -311,6 +311,16 @@ export const SERVER_MIGRATIONS: readonly { readonly name: string; readonly sql: 
     name: 'server:023-job-rescan',
     sql: 'ALTER TABLE jobs ADD COLUMN rescan INTEGER NOT NULL DEFAULT 0;',
   },
+  {
+    // Whether the logo (`logo.png`) is there, as the poster and fanart are: 1 or 0, NULL when the
+    // profile writes none or the row predates it (a rescan, or for a show the next look at the
+    // disk, fills it).
+    name: 'server:024-logo',
+    sql: `
+      ALTER TABLE library_items ADD COLUMN logo INTEGER;
+      ALTER TABLE series_files ADD COLUMN logo INTEGER;
+    `,
+  },
 ];
 
 /** Opens the single SQLite file of the config directory, shared with the CLI and the cache. */

@@ -105,7 +105,8 @@
       <dt class="muted">{t('web.library.metadata')}</dt>
       <dd>
         NFO: {present(detail.nfo)} · {t('web.library.col.poster')}: {present(detail.poster)} ·
-        {t('web.library.col.fanart')}: {present(detail.fanart)}
+        {t('web.library.col.fanart')}: {present(detail.fanart)} ·
+        {t('web.library.col.logo')}: {present(detail.logo)}
       </dd>
     </dl>
     {#if canRun(item)}

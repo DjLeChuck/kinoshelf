@@ -37,6 +37,7 @@ export interface LibraryItem {
   readonly nfo: boolean | null;
   readonly poster: boolean | null;
   readonly fanart: boolean | null;
+  readonly logo: boolean | null;
   /** What settles it: `GET /api/entries/{id}`. */
   readonly entryId: string | null;
   /** The folder it came in; files sharing it and `cluster` are validated together. `null`: not told. */
@@ -78,7 +79,11 @@ export interface TransferProgress {
 
 export interface ItemsPage {
   readonly library: {
-    readonly writes: { readonly nfo: boolean; readonly artwork: boolean };
+    readonly writes: {
+      readonly nfo: boolean;
+      readonly artwork: boolean;
+      readonly logo: boolean;
+    };
   };
   /** `null` until a scan of the source has ended. */
   readonly scannedAt: string | null;
@@ -132,6 +137,7 @@ export interface Show {
   readonly nfo: boolean | null;
   readonly poster: boolean | null;
   readonly fanart: boolean | null;
+  readonly logo: boolean | null;
 }
 
 export type EpisodeState = 'present' | 'missing' | 'unaired' | 'extra';

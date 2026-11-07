@@ -336,6 +336,7 @@ export const fr: Record<keyof typeof en, string> = {
   'web.library.col.video': 'Vidéo',
   'web.library.col.poster': 'Affiche',
   'web.library.col.fanart': 'Fanart',
+  'web.library.col.logo': 'Logo',
   'web.library.state.review': 'À valider',
   'web.library.state.rename': 'À renommer',
   'web.library.state.unrecognized': 'Non reconnu',

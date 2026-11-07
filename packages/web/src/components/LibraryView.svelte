@@ -346,6 +346,7 @@
                   <th>{t('web.library.col.poster')}</th>
                   <th>{t('web.library.col.fanart')}</th>
                 {/if}
+                {#if page.library.writes.logo}<th>{t('web.library.col.logo')}</th>{/if}
               </tr>
             </thead>
             <tbody>
@@ -389,6 +390,7 @@
                     <td>{presenceMark(item.poster)}</td>
                     <td>{presenceMark(item.fanart)}</td>
                   {/if}
+                  {#if page.library.writes.logo}<td>{presenceMark(item.logo)}</td>{/if}
                 </tr>
               {/each}
             </tbody>

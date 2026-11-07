@@ -139,9 +139,8 @@ export function companionOperations(
         : image.kind === 'logo'
           ? details.logoPath
           : details.backdropPath;
-    // A show's images are its own, in its folder: only a movie can lack one. A movie written flat
-    // has no folder of its own, and every movie would claim the same `logo.png`.
-    const folderOwned = image.kind === 'logo' ? !flat : written[image.kind];
+    // A show's images are its own, in its folder: only a movie can lack one, written flat.
+    const folderOwned = written[image.kind];
     if (path && (details.kind === 'series' || folderOwned)) {
       download(place.workFolders, render(image.name, {}), path, image.size);
     }
@@ -155,7 +154,7 @@ function seasonPosterTemplate(spec: ArtworkSpec, season: number): string {
 }
 
 /** A file a profile writes beside a video, as a library page counts it. */
-export type CompanionKind = 'nfo' | 'poster' | 'fanart';
+export type CompanionKind = 'nfo' | 'poster' | 'fanart' | 'logo';
 
 /** The name a profile gives a file it writes beside a video (no folder in it). */
 export function companionName(
@@ -179,13 +178,14 @@ export function companionsWritten(
 ): Record<CompanionKind, boolean> {
   const { nfo } = profile;
   if (kind === 'series') {
-    return { nfo: nfo !== null, poster: false, fanart: false };
+    return { nfo: nfo !== null, poster: false, fanart: false, logo: false };
   }
   const has = (art: ArtworkKind): boolean => profile.artwork.some((spec) => spec.kind === art);
   return {
     nfo: nfo !== null && (!flat || templateVariables(parseTemplate(nfo.movie)).includes('file')),
     poster: !flat && has('poster'),
     fanart: !flat && has('fanart'),
+    logo: !flat && has('logo'),
   };
 }
 
@@ -204,7 +204,9 @@ export function companionKindOf(profile: Profile, fileName: string): CompanionKi
     (candidate) =>
       candidate.kind !== 'season-poster' && companionName(profile, candidate.name, {}) === fileName,
   );
-  return spec?.kind === 'poster' || spec?.kind === 'fanart' ? spec.kind : undefined;
+  return spec?.kind === 'poster' || spec?.kind === 'fanart' || spec?.kind === 'logo'
+    ? spec.kind
+    : undefined;
 }
 
 /**
@@ -215,6 +217,7 @@ export function showFileNames(profile: Profile): {
   readonly nfo: string | undefined;
   readonly poster: string | undefined;
   readonly fanart: string | undefined;
+  readonly logo: string | undefined;
   readonly seasonPoster: (season: number) => string | undefined;
 } {
   const image = (kind: ArtworkKind, season = 0): string | undefined => {
@@ -228,6 +231,7 @@ export function showFileNames(profile: Profile): {
         : companionName(profile, profile.nfo.series, { file: '' }),
     poster: image('poster'),
     fanart: image('fanart'),
+    logo: image('logo'),
     seasonPoster: (season) => image('season-poster', season),
   };
 }

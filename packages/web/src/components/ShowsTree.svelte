@@ -37,7 +37,7 @@
     libraryId: string;
     /** The library's folder: what a scan of one show or season must stay inside. */
     source: string;
-    writes: { nfo: boolean; artwork: boolean };
+    writes: { nfo: boolean; artwork: boolean; logo: boolean };
     query: string;
     /** The tab: the shows it keeps, and the files waiting for a person (`review`, `unrecognized`). */
     filter: ShowFilter | undefined;
@@ -247,7 +247,9 @@
     });
   }
 
-  const columns = $derived(6 + (writes.nfo ? 1 : 0) + (writes.artwork ? 2 : 0));
+  const columns = $derived(
+    6 + (writes.nfo ? 1 : 0) + (writes.artwork ? 2 : 0) + (writes.logo ? 1 : 0),
+  );
 </script>
 
 {#if failure}
@@ -309,6 +311,7 @@
               <th>{t('web.library.col.poster')}</th>
               <th>{t('web.library.col.fanart')}</th>
             {/if}
+            {#if writes.logo}<th>{t('web.library.col.logo')}</th>{/if}
             <th>{t('web.library.col.missing')}</th>
           </tr>
         </thead>
@@ -412,6 +415,7 @@
                 <td>{presenceMark(show.poster)}</td>
                 <td>{presenceMark(show.fanart)}</td>
               {/if}
+              {#if writes.logo}<td>{presenceMark(show.logo)}</td>{/if}
               <td>
                 {#if show.missing}
                   <span class="chip chip-warn"
@@ -493,6 +497,7 @@
                       <td>{presenceMark(season.poster)}</td>
                       <td></td>
                     {/if}
+                    {#if writes.logo}<td></td>{/if}
                     <td>
                       {#if season.missing > 0}
                         <span class="chip chip-warn"
@@ -534,6 +539,7 @@
                         <td>{item?.resolution ?? ''}</td>
                         {#if writes.nfo}<td>{presenceMark(item?.nfo ?? null)}</td>{/if}
                         {#if writes.artwork}<td></td><td></td>{/if}
+                        {#if writes.logo}<td></td>{/if}
                         <td></td>
                       </tr>
                     {/each}

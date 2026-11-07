@@ -872,6 +872,7 @@ export const libraryItemSchema = {
     'nfo',
     'poster',
     'fanart',
+    'logo',
     'entryId',
     'release',
     'cluster',
@@ -911,6 +912,7 @@ export const libraryItemSchema = {
     },
     poster: { type: 'boolean', nullable: true },
     fanart: { type: 'boolean', nullable: true },
+    logo: { type: 'boolean', nullable: true },
     entryId: { type: 'string', nullable: true, description: 'To validate or change the match.' },
     release: {
       type: 'string',
@@ -950,6 +952,7 @@ export const showSchema = {
     'nfo',
     'poster',
     'fanart',
+    'logo',
   ],
   properties: {
     tmdbId: { type: 'integer' },
@@ -974,6 +977,11 @@ export const showSchema = {
       type: 'boolean',
       nullable: true,
       description: presenceDescription('The show fanart'),
+    },
+    logo: {
+      type: 'boolean',
+      nullable: true,
+      description: presenceDescription('The show logo'),
     },
   },
 } as const;

@@ -1914,6 +1914,7 @@ export interface paths {
                                 writes: {
                                     nfo: boolean;
                                     artwork: boolean;
+                                    logo: boolean;
                                 };
                             };
                             /** Format: date-time */
@@ -1982,6 +1983,7 @@ export interface paths {
                                 nfo: boolean | null;
                                 poster: boolean | null;
                                 fanart: boolean | null;
+                                logo: boolean | null;
                                 /** @description To validate or change the match. */
                                 entryId: string | null;
                                 /** @description The folder the file came in: files sharing it (and its `cluster`) are validated together. Filled by the list of items only. */
@@ -2121,6 +2123,7 @@ export interface paths {
                             nfo: boolean | null;
                             poster: boolean | null;
                             fanart: boolean | null;
+                            logo: boolean | null;
                             /** @description To validate or change the match. */
                             entryId: string | null;
                             /** @description The folder the file came in: files sharing it (and its `cluster`) are validated together. Filled by the list of items only. */
@@ -2193,7 +2196,7 @@ export interface paths {
         };
         /**
          * The shows of a series library
-         * @description One row per work (files nobody identified are not shows: they are in `GET /api/libraries/{id}/items`, filtered by state). `missing` is the number of aired episodes no file holds, as last counted: `null` until it was (it is counted on opening a show, and in the background when no job runs), never by this request. `missing=true` keeps the shows that lack some; `incomplete=true` those lacking a file the profile writes for the show or a season (`tvshow.nfo`, an image: see `nfo`, `poster`, `fanart`); `state` keeps the shows holding a file of that state, as `GET /api/libraries/{id}/items` filters. 409 `library.not-series` for a movie library.
+         * @description One row per work (files nobody identified are not shows: they are in `GET /api/libraries/{id}/items`, filtered by state). `missing` is the number of aired episodes no file holds, as last counted: `null` until it was (it is counted on opening a show, and in the background when no job runs), never by this request. `missing=true` keeps the shows that lack some; `incomplete=true` those lacking a file the profile writes for the show or a season (`tvshow.nfo`, an image: see `nfo`, `poster`, `fanart`, `logo`); `state` keeps the shows holding a file of that state, as `GET /api/libraries/{id}/items` filters. 409 `library.not-series` for a movie library.
          */
         get: {
             parameters: {
@@ -2241,6 +2244,8 @@ export interface paths {
                                 poster: boolean | null;
                                 /** @description The show fanart is on the disk. `null`: the profile does not write it, or no scan or change has looked yet. */
                                 fanart: boolean | null;
+                                /** @description The show logo is on the disk. `null`: the profile does not write it, or no scan or change has looked yet. */
+                                logo: boolean | null;
                             }[];
                         };
                     };
@@ -2384,6 +2389,7 @@ export interface paths {
                                         nfo: boolean | null;
                                         poster: boolean | null;
                                         fanart: boolean | null;
+                                        logo: boolean | null;
                                         /** @description To validate or change the match. */
                                         entryId: string | null;
                                         /** @description The folder the file came in: files sharing it (and its `cluster`) are validated together. Filled by the list of items only. */

@@ -251,7 +251,7 @@ format follows the Kodi wiki's templates, saved pages are not in the repository)
   CLI says "already named as the profile wants"). Files already there are left out of the plan
   rather than reported as skipped, so a rescan of a complete library stays `in-place`.
 - **The web shows them.** A library item says which of its NFO and images are there (`nfo`, `poster`,
-  `fanart` of `GET /api/libraries/{id}/items`), a dry run counts them apart from the ones already
+  `fanart`, `logo` of `GET /api/libraries/{id}/items`), a dry run counts them apart from the ones already
   there, and a batch's detail lists what was written
   (`extras` of `GET /api/batches/{id}`, from the journal's `generated` and `downloaded` entries).
 - **What the NFO carries beyond the basics.** `<tag>` (TMDB keywords, English, not translated) and
@@ -269,9 +269,10 @@ format follows the Kodi wiki's templates, saved pages are not in the repository)
   English, then a textless one, the best voted of each (PNG or JPEG only) as `Details.logoPath`. A work
   with none writes nothing, and a movie written flat gets none (every movie would claim the same file).
   TMDB serves logos in widths of its own, with no `w780`: the profile loader refuses any `size` but
-  `original`. **Not tracked** like the poster and fanart: no presence column, no filter, and a work
-  missing only its logo stays `ok`; it is written with its next rename, or a refresh a missing file
-  triggers.
+  `original`. It is tracked like the poster and fanart (`logo` of the items and of the shows, server
+  migration 024, `library.writes.logo` for the column): a work missing only its logo is `incomplete`,
+  so "Refresh" writes it, and it is under `missing-artwork`. Rows from before the migration have
+  `null` until the next scan (a show's, until its files are looked at again).
 - Not done: no collection overview, no episode `uniqueid`, no `<fileinfo>` (the player reads the file).
 
 ## Libraries and scan
@@ -328,7 +329,7 @@ refuses to delete a library an arrival folder points at (`library.in-use`). Ther
 - **Events** (`GET /api/events`): the payload-less topics are `jobs` (queued, started, ended), `progress`, `arrivals` (files waiting for a human changed:
   match, ignore, cancel, a job ending), `history`, `settings`, and `ready` on each (re)connection.
 - **Snapshot** (`library_items`, server migration 012, `library-items.ts`): what a typed library holds,
-  as its last scan saw it (title, year, tmdb id, state, presence of NFO / poster / fanart, entry id).
+  as its last scan saw it (title, year, tmdb id, state, presence of NFO / poster / fanart / logo, entry id).
   Replaced as a whole when a scan of the whole source ends, then patched by path after a transfer,
   an undo or a manual match, so listing never reads the disk nor asks TMDB. `GET
 /api/libraries/:id/items` lists it (filters `review|rename|unrecognized|missing-nfo|missing-artwork`,
@@ -353,10 +354,10 @@ refuses to delete a library an arrival folder points at (`library.in-use`). Ther
   (`series_completeness`, disposable). Until counted, `missing` is `null` (no badge); a TMDB failure
   leaves it so and the page still lists the files (`determined: false`). `counts['missing-episodes']`
   counts shows, not files, and is not a filter of `GET .../items`: it narrows `.../shows?missing=true`.
-  The NFO column of an episode is its own `<file>.nfo`. The show's files (`tvshow.nfo`, poster, fanart) and
+  The NFO column of an episode is its own `<file>.nfo`. The show's files (`tvshow.nfo`, poster, fanart, logo) and
   a season's poster are looked for **on the disk** by `SeriesFiles` (`series-files.ts`, server migration
   015 `series_files`, disposable) once a series library's rows change (scan, transfer, undo, startup), in
-  one go for the burst, then emit `history`: `GET .../shows` gives `nfo`/`poster`/`fanart` per show and
+  one go for the burst, then emit `history`: `GET .../shows` gives `nfo`/`poster`/`fanart`/`logo` per show and
   `GET .../shows/:tmdbId` a `poster` per season, `null` when the profile writes no such file, when no video
   of the show is in place yet (its folder is unknown) or before it was looked at. The planner cannot say it:
   it leaves out what exists, and keeps a show-level file on one episode only (`shareCompanions`). `missing-show-files` is a tree filter (it counts shows, like `missing-episodes`): `GET .../shows?incomplete=true`

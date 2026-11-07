@@ -322,6 +322,7 @@ export const en = {
   'web.library.col.video': 'Video',
   'web.library.col.poster': 'Poster',
   'web.library.col.fanart': 'Fanart',
+  'web.library.col.logo': 'Logo',
   'web.library.state.review': 'To validate',
   'web.library.state.rename': 'To rename',
   'web.library.state.unrecognized': 'Not recognized',

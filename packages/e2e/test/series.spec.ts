@@ -64,7 +64,7 @@ test('shows which NFO and images a show and its seasons have', async ({ page, re
   const show = `${folder}/Severance (2022) [tmdbid-95396]`;
   await mkdir(`${show}/Season 01`, { recursive: true });
   await writeFile(`${show}/Season 01/Severance (2022) S01E01.mkv`, 'video');
-  // The show has its NFO and poster, the season its poster; the fanart is missing.
+  // The show has its NFO and poster, the season its poster; the fanart and the logo are missing.
   for (const name of ['tvshow.nfo', 'poster.jpg', 'Season 01/poster.jpg']) {
     await writeFile(`${show}/${name}`, 'x');
   }
@@ -82,9 +82,9 @@ test('shows which NFO and images a show and its seasons have', async ({ page, re
   await page.goto(`/libraries/${id}`);
   const row = page.getByRole('row', { name: /Severance/ }).first();
   await expect(row).toBeVisible();
-  // NFO, poster, fanart: the files are looked for after the scan, not when the page reads.
+  // NFO, poster, fanart, logo: the files are looked for after the scan, not when the page reads.
   await expect(row.getByRole('cell').filter({ hasText: /^✓$/ })).toHaveCount(2);
-  await expect(row.getByRole('cell').filter({ hasText: /^✗$/ })).toHaveCount(1);
+  await expect(row.getByRole('cell').filter({ hasText: /^✗$/ })).toHaveCount(2);
 
   await row.getByRole('button', { name: /Show the seasons/ }).click();
   const season = page.getByRole('row', { name: /Season 1/ });
@@ -96,7 +96,7 @@ test('shows which NFO and images a show and its seasons have', async ({ page, re
   await expect(page.getByRole('row', { name: /Season 1/ })).toBeVisible();
   await expect(page.getByRole('button', { name: /Hide the seasons of Severance/ })).toBeVisible();
 
-  // The show lacks its fanart: the filter keeps it, and says how many.
+  // The show lacks its fanart and logo: the filter keeps it, and says how many.
   await page.getByRole('button', { name: /Missing show files\s*1/ }).click();
   await expect(page).toHaveURL(/state=missing-show-files/);
   await expect(page.getByRole('button', { name: /the seasons of Severance/ })).toBeVisible();

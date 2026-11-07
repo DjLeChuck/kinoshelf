@@ -20,6 +20,7 @@ export interface SeriesFilesRow {
   readonly nfo: Presence;
   readonly poster: Presence;
   readonly fanart: Presence;
+  readonly logo: Presence;
 }
 
 interface Row {
@@ -27,13 +28,14 @@ interface Row {
   nfo: number | null;
   poster: number | null;
   fanart: number | null;
+  logo: number | null;
 }
 
 const flag = (value: number | null): Presence => (value === null ? null : value === 1);
 const bit = (value: Presence): number | null => (value === null ? null : value ? 1 : 0);
 
 /**
- * Which files of a show (`tvshow.nfo`, its poster and fanart) and of a season (its poster) are on
+ * Which files of a show (`tvshow.nfo`, its poster, fanart and logo) and of a season (its poster) are on
  * the disk, as last looked at. Disposable like the completeness counts: a missing row means "not
  * looked at yet", and the next scan or transfer fills it.
  */
@@ -48,8 +50,8 @@ export class SeriesFilesStore {
     this.database.transaction(() => {
       this.database.prepare('DELETE FROM series_files WHERE library_id = ?').run(libraryId);
       const insert = this.database.prepare(
-        `INSERT INTO series_files (library_id, tmdb_id, season, nfo, poster, fanart)
-         VALUES (?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO series_files (library_id, tmdb_id, season, nfo, poster, fanart, logo)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
       );
       for (const { tmdbId, season, files } of rows) {
         insert.run(
@@ -59,6 +61,7 @@ export class SeriesFilesStore {
           bit(files.nfo),
           bit(files.poster),
           bit(files.fanart),
+          bit(files.logo),
         );
       }
     })();
@@ -68,11 +71,18 @@ export class SeriesFilesStore {
   get(libraryId: string, tmdbId: number, season?: number): SeriesFilesRow | undefined {
     const row = this.database
       .prepare<[string, number, number], Row>(
-        `SELECT season, nfo, poster, fanart FROM series_files
+        `SELECT season, nfo, poster, fanart, logo FROM series_files
          WHERE library_id = ? AND tmdb_id = ? AND season = ?`,
       )
       .get(libraryId, tmdbId, season ?? SHOW);
-    return row && { nfo: flag(row.nfo), poster: flag(row.poster), fanart: flag(row.fanart) };
+    return (
+      row && {
+        nfo: flag(row.nfo),
+        poster: flag(row.poster),
+        fanart: flag(row.fanart),
+        logo: flag(row.logo),
+      }
+    );
   }
 }
 
@@ -195,17 +205,23 @@ export class SeriesFiles {
       name === undefined ? null : await exists(join(dir, name));
     // On a network share each `access` is a round trip: the shows are looked at side by side.
     const perShow = await inBatches([...shows], LOOKUPS_AT_ONCE, async ([tmdbId, show]) => {
-      const [nfo, poster, fanart] = await Promise.all([
+      const [nfo, poster, fanart, logo] = await Promise.all([
         has(show.dir, names.nfo),
         has(show.dir, names.poster),
         has(show.dir, names.fanart),
+        has(show.dir, names.logo),
       ]);
-      const own: Found = { tmdbId, season: null, files: { nfo, poster, fanart } };
+      const own: Found = { tmdbId, season: null, files: { nfo, poster, fanart, logo } };
       const seasons = await Promise.all(
         [...show.seasons].map(async ([season, dir]): Promise<Found> => ({
           tmdbId,
           season,
-          files: { nfo: null, poster: await has(dir, names.seasonPoster(season)), fanart: null },
+          files: {
+            nfo: null,
+            poster: await has(dir, names.seasonPoster(season)),
+            fanart: null,
+            logo: null,
+          },
         })),
       );
       return [own, ...seasons];

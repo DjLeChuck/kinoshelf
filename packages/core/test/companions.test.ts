@@ -30,6 +30,7 @@ describe('companionsWritten', () => {
       nfo: true,
       poster: true,
       fanart: true,
+      logo: true,
     });
   });
 
@@ -42,6 +43,7 @@ describe('companionsWritten', () => {
       nfo: true,
       poster: false,
       fanart: false,
+      logo: false,
     });
   });
 
@@ -58,6 +60,7 @@ describe('companionsWritten', () => {
       nfo: true,
       poster: false,
       fanart: false,
+      logo: false,
     });
     expect(companionsWritten(await loadBundledProfile('plex'), 'series', false).nfo).toBe(false);
   });

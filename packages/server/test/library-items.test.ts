@@ -70,6 +70,7 @@ describe('the snapshot of a library', () => {
       nfo: false,
       poster: null,
       fanart: null,
+      logo: null,
     });
     expect(byPath.get(mystery)).toMatchObject({
       kind: 'movie',
@@ -211,17 +212,20 @@ interface ItemsBody {
     title: string | null;
     resolution: string | null;
     nfo: boolean | null;
+    poster: boolean | null;
+    fanart: boolean | null;
+    logo: boolean | null;
   }[];
 }
 
-describe('GET /api/libraries/:id/items', () => {
-  const list = async (h: Awaited<ReturnType<typeof scanned>>['h'], query = '') =>
-    (await h.request('GET', `/api/libraries/films/items${query}`)).json<ItemsBody>();
+const list = async (h: Awaited<ReturnType<typeof scanned>>['h'], query = '') =>
+  (await h.request('GET', `/api/libraries/films/items${query}`)).json<ItemsBody>();
 
+describe('GET /api/libraries/:id/items', () => {
   it('lists the snapshot with its counts, by title', async () => {
     const { h, root, dune, alien } = await scanned();
     const body = await list(h);
-    expect(body.library).toEqual({ writes: { nfo: true, artwork: false } });
+    expect(body.library).toEqual({ writes: { nfo: true, artwork: false, logo: false } });
     expect(body.scannedAt).toEqual(expect.any(String));
     expect(body.scan).toBeNull();
     expect(body.counts).toEqual({
@@ -357,6 +361,57 @@ describe('GET /api/libraries/:id/items', () => {
     expect(arrival.statusCode).toBe(409);
     expect(arrival.json()).toEqual({ error: { code: 'library.not-typed' } });
     expect((await h.request('GET', '/api/libraries/films/items?state=nope')).statusCode).toBe(400);
+  });
+});
+
+describe('the logo of a library item', () => {
+  const WITH_LOGO = PROFILE.replace(
+    'artwork: []',
+    `artwork:
+  - { kind: poster, name: poster.jpg }
+  - { kind: fanart, name: background.jpg }
+  - { kind: logo, name: logo.png }`,
+  );
+
+  it('is told apart from the other images, and keeps an item under missing-artwork', async () => {
+    const profile = join(await makeDir(), 'logo.yaml');
+    await writeFile(profile, WITH_LOGO);
+    const root = await makeDir();
+    const alienDir = join(root, 'Alien (1979)');
+    const alien = await put(join(alienDir, 'Alien (1979).mkv'), 'alien');
+    await put(join(alienDir, 'movie.nfo'), '<movie/>');
+    await put(join(alienDir, 'poster.jpg'), 'image');
+    await put(join(alienDir, 'background.jpg'), 'image');
+    const dune = await put(join(root, 'Dune (2021)', 'Dune (2021).mkv'), 'dune');
+    for (const name of ['movie.nfo', 'poster.jpg', 'background.jpg', 'logo.png']) {
+      await put(join(root, 'Dune (2021)', name), name);
+    }
+    const h = await harness({
+      config: {
+        libraries: [
+          { id: 'films', name: 'Films', source: root, type: 'movie', profile },
+          { id: 'shows', name: 'Shows', source: await makeDir(), type: 'series' },
+        ],
+      },
+    });
+    await h.request('POST', '/api/libraries/films/scan');
+    await h.app.jobs.idle();
+
+    const body = (await h.request('GET', '/api/libraries/films/items')).json<ItemsBody>();
+    expect(body.library).toEqual({ writes: { nfo: true, artwork: true, logo: true } });
+    const byPath = new Map(body.items.map((item) => [item.path, item]));
+    expect(byPath.get(alien)).toMatchObject({ poster: true, fanart: true, logo: false });
+    expect(byPath.get(alien)?.state).toBe('incomplete');
+    expect(byPath.get(dune)).toMatchObject({ poster: true, fanart: true, logo: true });
+    expect(byPath.get(dune)?.state).toBe('ok');
+    const missing = (await list(h, '?state=missing-artwork')).items.map((item) => item.path);
+    expect(missing).toEqual([alien]);
+  });
+
+  it('is not claimed when the profile writes none', async () => {
+    const { h, alien } = await scanned();
+    const item = (await list(h)).items.find((candidate) => candidate.path === alien);
+    expect(item).toMatchObject({ logo: null });
   });
 });
 
@@ -544,6 +599,7 @@ describe('the lookups of the item store', () => {
     nfo: true,
     poster: null,
     fanart: null,
+    logo: null,
     entryId: null,
     scanJobId: null,
     scannedAt: '2026-11-02T00:00:00.000Z',
@@ -667,6 +723,7 @@ describe('the snapshot after an undo', () => {
     nfo: true,
     poster: null,
     fanart: null,
+    logo: null,
     entryId: null,
     scanJobId: null,
     scannedAt: '2026-11-02T00:00:00.000Z',

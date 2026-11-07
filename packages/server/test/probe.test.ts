@@ -149,6 +149,7 @@ const item = (path: string): LibraryItem => ({
   nfo: null,
   poster: null,
   fanart: null,
+  logo: null,
   entryId: null,
   scanJobId: null,
   scannedAt: 'now',

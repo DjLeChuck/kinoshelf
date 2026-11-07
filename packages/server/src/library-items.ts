@@ -49,6 +49,7 @@ export interface LibraryItem {
   readonly nfo: Presence;
   readonly poster: Presence;
   readonly fanart: Presence;
+  readonly logo: Presence;
   /** The entry of the scan that saw it: what to validate or re-match. */
   readonly entryId: string | null;
   readonly scanJobId: string | null;
@@ -69,13 +70,14 @@ interface Row {
   nfo: number | null;
   poster: number | null;
   fanart: number | null;
+  logo: number | null;
   entry_id: string | null;
   scan_job_id: string | null;
   scanned_at: string;
 }
 
 const COLUMNS =
-  'library_id, path, kind, tmdb_id, title, year, season, episode, episode_end, state, nfo, poster, fanart, entry_id, scan_job_id, scanned_at';
+  'library_id, path, kind, tmdb_id, title, year, season, episode, episode_end, state, nfo, poster, fanart, logo, entry_id, scan_job_id, scanned_at';
 
 /** The columns a row is written with: `item_id` is derived from the path, never read back. */
 const WRITTEN_COLUMNS = `${COLUMNS}, item_id`;
@@ -109,6 +111,7 @@ const valuesOf = (item: LibraryItem): (string | number | null)[] => [
   bit(item.nfo),
   bit(item.poster),
   bit(item.fanart),
+  bit(item.logo),
   item.entryId,
   item.scanJobId,
   item.scannedAt,
@@ -129,6 +132,7 @@ const toItem = (row: Row): LibraryItem => ({
   nfo: flag(row.nfo),
   poster: flag(row.poster),
   fanart: flag(row.fanart),
+  logo: flag(row.logo),
   entryId: row.entry_id,
   scanJobId: row.scan_job_id,
   scannedAt: row.scanned_at,
@@ -262,7 +266,9 @@ export class LibraryItemStore {
     return this.database.prepare(
       // An upsert, not a replacement: what ffprobe learned of the file is not the scan's to erase.
       `INSERT INTO library_items (${WRITTEN_COLUMNS})
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       VALUES (${WRITTEN_COLUMNS.split(', ')
+         .map(() => '?')
+         .join(', ')})
        ON CONFLICT (library_id, path) DO UPDATE SET ${WRITTEN_COLUMNS.split(', ')
          .slice(2)
          .map((column) => `${column} = excluded.${column}`)
@@ -467,6 +473,7 @@ export class LibraryItemStore {
         nfo: flag(row.nfo),
         poster: flag(row.poster),
         fanart: flag(row.fanart),
+        logo: flag(row.logo),
       })),
     };
   }
@@ -490,7 +497,7 @@ export class LibraryItemStore {
       ...(options.incomplete
         ? [
             `EXISTS (SELECT 1 FROM series_files m WHERE m.library_id = i.library_id
-               AND m.tmdb_id = i.tmdb_id AND (m.nfo = 0 OR m.poster = 0 OR m.fanart = 0))`,
+               AND m.tmdb_id = i.tmdb_id AND (m.nfo = 0 OR m.poster = 0 OR m.fanart = 0 OR m.logo = 0))`,
           ]
         : []),
     ].join(' AND ');
@@ -506,7 +513,8 @@ export class LibraryItemStore {
                  ELSE COALESCE(i.episode_end, i.episode) - i.episode + 1 END) AS episodes,
         MAX(c.missing) AS missing,
         SUM(i.state = 'rename') AS rename, SUM(i.state = 'incomplete') AS refresh,
-        MAX(f.nfo) AS nfo, MAX(f.poster) AS poster, MAX(f.fanart) AS fanart
+        MAX(f.nfo) AS nfo, MAX(f.poster) AS poster, MAX(f.fanart) AS fanart,
+        MAX(f.logo) AS logo
       FROM library_items i
       LEFT JOIN series_completeness c ON c.library_id = i.library_id AND c.tmdb_id = i.tmdb_id
       LEFT JOIN series_files f
@@ -566,7 +574,7 @@ const FILTER_SQL: Record<ItemFilter, string> = {
   rename: "state = 'rename'",
   unrecognized: "state = 'unrecognized'",
   'missing-nfo': 'nfo = 0',
-  'missing-artwork': '(poster = 0 OR fanart = 0)',
+  'missing-artwork': '(poster = 0 OR fanart = 0 OR logo = 0)',
 };
 
 export type ItemCounts = Record<
@@ -590,6 +598,7 @@ export interface ShowRow {
   readonly nfo: Presence;
   readonly poster: Presence;
   readonly fanart: Presence;
+  readonly logo: Presence;
 }
 
 interface ShowQuery {
@@ -604,6 +613,7 @@ interface ShowQuery {
   nfo: number | null;
   poster: number | null;
   fanart: number | null;
+  logo: number | null;
 }
 
 /** Lower case without accents: what titles are ordered and searched by (`sort_key` in SQL). */
@@ -618,7 +628,7 @@ type Writable = CompanionKind;
 /** Which files the profile writes for a work of this kind (none for a file nobody identified). */
 const writes = (profile: Profile, kind: 'movie' | 'series' | null): Record<Writable, boolean> =>
   kind === null
-    ? { nfo: false, poster: false, fanart: false }
+    ? { nfo: false, poster: false, fanart: false, logo: false }
     : companionsWritten(profile, kind, kind === 'movie' && profile.templates.movieFolder === '');
 
 /** What an NFO or image path is, according to the profile; `undefined` for any other file. */
@@ -633,7 +643,7 @@ function describe(
   profile: Profile,
   kind: 'movie' | 'series' | null,
 ): { state: ItemState } & Record<Writable, Presence> {
-  const none = { nfo: null, poster: null, fanart: null };
+  const none = { nfo: null, poster: null, fanart: null, logo: null };
   const { classification, item } = entry;
   if (classification === 'unrecognized') {
     return { state: 'unrecognized', ...none };
@@ -652,7 +662,12 @@ function describe(
   }
   const presence = (name: Writable): Presence => (wanted[name] ? !missing.has(name) : null);
   const moves = item.operations.some(isTransfer);
-  const result = { nfo: presence('nfo'), poster: presence('poster'), fanart: presence('fanart') };
+  const result = {
+    nfo: presence('nfo'),
+    poster: presence('poster'),
+    fanart: presence('fanart'),
+    logo: presence('logo'),
+  };
   const state: ItemState = moves
     ? 'rename'
     : Object.values(result).some((value) => value === false)
@@ -666,15 +681,16 @@ function describe(
 export function profileWrites(
   profile: Profile,
   type: 'movie' | 'series',
-): { nfo: boolean; artwork: boolean } {
+): { nfo: boolean; artwork: boolean; logo: boolean } {
   if (type === 'series') {
     return {
       nfo: profile.nfo !== null,
       artwork: profile.artwork.some(({ kind }) => kind === 'poster' || kind === 'fanart'),
+      logo: profile.artwork.some(({ kind }) => kind === 'logo'),
     };
   }
   const wanted = writes(profile, 'movie');
-  return { nfo: wanted.nfo, artwork: wanted.poster || wanted.fanart };
+  return { nfo: wanted.nfo, artwork: wanted.poster || wanted.fanart, logo: wanted.logo };
 }
 
 /** The picture size a release name announces (`2160p`, `4K`…), the one cheap thing it says of the video. */
@@ -876,7 +892,12 @@ export class LibrarySnapshot {
       );
       // Everything the plan wrote is there now, unless it failed; the video itself was moved.
       const present = (name: Writable): Presence => (row[name] === null ? null : !failed.has(name));
-      const next = { nfo: present('nfo'), poster: present('poster'), fanart: present('fanart') };
+      const next = {
+        nfo: present('nfo'),
+        poster: present('poster'),
+        fanart: present('fanart'),
+        logo: present('logo'),
+      };
       this.deps.store.put({
         ...row,
         ...next,
@@ -939,7 +960,12 @@ export class LibrarySnapshot {
     const value = change === 'present';
     const apply = (name: Writable): Presence =>
       row[name] === null ? null : kinds.has(name) ? value : row[name];
-    const next = { nfo: apply('nfo'), poster: apply('poster'), fanart: apply('fanart') };
+    const next = {
+      nfo: apply('nfo'),
+      poster: apply('poster'),
+      fanart: apply('fanart'),
+      logo: apply('logo'),
+    };
     // After an undo the video is back at its source, to be renamed again.
     const missing = Object.values(next).some((presence) => presence === false);
     const state: ItemState =

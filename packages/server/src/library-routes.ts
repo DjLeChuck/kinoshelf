@@ -184,6 +184,7 @@ const presentItem = (item: LibraryItem, release?: ReleaseOf): unknown => ({
   nfo: item.nfo,
   poster: item.poster,
   fanart: item.fanart,
+  logo: item.logo,
   entryId: item.entryId,
   release: release?.release ?? null,
   cluster: release ? release.cluster : null,
@@ -511,8 +512,12 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
                 properties: {
                   writes: {
                     type: 'object',
-                    required: ['nfo', 'artwork'],
-                    properties: { nfo: { type: 'boolean' }, artwork: { type: 'boolean' } },
+                    required: ['nfo', 'artwork', 'logo'],
+                    properties: {
+                      nfo: { type: 'boolean' },
+                      artwork: { type: 'boolean' },
+                      logo: { type: 'boolean' },
+                    },
                   },
                 },
               },
@@ -716,7 +721,7 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
           'episodes no file holds, as last counted: `null` until it was (it is counted on ' +
           'opening a show, and in the background when no job runs), never by this request. ' +
           '`missing=true` keeps the shows that lack some; `incomplete=true` those lacking a file the profile ' +
-          'writes for the show or a season (`tvshow.nfo`, an image: see `nfo`, `poster`, `fanart`); ' +
+          'writes for the show or a season (`tvshow.nfo`, an image: see `nfo`, `poster`, `fanart`, `logo`); ' +
           '`state` keeps the shows holding a file of that state, as `GET /api/libraries/{id}/items` filters. 409 `library.not-series` for a movie library.',
         params: idParams,
         querystring: {

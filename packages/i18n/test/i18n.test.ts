@@ -42,6 +42,7 @@ describe('catalogs', () => {
       'entry.score',
       'web.library.scan.running',
       'web.library.col.fanart',
+      'web.library.col.logo',
       'web.library.runtime',
       'web.history.job.title',
       'web.history.job.cause',

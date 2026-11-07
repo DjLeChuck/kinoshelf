@@ -312,6 +312,7 @@ describe('comparing the files with the provider', () => {
     nfo: null,
     poster: null,
     fanart: null,
+    logo: null,
     entryId: null,
     scanJobId: null,
     scannedAt: '2026-01-01T00:00:00Z',
@@ -419,6 +420,7 @@ nfo: { format: kodi, movie: movie.nfo, episode: '{file}.nfo', series: tvshow.nfo
 artwork:
   - { kind: poster, name: poster.jpg }
   - { kind: fanart, name: fanart.jpg }
+  - { kind: logo, name: logo.png }
   - { kind: season-poster, name: poster.jpg }
 filesystem: { forbidden: posix, replacement: '', maxSegmentBytes: 255 }
 `;
@@ -450,7 +452,12 @@ describe('the files of a show and of its seasons', () => {
     };
     const listed = async () =>
       (await h.request('GET', '/api/libraries/shows/shows')).json<{
-        items: { nfo: boolean | null; poster: boolean | null; fanart: boolean | null }[];
+        items: {
+          nfo: boolean | null;
+          poster: boolean | null;
+          fanart: boolean | null;
+          logo: boolean | null;
+        }[];
       }>().items[0];
     const seasonPosters = async () =>
       (await h.request('GET', '/api/libraries/shows/shows/95396'))
@@ -473,17 +480,23 @@ describe('the files of a show and of its seasons', () => {
     // No fanart, and no poster for the second season: the show is incomplete, counted as one.
     expect(await incomplete()).toBe(1);
     expect(await counted()).toBe(1);
-    expect(await listed()).toMatchObject({ nfo: true, poster: true, fanart: false });
+    expect(await listed()).toMatchObject({ nfo: true, poster: true, fanart: false, logo: false });
     // The season poster is a season's own file, not the show's.
     expect(await seasonPosters()).toEqual([
       [1, true],
       [2, false],
     ]);
 
+    // The logo alone keeps the show incomplete.
     await put(join(show, 'fanart.jpg'), 'image');
     await put(join(show, 'Season 02', 'poster.jpg'), 'image');
     await scan();
-    expect(await listed()).toMatchObject({ fanart: true });
+    expect(await listed()).toMatchObject({ fanart: true, logo: false });
+    expect(await incomplete()).toBe(1);
+
+    await put(join(show, 'logo.png'), 'image');
+    await scan();
+    expect(await listed()).toMatchObject({ logo: true });
     expect(await seasonPosters()).toEqual([
       [1, true],
       [2, true],
@@ -496,9 +509,14 @@ describe('the files of a show and of its seasons', () => {
     const { h } = await scanned();
     await h.app.seriesFiles.idle();
     const [row] = (await h.request('GET', '/api/libraries/shows/shows')).json<{
-      items: { nfo: boolean | null; poster: boolean | null; fanart: boolean | null }[];
+      items: {
+        nfo: boolean | null;
+        poster: boolean | null;
+        fanart: boolean | null;
+        logo: boolean | null;
+      }[];
     }>().items;
-    expect(row).toMatchObject({ nfo: null, poster: null, fanart: null });
+    expect(row).toMatchObject({ nfo: null, poster: null, fanart: null, logo: null });
   });
 });
 
