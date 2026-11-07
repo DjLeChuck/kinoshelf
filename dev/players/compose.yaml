@@ -1,0 +1,33 @@
+# Jellyfin and Plex for trying Kinoshelf's profiles and notifications on this machine.
+# Started through the sub-flake (`nix run ./dev/players#up`); state lives in .work/players,
+# media in .work/media (both git-ignored). Media is mounted read-only: a player never writes
+# into what Kinoshelf organizes.
+services:
+  jellyfin:
+    image: jellyfin/jellyfin:latest
+    user: '${PUID:-1000}:${PGID:-1000}'
+    ports:
+      - '127.0.0.1:8096:8096'
+    volumes:
+      - ${WORK}/players/jellyfin/config:/config
+      - ${WORK}/players/jellyfin/cache:/cache
+      - ${WORK}/media:/media:ro
+    profiles: [jellyfin, all]
+
+  plex:
+    image: lscr.io/linuxserver/plex:latest
+    # Host network, as Plex recommends: an unclaimed server only lets the machine it runs on
+    # through its setup, and behind Docker's bridge the browser would look remote.
+    network_mode: host
+    environment:
+      PUID: ${PUID:-1000}
+      PGID: ${PGID:-1000}
+      TZ: ${TZ:-UTC}
+      VERSION: docker
+      # Optional, https://plex.tv/claim (valid 4 minutes). Without it, sign in at
+      # http://localhost:32400/web on first start.
+      PLEX_CLAIM: ${PLEX_CLAIM:-}
+    volumes:
+      - ${WORK}/players/plex/config:/config
+      - ${WORK}/media:/media:ro
+    profiles: [plex, all]

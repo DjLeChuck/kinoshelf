@@ -7,7 +7,7 @@ IMAGE ?= kinoshelf:dev
 .DEFAULT_GOAL := help
 
 .PHONY: help hooks install build build-web dev-server dev-web typecheck lint format format-check test test-corpus \
-        test-e2e test-live corpus-report corpus-record check docker-build flake-check clean
+        test-e2e test-live corpus-report corpus-record check docker-build players-up players-down flake-check clean
 
 help: ## List the targets
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}'
@@ -65,9 +65,16 @@ hooks: ## Use the versioned git hooks (.githooks): pre-push runs every test
 docker-build: ## Build the Docker image (IMAGE=kinoshelf:dev)
 	docker build -t $(IMAGE) .
 
+players-up: ## Start Jellyfin (:8096) and Plex (:32400) in Docker, media in .work/media (see dev/players)
+	nix run ./dev/players -- up
+
+players-down: ## Stop them (their state in .work/players is kept)
+	nix run ./dev/players -- down
+
 flake-check: ## Validate the Nix flake (new files must be `git add -N`)
-	nixfmt --check flake.nix
+	nixfmt --check flake.nix dev/players/flake.nix
 	nix flake check
+	nix flake check ./dev/players
 
 clean: ## Remove build output, including files whose source is gone (`tsc -b --clean` keeps them)
 	rm -rf packages/*/dist packages/providers/*/dist packages/*/tsconfig.tsbuildinfo packages/providers/*/tsconfig.tsbuildinfo

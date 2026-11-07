@@ -47,6 +47,19 @@ node packages/server/dist/main.js
 | `e2e`            | Playwright tests                                        |
 | `image`          | what the Docker image ships (server, CLI, web UI)       |
 
+## Trying Plex and Jellyfin locally
+
+`dev/players` is a small flake of its own that runs both players in Docker (`make players-up`,
+`make players-down`; or `nix run ./dev/players -- up|down|logs|status [jellyfin|plex]`). Their state
+lives in `.work/players` and their media folder is `.work/media` (`movies/`, `series/`), mounted
+read-only at `/media`. Point two libraries of Kinoshelf at `.work/media/movies` and
+`.work/media/series`, then add `/media/movies` and `/media/series` as libraries in the players.
+
+- Jellyfin: <http://localhost:8096>. Plex: <http://localhost:32400/web> (host network; set
+  `PLEX_CLAIM` from <https://plex.tv/claim> to claim the server at the first start).
+- For the notifications, Kinoshelf's "Path in Kinoshelf" is `.work/media/…` as the server sees it,
+  and the player's side is `/media/…`.
+
 ## Conventions
 
 See [AGENTS.md](../AGENTS.md). In short: everything in English, Conventional Commits, every
