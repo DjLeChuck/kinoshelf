@@ -318,7 +318,7 @@ describe('scanning a library', () => {
     expect(rename).toHaveLength(2);
     const dune = rename.find((f) => f.path.endsWith('Dune.2021.mkv'));
     expect(dune?.destination).toBe(
-      join(target, 'Dune (2021) [tmdbid-438631]', 'Dune (2021) [tmdbid-438631].mkv'),
+      join(target, 'Dune (2021) {tmdb-438631}', 'Dune (2021) {tmdb-438631}.mkv'),
     );
     expect(dune?.candidates[0]?.score).toBeGreaterThan(0);
 
@@ -341,7 +341,7 @@ describe('scanning a library', () => {
     ]);
     expect(
       await readFile(
-        join(target, 'Dune (2021) [tmdbid-438631]', 'Dune (2021) [tmdbid-438631].mkv'),
+        join(target, 'Dune (2021) {tmdb-438631}', 'Dune (2021) {tmdb-438631}.mkv'),
         'utf8',
       ),
     ).toBe('dune');

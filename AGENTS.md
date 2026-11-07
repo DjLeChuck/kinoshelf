@@ -80,7 +80,7 @@ contains no player-specific rule.
   poster `Season01.jpg`, or `season-specials-poster.jpg` for season 0 (the artwork's
   `specialsName`) (profile `plex-nfo`: no id in the names, since the NFO carries
   `<uniqueid type="tmdb">`).
-- Profile `jellyfin`: `[tmdbid-<id>]` in the movie and series folders and in the movie file (the file
+- Profile `jellyfin`: `{tmdb-<id>}` (the same as Plex's; Jellyfin's documentation gives `[tmdbid-<id>]`, its code reads `tmdb` as an alias and any of brackets, parentheses or braces) in the movie and series folders and in the movie file (the file
   must start with its folder's name), `SxxExx` episodes, `movie.nfo`, `tvshow.nfo`, `<file>.nfo`,
   `poster.jpg`, `background.jpg` and `logo.png`. A season's poster is a plain `poster.jpg` in its folder: the
   documentation lists nothing more, though Jellyfin's code also reads Kodi's `seasonNN-poster.jpg`

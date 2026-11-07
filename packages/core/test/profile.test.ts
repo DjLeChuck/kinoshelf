@@ -102,16 +102,23 @@ describe('jellyfin profile', () => {
   const load = () => loadProfileFile(new URL('../profiles/jellyfin.yaml', import.meta.url));
   const vars = { title: 'The Bear', year: 2022, tmdb: 136315, season: 3, episode: 4 };
 
-  it('tags the id in brackets and starts the movie file with its folder name', async () => {
+  it('tags the id in braces and starts the movie file with its folder name', async () => {
     const profile = await load();
-    expect(path(profile, 'movieFolder', vars)).toEqual(['The Bear (2022) [tmdbid-136315]']);
+    expect(path(profile, 'movieFolder', vars)).toEqual(['The Bear (2022) {tmdb-136315}']);
     expect(path(profile, 'movieFile', vars)).toEqual(path(profile, 'movieFolder', vars));
-    expect(path(profile, 'seriesFolder', vars)).toEqual(['The Bear (2022) [tmdbid-136315]']);
+    expect(path(profile, 'seriesFolder', vars)).toEqual(['The Bear (2022) {tmdb-136315}']);
     expect(path(profile, 'seasonFolder', vars)).toEqual(['Season 03']);
     expect(path(profile, 'episodeFile', vars)).toEqual(['The Bear (2022) S03E04']);
     expect(path(profile, 'episodeFile', { ...vars, episode: [1, 2] })).toEqual([
       'The Bear (2022) S03E01-E02',
     ]);
+  });
+
+  it('names the folders of a movie and of a show like plex does', async () => {
+    const [jellyfin, plex] = [await load(), await loadProfileFile(plexUrl)];
+    for (const name of ['movieFolder', 'seriesFolder'] as const) {
+      expect(path(jellyfin, name, vars)).toEqual(path(plex, name, vars));
+    }
   });
 
   it('writes Kodi NFO, poster and fanart', async () => {

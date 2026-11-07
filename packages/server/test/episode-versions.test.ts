@@ -72,7 +72,7 @@ async function twoQualities(extra: Partial<Config> = {}) {
   });
   await h.request('POST', '/api/libraries/shows/scan');
   await h.app.jobs.idle();
-  const season = join(root, 'Foundation (2021) [tmdbid-93740]', 'Season 01');
+  const season = join(root, 'Foundation (2021) {tmdb-93740}', 'Season 01');
   return { h, root, hd, uhd, season };
 }
 

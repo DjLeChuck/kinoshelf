@@ -8,7 +8,7 @@ const op = (
   role: string | null = type === 'transfer' ? 'main' : null,
 ): ReportOperation => ({ type, role, source: null, destination, status: 'done', error: null });
 
-const FOLDER = '28 Jours plus tard (2002) [tmdbid-170]';
+const FOLDER = '28 Jours plus tard (2002) {tmdb-170}';
 const movie = (folder: string, size = '1080p'): ReportOperation[] => [
   op(`/media/movies/${folder}/${folder} - ${size}.mkv`),
   op(`/media/movies/${folder}/${folder} - ${size}.nfo`, 'transfer', 'sidecar'),
@@ -21,7 +21,7 @@ describe('previewOf', () => {
     const preview = previewOf({
       items: [
         { entryId: 'a', results: movie(FOLDER) },
-        { entryId: 'b', results: movie('28 Semaines plus tard (2007) [tmdbid-1562]') },
+        { entryId: 'b', results: movie('28 Semaines plus tard (2007) {tmdb-1562}') },
       ],
     });
     expect(preview.root).toBe('/media/movies/');

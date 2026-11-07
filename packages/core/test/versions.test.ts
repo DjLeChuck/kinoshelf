@@ -226,7 +226,7 @@ describe('several qualities of one movie', () => {
     const { items } = await plan([input(file)], lib, jellyfin);
 
     const [folder, name] = (items[0]?.operations[0]?.destination ?? '').split('/').slice(-2);
-    expect(folder).toBe('Nightbitch (2024) [tmdbid-728949]');
+    expect(folder).toBe('Nightbitch (2024) {tmdb-728949}');
     expect(name).toBe(`${folder} - 2160p.mkv`);
   });
 

@@ -61,7 +61,7 @@ test('renames every episode of the ticked shows in one go', async ({ page, reque
 
 test('shows which NFO and images a show and its seasons have', async ({ page, request }) => {
   const folder = incoming('series-files');
-  const show = `${folder}/Severance (2022) [tmdbid-95396]`;
+  const show = `${folder}/Severance (2022) {tmdb-95396}`;
   await mkdir(`${show}/Season 01`, { recursive: true });
   await writeFile(`${show}/Season 01/Severance (2022) S01E01.mkv`, 'video');
   // The show has its NFO and poster, the season its poster; the fanart and the logo are missing.
