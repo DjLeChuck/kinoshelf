@@ -63,6 +63,17 @@ packages/corpus            (private) matching corpus and the scripts that grow i
 Output profiles are declarative YAML in `packages/core/profiles/`, shipped with the core: the core
 contains no player-specific rule.
 
+- **Profiles are kept as close to each other as the players allow**, so one library reads the same under
+  either and switching from one player to the other costs next to no renaming: the same id tag
+  (`{tmdb-<id>}`), the same NFO files (`movie.nfo`, `tvshow.nfo`, `<file>.nfo`), the same image names
+  (`poster.jpg`, `background.jpg`, `logo.png`), the same `Season 01` folders. A difference stays only
+  where a player needs it, and the profile's comment says why: Plex's lowercase `s01e01` and `-e` range
+  against Jellyfin's `S01E01` and `-E`, Plex's `Season01.jpg` (and `season-specials-poster.jpg` for
+  season 0) against Jellyfin's plain `poster.jpg` in the season folder, the file that must start with its
+  folder's name for Jellyfin. Before adding a rule to a profile, look for a name both players read and
+  use it; make it specific only when there is none, after checking both documentations (and Jellyfin's
+  code, which reads more than it documents).
+
 - The parser is [guessit-js](https://github.com/opensubtitles/guessit-js) (LGPL-3.0) behind the
   `Parser` interface. Never modify or vendor it (LGPL/MIT compatibility).
 - Profile template syntax: `{title}`, `{year}`, `{tmdb}`, `{season:02}`; `\{` and `\}` are literal

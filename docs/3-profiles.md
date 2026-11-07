@@ -16,6 +16,20 @@ the path of your own YAML file.
   episode. No season NFO: Plex ignores it.
 - `plex-nfo` uses the same layout as `plex-no-id`, with NFO and artwork.
 
+## Profiles stay close to each other
+
+The shipped profiles are kept as alike as the players allow, so a library laid out for one reads the
+same for the other, with next to no renaming when you switch. They share the id tag
+(`{tmdb-<id>}`), the NFO files (`movie.nfo`, `tvshow.nfo`, one per episode), the image names
+(`poster.jpg`, `background.jpg`, `logo.png`) and the `Season 01` folders.
+
+What differs is what a player requires:
+
+- Episodes: Plex reads `Show (2022) - s01e01`, Jellyfin `Show (2022) S01E01`.
+- A season's poster: `Season01.jpg` for Plex (`season-specials-poster.jpg` for the specials), a plain
+  `poster.jpg` in the season folder for Jellyfin.
+- Jellyfin wants the video file to start with the name of its folder.
+
 ## Rules that hold for every profile
 
 - Metadata files are never overwritten: one already there is left as it is and reported.
