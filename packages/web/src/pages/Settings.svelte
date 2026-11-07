@@ -58,7 +58,7 @@
       <button type="button" class="btn" onclick={() => void load()}>{t('web.retry')}</button>
     {:else if settings}
       <div id="general"><SettingsGeneral {settings} {save} /></div>
-      <div id="libraries"><SettingsLibraries profiles={settings.profiles} /></div>
+      <div id="libraries"><SettingsLibraries examples={settings.namingExamples} /></div>
       <div id="watch"><SettingsWatch {settings} {save} /></div>
       <div id="processing"><SettingsProcessing {settings} {save} /></div>
       <div id="plex"><SettingsServer kind="plex" {settings} {save} /></div>

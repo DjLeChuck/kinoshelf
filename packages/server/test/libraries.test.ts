@@ -24,7 +24,8 @@ interface LibraryBody {
   source: string;
   type: string | null;
   into: { movie: string; series: string } | null;
-  profile: string | null;
+  naming: string | null;
+  metadata: string | null;
   mode: string | null;
   threshold: number | null;
   watch: boolean;
@@ -92,7 +93,8 @@ describe('libraries', () => {
       name: 'Films',
       source,
       into: null,
-      profile: null,
+      naming: null,
+      metadata: null,
       mode: null,
       threshold: null,
       watch: true,
@@ -110,7 +112,8 @@ describe('libraries', () => {
       name: 'Films 4K',
       source,
       type: 'movie',
-      profile: 'jellyfin',
+      naming: 'no-id',
+      metadata: 'nfo',
       threshold: 80,
     });
     expect(created.statusCode).toBe(201);
@@ -120,7 +123,8 @@ describe('libraries', () => {
       source,
       type: 'movie',
       into: null,
-      profile: 'jellyfin',
+      naming: 'no-id',
+      metadata: 'nfo',
       mode: null,
       threshold: 80,
       watch: false,
@@ -131,17 +135,18 @@ describe('libraries', () => {
 
     const patched = await h.request('PATCH', '/api/libraries/films-4k', {
       name: 'Films',
-      profile: null,
+      naming: null,
       threshold: 90,
     });
     expect(patched.json<LibraryBody>()).toMatchObject({
       id: 'films-4k',
       name: 'Films',
       type: 'movie',
-      profile: null,
+      naming: null,
       threshold: 90,
     });
-    expect(await h.file()).not.toContain('profile: jellyfin');
+    expect(await h.file()).not.toContain('naming:');
+    expect(await h.file()).toContain('metadata: nfo');
 
     // A second library of the same name gets its own id.
     const other = await makeDir();
@@ -207,7 +212,7 @@ describe('libraries', () => {
 
     expect(await code(body({ source: join(source, 'missing') }))).toEqual([422, 'fs.not-found']);
     expect(await code(body({ source: file }))).toEqual([422, 'fs.not-a-directory']);
-    expect(await code(body({ profile: 'nope' }))).toEqual([422, 'profile.unknown']);
+    expect(await code(body({ naming: 'nope' }))).toEqual([400, 'request.invalid']);
     expect(await code(body({ source: 'relative' }))).toEqual([400, 'request.invalid']);
     expect(await code(body({ mode: 'teleport' }))).toEqual([400, 'request.invalid']);
     // A library is a typed one or an arrival folder, never both nor neither, and `into` must name
@@ -284,7 +289,7 @@ describe('libraries', () => {
 
 describe('scanning a library', () => {
   it('scans its source with its own settings and sorts the files in tabs', async () => {
-    const h = await served('profile: jellyfin\n');
+    const h = await served('metadata: nfo\n');
     const source = await makeDir();
     const { movies: target, series } = await typedLibraries(h);
     await put(join(source, 'Dune.2021.mkv'), 'dune');
@@ -302,13 +307,13 @@ describe('scanning a library', () => {
     const job = (await h.request('GET', `/api/jobs/${jobId}`)).json<{
       libraryId: string;
       path: string;
-      settings: { profile: string; mode: string; destinationRoot: unknown };
+      settings: { profile: unknown; mode: string; destinationRoot: unknown };
     }>();
     expect(job).toMatchObject({
       libraryId: 'downloads',
       path: source,
       settings: {
-        profile: 'jellyfin',
+        profile: { naming: 'with-id', metadata: 'nfo' },
         mode: 'hardlink',
         destinationRoot: { movie: target, series },
       },
@@ -360,9 +365,12 @@ describe('scanning a library', () => {
 
     const jobId = await scan(h, 'home');
     const job = (await h.request('GET', `/api/jobs/${jobId}`)).json<{
-      settings: { mode: string; profile: string };
+      settings: { mode: string; profile: unknown };
     }>();
-    expect(job.settings).toMatchObject({ mode: 'move', profile: 'plex' });
+    expect(job.settings).toMatchObject({
+      mode: 'move',
+      profile: { naming: 'with-id', metadata: 'none' },
+    });
     const compliant = await entriesOf(h, jobId, 'compliant');
     expect(compliant.map((f) => f.path)).toEqual([
       join(root, 'Alien (1979) {tmdb-348}', 'Alien (1979) {tmdb-348}.mkv'),
@@ -386,13 +394,17 @@ describe('scanning a library', () => {
             plan: {
               id: 'p',
               createdAt: '',
-              profileId: 'plex',
+              profileId: 'with-id.none',
               destinationRoot: '/m',
               mode: 'copy',
               items: [],
             },
           },
-          settings: { profile: 'plex', mode: 'copy', destinationRoot: '/m' },
+          settings: {
+            profile: { naming: 'with-id', metadata: 'none' },
+            mode: 'copy',
+            destinationRoot: '/m',
+          },
         };
       },
     });
@@ -509,6 +521,6 @@ describe('scanning a library', () => {
       finishedAt: null,
       error: null,
     });
-    expect(processed.settings.profile).toBe('plex');
+    expect(processed.settings.profile).toEqual({ naming: 'with-id', metadata: 'none' });
   });
 });

@@ -53,13 +53,14 @@ describe('loadConfig', () => {
     const dir = await makeDir();
     await put(
       join(dir, 'config.yaml'),
-      'locale: fr\nmode: hardlink\nthreshold: 90\nprofile: plex\n',
+      'locale: fr\nmode: hardlink\nthreshold: 90\nnaming: no-id\nmetadata: nfo\n',
     );
     expect(await loadConfig(dir)).toEqual({
       locale: 'fr',
       mode: 'hardlink',
       threshold: 90,
-      profile: 'plex',
+      naming: 'no-id',
+      metadata: 'nfo',
     });
   });
 

@@ -1,4 +1,4 @@
-import { rm, writeFile } from 'node:fs/promises';
+import { rm } from 'node:fs/promises';
 import Database from 'better-sqlite3';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -16,25 +16,8 @@ import { cleanup, harness, batchOf, makeDir, put } from './harness.js';
 
 afterEach(cleanup);
 
-const PROFILE = `
-id: kodi-test
-name: Kodi test
-episodeRangeSeparator: '-e'
-templates:
-  movieFolder: '{title} ({year})'
-  movieFile: '{title} ({year})'
-  seriesFolder: '{title}'
-  seasonFolder: 'Season {season:02}'
-  episodeFile: '{title} - s{season:02}e{episode:02}'
-nfo: { format: kodi, movie: movie.nfo, episode: '{file}.nfo' }
-artwork: []
-filesystem: { forbidden: posix, replacement: '', maxSegmentBytes: 255 }
-`;
-
 /** A movie library organized in place, holding a new film, an unknown file and a well-placed film. */
-async function scanned() {
-  const profile = join(await makeDir(), 'kodi.yaml');
-  await writeFile(profile, PROFILE);
+async function scanned(metadata: 'none' | 'nfo' = 'nfo') {
   const root = await makeDir();
   const dune = await put(join(root, 'Dune.2021.mkv'), 'dune');
   const mystery = await put(join(root, 'Mystery.Home.Video.mkv'));
@@ -42,7 +25,7 @@ async function scanned() {
   const h = await harness({
     config: {
       libraries: [
-        { id: 'films', name: 'Films', source: root, type: 'movie', profile },
+        { id: 'films', name: 'Films', source: root, type: 'movie', naming: 'no-id', metadata },
         { id: 'shows', name: 'Shows', source: await makeDir(), type: 'series' },
       ],
     },
@@ -66,11 +49,11 @@ describe('the snapshot of a library', () => {
       title: 'Dune',
       year: 2021,
       state: 'rename',
-      // The profile writes an NFO and no image; nothing is there yet.
+      // The profile writes an NFO and the images; nothing is there yet.
       nfo: false,
-      poster: null,
-      fanart: null,
-      logo: null,
+      poster: false,
+      fanart: false,
+      logo: false,
     });
     expect(byPath.get(mystery)).toMatchObject({
       kind: 'movie',
@@ -104,13 +87,14 @@ describe('the snapshot of a library', () => {
     await h.app.jobs.idle();
 
     expect(store.get('films', dune)).toBeUndefined();
+    // The test has no network: the NFO is written, the images are not, so both stay incomplete.
     expect(store.get('films', moved)).toMatchObject({
-      state: 'ok',
+      state: 'incomplete',
       nfo: true,
       title: 'Dune',
     });
-    // Only an NFO was missing: the film stays where it is, and is now complete.
-    expect(store.get('films', alien)).toMatchObject({ state: 'ok', nfo: true });
+    // The film stays where it is, and now has its NFO.
+    expect(store.get('films', alien)).toMatchObject({ state: 'incomplete', nfo: true });
 
     const batchId = batchOf(h, execution.id);
     expect((await h.request('POST', `/api/batches/${batchId}/undo`)).statusCode).toBe(200);
@@ -225,7 +209,7 @@ describe('GET /api/libraries/:id/items', () => {
   it('lists the snapshot with its counts, by title', async () => {
     const { h, root, dune, alien } = await scanned();
     const body = await list(h);
-    expect(body.library).toEqual({ writes: { nfo: true, artwork: false, logo: false } });
+    expect(body.library).toEqual({ writes: { nfo: true, artwork: true, logo: true } });
     expect(body.scannedAt).toEqual(expect.any(String));
     expect(body.scan).toBeNull();
     expect(body.counts).toEqual({
@@ -234,7 +218,7 @@ describe('GET /api/libraries/:id/items', () => {
       rename: 1,
       unrecognized: 1,
       'missing-nfo': 2,
-      'missing-artwork': 0,
+      'missing-artwork': 2,
       'missing-episodes': 0,
       'missing-show-files': 0,
     });
@@ -301,7 +285,7 @@ describe('GET /api/libraries/:id/items', () => {
     const { h, dune, alien } = await scanned();
     expect((await list(h, '?state=rename')).items.map((i) => i.path)).toEqual([dune]);
     expect((await list(h, '?state=missing-nfo')).items.map((i) => i.path)).toEqual([alien, dune]);
-    expect((await list(h, '?state=missing-artwork')).total).toBe(0);
+    expect((await list(h, '?state=missing-artwork')).total).toBe(2);
     // The title, or the file name, whatever the case.
     expect((await list(h, '?q=ALIEN')).items.map((i) => i.path)).toEqual([alien]);
     expect((await list(h, '?q=mystery.home')).total).toBe(1);
@@ -365,17 +349,7 @@ describe('GET /api/libraries/:id/items', () => {
 });
 
 describe('the logo of a library item', () => {
-  const WITH_LOGO = PROFILE.replace(
-    'artwork: []',
-    `artwork:
-  - { kind: poster, name: poster.jpg }
-  - { kind: fanart, name: background.jpg }
-  - { kind: logo, name: logo.png }`,
-  );
-
   it('is told apart from the other images, and keeps an item under missing-artwork', async () => {
-    const profile = join(await makeDir(), 'logo.yaml');
-    await writeFile(profile, WITH_LOGO);
     const root = await makeDir();
     const alienDir = join(root, 'Alien (1979)');
     const alien = await put(join(alienDir, 'Alien (1979).mkv'), 'alien');
@@ -389,7 +363,14 @@ describe('the logo of a library item', () => {
     const h = await harness({
       config: {
         libraries: [
-          { id: 'films', name: 'Films', source: root, type: 'movie', profile },
+          {
+            id: 'films',
+            name: 'Films',
+            source: root,
+            type: 'movie',
+            naming: 'no-id',
+            metadata: 'nfo',
+          },
           { id: 'shows', name: 'Shows', source: await makeDir(), type: 'series' },
         ],
       },
@@ -409,7 +390,7 @@ describe('the logo of a library item', () => {
   });
 
   it('is not claimed when the profile writes none', async () => {
-    const { h, alien } = await scanned();
+    const { h, alien } = await scanned('none');
     const item = (await list(h)).items.find((candidate) => candidate.path === alien);
     expect(item).toMatchObject({ logo: null });
   });
@@ -506,7 +487,8 @@ describe('POST /api/libraries/:id/execute', () => {
       skipped: string[];
     }>();
     expect(report.skipped).toEqual([]);
-    expect(report.items.flatMap((i) => i.results.map((r) => r.type)).sort()).toEqual([
+    const types = report.items.flatMap((i) => i.results.map((r) => r.type));
+    expect(types.filter((type) => type !== 'download').sort()).toEqual([
       'transfer',
       'write-file',
       'write-file',
@@ -520,8 +502,8 @@ describe('POST /api/libraries/:id/execute', () => {
     expect(run.statusCode).toBe(202);
     expect(run.json<{ executions: unknown[] }>().executions).toHaveLength(1);
     await h.app.jobs.idle();
-    expect(store.get('films', moved)).toMatchObject({ state: 'ok', nfo: true });
-    expect(store.get('films', alien)).toMatchObject({ state: 'ok', nfo: true });
+    expect(store.get('films', moved)).toMatchObject({ nfo: true });
+    expect(store.get('films', alien)).toMatchObject({ nfo: true });
 
     // One batch, in the history.
     const history = (await h.request('GET', '/api/history')).json<{ items: { kind: string }[] }>();
@@ -534,7 +516,7 @@ describe('POST /api/libraries/:id/execute', () => {
     const run = await h.request('POST', '/api/libraries/films/execute', { items: [itemId(alien)] });
     expect(run.statusCode).toBe(202);
     await h.app.jobs.idle();
-    expect(store.get('films', alien)).toMatchObject({ state: 'ok', nfo: true });
+    expect(store.get('films', alien)).toMatchObject({ nfo: true });
     expect(store.get('films', dune)?.state).toBe('rename');
   });
 
@@ -745,7 +727,14 @@ describe('the snapshot after an undo', () => {
     const snapshot = new LibrarySnapshot({
       config: () => ({
         libraries: [
-          { id: 'shows', name: 'Shows', source: '/lib', type: 'series', profile: 'jellyfin' },
+          {
+            id: 'shows',
+            name: 'Shows',
+            source: '/lib',
+            type: 'series',
+            naming: 'with-id',
+            metadata: 'nfo',
+          },
           { id: 'dl', name: 'Downloads', source: '/dl', into: { movie: 'shows', series: 'shows' } },
         ],
       }),
@@ -756,10 +745,10 @@ describe('the snapshot after an undo', () => {
     return { store, snapshot };
   };
 
-  it('forgets a video that went back to an arrival folder', async () => {
+  it('forgets a video that went back to an arrival folder', () => {
     const { store, snapshot } = setup();
     store.put(row('/lib/Show/Season 01/Show S01E01.mkv'));
-    await snapshot.undone([
+    snapshot.undone([
       journal({
         source: '/dl/Show.S01E01.mkv',
         destination: '/lib/Show/Season 01/Show S01E01.mkv',
@@ -768,10 +757,10 @@ describe('the snapshot after an undo', () => {
     expect(store.all('shows')).toEqual([]);
   });
 
-  it('moves a video renamed in place back to where it was, to rename again', async () => {
+  it('moves a video renamed in place back to where it was, to rename again', () => {
     const { store, snapshot } = setup();
     store.put(row('/lib/Show/Season 01/Show S01E01.mkv'));
-    await snapshot.undone([
+    snapshot.undone([
       journal({
         mode: 'move',
         source: '/lib/Show.S01E01.mkv',
@@ -783,11 +772,11 @@ describe('the snapshot after an undo', () => {
     ]);
   });
 
-  it('marks only the episode whose NFO went as lacking one', async () => {
+  it('marks only the episode whose NFO went as lacking one', () => {
     const { store, snapshot } = setup();
     store.put(row('/lib/Show/Season 01/Show S01E01.mkv'));
     store.put(row('/lib/Show/Season 01/Show S01E02.mkv', { episode: 2 }));
-    await snapshot.undone([
+    snapshot.undone([
       journal({ kind: 'generated', destination: '/lib/Show/Season 01/Show S01E02.nfo' }),
     ]);
     expect(store.all('shows').map(({ episode, nfo }) => ({ episode, nfo }))).toEqual([

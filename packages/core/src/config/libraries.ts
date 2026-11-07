@@ -1,15 +1,16 @@
 import { LIBRARY_ID_PATTERN, type Config, type LibraryConfig } from './config.js';
+import { DEFAULT_PROFILE_CHOICE, type ProfileChoice } from '../profiles/build.js';
 import type { SettingsOverrides } from './settings.js';
 
-/** The profile of a library that sets none, and of Kinoshelf when `config.yaml` sets none either. */
-export const DEFAULT_PROFILE = 'plex';
-
-/** The profile a library writes with: its own, else the global one, else `DEFAULT_PROFILE`. */
+/** The profile a library writes with: its own choices, else the global ones, else the defaults. */
 export function libraryProfile(
-  library: Pick<LibraryConfig, 'profile'> | undefined,
-  config: Pick<Config, 'profile'>,
-): string {
-  return library?.profile ?? config.profile ?? DEFAULT_PROFILE;
+  library: Pick<LibraryConfig, 'naming' | 'metadata'> | undefined,
+  config: Pick<Config, 'naming' | 'metadata'>,
+): ProfileChoice {
+  return {
+    naming: library?.naming ?? config.naming ?? DEFAULT_PROFILE_CHOICE.naming,
+    metadata: library?.metadata ?? config.metadata ?? DEFAULT_PROFILE_CHOICE.metadata,
+  };
 }
 
 /** Where a library's works are written: its own source if typed, else its arrival destinations. */
@@ -34,7 +35,7 @@ function destinationOverrides(
 
 /**
  * What a library sets, as overrides for `resolveSettings`: the rest follows the config. An arrival
- * folder sets no profile: it is planned with the global one until the user picks a destination
+ * folder sets no naming nor metadata: it is planned with the global ones until the user picks a destination
  * (the profile of that library is then the right one).
  */
 export function libraryOverrides(
@@ -43,7 +44,8 @@ export function libraryOverrides(
 ): SettingsOverrides {
   return {
     ...destinationOverrides(library, libraries),
-    ...(library.profile !== undefined && { profile: library.profile }),
+    ...(library.naming !== undefined && { naming: library.naming }),
+    ...(library.metadata !== undefined && { metadata: library.metadata }),
     ...(library.mode !== undefined && { mode: library.mode }),
     ...(library.threshold !== undefined && { threshold: library.threshold }),
   };

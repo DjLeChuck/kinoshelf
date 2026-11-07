@@ -10,20 +10,14 @@
     type Library,
     type LibraryGroup,
   } from '../lib/libraries.js';
-  import {
-    CUSTOM_PROFILE,
-    FormError,
-    MODES,
-    profileHelp,
-    profileName,
-    type ShippedProfile,
-  } from '../lib/settings.js';
+  import { FormError, MODES, type NamingExample, type Naming } from '../lib/settings.js';
   import PathField from './PathField.svelte';
+  import ProfileChoice from './ProfileChoice.svelte';
 
   let {
     library,
     group,
-    profiles,
+    examples,
     libraries,
     onsaved,
     ondeleted,
@@ -32,7 +26,7 @@
     /** `undefined` creates one, of `group`. */
     library?: Library | undefined;
     group: LibraryGroup;
-    profiles: readonly ShippedProfile[];
+    examples: Readonly<Record<Naming, NamingExample>>;
     /** Every library, to choose the destinations of an arrival folder among the typed ones. */
     libraries: readonly Library[];
     onsaved: (library: Library) => void;
@@ -42,7 +36,7 @@
 
   // Read once: the page keys this form by library, and nothing replaces it under an edit.
   /* svelte-ignore state_referenced_locally */
-  let form = $state(libraryForm(library, profiles, group, libraries));
+  let form = $state(libraryForm(library, group, libraries));
   let busy = $state(false);
   let failure = $state<unknown>(undefined);
   let saved = $state(false);
@@ -96,25 +90,6 @@
   const typed = $derived((kind: 'movie' | 'series') =>
     libraries.filter((one) => one.type === kind),
   );
-
-  const profileChoices = $derived([
-    {
-      id: '',
-      name: t('web.libraries.profile.default'),
-      help: t('web.libraries.profile.default.help'),
-    },
-    ...profiles.map((profile) => ({
-      id: profile.id,
-      name: profileName(profile, t),
-      help: profileHelp(profile.id, t),
-      example: profile.example.movie,
-    })),
-    {
-      id: CUSTOM_PROFILE,
-      name: t('web.settings.processing.profile.custom'),
-      help: t('web.settings.processing.profile.path.hint'),
-    },
-  ]);
 </script>
 
 <form onsubmit={submit} class="form">
@@ -191,32 +166,13 @@
   {#if group === 'in-place'}
     <section class="card" aria-labelledby="lib-profile">
       <h2 id="lib-profile">{t('web.libraries.profile')}</h2>
-      <div class="cards" role="radiogroup" aria-labelledby="lib-profile">
-        {#each profileChoices as choice (choice.id)}
-          <label class="option" class:on={form.profile.choice === choice.id}>
-            <input
-              type="radio"
-              name="lib-profile"
-              value={choice.id}
-              bind:group={form.profile.choice}
-            />
-            <span class="option-name">{choice.name}</span>
-            {#if choice.help}<span class="muted hint">{choice.help}</span>{/if}
-            {#if 'example' in choice}<code class="example">{choice.example}</code>{/if}
-          </label>
-        {/each}
-      </div>
-      {#if form.profile.choice === CUSTOM_PROFILE}
-        <div class="field">
-          <label for="lib-profile-path">{t('web.settings.processing.profile.path')}</label>
-          <PathField
-            id="lib-profile-path"
-            kind="file"
-            placeholder="/config/my-profile.yaml"
-            bind:value={form.profile.path}
-          />
-        </div>
-      {/if}
+      <ProfileChoice
+        id="lib"
+        bind:naming={form.naming}
+        bind:metadata={form.metadata}
+        {examples}
+        withDefault
+      />
     </section>
   {:else}
     <section class="card" aria-labelledby="lib-mode">
@@ -351,12 +307,6 @@
     display: flex;
     flex-wrap: wrap;
     gap: 4px 24px;
-  }
-
-  /* The radio stays in the page for the keyboard and screen readers; the card is what is seen. */
-  .example {
-    font-size: 11.5px;
-    overflow-wrap: anywhere;
   }
 
   .advanced summary {

@@ -47,6 +47,9 @@ const watchSchema = z.strictObject({
 /** Stable, URL-safe: it names a library in the API and in the jobs it started. */
 export const LIBRARY_ID_PATTERN = /^[a-z0-9][a-z0-9-]*$/;
 
+const namingSchema = z.enum(['with-id', 'no-id']);
+const metadataSchema = z.enum(['none', 'nfo']);
+
 const libraryKindSchema = z.enum(['movie', 'series']);
 
 /**
@@ -63,8 +66,9 @@ const librarySchema = z
     type: libraryKindSchema.optional(),
     /** Ids of typed libraries; both kinds, so a release always has a default destination. */
     into: z.strictObject({ movie: z.string().min(1), series: z.string().min(1) }).optional(),
-    /** Typed libraries only: an arrival folder takes the profile of its destination. */
-    profile: z.string().min(1).optional(),
+    /** Typed libraries only: an arrival folder takes the naming and metadata of its destination. */
+    naming: namingSchema.optional(),
+    metadata: metadataSchema.optional(),
     /** Arrival folders only (default `copy`): a typed library is organized in place. */
     mode: z.enum(['copy', 'hardlink', 'move']).optional(),
     threshold: z.number().min(0).max(100).optional(),
@@ -77,8 +81,13 @@ const librarySchema = z
     };
     if ((library.type === undefined) === (library.into === undefined)) {
       problem('needs exactly one of "type" and "into"');
-    } else if (library.into !== undefined && library.profile !== undefined) {
-      problem('an arrival folder ("into") takes the profile of its destination: remove "profile"');
+    } else if (
+      library.into !== undefined &&
+      (library.naming !== undefined || library.metadata !== undefined)
+    ) {
+      problem(
+        'an arrival folder ("into") takes the naming and metadata of its destination: remove "naming" and "metadata"',
+      );
     } else if (library.type !== undefined && library.mode !== undefined) {
       problem('a library with a "type" is organized in place: remove "mode"');
     }
@@ -99,7 +108,10 @@ const configSchema = z
     locale: z.enum(['en', 'fr']).optional(),
     /** Language of the titles fetched from TMDB, e.g. `fr` or `en-US`. */
     metadataLanguage: z.string().min(2).optional(),
-    profile: z.string().min(1).optional(),
+    /** Whether the folder names carry the `{tmdb-<id>}` tag (default `with-id`). */
+    naming: namingSchema.optional(),
+    /** Whether NFO files and images are written beside the videos (default `none`). */
+    metadata: metadataSchema.optional(),
     mode: z.enum(['copy', 'hardlink', 'move']).optional(),
     threshold: z.number().min(0).max(100).optional(),
     /**

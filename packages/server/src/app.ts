@@ -250,7 +250,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
       scanned: async (job) => {
         // Before the snapshot and the notification: a file is planned for the library it goes to.
         await service.planArrivals(job);
-        await snapshot.scanned(job);
+        snapshot.scanned(job);
         if (options.retentionDays) {
           forgetReplacedScans(options.database, typedScans());
         }

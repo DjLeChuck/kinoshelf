@@ -1,7 +1,6 @@
-import { readdir, readFile, stat } from 'node:fs/promises';
-import { resolve } from 'node:path';
+import { readFile, stat } from 'node:fs/promises';
 import { parseDocument } from 'yaml';
-import { errnoCode, KinoshelfError } from '../errors.js';
+import { KinoshelfError } from '../errors.js';
 import type { Profile } from '../types/profile.js';
 import { profileSchema, type ProfileFile } from './schema.js';
 import { parseTemplate, templateVariables } from './template.js';
@@ -124,7 +123,6 @@ export function parseProfile(yamlText: string): Profile {
 
   return {
     id: file.id,
-    name: file.name,
     episodeRangeSeparator: file.episodeRangeSeparator,
     templates: {
       movieFolder: file.templates.movieFolder,
@@ -188,39 +186,4 @@ export async function loadProfileFile(path: string | URL): Promise<Profile> {
   }
   parsed.set(key, { stamp, profile });
   return profile;
-}
-
-// Same depth from `src/profiles` and `dist/profiles`: the YAML files ship next to the code.
-const BUNDLED_DIR = new URL('../../profiles/', import.meta.url);
-
-const PROFILE_ID = /^[a-z0-9-]+$/;
-
-/** Ids of the profiles shipped with Kinoshelf, e.g. `plex`. */
-export async function listBundledProfiles(): Promise<string[]> {
-  return (await readdir(BUNDLED_DIR))
-    .filter((name) => name.endsWith('.yaml'))
-    .map((name) => name.slice(0, -'.yaml'.length))
-    .sort();
-}
-
-/** Loads a shipped profile by id. The id is checked so it can never address another file. */
-export async function loadBundledProfile(id: string): Promise<Profile> {
-  if (!PROFILE_ID.test(id)) {
-    throw new KinoshelfError('profile.unknown', { id });
-  }
-  try {
-    return await loadProfileFile(new URL(`${id}.yaml`, BUNDLED_DIR));
-  } catch (error) {
-    if (errnoCode(error) === 'ENOENT') {
-      throw new KinoshelfError('profile.unknown', { id });
-    }
-    throw error;
-  }
-}
-
-/** A path (contains a separator or ends in .yaml) or the id of a bundled profile. */
-export function loadProfile(reference: string): Promise<Profile> {
-  return /[\\/]|\.ya?ml$/i.test(reference)
-    ? loadProfileFile(resolve(reference))
-    : loadBundledProfile(reference);
 }

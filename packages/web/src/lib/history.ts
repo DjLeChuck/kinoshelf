@@ -2,7 +2,7 @@ import type { Locale } from '@kinoshelf/i18n';
 import type { ErrorBody } from './arrivals.js';
 import type { Library } from './libraries.js';
 import { isBelow } from './paths.js';
-import type { Mode } from './settings.js';
+import type { Metadata, Mode, Naming } from './settings.js';
 
 export type JobStatus = 'queued' | 'running' | 'done' | 'failed';
 /** `queued`/`running`: the transfer of a batch is not over. */
@@ -43,7 +43,7 @@ export interface JobDetail {
   } | null;
   readonly summary: Readonly<Record<string, number>> | null;
   readonly settings: {
-    readonly profile: string;
+    readonly profile: { readonly naming: Naming; readonly metadata: Metadata };
     readonly mode: Mode;
     readonly destinationRoot: string | { readonly movie: string; readonly series: string };
   } | null;

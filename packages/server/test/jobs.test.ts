@@ -16,7 +16,7 @@ interface JobBody {
   status: string;
   error: { code: string; params?: Record<string, unknown> } | null;
   summary: Record<string, number> | null;
-  settings: { profile: string; mode: string } | null;
+  settings: { profile: unknown; mode: string } | null;
   batchId: string | null;
 }
 
@@ -144,13 +144,17 @@ const empty: ProcessedJob = {
     plan: {
       id: 'p',
       createdAt: '',
-      profileId: 'plex',
+      profileId: 'with-id.none',
       destinationRoot: '/m',
       mode: 'copy',
       items: [],
     },
   },
-  settings: { profile: 'plex', mode: 'copy', destinationRoot: '/m' },
+  settings: {
+    profile: { naming: 'with-id', metadata: 'none' },
+    mode: 'copy',
+    destinationRoot: '/m',
+  },
 };
 
 function newQueue(): { jobs: JobStore; executions: ExecutionStore } {

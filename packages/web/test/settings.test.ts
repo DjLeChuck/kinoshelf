@@ -1,14 +1,8 @@
-import { createTranslator } from '@kinoshelf/i18n';
 import { describe, expect, it } from 'vitest';
 import {
-  CUSTOM_PROFILE,
   cleanMappings,
   isHttpUrl,
   nullIfBlank,
-  profileForm,
-  profileHelp,
-  profileName,
-  profileOf,
   secondsOf,
   thresholdOf,
   watchForm,
@@ -99,31 +93,6 @@ describe('isHttpUrl', () => {
   });
 });
 
-describe('profile', () => {
-  const bundled = [{ id: 'plex' }];
-
-  it('reads a bundled id, the default and a path back into the form', () => {
-    expect(profileForm(null, bundled)).toEqual({ choice: '', path: '' });
-    expect(profileForm('plex', bundled)).toEqual({ choice: 'plex', path: '' });
-    expect(profileForm('/config/mine.yaml', bundled)).toEqual({
-      choice: CUSTOM_PROFILE,
-      path: '/config/mine.yaml',
-    });
-  });
-
-  it('saves the choice, or the path of the user’s own file', () => {
-    expect(profileOf({ choice: '', path: '' })).toBeNull();
-    expect(profileOf({ choice: 'plex', path: '/ignored' })).toBe('plex');
-    expect(profileOf({ choice: CUSTOM_PROFILE, path: ' /config/mine.yaml ' })).toBe(
-      '/config/mine.yaml',
-    );
-  });
-
-  it('refuses "my own file" without a path', () => {
-    expect(profileOf({ choice: CUSTOM_PROFILE, path: '  ' })).toBeUndefined();
-  });
-});
-
 describe('secondsOf', () => {
   it.each([
     ['', null],
@@ -161,19 +130,5 @@ describe('the watch form', () => {
 
   it('refuses seconds that are not a number', () => {
     expect(watchPatch({ ...watchForm(settings), poll: 'often' })).toEqual({ invalid: 'seconds' });
-  });
-});
-
-describe('profile texts', () => {
-  const t = createTranslator('fr');
-
-  it('translates the name of a shipped profile and falls back to the file’s own name', () => {
-    expect(profileName({ id: 'plex-no-id', name: 'Plex (no id)' }, t)).toBe('Plex (sans id)');
-    expect(profileName({ id: 'mine', name: 'My profile' }, t)).toBe('My profile');
-  });
-
-  it('describes a shipped profile only', () => {
-    expect(profileHelp('plex-no-id', t)).toContain('sans l’id TMDB');
-    expect(profileHelp('mine', t)).toBeNull();
   });
 });

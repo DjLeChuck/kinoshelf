@@ -9,8 +9,8 @@ const context: SettingsContext = {
 };
 
 describe('resolveSettings', () => {
-  it('lets overrides win over the config, which wins over defaults', async () => {
-    const settings = await resolveSettings(
+  it('lets overrides win over the config, which wins over defaults', () => {
+    const settings = resolveSettings(
       { dest: '/media', mode: 'hardlink', threshold: 95 },
       { mode: 'move', threshold: 70, metadataLanguage: 'fr' },
       context,
@@ -20,29 +20,38 @@ describe('resolveSettings', () => {
       threshold: 95,
       destinations: '/media',
       metadataLanguage: 'fr',
-      profile: { id: 'plex' },
+      profile: { id: 'with-id.none' },
     });
   });
 
-  it('copies to another folder and moves when organizing in place', async () => {
-    expect((await resolveSettings({ dest: '/media' }, {}, context)).mode).toBe('copy');
-    expect((await resolveSettings({ dest: '/downloads' }, {}, context)).mode).toBe('move');
+  it('takes naming and metadata from the overrides, then the config, then the defaults', () => {
+    const idOf = (
+      ...args: Parameters<typeof resolveSettings> extends [infer O, infer C, ...unknown[]]
+        ? [O, C]
+        : never
+    ) => resolveSettings(args[0], args[1], context).profile.id;
+    expect(idOf({ dest: '/m' }, {})).toBe('with-id.none');
+    expect(idOf({ dest: '/m' }, { naming: 'no-id', metadata: 'nfo' })).toBe('no-id.nfo');
+    expect(idOf({ dest: '/m', metadata: 'none' }, { naming: 'no-id', metadata: 'nfo' })).toBe(
+      'no-id.none',
+    );
   });
 
-  it('keeps movies and series apart when their roots differ', async () => {
-    const settings = await resolveSettings(
-      { destMovies: '/movies', destSeries: '/shows' },
-      {},
-      context,
-    );
+  it('copies to another folder and moves when organizing in place', () => {
+    expect(resolveSettings({ dest: '/media' }, {}, context).mode).toBe('copy');
+    expect(resolveSettings({ dest: '/downloads' }, {}, context).mode).toBe('move');
+  });
+
+  it('keeps movies and series apart when their roots differ', () => {
+    const settings = resolveSettings({ destMovies: '/movies', destSeries: '/shows' }, {}, context);
     expect(settings.destinations).toEqual({ movie: '/movies', series: '/shows' });
   });
 
-  it('requires a destination unless the source stands in for it', async () => {
-    await expect(resolveSettings({}, {}, context)).rejects.toMatchObject({
-      info: { code: 'config.destination-required' },
-    });
-    const settings = await resolveSettings({}, {}, { ...context, defaultToSource: true });
+  it('requires a destination unless the source stands in for it', () => {
+    expect(() => resolveSettings({}, {}, context)).toThrow(
+      expect.objectContaining({ info: { code: 'config.destination-required' } }) as Error,
+    );
+    const settings = resolveSettings({}, {}, { ...context, defaultToSource: true });
     expect(settings.destinations).toBe('/downloads');
   });
 });
@@ -53,22 +62,21 @@ describe('resolveSettings destinations from the libraries', () => {
     { id: 'shows', name: 'Shows', source: '/m/shows', type: 'series' },
   ];
 
-  it('sends each kind to the first library of its type when nothing says otherwise', async () => {
-    const settings = await resolveSettings({}, { libraries }, context);
+  it('sends each kind to the first library of its type when nothing says otherwise', () => {
+    const settings = resolveSettings({}, { libraries }, context);
     expect(settings.destinations).toEqual({ movie: '/m/films', series: '/m/shows' });
   });
 
-  it('lets an override win, and prefers a library to the folder being scanned', async () => {
-    expect((await resolveSettings({ dest: '/x' }, { libraries }, context)).destinations).toBe('/x');
+  it('lets an override win, and prefers a library to the folder being scanned', () => {
+    expect(resolveSettings({ dest: '/x' }, { libraries }, context).destinations).toBe('/x');
     expect(
-      (await resolveSettings({}, { libraries }, { ...context, defaultToSource: true }))
-        .destinations,
+      resolveSettings({}, { libraries }, { ...context, defaultToSource: true }).destinations,
     ).toEqual({ movie: '/m/films', series: '/m/shows' });
   });
 
-  it('needs both kinds: a library of one type is not enough', async () => {
-    await expect(
-      resolveSettings({}, { libraries: libraries.slice(0, 1) }, context),
-    ).rejects.toMatchObject({ info: { code: 'config.destination-required' } });
+  it('needs both kinds: a library of one type is not enough', () => {
+    expect(() => resolveSettings({}, { libraries: libraries.slice(0, 1) }, context)).toThrow(
+      expect.objectContaining({ info: { code: 'config.destination-required' } }) as Error,
+    );
   });
 });

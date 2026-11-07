@@ -2,17 +2,11 @@
   import { messageOf } from '../lib/errors.js';
   import { resource } from '../lib/resource.svelte.js';
   import { t } from '../lib/i18n.svelte.js';
-  import {
-    folderName,
-    groupOf,
-    libraryApi,
-    type Library,
-    type LibraryGroup,
-  } from '../lib/libraries.js';
-  import { profileName, type ShippedProfile } from '../lib/settings.js';
+  import { groupOf, libraryApi, type Library, type LibraryGroup } from '../lib/libraries.js';
+  import type { Naming, NamingExample } from '../lib/settings.js';
   import LibraryForm from './LibraryForm.svelte';
 
-  let { profiles }: { profiles: readonly ShippedProfile[] } = $props();
+  let { examples }: { examples: Readonly<Record<Naming, NamingExample>> } = $props();
 
   const GROUPS: readonly LibraryGroup[] = ['in-place', 'arrival'];
 
@@ -29,12 +23,16 @@
     return target && 'id' in target ? libraries?.find(({ id }) => id === target.id) : undefined;
   });
 
-  function profileLabel(library: Library): string {
-    if (library.profile === null) {
-      return t('web.libraries.default');
-    }
-    const bundled = profiles.find(({ id }) => id === library.profile);
-    return bundled ? profileName(bundled, t) : folderName(library.profile);
+  /** What a library writes, `default` where it follows the settings. */
+  function profileLabel(library: Library): { naming: string; metadata: string } {
+    return {
+      naming: library.naming
+        ? t(`web.profile.naming.${library.naming}`)
+        : t('web.libraries.default'),
+      metadata: library.metadata
+        ? t(`web.profile.metadata.${library.metadata}`)
+        : t('web.libraries.default'),
+    };
   }
 
   function close(): void {
@@ -98,7 +96,7 @@
                         series: nameOf(library.into.series),
                       })}
                     {:else}
-                      {t('web.libraries.summary.profile', { profile: profileLabel(library) })}
+                      {t('web.libraries.summary.profile', profileLabel(library))}
                     {/if}
                   </span>
                 </button>
@@ -115,7 +113,7 @@
           <LibraryForm
             library={current}
             group={current ? groupOf(current) : 'group' in editing ? editing.group : 'in-place'}
-            {profiles}
+            {examples}
             {libraries}
             onsaved={() => {
               if (!current) {

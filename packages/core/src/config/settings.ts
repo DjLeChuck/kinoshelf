@@ -1,6 +1,6 @@
 import { dirname, resolve } from 'node:path';
 import { KinoshelfError } from '../errors.js';
-import { loadProfile } from '../profiles/loader.js';
+import { buildProfile, type Metadata, type Naming } from '../profiles/build.js';
 import type { TransferMode } from '../types/operation.js';
 import type { DestinationRoots } from '../types/plan.js';
 import type { Profile } from '../types/profile.js';
@@ -16,7 +16,8 @@ export interface SettingsOverrides {
   readonly dest?: string;
   readonly destMovies?: string;
   readonly destSeries?: string;
-  readonly profile?: string;
+  readonly naming?: Naming;
+  readonly metadata?: Metadata;
   readonly mode?: TransferMode;
   readonly threshold?: number;
   readonly metadataLanguage?: string;
@@ -44,11 +45,11 @@ export interface SettingsContext {
  * Merges overrides over the config file over defaults. Writing in the folder being read
  * (organized in place) defaults to `move`, otherwise to `copy`.
  */
-export async function resolveSettings(
+export function resolveSettings(
   overrides: SettingsOverrides,
   config: Config,
   context: SettingsContext,
-): Promise<Settings> {
+): Settings {
   const sourceDir = resolve(context.sourceIsFile ? dirname(context.source) : context.source);
 
   // Without a word of the caller, a kind goes to the first library of that type; the folder being
@@ -68,7 +69,7 @@ export async function resolveSettings(
   const threshold = overrides.threshold ?? config.threshold;
 
   return {
-    profile: await loadProfile(libraryProfile(overrides, config)),
+    profile: buildProfile(libraryProfile(overrides, config)),
     mode: overrides.mode ?? config.mode ?? (inPlace ? 'move' : 'copy'),
     ...(threshold !== undefined && { threshold }),
     metadataLanguage:

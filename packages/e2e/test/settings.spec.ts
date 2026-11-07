@@ -37,26 +37,37 @@ test('refuses a threshold out of range before asking the server', async ({ page 
   await expect(section.getByRole('alert')).toContainText('a number from 0 to 100');
 });
 
-test('offers the bundled profiles and asks for a path only for one’s own file', async ({
+test('chooses the naming and whether NFO files are written, and finds both after a reload', async ({
   page,
 }) => {
-  const section = page.locator('form', {
-    has: page.getByRole('heading', { name: 'Default settings' }),
-  });
-  await expect(section.getByRole('option', { name: 'Plex', exact: true })).toBeAttached();
-  await expect(section.getByLabel('Path of the YAML file')).toHaveCount(0);
+  const form = () =>
+    page.locator('form', { has: page.getByRole('heading', { name: 'Default settings' }) });
+  const section = form();
 
-  // The default (Plex) is explained with the paths it writes; another profile shows its own.
-  const layout = section.getByRole('group', { name: 'What this profile writes' });
-  await expect(layout).toContainText('Dune (2021) {tmdb-438631}/Dune (2021) {tmdb-438631}.mkv');
-  await section.getByLabel('Output profile').selectOption({ label: 'Plex (no id)' });
-  await expect(layout).toContainText('Dune (2021)/Dune (2021).mkv');
-  await expect(layout).not.toContainText('tmdb');
+  // Each naming shows the paths it writes, and the id is on by default.
+  await expect(section.getByRole('radio', { name: /^With the TMDB id/ })).toBeChecked();
+  await expect(section.getByRole('radio', { name: /^None/ })).toBeChecked();
+  await expect(section).toContainText('Dune (2021) {tmdb-438631}/Dune (2021) {tmdb-438631}.mkv');
+  await expect(section).toContainText('Dune (2021)/Dune (2021).mkv');
+  // The consequence of writing metadata is said before choosing it.
+  await expect(section).toContainText('Plex only does with the optional “Plex NFO” agent');
 
-  await section.getByLabel('Output profile').selectOption({ label: 'My own file…' });
+  await section.getByRole('radio', { name: /^Without the id/ }).check({ force: true });
+  await section.getByRole('radio', { name: /^NFO files and images/ }).check({ force: true });
   await section.getByRole('button', { name: 'Save', exact: true }).click();
-  await expect(section.getByRole('alert')).toContainText('path of your profile file');
-  await section.getByLabel('Path of the YAML file').fill('/config/mine.yaml');
+  await expect(section.getByText('Saved.')).toBeVisible();
+
+  await page.reload();
+  await expect(form().getByRole('radio', { name: /^Without the id/ })).toBeChecked();
+  await expect(form().getByRole('radio', { name: /^NFO files and images/ })).toBeChecked();
+
+  // Back to the defaults, so the other specs start from them.
+  await form()
+    .getByRole('radio', { name: /^With the TMDB id/ })
+    .check({ force: true });
+  await form().getByRole('radio', { name: /^None/ }).check({ force: true });
+  await form().getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(form().getByText('Saved.')).toBeVisible();
 });
 
 test('picks the source folder of a library on the server’s disk instead of typing it', async ({

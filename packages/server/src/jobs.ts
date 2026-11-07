@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { Analysis, DestinationRoots, TransferMode } from '@kinoshelf/core';
+import type { Analysis, DestinationRoots, ProfileChoice, TransferMode } from '@kinoshelf/core';
 import type { Database } from 'better-sqlite3';
 import type { StoredError, EntryStore } from './entries.js';
 import type { ExecutionStore } from './executions.js';
@@ -11,8 +11,8 @@ export type JobStatus = 'queued' | 'running' | 'done' | 'failed';
  * same way as the others, whatever `config.yaml` says by then.
  */
 export interface PlanSettings {
-  /** A bundled profile id or a path, as `loadProfile` takes it. */
-  readonly profile: string;
+  /** How the files are named and which metadata files are written. */
+  readonly profile: ProfileChoice;
   readonly mode: TransferMode;
   readonly destinationRoot: DestinationRoots;
 }

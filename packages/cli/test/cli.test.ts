@@ -32,7 +32,7 @@ describe('scan', () => {
     expect(await h.cli('scan', src, '--dest', dest)).toBe(0);
 
     const text = h.out.join('\n');
-    expect(text).toContain('Video files analyzed: 4 · profile plex · mode copy');
+    expect(text).toContain('Video files analyzed: 4 · profile with-id.none · mode copy');
     expect(text).toContain(`Destination: ${dest}`);
     expect(text).toContain('To organize (2)');
     expect(text).toContain(`→ ${join(DUNE_DIR, `Dune (2021) {tmdb-438631}.mkv`)}`);
@@ -405,12 +405,14 @@ describe('options and configuration', () => {
     expect(h.err.join('\n')).toContain(message);
   });
 
-  it('reports an unknown profile', async () => {
+  it('reports an unknown naming or metadata', async () => {
     const src = await makeDir();
     await put(join(src, 'Dune.2021.mkv'));
     const h = await harness();
-    expect(await h.cli('scan', src, '--profile', 'nope')).toBe(2);
-    expect(h.err.join('\n')).toContain('Unknown profile "nope".');
+    expect(await h.cli('scan', src, '--naming', 'nope')).toBe(2);
+    expect(h.err.join('\n')).toContain('Invalid value "nope" for --naming.');
+    expect(await h.cli('scan', src, '--metadata', 'all')).toBe(2);
+    expect(h.err.join('\n')).toContain('Invalid value "all" for --metadata.');
   });
 
   it('uses the config file for defaults, flags winning over it', async () => {

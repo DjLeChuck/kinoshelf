@@ -75,7 +75,13 @@ test('refreshes a show that only lacks files of its own', async ({ page, request
   }
   const created = await request.post('/api/libraries', {
     headers: AUTH_HEADERS,
-    data: { name: 'Refresh series', source: folder, type: 'series', profile: 'jellyfin' },
+    data: {
+      name: 'Refresh series',
+      source: folder,
+      type: 'series',
+      naming: 'with-id',
+      metadata: 'nfo',
+    },
   });
   expect(created.status()).toBe(201);
   const { id } = (await created.json()) as { id: string };
@@ -104,7 +110,13 @@ test('shows which NFO and images a show and its seasons have', async ({ page, re
   }
   const created = await request.post('/api/libraries', {
     headers: AUTH_HEADERS,
-    data: { name: 'Jelly series', source: folder, type: 'series', profile: 'jellyfin' },
+    data: {
+      name: 'Jelly series',
+      source: folder,
+      type: 'series',
+      naming: 'with-id',
+      metadata: 'nfo',
+    },
   });
   expect(created.status()).toBe(201);
   const { id } = (await created.json()) as { id: string };

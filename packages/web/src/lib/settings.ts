@@ -1,5 +1,3 @@
-import { en, type MessageKey, type Translate } from '@kinoshelf/i18n';
-
 export type Mode = 'copy' | 'hardlink' | 'move';
 export type WebhookFormat = 'generic' | 'gotify' | 'ntfy' | 'discord';
 export type WebhookEvent = 'transferred' | 'failed' | 'needs-review';
@@ -40,21 +38,29 @@ export interface Settings {
     readonly apply: boolean;
   } | null;
   readonly processing: {
-    readonly profile: string | null;
+    readonly naming: Naming | null;
+    readonly metadata: Metadata | null;
     readonly mode: Mode | null;
     readonly threshold: number | null;
     readonly detectPictureSize: boolean;
   };
   readonly apiKey: { readonly source: 'env' | 'database' | null };
-  /** The profiles shipped with Kinoshelf. */
-  readonly profiles: readonly ShippedProfile[];
+  /** A movie and an episode path as each naming writes them. */
+  readonly namingExamples: Readonly<Record<Naming, NamingExample>>;
 }
 
-export interface ShippedProfile {
-  readonly id: string;
-  /** The profile file's own name: what is shown when the catalogs have no translation for it. */
-  readonly name: string;
-  readonly example: { readonly movie: string; readonly series: string };
+/** The web does not import the core: these mirror its `Naming` and `Metadata`. */
+export type Naming = 'with-id' | 'no-id';
+export type Metadata = 'none' | 'nfo';
+export const NAMINGS: readonly Naming[] = ['with-id', 'no-id'];
+export const METADATAS: readonly Metadata[] = ['none', 'nfo'];
+/** What a library or the settings write by default. */
+export const DEFAULT_NAMING: Naming = 'with-id';
+export const DEFAULT_METADATA: Metadata = 'none';
+
+export interface NamingExample {
+  readonly movie: string;
+  readonly series: string;
 }
 
 export interface TestResult {
@@ -139,50 +145,6 @@ export function isHttpUrl(text: string): boolean {
 /** A mistake in the form itself, caught before the server is asked; its message is already text. */
 export class FormError extends Error {
   override name = 'FormError';
-}
-
-const isMessageKey = (key: string): key is MessageKey => key in en;
-
-/** The translated name of a shipped profile, or the one in its file when none is translated. */
-export function profileName(profile: Pick<ShippedProfile, 'id' | 'name'>, t: Translate): string {
-  const key = `web.profile.${profile.id}.name`;
-  return isMessageKey(key) ? t(key) : profile.name;
-}
-
-/** The translated description of a shipped profile, `null` when there is none. */
-export function profileHelp(id: string, t: Translate): string | null {
-  const key = `web.profile.${id}.help`;
-  return isMessageKey(key) ? t(key) : null;
-}
-
-/** The select's value for "my own file": no bundled profile has this id. */
-export const CUSTOM_PROFILE = '__custom__';
-
-export interface ProfileForm {
-  /** `''` (the default), a bundled id, or `CUSTOM_PROFILE`. */
-  choice: string;
-  path: string;
-}
-
-/** A configured value that is not a bundled id is a path to the user's own file. */
-export function profileForm(
-  profile: string | null,
-  bundled: readonly { readonly id: string }[],
-): ProfileForm {
-  if (profile === null) {
-    return { choice: '', path: '' };
-  }
-  return bundled.some(({ id }) => id === profile)
-    ? { choice: profile, path: '' }
-    : { choice: CUSTOM_PROFILE, path: profile };
-}
-
-/** What to save; `undefined` when "my own file" is chosen but no path is given. */
-export function profileOf(form: ProfileForm): string | null | undefined {
-  if (form.choice === CUSTOM_PROFILE) {
-    return nullIfBlank(form.path) ?? undefined;
-  }
-  return nullIfBlank(form.choice);
 }
 
 /** A whole number of seconds: blank unsets it, anything else is `undefined` (refused by the form). */

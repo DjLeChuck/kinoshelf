@@ -9,7 +9,6 @@ import type { ImageSize } from './details.js';
  */
 export interface Profile {
   readonly id: string;
-  readonly name: string;
   /** Joins first and last episode of a multi-episode file, e.g. `-e` gives `s02e18-e19`. */
   readonly episodeRangeSeparator: string;
   readonly templates: PathTemplates;

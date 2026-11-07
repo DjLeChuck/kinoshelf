@@ -10,13 +10,16 @@ export type * from './types/journal.js';
 export type * from './types/errors.js';
 export { ERROR_CODES, type ErrorCode } from './error-codes.js';
 export { errnoCode, KinoshelfError } from './errors.js';
+export { loadProfileFile, parseProfile } from './profiles/loader.js';
 export {
-  listBundledProfiles,
-  loadProfile,
-  loadBundledProfile,
-  loadProfileFile,
-  parseProfile,
-} from './profiles/loader.js';
+  buildProfile,
+  DEFAULT_PROFILE_CHOICE,
+  METADATAS,
+  NAMINGS,
+  type Metadata,
+  type Naming,
+  type ProfileChoice,
+} from './profiles/build.js';
 export {
   parseTemplate,
   renderProfileTemplate,

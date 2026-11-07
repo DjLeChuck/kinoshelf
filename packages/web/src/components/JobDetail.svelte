@@ -145,8 +145,10 @@
       <section aria-labelledby="settings-title-{job.id}">
         <h3 id="settings-title-{job.id}">{t('web.history.job.used')}</h3>
         <dl>
-          <dt>{t('web.history.job.used.profile')}</dt>
-          <dd class="mono">{job.settings.profile}</dd>
+          <dt>{t('web.history.job.used.naming')}</dt>
+          <dd>{t(`web.profile.naming.${job.settings.profile.naming}`)}</dd>
+          <dt>{t('web.history.job.used.metadata')}</dt>
+          <dd>{t(`web.profile.metadata.${job.settings.profile.metadata}`)}</dd>
           <dt>{t('web.history.job.used.mode')}</dt>
           <dd>{t(`web.settings.processing.mode.${job.settings.mode}`)}</dd>
           {#if roots.movies === roots.series}

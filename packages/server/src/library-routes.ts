@@ -2,16 +2,18 @@ import { stat } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import {
   errnoCode,
+  buildProfile,
   libraryProfile,
   KinoshelfError,
   libraryId,
-  loadProfile,
   type MovieDetails,
   type PlanItem,
   type SeriesDetails,
   type Config,
   type ConfigEdit,
   type LibraryConfig,
+  type Metadata,
+  type Naming,
 } from '@kinoshelf/core';
 import type { FastifyInstance } from 'fastify';
 import { ApiError } from './api-error.js';
@@ -103,7 +105,8 @@ interface CreateBody {
   source: string;
   type?: Kind;
   into?: Into;
-  profile?: string;
+  naming?: Naming;
+  metadata?: Metadata;
   mode?: Mode;
   threshold?: number;
   watch?: boolean;
@@ -115,7 +118,8 @@ interface PatchBody {
   source?: string;
   type?: Kind;
   into?: Into | null;
-  profile?: string | null;
+  naming?: Naming | null;
+  metadata?: Metadata | null;
   mode?: Mode | null;
   threshold?: number | null;
   watch?: boolean;
@@ -144,10 +148,6 @@ async function requireFolder(path: string): Promise<void> {
 async function validate(body: PatchBody): Promise<void> {
   if (body.source) {
     await requireFolder(body.source);
-  }
-  if (typeof body.profile === 'string') {
-    // A bundled id or a path to a YAML file: refused with the loader's own typed error.
-    await loadProfile(body.profile);
   }
 }
 
@@ -215,7 +215,8 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
       source: library.source,
       type: library.type ?? null,
       into: library.into ?? null,
-      profile: library.profile ?? null,
+      naming: library.naming ?? null,
+      metadata: library.metadata ?? null,
       mode: library.mode ?? null,
       threshold: library.threshold ?? null,
       watch: library.watch ?? false,
@@ -248,7 +249,7 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
         description:
           'A library is a source folder (what a scan reads). With a `type` it is organized in place ' +
           'and is also a destination; with `into` (the ids of a movie and a series library) it is ' +
-          'an arrival folder, with its own mode. `profile` goes with `type`, `mode` with `into`; ' +
+          'an arrival folder, with its own mode. `naming` and `metadata` go with `type`, `mode` with `into`; ' +
           'a field that is `null` follows the global setting. ' +
           '`lastScan` is the latest scan of the whole source, queued, running, failed or done ' +
           '(its job in `GET /api/jobs/{id}`); what the library holds is `GET /api/libraries/{id}/items`.',
@@ -265,8 +266,7 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
         summary: 'Add a library',
         description:
           'The id is made from the name. The source must be an existing ' +
-          'folder (422 `fs.not-found`, `fs.not-a-directory`, `fs.unreadable`), the profile a known ' +
-          'one (422 `profile.unknown`), exactly one of `type` and `into` is given and `into` names libraries of the right type (422 `library.invalid`), and no other library may have the same source (409 ' +
+          'folder (422 `fs.not-found`, `fs.not-a-directory`, `fs.unreadable`), exactly one of `type` and `into` is given and `into` names libraries of the right type (422 `library.invalid`), and no other library may have the same source (409 ' +
           '`library.source-taken`).',
         body: libraryCreateSchema,
         response: {
@@ -292,7 +292,8 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
           source: body.source,
           ...(body.type !== undefined && { type: body.type }),
           ...(body.into !== undefined && { into: body.into }),
-          ...(body.profile !== undefined && { profile: body.profile }),
+          ...(body.naming !== undefined && { naming: body.naming }),
+          ...(body.metadata !== undefined && { metadata: body.metadata }),
           ...(body.mode !== undefined && { mode: body.mode }),
           ...(body.threshold !== undefined && { threshold: body.threshold }),
           ...(body.watch !== undefined && { watch: body.watch }),
@@ -309,7 +310,7 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
       schema: {
         summary: 'Change a library',
         description:
-          'Only what is sent changes; `null` removes `profile`, `mode`, `threshold` or `into`; ' +
+          'Only what is sent changes; `null` removes `naming`, `metadata`, `mode`, `threshold` or `into`; ' +
           'the type never changes. The id never changes. ' +
           'Same validation as `POST /api/libraries`. Files already planned keep the settings they ' +
           'were planned with; the next scan uses the new ones.',
@@ -567,13 +568,13 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
         },
       },
     },
-    async (request) => {
+    (request) => {
       const library = find(store.config, request.params.id);
       if (library.type === undefined) {
         // An arrival folder holds what waits to go elsewhere: that is `GET /api/arrivals`.
         throw new ApiError(409, 'library.not-typed');
       }
-      const profile = await loadProfile(libraryProfile(library, store.config));
+      const profile = buildProfile(libraryProfile(library, store.config));
       const { state, q, limit, offset } = request.query;
       const page = items.page(library.id, {
         ...(state && { filter: state }),

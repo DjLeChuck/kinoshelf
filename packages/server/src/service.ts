@@ -2,12 +2,11 @@ import { randomUUID } from 'node:crypto';
 import { lstat } from 'node:fs/promises';
 import { basename, dirname, extname, join, relative } from 'node:path';
 import {
+  buildProfile,
   libraryProfile,
   createPlan,
   GuessitParser,
   hasVersionSibling,
-  loadProfile,
-  type Profile,
   MetadataLoader,
   type LoadedMetadata,
   executePlan,
@@ -146,10 +145,8 @@ export class Service {
     const entry = this.pendingEntry(entryId);
     const asked = options.libraryId;
     const libraryId = this.chosenLibrary(entry, candidate, asked);
-    // A release of 200 episodes reads its profile once, not 200 times.
-    const profiles = new Map<string, Promise<Profile>>();
     // A size picked by hand is this file's: its release mates have their own.
-    await this.applyChoice(entry, candidate, libraryId, profiles, options.screenSize);
+    await this.applyChoice(entry, candidate, libraryId, options.screenSize);
     // The choice is about the series, so the rest of the release follows; one that cannot (the
     // provider is down, say) stays as it was and can be settled on its own.
     const followers: string[] = [];
@@ -157,7 +154,7 @@ export class Service {
       for (const mate of this.deps.entries.releaseMates(entry)) {
         try {
           const mateLibrary = this.chosenLibrary(mate, candidate, asked);
-          if ((await this.applyChoice(mate, candidate, mateLibrary, profiles)) !== 'conflict') {
+          if ((await this.applyChoice(mate, candidate, mateLibrary)) !== 'conflict') {
             followers.push(mate.id);
           }
         } catch {
@@ -173,15 +170,11 @@ export class Service {
     entry: Entry,
     candidate: Candidate,
     libraryId: string | null,
-    profiles?: Map<string, Promise<Profile>>,
     screenSize?: string,
   ): Promise<Classification> {
     const named =
       screenSize === undefined ? entry : { ...entry, parsed: { ...entry.parsed, screenSize } };
-    const item = await this.planWith(named, candidate, {
-      libraryId,
-      ...(profiles && { profiles }),
-    });
+    const item = await this.planWith(named, candidate, { libraryId });
     const classification = classifyItem(item);
     this.deps.entries.setMatch(
       entry.id,
@@ -190,7 +183,7 @@ export class Service {
       { candidate, score: 100 },
       { libraryId },
     );
-    await this.deps.snapshot.matched(this.require(entry.id), candidate);
+    this.deps.snapshot.matched(this.require(entry.id), candidate);
     return classification;
   }
 
@@ -223,15 +216,6 @@ export class Service {
     return { details, seasons: seasons.filter((season) => season !== null) };
   }
 
-  private profile(source: string, memo?: Map<string, Promise<Profile>>): Promise<Profile> {
-    if (!memo) {
-      return loadProfile(source);
-    }
-    const loading = memo.get(source) ?? loadProfile(source);
-    memo.set(source, loading);
-    return loading;
-  }
-
   private provider(): MetadataProvider {
     const { config } = this.deps;
     return makeProvider(this.deps, config.metadataLanguage ?? defaultMetadataLanguage(this.deps));
@@ -249,11 +233,10 @@ export class Service {
       lenient?: boolean;
       applyVersion?: boolean;
       libraryId?: string | null;
-      profiles?: Map<string, Promise<Profile>>;
     } = {},
   ): Promise<PlanItem> {
     const settings = this.settingsFor(entry, options.libraryId);
-    const profile = await this.profile(settings.profile, options.profiles);
+    const profile = buildProfile(settings.profile);
     const provider = this.provider();
     const loader = new MetadataLoader({ provider, profile });
     let metadata: LoadedMetadata = {};
@@ -529,7 +512,6 @@ export class Service {
     screenSize?: string,
   ): Promise<{ ready: Map<string, PlanItem>; refused: Map<string, PlanItem> }> {
     this.requireDoneJob(jobId);
-    const profiles = new Map<string, Promise<Profile>>();
     const ready = new Map<string, PlanItem>();
     const refused = new Map<string, PlanItem>();
     for (const id of entryIds) {
@@ -547,7 +529,6 @@ export class Service {
         size === undefined ? entry : { ...entry, parsed: { ...entry.parsed, screenSize: size } };
       const item = await this.planWith(named, toCandidate(stored), {
         applyVersion: true,
-        profiles,
       });
       if (item.status === 'ready') {
         ready.set(id, item);
@@ -626,7 +607,7 @@ export class Service {
         onSettled?.(done + failed, total, entry.path);
       });
     }
-    await this.deps.snapshot.transferred(execution.jobId, settled);
+    this.deps.snapshot.transferred(execution.jobId, settled);
     return { summary: { done, failed }, files };
   }
 
@@ -685,12 +666,9 @@ export class Service {
       return [item === entry.item ? entry : { ...entry, item }];
     });
     const held: { entry: Entry; destination: string }[] = [];
-    const profiles = new Map<string, Promise<Profile>>();
     const entries: Entry[] = [];
     for (const entry of chosen) {
-      const fresh = overrides
-        ? entry
-        : await this.refreshed(entry, profiles, options.persist === true);
+      const fresh = overrides ? entry : await this.refreshed(entry, options.persist === true);
       if ('held' in fresh) {
         held.push({ entry, destination: fresh.held });
       } else {
@@ -709,23 +687,21 @@ export class Service {
     if (groups.size === 0) {
       groups.set('', { settings: this.settingsOf(jobId), entries: [] });
     }
-    const planned = await Promise.all(
-      [...groups.values()].map(async ({ settings, entries: members }, index) => {
-        const profile = await loadProfile(settings.profile);
-        const plan: Plan = {
-          id: index === 0 ? job.id : `${job.id}#${String(index + 1)}`,
-          createdAt: new Date().toISOString(),
-          profileId: profile.id,
-          destinationRoot: settings.destinationRoot,
-          mode: settings.mode,
-          items: members.flatMap((entry) => (entry.item ? [entry.item] : [])),
-        };
-        const entryOfItem = new Map(
-          members.flatMap((entry) => (entry.item ? [[entry.item.id, entry] as const] : [])),
-        );
-        return { plan, entryOfItem };
-      }),
-    );
+    const planned = [...groups.values()].map(({ settings, entries: members }, index) => {
+      const profile = buildProfile(settings.profile);
+      const plan: Plan = {
+        id: index === 0 ? job.id : `${job.id}#${String(index + 1)}`,
+        createdAt: new Date().toISOString(),
+        profileId: profile.id,
+        destinationRoot: settings.destinationRoot,
+        mode: settings.mode,
+        items: members.flatMap((entry) => (entry.item ? [entry.item] : [])),
+      };
+      const entryOfItem = new Map(
+        members.flatMap((entry) => (entry.item ? [[entry.item.id, entry] as const] : [])),
+      );
+      return { plan, entryOfItem };
+    });
     return { groups: planned, held };
   }
 
@@ -736,11 +712,7 @@ export class Service {
    * none is left, it is held in Arrivals as a conflict rather than sent to fail. Other works are
    * left as they were: they cannot be told apart by a name.
    */
-  private async refreshed(
-    entry: Entry,
-    profiles: Map<string, Promise<Profile>>,
-    persist: boolean,
-  ): Promise<Entry | { held: string }> {
+  private async refreshed(entry: Entry, persist: boolean): Promise<Entry | { held: string }> {
     const main = entry.item?.operations.find(
       (operation): operation is TransferOperation =>
         operation.type === 'transfer' && operation.role === 'main',
@@ -773,9 +745,7 @@ export class Service {
     let item: PlanItem;
     try {
       // The stored plan's own reading of the name: a size chosen by hand lives only there.
-      item = await this.planWith({ ...entry, parsed: entry.item.parsed }, toCandidate(stored), {
-        profiles,
-      });
+      item = await this.planWith({ ...entry, parsed: entry.item.parsed }, toCandidate(stored));
     } catch {
       // The provider is down: the stored plan stands, and the executor still refuses to overwrite.
       return entry;
@@ -825,7 +795,7 @@ export class Service {
           )
           .map(({ entry }) => entry.id),
       );
-      await this.deps.snapshot.undone(journal.entriesOf(batchId).filter(({ id }) => !kept.has(id)));
+      this.deps.snapshot.undone(journal.entriesOf(batchId).filter(({ id }) => !kept.has(id)));
       entries.reopenBatch(batchId);
     }
     return {

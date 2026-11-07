@@ -1,4 +1,8 @@
 /** JSON Schemas of the API: they validate requests, shape responses and feed the OpenAPI file. */
+import { METADATAS, NAMINGS } from '@kinoshelf/core';
+
+const namings = NAMINGS;
+const metadatas = METADATAS;
 
 const CLASSIFICATIONS = [
   'compliant',
@@ -143,7 +147,14 @@ export const jobSchema = {
       nullable: true,
       required: ['profile', 'mode', 'destinationRoot'],
       properties: {
-        profile: { type: 'string' },
+        profile: {
+          type: 'object',
+          required: ['naming', 'metadata'],
+          properties: {
+            naming: { type: 'string', enum: [...namings] },
+            metadata: { type: 'string', enum: [...metadatas] },
+          },
+        },
         mode: { type: 'string', enum: ['copy', 'hardlink', 'move'] },
         destinationRoot: {
           oneOf: [
@@ -527,7 +538,7 @@ export const settingsSchema = {
     'watch',
     'processing',
     'apiKey',
-    'profiles',
+    'namingExamples',
   ],
   properties: {
     tmdb: {
@@ -589,31 +600,29 @@ export const settingsSchema = {
     },
     processing: {
       type: 'object',
-      required: ['profile', 'mode', 'threshold', 'detectPictureSize'],
+      required: ['naming', 'metadata', 'mode', 'threshold', 'detectPictureSize'],
       properties: {
-        profile: { type: 'string', nullable: true },
+        naming: { type: 'string', enum: [...namings, null], nullable: true },
+        metadata: { type: 'string', enum: [...metadatas, null], nullable: true },
         mode: { type: 'string', enum: ['copy', 'hardlink', 'move'], nullable: true },
         threshold: { type: 'number', nullable: true },
         detectPictureSize: { type: 'boolean' },
       },
     },
-    profiles: {
-      type: 'array',
-      description: 'The profiles shipped with Kinoshelf; `processing.profile` may also be a path.',
-      items: {
-        type: 'object',
-        required: ['id', 'name', 'example'],
-        properties: {
-          id: { type: 'string' },
-          name: { type: 'string' },
-          example: {
+    namingExamples: {
+      type: 'object',
+      description: 'A movie and an episode path as each naming would write them.',
+      required: [...namings],
+      properties: Object.fromEntries(
+        namings.map((naming) => [
+          naming,
+          {
             type: 'object',
-            description: 'A movie and an episode path as the profile would write them.',
             required: ['movie', 'series'],
             properties: { movie: { type: 'string' }, series: { type: 'string' } },
           },
-        },
-      },
+        ]),
+      ),
     },
     apiKey: {
       type: 'object',
@@ -696,7 +705,8 @@ export const settingsPatchSchema = {
       type: 'object',
       additionalProperties: false,
       properties: {
-        profile: nullable({ type: 'string', minLength: 1 }),
+        naming: nullable({ type: 'string', enum: namings }),
+        metadata: nullable({ type: 'string', enum: metadatas }),
         mode: nullable({ type: 'string', enum: ['copy', 'hardlink', 'move'] }),
         threshold: nullable({ type: 'number', minimum: 0, maximum: 100 }),
         // On unless turned off: `null` goes back to that default.
@@ -1033,7 +1043,8 @@ export const librarySchema = {
     'source',
     'type',
     'into',
-    'profile',
+    'naming',
+    'metadata',
     'mode',
     'threshold',
     'watch',
@@ -1048,8 +1059,9 @@ export const librarySchema = {
     type: { type: 'string', enum: [...libraryKinds, null], nullable: true },
     /** Arrival folder: the typed libraries its releases go to by default. */
     into: { ...libraryInto, nullable: true },
-    /** Unset (null): follows the global profile, mode and threshold. */
-    profile: { type: 'string', nullable: true },
+    /** Unset (null): follows the global naming, metadata, mode and threshold. */
+    naming: { type: 'string', enum: [...namings, null], nullable: true },
+    metadata: { type: 'string', enum: [...metadatas, null], nullable: true },
     mode: { type: 'string', enum: [...libraryModes, null], nullable: true },
     threshold: { type: 'number', nullable: true },
     watch: { type: 'boolean' },
@@ -1072,7 +1084,8 @@ const libraryFields = {
   source: { type: 'string', pattern: '^/' },
   type: { type: 'string', enum: libraryKinds },
   into: libraryInto,
-  profile: { type: 'string', minLength: 1 },
+  naming: { type: 'string', enum: namings },
+  metadata: { type: 'string', enum: metadatas },
   mode: { type: 'string', enum: libraryModes },
   threshold: { type: 'number', minimum: 0, maximum: 100 },
   watch: { type: 'boolean' },
@@ -1094,7 +1107,8 @@ export const libraryPatchSchema = {
     source: libraryFields.source,
     type: libraryFields.type,
     into: nullable(libraryFields.into),
-    profile: nullable(libraryFields.profile),
+    naming: nullable(libraryFields.naming),
+    metadata: nullable(libraryFields.metadata),
     mode: nullable(libraryFields.mode),
     threshold: nullable(libraryFields.threshold),
     watch: libraryFields.watch,

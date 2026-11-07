@@ -116,7 +116,7 @@ async function runPipeline(
   } catch {
     throw new KinoshelfError('discover.not-found', { path: source });
   }
-  const settings = await resolveSettings(options, context.config, {
+  const settings = resolveSettings(options, context.config, {
     source,
     sourceIsFile: isFile,
     defaultToSource: kind === 'scan',
@@ -292,7 +292,8 @@ function buildProgram(context: Context, exit: { code: number }): Command {
       .option('--dest <dir>', t('help.opt.dest'))
       .option('--dest-movies <dir>', t('help.opt.dest-movies'))
       .option('--dest-series <dir>', t('help.opt.dest-series'))
-      .option('--profile <profile>', t('help.opt.profile'))
+      .option('--naming <naming>', t('help.opt.naming'))
+      .option('--metadata <metadata>', t('help.opt.metadata'))
       .option('--mode <mode>', t('help.opt.mode'))
       .option('--threshold <score>', t('help.opt.threshold'))
       .option('--metadata-language <code>', t('help.opt.metadata-language'))
@@ -357,14 +358,13 @@ function buildProgram(context: Context, exit: { code: number }): Command {
 }
 
 /**
- * Failures that come from what was typed (a path that does not exist, a profile nobody knows, no
+ * Failures that come from what was typed (a path that does not exist, no
  * destination, an age below the minimum): bad usage, exit 2, like an invalid option.
  */
 const USAGE_ERRORS: ReadonlySet<string> = new Set([
   'cleanup.age-too-short',
   'config.destination-required',
   'discover.not-found',
-  'profile.unknown',
 ]);
 
 /** Runs the CLI and returns the exit code: 0 ok, 1 an operation or the run failed, 2 bad usage. */

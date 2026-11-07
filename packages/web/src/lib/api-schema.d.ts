@@ -395,22 +395,26 @@ export interface paths {
                                 apply: boolean;
                             } | null;
                             processing: {
-                                profile: string | null;
+                                /** @enum {string|null} */
+                                naming: "with-id" | "no-id" | null;
+                                /** @enum {string|null} */
+                                metadata: "none" | "nfo" | null;
                                 /** @enum {string|null} */
                                 mode: "copy" | "hardlink" | "move" | null;
                                 threshold: number | null;
                                 detectPictureSize: boolean;
                             };
-                            /** @description The profiles shipped with Kinoshelf; `processing.profile` may also be a path. */
-                            profiles: {
-                                id: string;
-                                name: string;
-                                /** @description A movie and an episode path as the profile would write them. */
-                                example: {
+                            /** @description A movie and an episode path as each naming would write them. */
+                            namingExamples: {
+                                "with-id": {
                                     movie: string;
                                     series: string;
                                 };
-                            }[];
+                                "no-id": {
+                                    movie: string;
+                                    series: string;
+                                };
+                            };
                             apiKey: {
                                 /**
                                  * @description Where the key comes from. It cannot be read back, only replaced.
@@ -500,7 +504,10 @@ export interface paths {
                             apply?: boolean | null;
                         } | null;
                         processing?: {
-                            profile?: string | null;
+                            /** @enum {string|null} */
+                            naming?: "with-id" | "no-id" | null;
+                            /** @enum {string|null} */
+                            metadata?: "none" | "nfo" | null;
                             /** @enum {string|null} */
                             mode?: "copy" | "hardlink" | "move" | null;
                             threshold?: number | null;
@@ -557,22 +564,26 @@ export interface paths {
                                 apply: boolean;
                             } | null;
                             processing: {
-                                profile: string | null;
+                                /** @enum {string|null} */
+                                naming: "with-id" | "no-id" | null;
+                                /** @enum {string|null} */
+                                metadata: "none" | "nfo" | null;
                                 /** @enum {string|null} */
                                 mode: "copy" | "hardlink" | "move" | null;
                                 threshold: number | null;
                                 detectPictureSize: boolean;
                             };
-                            /** @description The profiles shipped with Kinoshelf; `processing.profile` may also be a path. */
-                            profiles: {
-                                id: string;
-                                name: string;
-                                /** @description A movie and an episode path as the profile would write them. */
-                                example: {
+                            /** @description A movie and an episode path as each naming would write them. */
+                            namingExamples: {
+                                "with-id": {
                                     movie: string;
                                     series: string;
                                 };
-                            }[];
+                                "no-id": {
+                                    movie: string;
+                                    series: string;
+                                };
+                            };
                             apiKey: {
                                 /**
                                  * @description Where the key comes from. It cannot be read back, only replaced.
@@ -1093,7 +1104,7 @@ export interface paths {
         };
         /**
          * The libraries, with the state of their last scan
-         * @description A library is a source folder (what a scan reads). With a `type` it is organized in place and is also a destination; with `into` (the ids of a movie and a series library) it is an arrival folder, with its own mode. `profile` goes with `type`, `mode` with `into`; a field that is `null` follows the global setting. `lastScan` is the latest scan of the whole source, queued, running, failed or done (its job in `GET /api/jobs/{id}`); what the library holds is `GET /api/libraries/{id}/items`.
+         * @description A library is a source folder (what a scan reads). With a `type` it is organized in place and is also a destination; with `into` (the ids of a movie and a series library) it is an arrival folder, with its own mode. `naming` and `metadata` go with `type`, `mode` with `into`; a field that is `null` follows the global setting. `lastScan` is the latest scan of the whole source, queued, running, failed or done (its job in `GET /api/jobs/{id}`); what the library holds is `GET /api/libraries/{id}/items`.
          */
         get: {
             parameters: {
@@ -1120,7 +1131,10 @@ export interface paths {
                                 movie: string;
                                 series: string;
                             } | null;
-                            profile: string | null;
+                            /** @enum {string|null} */
+                            naming: "with-id" | "no-id" | null;
+                            /** @enum {string|null} */
+                            metadata: "none" | "nfo" | null;
                             /** @enum {string|null} */
                             mode: "copy" | "hardlink" | "move" | null;
                             threshold: number | null;
@@ -1156,7 +1170,7 @@ export interface paths {
         put?: never;
         /**
          * Add a library
-         * @description The id is made from the name. The source must be an existing folder (422 `fs.not-found`, `fs.not-a-directory`, `fs.unreadable`), the profile a known one (422 `profile.unknown`), exactly one of `type` and `into` is given and `into` names libraries of the right type (422 `library.invalid`), and no other library may have the same source (409 `library.source-taken`).
+         * @description The id is made from the name. The source must be an existing folder (422 `fs.not-found`, `fs.not-a-directory`, `fs.unreadable`), exactly one of `type` and `into` is given and `into` names libraries of the right type (422 `library.invalid`), and no other library may have the same source (409 `library.source-taken`).
          */
         post: {
             parameters: {
@@ -1176,7 +1190,10 @@ export interface paths {
                             movie: string;
                             series: string;
                         };
-                        profile?: string;
+                        /** @enum {string} */
+                        naming?: "with-id" | "no-id";
+                        /** @enum {string} */
+                        metadata?: "none" | "nfo";
                         /** @enum {string} */
                         mode?: "copy" | "hardlink" | "move";
                         threshold?: number;
@@ -1201,7 +1218,10 @@ export interface paths {
                                 movie: string;
                                 series: string;
                             } | null;
-                            profile: string | null;
+                            /** @enum {string|null} */
+                            naming: "with-id" | "no-id" | null;
+                            /** @enum {string|null} */
+                            metadata: "none" | "nfo" | null;
                             /** @enum {string|null} */
                             mode: "copy" | "hardlink" | "move" | null;
                             threshold: number | null;
@@ -1374,7 +1394,7 @@ export interface paths {
         head?: never;
         /**
          * Change a library
-         * @description Only what is sent changes; `null` removes `profile`, `mode`, `threshold` or `into`; the type never changes. The id never changes. Same validation as `POST /api/libraries`. Files already planned keep the settings they were planned with; the next scan uses the new ones.
+         * @description Only what is sent changes; `null` removes `naming`, `metadata`, `mode`, `threshold` or `into`; the type never changes. The id never changes. Same validation as `POST /api/libraries`. Files already planned keep the settings they were planned with; the next scan uses the new ones.
          */
         patch: {
             parameters: {
@@ -1396,7 +1416,10 @@ export interface paths {
                             movie: string;
                             series: string;
                         } | null;
-                        profile?: string | null;
+                        /** @enum {string|null} */
+                        naming?: "with-id" | "no-id" | null;
+                        /** @enum {string|null} */
+                        metadata?: "none" | "nfo" | null;
                         /** @enum {string|null} */
                         mode?: "copy" | "hardlink" | "move" | null;
                         threshold?: number | null;
@@ -1421,7 +1444,10 @@ export interface paths {
                                 movie: string;
                                 series: string;
                             } | null;
-                            profile: string | null;
+                            /** @enum {string|null} */
+                            naming: "with-id" | "no-id" | null;
+                            /** @enum {string|null} */
+                            metadata: "none" | "nfo" | null;
                             /** @enum {string|null} */
                             mode: "copy" | "hardlink" | "move" | null;
                             threshold: number | null;
@@ -1620,7 +1646,12 @@ export interface paths {
                                 current: string | null;
                             } | null;
                             settings: {
-                                profile: string;
+                                profile: {
+                                    /** @enum {string} */
+                                    naming: "with-id" | "no-id";
+                                    /** @enum {string} */
+                                    metadata: "none" | "nfo";
+                                };
                                 /** @enum {string} */
                                 mode: "copy" | "hardlink" | "move";
                                 destinationRoot: string | {
@@ -1793,7 +1824,12 @@ export interface paths {
                                 current: string | null;
                             } | null;
                             settings: {
-                                profile: string;
+                                profile: {
+                                    /** @enum {string} */
+                                    naming: "with-id" | "no-id";
+                                    /** @enum {string} */
+                                    metadata: "none" | "nfo";
+                                };
                                 /** @enum {string} */
                                 mode: "copy" | "hardlink" | "move";
                                 destinationRoot: string | {
@@ -2943,7 +2979,12 @@ export interface paths {
                                 current: string | null;
                             } | null;
                             settings: {
-                                profile: string;
+                                profile: {
+                                    /** @enum {string} */
+                                    naming: "with-id" | "no-id";
+                                    /** @enum {string} */
+                                    metadata: "none" | "nfo";
+                                };
                                 /** @enum {string} */
                                 mode: "copy" | "hardlink" | "move";
                                 destinationRoot: string | {
@@ -3121,7 +3162,12 @@ export interface paths {
                                 current: string | null;
                             } | null;
                             settings: {
-                                profile: string;
+                                profile: {
+                                    /** @enum {string} */
+                                    naming: "with-id" | "no-id";
+                                    /** @enum {string} */
+                                    metadata: "none" | "nfo";
+                                };
                                 /** @enum {string} */
                                 mode: "copy" | "hardlink" | "move";
                                 destinationRoot: string | {

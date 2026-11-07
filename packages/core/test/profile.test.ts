@@ -1,20 +1,16 @@
-import { mkdtemp, readFile, rm, utimes, writeFile } from 'node:fs/promises';
+import { mkdtemp, rm, utimes, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   KinoshelfError,
-  listBundledProfiles,
-  loadBundledProfile,
+  buildProfile,
   loadProfileFile,
   parseProfile,
   parseTemplate,
   renderTemplate,
 } from '../src/index.js';
-import type { Profile, TemplateVariables } from '../src/index.js';
-
-const plexUrl = new URL('../profiles/plex.yaml', import.meta.url);
-const plexNoIdUrl = new URL('../profiles/plex-no-id.yaml', import.meta.url);
+import type { Metadata, Naming, Profile, TemplateVariables } from '../src/index.js';
 
 function codeOf(fn: () => unknown): string | undefined {
   try {
@@ -38,7 +34,6 @@ function path(
 
 const base = `
 id: test
-name: Test
 episodeRangeSeparator: '-e'
 templates:
   movieFolder: '{title}'
@@ -52,114 +47,108 @@ filesystem:
   maxSegmentBytes: 255
 `;
 
-describe('plex profile', () => {
-  it('writes no NFO and no artwork', async () => {
-    const plex = await loadProfileFile(plexUrl);
-    expect(plex.id).toBe('plex');
-    expect(plex.nfo).toBeNull();
-    expect(plex.artwork).toEqual([]);
-  });
+const profileOf = (naming: Naming, metadata: Metadata): Profile =>
+  buildProfile({ naming, metadata });
 
-  it('renders the movie layout from the Plex documentation', async () => {
-    const plex = await loadProfileFile(plexUrl);
-    const vars = { title: 'Dune', year: 2021, tmdb: 438631 };
-    expect(path(plex, 'movieFolder', vars)).toEqual(['Dune (2021) {tmdb-438631}']);
-    expect(path(plex, 'movieFile', vars)).toEqual(['Dune (2021) {tmdb-438631}']);
-  });
-
-  it('renders the series layout: id in the series folder only', async () => {
-    const plex = await loadProfileFile(plexUrl);
-    const vars = { title: 'The Bear', year: 2022, tmdb: 136315, season: 3, episode: 4 };
-    expect(path(plex, 'seriesFolder', vars)).toEqual(['The Bear (2022) {tmdb-136315}']);
-    expect(path(plex, 'seasonFolder', vars)).toEqual(['Season 03']);
-    expect(path(plex, 'episodeFile', vars)).toEqual(['The Bear (2022) - s03e04']);
-  });
-
-  it('renders specials and double episodes', async () => {
-    const plex = await loadProfileFile(plexUrl);
-    const vars = { title: 'Grey’s Anatomy', year: 2005, tmdb: 1416, season: 2 };
-    expect(path(plex, 'seasonFolder', { ...vars, season: 0 })).toEqual(['Season 00']);
-    expect(path(plex, 'episodeFile', { ...vars, episode: [1, 3] })).toEqual([
-      'Grey’s Anatomy (2005) - s02e01-e03',
-    ]);
-  });
-});
-
-describe('plex-no-id profile', () => {
-  it('leaves the id out of every name', async () => {
-    const profile = await loadProfileFile(plexNoIdUrl);
-    const vars = { title: 'The Bear', year: 2022, tmdb: 136315, season: 3, episode: 4 };
-    expect(profile.id).toBe('plex-no-id');
-    expect(path(profile, 'movieFolder', vars)).toEqual(['The Bear (2022)']);
-    expect(path(profile, 'movieFile', vars)).toEqual(['The Bear (2022)']);
-    expect(path(profile, 'seriesFolder', vars)).toEqual(['The Bear (2022)']);
-    expect(path(profile, 'seasonFolder', vars)).toEqual(['Season 03']);
-    expect(path(profile, 'episodeFile', vars)).toEqual(['The Bear (2022) - s03e04']);
-  });
-});
-
-describe('jellyfin profile', () => {
-  const load = () => loadProfileFile(new URL('../profiles/jellyfin.yaml', import.meta.url));
+describe('buildProfile naming', () => {
   const vars = { title: 'The Bear', year: 2022, tmdb: 136315, season: 3, episode: 4 };
 
-  it('tags the id in braces and starts the movie file with its folder name', async () => {
-    const profile = await load();
+  it('with-id tags the id in braces, in the folders and in the movie file', () => {
+    const profile = profileOf('with-id', 'none');
     expect(path(profile, 'movieFolder', vars)).toEqual(['The Bear (2022) {tmdb-136315}']);
+    // Jellyfin wants the file to start with its folder's name.
     expect(path(profile, 'movieFile', vars)).toEqual(path(profile, 'movieFolder', vars));
     expect(path(profile, 'seriesFolder', vars)).toEqual(['The Bear (2022) {tmdb-136315}']);
     expect(path(profile, 'seasonFolder', vars)).toEqual(['Season 03']);
     expect(path(profile, 'episodeFile', vars)).toEqual(['The Bear (2022) - s03e04']);
-    expect(path(profile, 'episodeFile', { ...vars, episode: [1, 2] })).toEqual([
-      'The Bear (2022) - s03e01-e02',
+  });
+
+  it('no-id leaves the id out of every name', () => {
+    const profile = profileOf('no-id', 'none');
+    expect(path(profile, 'movieFolder', vars)).toEqual(['The Bear (2022)']);
+    expect(path(profile, 'movieFile', vars)).toEqual(['The Bear (2022)']);
+    expect(path(profile, 'seriesFolder', vars)).toEqual(['The Bear (2022)']);
+    expect(path(profile, 'episodeFile', vars)).toEqual(['The Bear (2022) - s03e04']);
+  });
+
+  it('renders specials and double episodes', () => {
+    const profile = profileOf('with-id', 'none');
+    const grey = { title: 'Grey’s Anatomy', year: 2005, tmdb: 1416, season: 2 };
+    expect(path(profile, 'seasonFolder', { ...grey, season: 0 })).toEqual(['Season 00']);
+    expect(path(profile, 'episodeFile', { ...grey, episode: [1, 3] })).toEqual([
+      'Grey’s Anatomy (2005) - s02e01-e03',
     ]);
   });
 
-  it('names the folders of a movie and of a show like plex does', async () => {
-    const [jellyfin, plex] = [await load(), await loadProfileFile(plexUrl)];
-    for (const name of ['movieFolder', 'seriesFolder'] as const) {
-      expect(path(jellyfin, name, vars)).toEqual(path(plex, name, vars));
-    }
+  it('names every episode alike whatever the choices', () => {
+    const names = (['with-id', 'no-id'] as const).flatMap((naming) =>
+      (['none', 'nfo'] as const).map((metadata) =>
+        path(profileOf(naming, metadata), 'episodeFile', vars),
+      ),
+    );
+    expect(new Set(names.map((name) => name.join('/'))).size).toBe(1);
   });
 
-  it('writes Kodi NFO, poster and fanart', async () => {
-    const profile = await load();
-    expect(profile.nfo).toEqual({
-      format: 'kodi',
-      movie: 'movie.nfo',
-      episode: '{file}.nfo',
-      series: 'tvshow.nfo',
-    });
-    expect(profile.artwork.map(({ kind, name, size }) => [kind, name, size])).toEqual([
-      ['poster', 'poster.jpg', 'standard'],
-      ['fanart', 'background.jpg', 'original'],
-      ['logo', 'logo.png', 'original'],
-      ['season-poster', 'season{season:02}-poster.jpg', 'standard'],
-    ]);
-    expect(profile.artwork[3]?.specialsName).toBe('season-specials-poster.jpg');
+  it('identifies the choice', () => {
+    expect(profileOf('no-id', 'nfo').id).toBe('no-id.nfo');
   });
 });
 
-describe('plex-nfo profile', () => {
-  const load = () => loadProfileFile(new URL('../profiles/plex-nfo.yaml', import.meta.url));
+describe('buildProfile metadata', () => {
+  it('none writes no NFO and no artwork', () => {
+    for (const naming of ['with-id', 'no-id'] as const) {
+      const profile = profileOf(naming, 'none');
+      expect(profile.nfo).toBeNull();
+      expect(profile.artwork).toEqual([]);
+    }
+  });
 
-  it('names like plex-no-id and writes what the Plex NFO agents read', async () => {
-    const profile = await load();
-    const vars = { title: 'The Bear', year: 2022, tmdb: 136315, season: 3, episode: 4 };
-    expect(path(profile, 'movieFolder', vars)).toEqual(['The Bear (2022)']);
-    expect(path(profile, 'episodeFile', vars)).toEqual(['The Bear (2022) - s03e04']);
-    expect(profile.nfo).toEqual({
-      format: 'kodi',
-      movie: 'movie.nfo',
-      episode: '{file}.nfo',
-      series: 'tvshow.nfo',
-    });
-    expect(profile.artwork.map(({ kind, name }) => [kind, name])).toEqual([
-      ['poster', 'poster.jpg'],
-      ['fanart', 'background.jpg'],
-      ['logo', 'logo.png'],
-      ['season-poster', 'season{season:02}-poster.jpg'],
-    ]);
-    expect(profile.artwork[3]?.specialsName).toBe('season-specials-poster.jpg');
+  it('nfo writes Kodi NFO and the images both players read', () => {
+    for (const naming of ['with-id', 'no-id'] as const) {
+      const profile = profileOf(naming, 'nfo');
+      expect(profile.nfo).toEqual({
+        format: 'kodi',
+        movie: 'movie.nfo',
+        episode: '{file}.nfo',
+        series: 'tvshow.nfo',
+      });
+      expect(profile.artwork.map(({ kind, name, size }) => [kind, name, size])).toEqual([
+        ['poster', 'poster.jpg', 'standard'],
+        ['fanart', 'background.jpg', 'original'],
+        ['logo', 'logo.png', 'original'],
+        ['season-poster', 'season{season:02}-poster.jpg', 'standard'],
+      ]);
+      expect(profile.artwork[3]?.specialsName).toBe('season-specials-poster.jpg');
+    }
+  });
+
+  it('is a profile the YAML loader would accept (the two stay in step)', () => {
+    // Everything a built profile uses must be known to the validation a custom file goes through.
+    const profile = profileOf('with-id', 'nfo');
+    const yaml = [
+      'id: built',
+      `episodeRangeSeparator: '${profile.episodeRangeSeparator}'`,
+      'templates:',
+      ...Object.entries(profile.templates).map(([key, value]) => `  ${key}: '${value}'`),
+      'nfo:',
+      '  format: kodi',
+      `  movie: ${profile.nfo?.movie ?? ''}`,
+      `  episode: '${profile.nfo?.episode ?? ''}'`,
+      `  series: ${profile.nfo?.series ?? ''}`,
+      'artwork:',
+      ...profile.artwork.map(
+        (a) =>
+          `  - { kind: ${a.kind}, name: '${a.name}', size: ${a.size}${
+            a.specialsName === undefined ? '' : `, specialsName: ${a.specialsName}`
+          } }`,
+      ),
+      'filesystem:',
+      `  forbidden: ${profile.filesystem.forbidden}`,
+      "  replacement: ''",
+      `  maxSegmentBytes: ${String(profile.filesystem.maxSegmentBytes)}`,
+      '',
+    ].join('\n');
+    expect(parseProfile(yaml)).toEqual({ ...profile, id: 'built' });
   });
 });
 
@@ -301,41 +290,21 @@ artwork:
   });
 });
 
-describe('bundled profiles', () => {
-  it('lists the shipped profiles', async () => {
-    expect(await listBundledProfiles()).toContain('plex');
-  });
-
-  it('loads one by id', async () => {
-    expect((await loadBundledProfile('plex')).id).toBe('plex');
-  });
-
-  it.each(['nope', '../etc/passwd', 'Plex', '', 'a/b'])(
-    'refuses unknown or unsafe id %j',
-    async (id) => {
-      await expect(loadBundledProfile(id)).rejects.toSatisfy(
-        (error: unknown) =>
-          error instanceof KinoshelfError && error.info.code === 'profile.unknown',
-      );
-    },
-  );
-});
-
 describe('loadProfileFile: parsed once', () => {
   it('serves a profile again until its file changes', async () => {
     const directory = await mkdtemp(join(tmpdir(), 'kinoshelf-profile-'));
     try {
       const file = join(directory, 'mine.yaml');
-      const text = await readFile(plexUrl, 'utf8');
+      const text = base;
       await writeFile(file, text);
       const first = await loadProfileFile(file);
       expect(await loadProfileFile(file)).toBe(first);
 
-      await writeFile(file, text.replace(/^name: .*$/m, 'name: Edited'));
+      await writeFile(file, text.replace(/^id: .*$/m, 'id: edited'));
       await utimes(file, new Date(), new Date(Date.now() + 5000));
       const edited = await loadProfileFile(file);
       expect(edited).not.toBe(first);
-      expect(edited.name).toBe('Edited');
+      expect(edited.id).toBe('edited');
     } finally {
       await rm(directory, { recursive: true, force: true });
     }

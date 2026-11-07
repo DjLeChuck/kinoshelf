@@ -29,7 +29,6 @@ export const ERROR_CODES = [
   'profile.invalid',
   'profile.invalid-path',
   'profile.not-a-file',
-  'profile.unknown',
   'profile.unknown-variable',
   'profile.yaml-syntax',
   'provider.foreign-id',

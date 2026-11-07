@@ -7,7 +7,7 @@ import {
   isSample,
   GuessitParser,
   KinoshelfError,
-  loadBundledProfile,
+  buildProfile,
 } from '../src/index.js';
 import { FakeProvider, movie, season, series } from './fake-provider.js';
 import { cleanup, makeDir, put } from './workspace.js';
@@ -162,7 +162,7 @@ describe('releases', () => {
     analyze(await discoverVideos(src, undefined, undefined, { splitReleases: true }), {
       parser: new GuessitParser(),
       provider,
-      profile: await loadBundledProfile('plex'),
+      profile: buildProfile({ naming: 'with-id', metadata: 'none' }),
       destinationRoot: await makeDir(),
       mode: 'copy',
     });
@@ -253,7 +253,7 @@ describe('analyze', () => {
     const result = await analyze(await discoverVideos(src), {
       parser: new GuessitParser(),
       provider,
-      profile: await loadBundledProfile('plex'),
+      profile: buildProfile({ naming: 'with-id', metadata: 'none' }),
       destinationRoot: lib,
       mode: 'copy',
       onProgress: (done) => progress.push(done),
@@ -278,7 +278,7 @@ describe('analyze', () => {
     const result = await analyze(await discoverVideos(lib), {
       parser: new GuessitParser(),
       provider: new FakeProvider([movie(438631, 'Dune', 2021)]),
-      profile: await loadBundledProfile('plex'),
+      profile: buildProfile({ naming: 'with-id', metadata: 'none' }),
       destinationRoot: lib,
       mode: 'move',
     });
@@ -293,7 +293,7 @@ describe('analyze', () => {
     const result = await analyze(await discoverVideos(src), {
       parser: new GuessitParser(),
       provider: new FakeProvider([movie(1, 'Dune', 2021), movie(2, 'Dune', 1984)]),
-      profile: await loadBundledProfile('plex'),
+      profile: buildProfile({ naming: 'with-id', metadata: 'none' }),
       destinationRoot: await makeDir(),
       mode: 'copy',
     });
@@ -309,7 +309,7 @@ describe('analyze', () => {
     const result = await analyze(await discoverVideos(src), {
       parser: new GuessitParser(),
       provider: new FakeProvider([]),
-      profile: await loadBundledProfile('plex'),
+      profile: buildProfile({ naming: 'with-id', metadata: 'none' }),
       destinationRoot: await makeDir(),
       mode: 'copy',
       concurrency: 3,
@@ -331,7 +331,7 @@ describe('analyze', () => {
     const result = await analyze(await discoverVideos(join(root, 'Movies')), {
       parser: new GuessitParser(),
       provider: new FakeProvider([movie(438631, 'Dune', 2021)]),
-      profile: await loadBundledProfile('plex'),
+      profile: buildProfile({ naming: 'with-id', metadata: 'none' }),
       destinationRoot: join(root, 'lib'),
       mode: 'copy',
     });
@@ -368,7 +368,7 @@ describe('analyze', () => {
     await analyze(files, {
       parser: slow,
       provider: new FakeProvider([]),
-      profile: await loadBundledProfile('plex'),
+      profile: buildProfile({ naming: 'with-id', metadata: 'none' }),
       destinationRoot: join(root, 'lib'),
       mode: 'copy',
     });

@@ -30,9 +30,12 @@ async function load(yaml: string): Promise<Config> {
 describe('libraries', () => {
   it('makes a typed library its own destination and an arrival folder follow its targets', () => {
     expect(libraryOverrides(films, libraries)).toEqual({ dest: '/m/films' });
-    expect(libraryOverrides({ ...films, profile: 'jellyfin', threshold: 90 }, libraries)).toEqual({
+    expect(
+      libraryOverrides({ ...films, naming: 'no-id', metadata: 'nfo', threshold: 90 }, libraries),
+    ).toEqual({
       dest: '/m/films',
-      profile: 'jellyfin',
+      naming: 'no-id',
+      metadata: 'nfo',
       threshold: 90,
     });
     expect(libraryOverrides({ ...arrival, mode: 'hardlink', threshold: 80 }, libraries)).toEqual({
@@ -87,9 +90,9 @@ describe('libraries', () => {
       );
     });
 
-    it('keeps the profile on typed libraries and the mode on arrival folders', async () => {
+    it('keeps naming and metadata on typed libraries and the mode on arrival folders', async () => {
       await rejected(
-        `${head}  - {id: a, name: A, source: /a, into: {movie: films, series: shows}, profile: plex}\n`,
+        `${head}  - {id: a, name: A, source: /a, into: {movie: films, series: shows}, naming: no-id}\n`,
       );
       await rejected('libraries:\n  - {id: a, name: A, source: /a, type: movie, mode: copy}\n');
     });

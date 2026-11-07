@@ -1,13 +1,6 @@
 import { api } from './api.js';
 import { baseName } from './paths.js';
-import {
-  nullIfBlank,
-  profileForm,
-  profileOf,
-  thresholdOf,
-  type Mode,
-  type ProfileForm,
-} from './settings.js';
+import { nullIfBlank, thresholdOf, type Metadata, type Mode, type Naming } from './settings.js';
 
 export type LibraryKind = 'movie' | 'series';
 /** The ids of the libraries an arrival folder sends its releases to. */
@@ -24,7 +17,8 @@ export interface Library {
   /** A library organized in place has a type; an arrival folder has `into`. */
   readonly type?: LibraryKind | null;
   readonly into?: LibraryInto | null;
-  readonly profile: string | null;
+  readonly naming: Naming | null;
+  readonly metadata: Metadata | null;
   readonly mode: Mode | null;
   readonly threshold: number | null;
   readonly watch: boolean;
@@ -39,14 +33,15 @@ export interface Library {
 
 /**
  * What `POST`/`PATCH /api/libraries` take; on a PATCH, `null` unsets a field. A library organized
- * in place carries `type` and no `mode`, an arrival folder `into` and no `profile`.
+ * in place carries `type` and no `mode`, an arrival folder `into` and no `naming` nor `metadata`.
  */
 export interface LibraryBody {
   name: string;
   source: string;
   type?: LibraryKind;
   into?: LibraryInto;
-  profile?: string | null;
+  naming?: Naming | null;
+  metadata?: Metadata | null;
   mode?: Mode | null;
   threshold?: number | null;
   watch?: boolean;
@@ -94,8 +89,9 @@ export interface LibraryForm {
   type: LibraryKind;
   /** Arrival only: the ids of the libraries it sends to. */
   into: { movie: string; series: string };
-  /** In place only. */
-  profile: ProfileForm;
+  /** In place only; `''` follows the global setting. */
+  naming: Naming | '';
+  metadata: Metadata | '';
   /** Arrival only; `''` follows the global mode. */
   mode: Mode | '';
   /** Follow the global threshold instead of `threshold`. */
@@ -106,7 +102,6 @@ export interface LibraryForm {
 
 export function libraryForm(
   library: Library | undefined,
-  bundled: readonly { readonly id: string }[],
   group: LibraryGroup = library ? groupOf(library) : 'in-place',
   /** Libraries organized in place, to preselect the destinations of a new arrival folder. */
   typed: readonly Library[] = [],
@@ -118,7 +113,8 @@ export function libraryForm(
     source: library?.source ?? '',
     type: library?.type ?? 'movie',
     into: library?.into ?? { movie: first('movie'), series: first('series') },
-    profile: profileForm(library?.profile ?? null, bundled),
+    naming: library?.naming ?? '',
+    metadata: library?.metadata ?? '',
     mode: library?.mode ?? '',
     defaultThreshold: library?.threshold == null,
     threshold: library?.threshold ?? THRESHOLD_DEFAULT,
@@ -137,7 +133,7 @@ export const folderName = baseName;
 export function libraryBody(
   form: LibraryForm,
   creating: boolean,
-): LibraryBody | { invalid: 'source' | 'into' | 'profile' | 'threshold' } {
+): LibraryBody | { invalid: 'source' | 'into' | 'threshold' } {
   const source = form.source.trim();
   if (!source.startsWith('/')) {
     return { invalid: 'source' };
@@ -153,11 +149,8 @@ export function libraryBody(
     watch: form.watch,
   };
   if (form.group === 'in-place') {
-    const profile = profileOf(form.profile);
-    if (profile === undefined) {
-      return { invalid: 'profile' };
-    }
-    body.profile = profile;
+    body.naming = form.naming === '' ? null : form.naming;
+    body.metadata = form.metadata === '' ? null : form.metadata;
     if (creating) {
       body.type = form.type;
     }

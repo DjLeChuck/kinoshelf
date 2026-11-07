@@ -5,6 +5,8 @@ import {
   watchedFolders,
   type Config,
   type ConfigEdit,
+  type Metadata,
+  type Naming,
 } from '@kinoshelf/core';
 import { tmdbKeyFromEnv } from '@kinoshelf/provider-tmdb';
 import { ApiError } from './api-error.js';
@@ -48,7 +50,8 @@ export interface SettingsPatch {
     apply?: Nullable<boolean>;
   }>;
   processing?: {
-    profile?: Nullable<string>;
+    naming?: Nullable<Naming>;
+    metadata?: Nullable<Metadata>;
     mode?: Nullable<'copy' | 'hardlink' | 'move'>;
     threshold?: Nullable<number>;
     detectPictureSize?: Nullable<boolean>;
@@ -107,7 +110,8 @@ export function presentSettings(config: Config, env: Env): unknown {
           }
         : null,
     processing: {
-      profile: config.profile ?? null,
+      naming: config.naming ?? null,
+      metadata: config.metadata ?? null,
       mode: config.mode ?? null,
       threshold: config.threshold ?? null,
       // Read from the file when it is named, so on unless turned off.

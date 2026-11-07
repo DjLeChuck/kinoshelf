@@ -1,7 +1,8 @@
 import {
-  listBundledProfiles,
-  loadBundledProfile,
+  buildProfile,
+  NAMINGS,
   renderProfileTemplate,
+  type Naming,
   type Profile,
   type TemplateVariables,
 } from '@kinoshelf/core';
@@ -45,26 +46,21 @@ function exampleOf(profile: Profile): { movie: string; series: string } {
   };
 }
 
-/** The profiles shipped with Kinoshelf, for the UI to offer them instead of asking for a name. */
-async function bundledProfiles(): Promise<
-  { id: string; name: string; example: { movie: string; series: string } }[]
-> {
-  return Promise.all(
-    (await listBundledProfiles()).map(async (id) => {
-      const profile = await loadBundledProfile(id);
-      return { id, name: profile.name, example: exampleOf(profile) };
-    }),
-  );
+/** What each naming writes (metadata does not change a name), for the UI to show an example. */
+function namingExamples(): Record<Naming, { movie: string; series: string }> {
+  return Object.fromEntries(
+    NAMINGS.map((naming) => [naming, exampleOf(buildProfile({ naming, metadata: 'none' }))]),
+  ) as Record<Naming, { movie: string; series: string }>;
 }
 
 const apiKeySource = (ctx: SettingsContext): 'env' | 'database' | null =>
   (ctx.env.KINOSHELF_API_KEY ?? '') !== '' ? 'env' : hasApiKey(ctx.database) ? 'database' : null;
 
 export function registerSettingsRoutes(api: FastifyInstance, ctx: SettingsContext): void {
-  const present = async (): Promise<unknown> => ({
+  const present = (): unknown => ({
     ...(presentSettings(ctx.store.config, ctx.env) as object),
     apiKey: { source: apiKeySource(ctx) },
-    profiles: await bundledProfiles(),
+    namingExamples: namingExamples(),
   });
 
   api.get(
@@ -110,7 +106,7 @@ export function registerSettingsRoutes(api: FastifyInstance, ctx: SettingsContex
         await ctx.store.update((current) => editsFor(request.body, current));
         ctx.events.emit('settings');
       }
-      return await present();
+      return present();
     },
   );
 

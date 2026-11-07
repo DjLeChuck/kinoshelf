@@ -6,7 +6,7 @@ import {
   executePlan,
   GuessitParser,
   KinoshelfError,
-  loadBundledProfile,
+  buildProfile,
   MemoryJournal,
   parseProfile,
   undoLastBatch,
@@ -21,8 +21,8 @@ import { cleanup, counter, makeDir, put } from './workspace.js';
 afterEach(cleanup);
 
 const parser = new GuessitParser();
-const plex = await loadBundledProfile('plex');
-const jellyfin = await loadBundledProfile('jellyfin');
+const plex = buildProfile({ naming: 'with-id', metadata: 'none' });
+const jellyfin = buildProfile({ naming: 'with-id', metadata: 'nfo' });
 const nightbitch = movie(728949, 'Nightbitch', 2024);
 
 const details: MovieDetails = {
@@ -64,7 +64,6 @@ const FOLDER = 'Nightbitch (2024) {tmdb-728949}';
 /** A Kodi-style profile that keeps several versions, with a folder poster and a `movie.nfo`. */
 const kodiProfile = parseProfile(`
 id: kodi
-name: Kodi
 episodeRangeSeparator: '-e'
 templates:
   movieFolder: '{title} ({year})'
@@ -640,7 +639,6 @@ describe('a profile’s version template', () => {
   const withVersion = (version: string) =>
     parseProfile(`
 id: custom
-name: Custom
 episodeRangeSeparator: '-e'
 templates:
   movieFolder: '{title}'

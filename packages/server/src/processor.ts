@@ -82,7 +82,7 @@ async function process(deps: ProcessorDeps, job: Job): Promise<ProcessedJob> {
   // (source = destination) must not depend on which sub-folder arrived. A library removed since
   // the job was queued leaves the global settings.
   const library = deps.config.libraries?.find(({ id }) => id === job.libraryId);
-  const settings = await resolveSettings(
+  const settings = resolveSettings(
     library ? libraryOverrides(library, deps.config.libraries ?? []) : {},
     deps.config,
     {

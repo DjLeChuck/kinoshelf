@@ -4,7 +4,6 @@ const text = z.string().min(1);
 
 export const profileSchema = z.strictObject({
   id: z.string().regex(/^[a-z0-9-]+$/),
-  name: text,
   /** Joins first and last episode of a multi-episode file, e.g. `-e` gives `s02e18-e19`. */
   episodeRangeSeparator: z.string(),
   templates: z.strictObject({

@@ -1,8 +1,8 @@
 import { access } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import {
+  buildProfile,
   libraryProfile,
-  loadProfile,
   showFileNames,
   type Config,
   type Profile,
@@ -174,7 +174,7 @@ export class SeriesFiles {
     if (library?.type !== 'series') {
       return;
     }
-    const profile = await loadProfile(libraryProfile(library, config));
+    const profile = buildProfile(libraryProfile(library, config));
     this.deps.store.replace(libraryId, await this.look(libraryId, profile));
     this.deps.refreshed?.(libraryId);
   }

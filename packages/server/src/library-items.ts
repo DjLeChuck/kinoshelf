@@ -1,10 +1,10 @@
 import { createHash } from 'node:crypto';
 import { basename, dirname, extname } from 'node:path';
 import {
+  buildProfile,
   libraryProfile,
   companionKindOf,
   companionsWritten,
-  loadProfile,
   type Candidate,
   type CompanionKind,
   type Config,
@@ -771,10 +771,10 @@ const typedLibraryHolding = (config: Config, path: string): LibraryConfig | unde
  * The profile of each typed library, read once per call rather than once per file: a batch or an
  * undo of a whole series goes through thousands of them.
  */
-function profilesOf(config: Config): (library: LibraryConfig) => Promise<Profile> {
-  const profiles = new Map<string, Promise<Profile>>();
+function profilesOf(config: Config): (library: LibraryConfig) => Profile {
+  const profiles = new Map<string, Profile>();
   return (library) => {
-    const profile = profiles.get(library.id) ?? loadProfile(libraryProfile(library, config));
+    const profile = profiles.get(library.id) ?? buildProfile(libraryProfile(library, config));
     profiles.set(library.id, profile);
     return profile;
   };
@@ -803,15 +803,15 @@ export class LibrarySnapshot {
       : undefined;
   }
 
-  private async profileOf(jobId: string): Promise<Profile | undefined> {
+  private profileOf(jobId: string): Profile | undefined {
     const settings = this.deps.jobs.settings(jobId);
-    return settings && loadProfile(settings.profile);
+    return settings && buildProfile(settings.profile);
   }
 
   /** A scan of a library's whole source, or of one folder of it, is done. */
-  async scanned(job: Job): Promise<void> {
+  scanned(job: Job): void {
     const library = this.libraryOf(job);
-    const profile = await this.profileOf(job.id);
+    const profile = this.profileOf(job.id);
     if (!library || !profile) {
       return;
     }
@@ -825,10 +825,10 @@ export class LibrarySnapshot {
   }
 
   /** A human chose the work of a file: its row follows, with the title they chose. */
-  async matched(entry: Entry, candidate: Candidate): Promise<void> {
+  matched(entry: Entry, candidate: Candidate): void {
     const job = this.deps.jobs.get(entry.jobId);
     const library = this.libraryOf(job);
-    const profile = await this.profileOf(entry.jobId);
+    const profile = this.profileOf(entry.jobId);
     const row = library && this.deps.store.get(library.id, entry.path);
     if (!library || !profile || !row) {
       return;
@@ -841,14 +841,14 @@ export class LibrarySnapshot {
   }
 
   /** Transfers of a job ended: each video that went through is where it was sent, and written. */
-  async transferred(
+  transferred(
     jobId: string,
     done: readonly { readonly entry: Entry; readonly results: readonly OperationResult[] }[],
-  ): Promise<void> {
+  ): void {
     const library = this.libraryOf(this.deps.jobs.get(jobId));
-    const profile = await this.profileOf(jobId);
+    const profile = this.profileOf(jobId);
     if (!library || !profile) {
-      await this.arrived(done);
+      this.arrived(done);
       return;
     }
     for (const { entry, results } of done) {
@@ -874,9 +874,9 @@ export class LibrarySnapshot {
    * library whose folder holds it, with what was written beside it. The library is told by where
    * the video landed, since a file's destination can be chosen one by one.
    */
-  private async arrived(
+  private arrived(
     done: readonly { readonly entry: Entry; readonly results: readonly OperationResult[] }[],
-  ): Promise<void> {
+  ): void {
     const config = this.deps.config();
     const profileOf = profilesOf(config);
     const now = new Date().toISOString();
@@ -889,7 +889,7 @@ export class LibrarySnapshot {
       if (path === undefined || !library) {
         continue;
       }
-      const profile = await profileOf(library);
+      const profile = profileOf(library);
       const row = itemOf(entry, profile, library.id, now);
       const failed = new Set<Writable>(
         results
@@ -920,7 +920,7 @@ export class LibrarySnapshot {
    * A batch was undone: a video is back where it came from, and the files written beside the
    * others are gone. Files that sit in no typed library are not ours to track.
    */
-  async undone(entries: readonly JournalEntry[]): Promise<void> {
+  undone(entries: readonly JournalEntry[]): void {
     const config = this.deps.config();
     const profileOf = profilesOf(config);
     // The written files first: once a video is moved back, its folder is no longer the one to look in.
@@ -943,7 +943,7 @@ export class LibrarySnapshot {
         }
         continue;
       }
-      const kind = fileKind(await profileOf(library), entry.destination);
+      const kind = fileKind(profileOf(library), entry.destination);
       if (kind === undefined) {
         continue;
       }

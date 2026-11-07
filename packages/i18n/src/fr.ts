@@ -29,7 +29,6 @@ export const fr: Record<keyof typeof en, string> = {
   'error.profile.invalid-path': 'Template invalide dans {field} : « {template} »',
   'error.profile.not-a-file':
     'Impossible d’utiliser {path} comme profil : indiquez un fichier .yaml existant d’au plus {max} Ko.',
-  'error.profile.unknown': 'Profil inconnu « {id} ».',
   'error.profile.unknown-variable': 'Variable inconnue {variable} dans {field}.',
   'error.profile.yaml-syntax': 'Le profil n’est pas du YAML valide : {detail}',
   'error.provider.foreign-id':
@@ -179,11 +178,12 @@ export const fr: Record<keyof typeof en, string> = {
   'help.arg.source': 'dossier ou fichier vidéo à analyser',
   'help.arg.path': 'fichier vidéo ou dossier à traiter',
   'help.opt.library':
-    'utilise les destinations, le profil, le mode et le seuil d’une bibliothèque de config.yaml',
+    'utilise les destinations, le nommage, les métadonnées, le mode et le seuil d’une bibliothèque de config.yaml',
   'help.opt.dest': 'dossier de destination des films et des séries',
   'help.opt.dest-movies': 'dossier de destination des films',
   'help.opt.dest-series': 'dossier de destination des séries',
-  'help.opt.profile': 'profil de sortie : un identifiant fourni ou le chemin d’un fichier YAML',
+  'help.opt.naming': 'nommage des dossiers : with-id (avec une étiquette {tmdb-<id>}) ou no-id',
+  'help.opt.metadata': 'écrire les NFO et les images à côté des vidéos : none ou nfo',
   'help.opt.mode':
     'copy, hardlink ou move (par défaut : move si la destination est le dossier source, sinon copy)',
   'help.opt.threshold': 'score minimal (0-100) pour un traitement automatique',
@@ -415,7 +415,6 @@ export const fr: Record<keyof typeof en, string> = {
   'web.libraries.group.arrival': 'Dossiers d’arrivée',
   'web.libraries.group.arrival.empty':
     'Aucun dossier d’arrivée pour l’instant. Ajoutez-en un si vos téléchargements atterrissent dans un dossier.',
-  'web.libraries.summary.profile': 'Profil : {profile}',
   'web.libraries.summary.into': 'Films → {movie} · Séries → {series}',
   'web.libraries.invalid.into':
     'Choisissez une bibliothèque de destination pour les films et pour les séries.',
@@ -433,9 +432,6 @@ export const fr: Record<keyof typeof en, string> = {
     'Surveiller le dossier source et traiter les nouveaux fichiers automatiquement',
   'web.libraries.watch.hint':
     'Seulement pour un dossier qui ne contient que des téléchargements terminés, jamais un dossier où l’on écrit encore. Le délai de stabilisation et l’intervalle sont dans les réglages.',
-  'web.libraries.profile': 'Profil de sortie',
-  'web.libraries.profile.default': 'Par défaut',
-  'web.libraries.profile.default.help': 'Le profil défini dans les réglages.',
   'web.libraries.mode': 'Mode fichier',
   'web.libraries.mode.hardlink.warning':
     'Source et destination doivent être sur le même système de fichiers. Sinon, l’opération échoue avec une erreur explicite : aucun repli automatique vers la copie.',
@@ -450,7 +446,6 @@ export const fr: Record<keyof typeof en, string> = {
   'web.libraries.delete.confirm': 'Oui, supprimer',
   'web.libraries.delete.cancel': 'Annuler',
   'web.libraries.invalid.source': 'Indiquez le dossier source, en chemin absolu.',
-  'web.libraries.invalid.profile': 'Indiquez le chemin du fichier de profil.',
   'web.welcome.eyebrow': 'Bienvenue',
   'web.welcome.title': 'Mettons de l’ordre dans vos films et séries',
   'web.welcome.intro':
@@ -494,7 +489,7 @@ export const fr: Record<keyof typeof en, string> = {
   'web.onboarding.form.destination.movies': 'Dossier des films',
   'web.onboarding.form.destination.series': 'Dossier des séries',
   'web.onboarding.form.destination.hint':
-    'Deux dossiers différents, comme Plex le recommande. Le profil de sortie et d’autres bibliothèques se règlent dans les réglages.',
+    'Deux dossiers différents, comme Plex le recommande. Les noms, les fichiers de métadonnées et d’autres bibliothèques se règlent dans les réglages.',
   'web.onboarding.form.source.needs-destination':
     'Indiquez d’abord vos dossiers de films et de séries (étape précédente).',
   'web.onboarding.form.source': 'Dossier de téléchargements',
@@ -674,7 +669,6 @@ export const fr: Record<keyof typeof en, string> = {
   'web.history.job.tech.show': 'Afficher le détail technique',
   'web.history.job.tech.hide': 'Masquer le détail technique',
   'web.history.job.used': 'Réglages utilisés',
-  'web.history.job.used.profile': 'Profil',
   'web.history.job.used.mode': 'Mode',
   'web.history.job.used.destination': 'Destination',
   'web.history.job.used.movies': 'Films',
@@ -706,12 +700,34 @@ export const fr: Record<keyof typeof en, string> = {
     'La langue des titres récupérés sur TMDB, par exemple fr ou en-US.',
   'web.settings.general.locale': 'Langue du serveur',
   'web.settings.general.locale.hint': 'La langue des notifications.',
+  'web.profile.naming': 'Noms',
+  'web.profile.naming.hint': 'La façon de nommer les dossiers et les fichiers.',
+  'web.profile.naming.with-id': 'Avec l’id TMDB',
+  'web.profile.naming.with-id.help':
+    'L’id TMDB figure entre accolades dans les dossiers de films et de séries et dans le nom du fichier d’un film ({tmdb-438631}). Plex et Jellyfin reconnaissent alors la bonne œuvre, même quand deux partagent un titre et une année.',
+  'web.profile.naming.no-id': 'Sans l’id',
+  'web.profile.naming.no-id.help':
+    'Des noms plus propres, mais le lecteur identifie alors une œuvre par son titre et son année seuls, ce qui peut confondre deux œuvres qui les partagent (un remake sorti la même année). Les fichiers NFO, quand ils sont écrits, portent quand même l’id.',
+  'web.profile.metadata': 'Fichiers de métadonnées',
+  'web.profile.metadata.hint': 'Ce qui est écrit à côté des vidéos.',
+  'web.profile.metadata.none': 'Aucun',
+  'web.profile.metadata.none.help':
+    'Seules les vidéos sont renommées. Le lecteur va chercher lui-même les descriptions et les images.',
+  'web.profile.metadata.nfo': 'Fichiers NFO et images',
+  'web.profile.metadata.nfo.help':
+    'Écrit un fichier NFO au format Kodi (movie.nfo, tvshow.nfo, un par épisode) et les images d’affiche, de fond et de logo à côté des vidéos, ainsi que les affiches de saison dans le dossier de la série. Jellyfin les lit avant d’interroger une source en ligne. Plex ne le fait qu’avec l’agent facultatif « Plex NFO » (Plex Media Server 1.43.1 ou plus) : ses agents par défaut les ignorent.',
+  'web.profile.default': 'Par défaut',
+  'web.profile.default.help': 'Ce qui est défini dans les réglages.',
+  'web.profile.example.movie': 'Film',
+  'web.profile.example.series': 'Épisode',
+  'web.profile.explain': 'Ce que ce nommage écrit',
+  'web.libraries.summary.profile': 'Noms : {naming} · Métadonnées : {metadata}',
+  'web.libraries.profile': 'Noms et métadonnées',
+  'web.history.job.used.naming': 'Noms',
+  'web.history.job.used.metadata': 'Fichiers de métadonnées',
   'web.settings.processing.title': 'Réglages par défaut',
   'web.settings.processing.intro':
     'Utilisés par les bibliothèques qui n’ont pas les leurs, et pour un dossier hors bibliothèque (un chemin soumis, ou la ligne de commande).',
-  'web.settings.processing.profile': 'Profil de sortie',
-  'web.settings.processing.profile.hint':
-    'La façon de nommer fichiers et dossiers. Choisissez un profil fourni avec Kinoshelf, ou indiquez votre propre fichier YAML.',
   'web.settings.processing.mode': 'Mode de fichier',
   'web.settings.processing.mode.default': 'Automatique',
   'web.settings.processing.mode.copy': 'Copie',
@@ -778,23 +794,6 @@ export const fr: Record<keyof typeof en, string> = {
   'web.settings.access.new': 'Votre nouvelle clé. Elle n’est affichée qu’une fois.',
   'web.settings.access.copy': 'Copier',
   'web.settings.access.copied': 'Copié',
-  'web.settings.processing.profile.default': 'Par défaut (Plex)',
-  'web.settings.processing.profile.custom': 'Mon propre fichier…',
-  'web.profile.plex.help':
-    'Noms pour les agents Plex par défaut. L’id TMDB figure entre accolades dans le dossier et le nom du fichier d’un film, et dans le dossier d’une série : Plex reconnaît ainsi la bonne œuvre même quand deux partagent un titre et une année. Aucun fichier NFO ni aucune image n’est écrit.',
-  'web.profile.plex-no-id.name': 'Plex (sans id)',
-  'web.profile.plex-no-id.help':
-    'Même organisation que Plex, sans l’id TMDB : des noms plus propres, mais Plex identifie alors une œuvre par son seul titre et son année, ce qui peut confondre deux œuvres qui partagent les deux (un remake sorti la même année). Aucun fichier NFO ni aucune image n’est écrit.',
-  'web.profile.jellyfin.help':
-    'Noms pour Jellyfin : l’id TMDB figure entre accolades dans les dossiers des films et des séries (et le nom du fichier d’un film), puis un fichier NFO au format Kodi (movie.nfo, tvshow.nfo, un par épisode) et les images poster, fanart et logo sont écrits à côté des vidéos. Jellyfin les lit avant d’interroger une source en ligne.',
-  'web.profile.plex-nfo.help':
-    'Pour les agents optionnels « Plex NFO » (Plex Media Server 1.43.1 ou plus récent), qui lisent des fichiers NFO et des images locales au lieu d’interroger une source en ligne. Même organisation que Plex, sans l’id dans les noms puisque le NFO le porte. Les agents par défaut de Plex ignorent ces fichiers : utilisez Plex pour eux.',
-  'web.settings.processing.profile.explain': 'Ce que ce profil écrit',
-  'web.settings.processing.profile.example.movie': 'Film',
-  'web.settings.processing.profile.example.series': 'Épisode',
-  'web.settings.processing.profile.path': 'Chemin du fichier YAML',
-  'web.settings.processing.profile.path.hint':
-    'Sur la machine qui exécute Kinoshelf (avec Docker : dans le conteneur), par exemple /config/mon-profil.yaml.',
   'web.settings.processing.mode.default.help':
     'Déplace les fichiers quand vous rangez un dossier sur place (la destination est le dossier source), et les copie quand la destination est un autre dossier. Exemple : /downloads rangé dans /downloads déplace ; rangé dans /media copie.',
   'web.settings.processing.mode.copy.help':
@@ -817,8 +816,6 @@ export const fr: Record<keyof typeof en, string> = {
     'Un message dans un salon Discord. Collez l’URL du webhook créé dans les paramètres du salon (Intégrations, puis Webhooks).',
   'web.settings.access.warning':
     'Les scripts qui utilisent la clé actuelle cessent de fonctionner aussitôt. Ce navigateur reste connecté.',
-  'web.settings.invalid.profile':
-    'Indiquez le chemin de votre fichier de profil, ou choisissez-en un dans la liste.',
   'web.not-found.title': 'Page introuvable',
   'web.not-found.back': 'Retour aux bibliothèques',
 };

@@ -14,7 +14,16 @@ async function organized(fileName: string) {
   const file = await put(join(root, FOLDER, fileName), 'dune');
   const h = await harness({
     config: {
-      libraries: [{ id: 'films', name: 'Films', source: root, type: 'movie', profile: 'plex' }],
+      libraries: [
+        {
+          id: 'films',
+          name: 'Films',
+          source: root,
+          type: 'movie',
+          naming: 'with-id',
+          metadata: 'none',
+        },
+      ],
     },
   });
   await h.request('POST', '/api/libraries/films/scan');

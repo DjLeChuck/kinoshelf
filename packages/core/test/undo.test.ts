@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import {
   createPlan,
   executePlan,
-  loadBundledProfile,
+  buildProfile,
   MemoryJournal,
   undoBatch,
   undoLastBatch,
@@ -14,7 +14,7 @@ import {
 import { movie } from './fake-provider.js';
 import { cleanup, counter, makeDir, parsedMovie, put } from './workspace.js';
 
-const plex = await loadBundledProfile('plex');
+const plex = buildProfile({ naming: 'with-id', metadata: 'none' });
 const FOLDER = 'Dune (2021) {tmdb-438631}';
 const STEM = 'Dune (2021) {tmdb-438631}';
 

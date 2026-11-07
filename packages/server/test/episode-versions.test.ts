@@ -62,7 +62,14 @@ async function twoQualities(extra: Partial<Config> = {}) {
     config: {
       libraries: [
         { id: 'films', name: 'Films', source: await makeDir(), type: 'movie' },
-        { id: 'shows', name: 'Shows', source: root, type: 'series', profile: 'jellyfin' },
+        {
+          id: 'shows',
+          name: 'Shows',
+          source: root,
+          type: 'series',
+          naming: 'with-id',
+          metadata: 'nfo',
+        },
       ],
       ...extra,
     },

@@ -34,7 +34,6 @@ export const en = {
   'error.profile.invalid-path': 'Invalid template in {field}: "{template}"',
   'error.profile.not-a-file':
     'Cannot use {path} as a profile: give an existing .yaml file of at most {max} KB.',
-  'error.profile.unknown': 'Unknown profile "{id}".',
   'error.profile.unknown-variable': 'Unknown variable {variable} in {field}.',
   'error.profile.yaml-syntax': 'The profile is not valid YAML: {detail}',
   'error.provider.foreign-id': 'An id from provider "{received}" cannot be used with "{expected}".',
@@ -172,11 +171,12 @@ export const en = {
   'help.arg.source': 'folder or video file to analyze',
   'help.arg.path': 'video file or folder to process',
   'help.opt.library':
-    'use the destinations, profile, mode and threshold of a library of config.yaml',
+    'use the destinations, naming, metadata, mode and threshold of a library of config.yaml',
   'help.opt.dest': 'destination folder for movies and series',
   'help.opt.dest-movies': 'destination folder for movies',
   'help.opt.dest-series': 'destination folder for series',
-  'help.opt.profile': 'output profile: a bundled id or the path of a YAML file',
+  'help.opt.naming': 'naming of the folders: with-id (a {tmdb-<id>} tag) or no-id',
+  'help.opt.metadata': 'write NFO files and images beside the videos: none or nfo',
   'help.opt.mode':
     'copy, hardlink or move (default: move when the destination is the source folder, else copy)',
   'help.opt.threshold': 'minimum score (0-100) for automatic processing',
@@ -398,7 +398,6 @@ export const en = {
   'web.libraries.group.arrival': 'Arrival folders',
   'web.libraries.group.arrival.empty':
     'No arrival folder yet. Add one if your downloads land in a folder.',
-  'web.libraries.summary.profile': 'Profile: {profile}',
   'web.libraries.summary.into': 'Movies → {movie} · Series → {series}',
   'web.libraries.invalid.into': 'Choose a destination library for the movies and for the series.',
   'web.settings.libraries.title': 'Libraries',
@@ -414,9 +413,6 @@ export const en = {
   'web.libraries.watch': 'Watch the source folder and process new files automatically',
   'web.libraries.watch.hint':
     'Only for a folder that holds finished downloads, never one that is still being written to. The settling time and the interval are in the settings.',
-  'web.libraries.profile': 'Output profile',
-  'web.libraries.profile.default': 'Default',
-  'web.libraries.profile.default.help': 'The profile set in the settings.',
   'web.libraries.mode': 'File mode',
   'web.libraries.mode.hardlink.warning':
     'Source and destination must be on the same file system. Otherwise the operation fails with an explicit error: there is no automatic fallback to a copy.',
@@ -431,7 +427,6 @@ export const en = {
   'web.libraries.delete.confirm': 'Yes, delete',
   'web.libraries.delete.cancel': 'Cancel',
   'web.libraries.invalid.source': 'Give the source folder, as an absolute path.',
-  'web.libraries.invalid.profile': 'Give the path of the profile file.',
   'web.welcome.eyebrow': 'Welcome',
   'web.welcome.title': 'Let’s put your movies and series in order',
   'web.welcome.intro':
@@ -474,7 +469,7 @@ export const en = {
   'web.onboarding.form.destination.movies': 'Movies folder',
   'web.onboarding.form.destination.series': 'Series folder',
   'web.onboarding.form.destination.hint':
-    'Two different folders, as Plex recommends. The output profile and more libraries are in the settings.',
+    'Two different folders, as Plex recommends. The naming, the metadata files and more libraries are in the settings.',
   'web.onboarding.form.source.needs-destination':
     'Give your movies and series folders first (previous step).',
   'web.onboarding.form.source': 'Downloads folder',
@@ -651,7 +646,6 @@ export const en = {
   'web.history.job.tech.show': 'Show the technical detail',
   'web.history.job.tech.hide': 'Hide the technical detail',
   'web.history.job.used': 'Settings used',
-  'web.history.job.used.profile': 'Profile',
   'web.history.job.used.mode': 'Mode',
   'web.history.job.used.destination': 'Destination',
   'web.history.job.used.movies': 'Movies',
@@ -683,12 +677,34 @@ export const en = {
     'The language of titles fetched from TMDB, e.g. fr or en-US.',
   'web.settings.general.locale': 'Server language',
   'web.settings.general.locale.hint': 'The language of notifications.',
+  'web.profile.naming': 'Names',
+  'web.profile.naming.hint': 'How the folders and files are named.',
+  'web.profile.naming.with-id': 'With the TMDB id',
+  'web.profile.naming.with-id.help':
+    'The TMDB id goes in braces in the movie and series folders and in the movie file name ({tmdb-438631}). Plex and Jellyfin then recognize the right work even when two share a title and year.',
+  'web.profile.naming.no-id': 'Without the id',
+  'web.profile.naming.no-id.help':
+    'Cleaner names, but the player then identifies a work by its title and year alone, which can mix up two works sharing both (a remake released the same year). The NFO files, when written, still carry the id.',
+  'web.profile.metadata': 'Metadata files',
+  'web.profile.metadata.hint': 'What is written next to the videos.',
+  'web.profile.metadata.none': 'None',
+  'web.profile.metadata.none.help':
+    'Only the videos are renamed. The player fetches the descriptions and the artwork itself.',
+  'web.profile.metadata.nfo': 'NFO files and images',
+  'web.profile.metadata.nfo.help':
+    'Writes a Kodi-format NFO file (movie.nfo, tvshow.nfo, one per episode) and the poster, background and logo images next to the videos, and the season posters in the show’s folder. Jellyfin reads them before it asks any online source. Plex only does with the optional “Plex NFO” agent (Plex Media Server 1.43.1 or later): its default agents ignore them.',
+  'web.profile.default': 'Default',
+  'web.profile.default.help': 'What is set in the settings.',
+  'web.profile.example.movie': 'Movie',
+  'web.profile.example.series': 'Episode',
+  'web.profile.explain': 'What this naming writes',
+  'web.libraries.summary.profile': 'Names: {naming} · Metadata: {metadata}',
+  'web.libraries.profile': 'Names and metadata',
+  'web.history.job.used.naming': 'Names',
+  'web.history.job.used.metadata': 'Metadata files',
   'web.settings.processing.title': 'Default settings',
   'web.settings.processing.intro':
     'Used by libraries that do not set their own, and for a folder outside any library (a path you submit, or the command line).',
-  'web.settings.processing.profile': 'Output profile',
-  'web.settings.processing.profile.hint':
-    'How files and folders are named. Pick one shipped with Kinoshelf, or point to your own YAML file.',
   'web.settings.processing.mode': 'File mode',
   'web.settings.processing.mode.default': 'Automatic',
   'web.settings.processing.mode.copy': 'Copy',
@@ -753,23 +769,6 @@ export const en = {
   'web.settings.access.new': 'Your new key. It is shown once.',
   'web.settings.access.copy': 'Copy',
   'web.settings.access.copied': 'Copied',
-  'web.settings.processing.profile.default': 'Default (Plex)',
-  'web.settings.processing.profile.custom': 'My own file…',
-  'web.profile.plex.help':
-    'Names for the default Plex agents. The TMDB id goes in braces in the movie folder and file name and in the series folder, so Plex recognizes the right work even when two share a title and year. No NFO file or artwork is written.',
-  'web.profile.plex-no-id.name': 'Plex (no id)',
-  'web.profile.plex-no-id.help':
-    'The same layout as Plex, without the TMDB id: cleaner names, but Plex then identifies a work by its title and year alone, which can mix up two works sharing both (a remake released the same year). No NFO file or artwork is written.',
-  'web.profile.jellyfin.help':
-    'Names for Jellyfin: the TMDB id goes in braces in the movie and series folders (and the movie file), then a Kodi-format NFO file (movie.nfo, tvshow.nfo, one per episode) and the poster, fanart and logo images are written next to the videos. Jellyfin reads them before it asks any online provider.',
-  'web.profile.plex-nfo.help':
-    'For the optional “Plex NFO” agents (Plex Media Server 1.43.1 or later), which read local NFO files and images instead of asking an online source. The same layout as Plex without the id in the names, since the NFO carries it. Plex’s default agents ignore these files: use Plex for them.',
-  'web.settings.processing.profile.explain': 'What this profile writes',
-  'web.settings.processing.profile.example.movie': 'Movie',
-  'web.settings.processing.profile.example.series': 'Episode',
-  'web.settings.processing.profile.path': 'Path of the YAML file',
-  'web.settings.processing.profile.path.hint':
-    'On the machine running Kinoshelf (in Docker: inside the container), e.g. /config/my-profile.yaml.',
   'web.settings.processing.mode.default.help':
     'Moves the files when you organize a folder where it is (the destination is the source folder), and copies them when the destination is another folder. Example: scanning /downloads into /downloads moves; into /media copies.',
   'web.settings.processing.mode.copy.help':
@@ -792,7 +791,6 @@ export const en = {
     'A message in a Discord channel. Paste the webhook URL made in the channel’s settings (Integrations, then Webhooks).',
   'web.settings.access.warning':
     'Scripts using the current key stop working at once. This browser stays signed in.',
-  'web.settings.invalid.profile': 'Give the path of your profile file, or pick one from the list.',
   'web.not-found.title': 'Page not found',
   'web.not-found.back': 'Back to the libraries',
 } as const;

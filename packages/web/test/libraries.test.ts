@@ -7,7 +7,6 @@ import {
   type Library,
 } from '../src/lib/libraries.js';
 
-const bundled = [{ id: 'plex' }, { id: 'jellyfin' }];
 const lastScan = { jobId: 'j1', status: 'done' as const };
 const films: Library = {
   id: 'films',
@@ -15,7 +14,8 @@ const films: Library = {
   source: '/mnt/films',
   type: 'movie',
   into: null,
-  profile: 'jellyfin',
+  naming: 'no-id',
+  metadata: 'nfo',
   mode: null,
   threshold: 90,
   watch: false,
@@ -30,7 +30,8 @@ const arrivals: Library = {
   source: '/mnt/dl',
   type: null,
   into: { movie: 'films', series: 'series' },
-  profile: null,
+  naming: null,
+  metadata: null,
   mode: 'hardlink',
   threshold: null,
   watch: true,
@@ -43,14 +44,15 @@ describe('the library form', () => {
   });
 
   it('shows a saved library as it is', () => {
-    expect(libraryForm(films, bundled)).toMatchObject({
+    expect(libraryForm(films)).toMatchObject({
       group: 'in-place',
       type: 'movie',
-      profile: { choice: 'jellyfin' },
+      naming: 'no-id',
+      metadata: 'nfo',
       defaultThreshold: false,
       threshold: 90,
     });
-    expect(libraryForm(arrivals, bundled)).toMatchObject({
+    expect(libraryForm(arrivals)).toMatchObject({
       group: 'arrival',
       into: { movie: 'films', series: 'series' },
       mode: 'hardlink',
@@ -60,21 +62,21 @@ describe('the library form', () => {
   });
 
   it('preselects the first library of each type for a new arrival folder', () => {
-    expect(libraryForm(undefined, bundled, 'arrival', [films, series]).into).toEqual({
+    expect(libraryForm(undefined, 'arrival', [films, series]).into).toEqual({
       movie: 'films',
       series: 'series',
     });
-    expect(libraryForm(undefined, bundled, 'arrival').into).toEqual({ movie: '', series: '' });
+    expect(libraryForm(undefined, 'arrival').into).toEqual({ movie: '', series: '' });
   });
 
   it('names a library after its folder when no name is given', () => {
-    const form = { ...libraryForm(undefined, bundled), source: '/mnt/tank/downloads' };
+    const form = { ...libraryForm(undefined), source: '/mnt/tank/downloads' };
     expect(libraryBody(form, true)).toMatchObject({ name: 'downloads' });
     expect(folderName('/')).toBe('/');
   });
 
   it('sends the type once, on creation, and no mode for a library organized in place', () => {
-    const form = { ...libraryForm(undefined, bundled), source: '/in', type: 'series' as const };
+    const form = { ...libraryForm(undefined), source: '/in', type: 'series' as const };
     expect(libraryBody(form, true)).toEqual({
       name: 'in',
       source: '/in',
@@ -84,14 +86,26 @@ describe('the library form', () => {
     expect(libraryBody(form, false)).toEqual({
       name: 'in',
       source: '/in',
-      profile: null,
+      naming: null,
+      metadata: null,
       threshold: null,
       watch: false,
     });
   });
 
-  it('sends the destinations and the mode of an arrival folder, and no profile', () => {
-    const form = libraryForm(arrivals, bundled);
+  it('sends what a library chose, and null for what follows the settings', () => {
+    const form = libraryForm(films);
+    expect(libraryBody(form, false)).toMatchObject({ naming: 'no-id', metadata: 'nfo' });
+    expect(libraryBody({ ...form, naming: '', metadata: '' }, false)).toMatchObject({
+      naming: null,
+      metadata: null,
+    });
+    // Nothing to unset on a creation.
+    expect(libraryBody({ ...form, naming: '', metadata: '' }, true)).not.toHaveProperty('naming');
+  });
+
+  it('sends the destinations and the mode of an arrival folder, and no naming nor metadata', () => {
+    const form = libraryForm(arrivals);
     expect(libraryBody(form, false)).toEqual({
       name: 'Downloads',
       source: '/mnt/dl',
@@ -103,15 +117,11 @@ describe('the library form', () => {
     expect(libraryBody({ ...form, mode: '' }, true)).not.toHaveProperty('mode');
   });
 
-  it('refuses a relative source, a missing destination and a missing profile file', () => {
-    const arrival = libraryForm(arrivals, bundled);
+  it('refuses a relative source and a missing destination', () => {
+    const arrival = libraryForm(arrivals);
     expect(libraryBody({ ...arrival, source: 'dl' }, false)).toEqual({ invalid: 'source' });
     expect(libraryBody({ ...arrival, into: { movie: 'films', series: '' } }, false)).toEqual({
       invalid: 'into',
-    });
-    const typed = libraryForm(films, bundled);
-    expect(libraryBody({ ...typed, profile: { choice: '__custom__', path: ' ' } }, false)).toEqual({
-      invalid: 'profile',
     });
   });
 });

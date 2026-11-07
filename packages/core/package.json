@@ -15,8 +15,7 @@
     }
   },
   "files": [
-    "dist",
-    "profiles"
+    "dist"
   ],
   "dependencies": {
     "better-sqlite3": "^13.0.3",

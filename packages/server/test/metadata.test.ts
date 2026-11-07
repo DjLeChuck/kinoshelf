@@ -1,4 +1,3 @@
-import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { EntryStore } from '../src/entries.js';
@@ -15,30 +14,13 @@ import {
 
 afterEach(cleanup);
 
-const PROFILE = `
-id: kodi-test
-name: Kodi test
-episodeRangeSeparator: '-e'
-templates:
-  movieFolder: '{title} ({year})'
-  movieFile: '{title} ({year})'
-  seriesFolder: '{title}'
-  seasonFolder: 'Season {season:02}'
-  episodeFile: '{title} - s{season:02}e{episode:02}'
-nfo: { format: kodi, movie: movie.nfo, episode: '{file}.nfo' }
-artwork: []
-filesystem: { forbidden: posix, replacement: '', maxSegmentBytes: 255 }
-`;
-
 const DUNE = { kind: 'movie', id: { provider: 'tmdb', id: 438631 }, title: 'Dune', year: 2021 };
 
 /** A queue holding one file the provider cannot read, under a profile that writes an NFO. */
 async function setup(options: { detailsFail?: boolean } = {}) {
-  const profile = join(await makeDir(), 'kodi.yaml');
-  await writeFile(profile, PROFILE);
   const destination = await makeDir();
   const h = await harness({
-    config: { libraries: [...librariesAt(destination)], profile },
+    config: { libraries: [...librariesAt(destination)], naming: 'no-id', metadata: 'nfo' },
     createProvider: () => ({
       ...fakeProvider,
       ...(options.detailsFail && {
@@ -63,7 +45,9 @@ describe('metadata files in the validation queue', () => {
 
     // What the transfer will run, as stored on the file: nothing is written yet.
     const operations = new EntryStore(h.database).get(entryId)?.item?.operations ?? [];
-    expect(operations.map((op) => op.type).sort()).toEqual(['transfer', 'write-file']);
+    expect(operations.map((op) => op.type)).toEqual(
+      expect.arrayContaining(['transfer', 'write-file']),
+    );
     expect(operations.find((op) => op.type === 'write-file')?.destination).toBe(
       join(destination, 'Dune (2021)', 'movie.nfo'),
     );

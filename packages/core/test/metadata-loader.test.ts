@@ -4,7 +4,7 @@ import {
   analyze,
   discoverVideos,
   GuessitParser,
-  loadBundledProfile,
+  buildProfile,
   MetadataLoader,
   parseProfile,
   type ExternalId,
@@ -18,7 +18,6 @@ afterEach(cleanup);
 
 const WRITING = `
 id: kodi
-name: Kodi
 episodeRangeSeparator: '-e'
 templates:
   movieFolder: '{title} ({year})'
@@ -45,7 +44,10 @@ const episode = (season: number, episodes: number[]): ParsedMedia => ({
 describe('MetadataLoader', () => {
   it('makes no request for a profile that writes nothing', async () => {
     const provider = new FakeProvider([movie(1, 'Dune', 2021)]);
-    const loader = new MetadataLoader({ provider, profile: await loadBundledProfile('plex') });
+    const loader = new MetadataLoader({
+      provider,
+      profile: buildProfile({ naming: 'with-id', metadata: 'none' }),
+    });
     expect(loader.needsMetadata).toBe(false);
     expect(await loader.forCandidate(movie(1, 'Dune', 2021), episode(1, [1]))).toEqual({});
     expect(provider.calls).toEqual([]);
@@ -184,7 +186,6 @@ describe('analyze with a profile that writes NFO and artwork', () => {
   it('names an episode by the title the provider gives it, asking only for its season', async () => {
     const naming = parseProfile(`
 id: titled
-name: Titled
 episodeRangeSeparator: '-e'
 templates:
   movieFolder: '{title} ({year})'
@@ -205,7 +206,7 @@ filesystem: { forbidden: posix, replacement: '', maxSegmentBytes: 255 }
   });
 
   it('plans nothing extra, and asks nothing, for a profile that writes nothing', async () => {
-    const { result, provider } = await run(await loadBundledProfile('plex'), [
+    const { result, provider } = await run(buildProfile({ naming: 'with-id', metadata: 'none' }), [
       'Dune.2021.2160p.mkv',
     ]);
     expect(result.plan.items[0]?.operations).toHaveLength(1);

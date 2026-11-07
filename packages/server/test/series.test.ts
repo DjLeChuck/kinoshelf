@@ -1,4 +1,4 @@
-import { access, writeFile } from 'node:fs/promises';
+import { access } from 'node:fs/promises';
 import { join } from 'node:path';
 import { loadConfig } from '@kinoshelf/core';
 import type { MetadataProvider, SeasonInfo, SeriesDetails } from '@kinoshelf/core';
@@ -406,33 +406,12 @@ describe('an episode that arrives', () => {
   });
 });
 
-const SHOW_PROFILE = `
-id: show-files-test
-name: Show files test
-episodeRangeSeparator: '-e'
-templates:
-  movieFolder: '{title} ({year})'
-  movieFile: '{title} ({year})'
-  seriesFolder: '{title}'
-  seasonFolder: 'Season {season:02}'
-  episodeFile: '{title} - s{season:02}e{episode:02}'
-nfo: { format: kodi, movie: movie.nfo, episode: '{file}.nfo', series: tvshow.nfo }
-artwork:
-  - { kind: poster, name: poster.jpg }
-  - { kind: fanart, name: fanart.jpg }
-  - { kind: logo, name: logo.png }
-  - { kind: season-poster, name: 'season{season:02}-poster.jpg' }
-filesystem: { forbidden: posix, replacement: '', maxSegmentBytes: 255 }
-`;
-
 describe('the files of a show and of its seasons', () => {
   it('are looked for on the disk after a scan, and again when it changes', async () => {
-    const profile = join(await makeDir(), 'show-files.yaml');
-    await writeFile(profile, SHOW_PROFILE);
     const root = await makeDir();
-    const show = join(root, 'Severance');
-    await put(join(show, 'Season 01', 'Severance - s01e01.mkv'));
-    await put(join(show, 'Season 02', 'Severance - s02e01.mkv'));
+    const show = join(root, 'Severance (2022)');
+    await put(join(show, 'Season 01', 'Severance (2022) - s01e01.mkv'));
+    await put(join(show, 'Season 02', 'Severance (2022) - s02e01.mkv'));
     await put(join(show, 'tvshow.nfo'), '<tvshow/>');
     await put(join(show, 'poster.jpg'), 'image');
     await put(join(show, 'season01-poster.jpg'), 'image');
@@ -440,7 +419,14 @@ describe('the files of a show and of its seasons', () => {
       config: {
         libraries: [
           { id: 'films', name: 'Films', source: await makeDir(), type: 'movie' },
-          { id: 'shows', name: 'Shows', source: root, type: 'series', profile },
+          {
+            id: 'shows',
+            name: 'Shows',
+            source: root,
+            type: 'series',
+            naming: 'no-id',
+            metadata: 'nfo',
+          },
         ],
       },
       createProvider: () => provider(),
@@ -488,7 +474,7 @@ describe('the files of a show and of its seasons', () => {
     ]);
 
     // The logo alone keeps the show incomplete.
-    await put(join(show, 'fanart.jpg'), 'image');
+    await put(join(show, 'background.jpg'), 'image');
     await put(join(show, 'season02-poster.jpg'), 'image');
     await scan();
     expect(await listed()).toMatchObject({ fanart: true, logo: false });
@@ -522,17 +508,22 @@ describe('the files of a show and of its seasons', () => {
 
 describe('refreshing some episodes of a show', () => {
   it('writes the show’s own files even when the episode carrying them is left out', async () => {
-    const profile = join(await makeDir(), 'show-files.yaml');
-    await writeFile(profile, SHOW_PROFILE);
     const root = await makeDir();
-    const show = join(root, 'Severance');
-    await put(join(show, 'Season 01', 'Severance - s01e01.mkv'));
-    const second = await put(join(show, 'Season 01', 'Severance - s01e02.mkv'));
+    const show = join(root, 'Severance (2022)');
+    await put(join(show, 'Season 01', 'Severance (2022) - s01e01.mkv'));
+    const second = await put(join(show, 'Season 01', 'Severance (2022) - s01e02.mkv'));
     const h = await harness({
       config: {
         libraries: [
           { id: 'films', name: 'Films', source: await makeDir(), type: 'movie' },
-          { id: 'shows', name: 'Shows', source: root, type: 'series', profile },
+          {
+            id: 'shows',
+            name: 'Shows',
+            source: root,
+            type: 'series',
+            naming: 'no-id',
+            metadata: 'nfo',
+          },
         ],
       },
       createProvider: () => provider(),
@@ -548,25 +539,26 @@ describe('refreshing some episodes of a show', () => {
     expect(run.statusCode).toBe(202);
     await h.app.jobs.idle();
     expect(await exists(join(show, 'tvshow.nfo'))).toBe(true);
-    expect(await exists(join(show, 'Season 01', 'Severance - s01e02.nfo'))).toBe(true);
+    expect(await exists(join(show, 'Season 01', 'Severance (2022) - s01e02.nfo'))).toBe(true);
     // The other episode's own NFO is not this selection's.
-    expect(await exists(join(show, 'Season 01', 'Severance - s01e01.nfo'))).toBe(false);
+    expect(await exists(join(show, 'Season 01', 'Severance (2022) - s01e01.nfo'))).toBe(false);
   });
 });
 
 describe('a show lacking only files of its own', () => {
   /** Two episodes with their own NFO, the show's files there, season 1's poster known to TMDB. */
   async function lacking() {
-    const profile = join(await makeDir(), 'show-files.yaml');
-    await writeFile(profile, SHOW_PROFILE);
     const root = await makeDir();
-    const show = join(root, 'Severance');
+    const show = join(root, 'Severance (2022)');
     for (const [season, name] of [
       ['01', 's01e01'],
       ['02', 's02e01'],
     ] as const) {
-      await put(join(show, `Season ${season}`, `Severance - ${name}.mkv`));
-      await put(join(show, `Season ${season}`, `Severance - ${name}.nfo`), '<episodedetails/>');
+      await put(join(show, `Season ${season}`, `Severance (2022) - ${name}.mkv`));
+      await put(
+        join(show, `Season ${season}`, `Severance (2022) - ${name}.nfo`),
+        '<episodedetails/>',
+      );
     }
     await put(join(show, 'tvshow.nfo'), '<tvshow/>');
     await put(join(show, 'poster.jpg'), 'image');
@@ -578,7 +570,14 @@ describe('a show lacking only files of its own', () => {
       config: {
         libraries: [
           { id: 'films', name: 'Films', source: await makeDir(), type: 'movie' },
-          { id: 'shows', name: 'Shows', source: root, type: 'series', profile },
+          {
+            id: 'shows',
+            name: 'Shows',
+            source: root,
+            type: 'series',
+            naming: 'no-id',
+            metadata: 'nfo',
+          },
         ],
       },
       createProvider: () => ({

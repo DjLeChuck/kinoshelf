@@ -24,7 +24,8 @@ interface SettingsBody {
   jellyfin: { url: string; tokenConfigured: boolean } | null;
   webhooks: { id: string; target: string; format: string; on: string[] }[];
   processing: {
-    profile: string | null;
+    naming: string | null;
+    metadata: string | null;
     mode: string | null;
     threshold: number | null;
     detectPictureSize: boolean;
@@ -50,44 +51,20 @@ async function withConfig(yaml: string, overrides: Parameters<typeof harness>[0]
 }
 
 describe('GET /api/settings', () => {
-  it('lists the bundled profiles, so the UI can offer them', async () => {
+  it('gives an example of each naming, so the UI can show what it writes', async () => {
     const h = await withConfig(librariesYaml('/media'));
     expect(
-      (await h.request('GET', '/api/settings')).json<{ profiles: unknown }>().profiles,
-    ).toEqual([
-      {
-        id: 'jellyfin',
-        name: 'Jellyfin',
-        example: {
-          movie: 'Dune (2021) {tmdb-438631}/Dune (2021) {tmdb-438631}.mkv',
-          series: 'The Bear (2022) {tmdb-136315}/Season 03/The Bear (2022) - s03e04.mkv',
-        },
+      (await h.request('GET', '/api/settings')).json<{ namingExamples: unknown }>().namingExamples,
+    ).toEqual({
+      'with-id': {
+        movie: 'Dune (2021) {tmdb-438631}/Dune (2021) {tmdb-438631}.mkv',
+        series: 'The Bear (2022) {tmdb-136315}/Season 03/The Bear (2022) - s03e04.mkv',
       },
-      {
-        id: 'plex',
-        name: 'Plex',
-        example: {
-          movie: 'Dune (2021) {tmdb-438631}/Dune (2021) {tmdb-438631}.mkv',
-          series: 'The Bear (2022) {tmdb-136315}/Season 03/The Bear (2022) - s03e04.mkv',
-        },
+      'no-id': {
+        movie: 'Dune (2021)/Dune (2021).mkv',
+        series: 'The Bear (2022)/Season 03/The Bear (2022) - s03e04.mkv',
       },
-      {
-        id: 'plex-nfo',
-        name: 'Plex (NFO)',
-        example: {
-          movie: 'Dune (2021)/Dune (2021).mkv',
-          series: 'The Bear (2022)/Season 03/The Bear (2022) - s03e04.mkv',
-        },
-      },
-      {
-        id: 'plex-no-id',
-        name: 'Plex (no id)',
-        example: {
-          movie: 'Dune (2021)/Dune (2021).mkv',
-          series: 'The Bear (2022)/Season 03/The Bear (2022) - s03e04.mkv',
-        },
-      },
-    ]);
+    });
   });
 
   it('reports what is set and never the secrets', async () => {
@@ -179,7 +156,7 @@ describe('PATCH /api/settings', () => {
     const h = await withConfig(`${librariesYaml('/media')}mode: copy\nlocale: en\n`);
     const response = await h.patch({
       locale: null,
-      processing: { profile: null, mode: null, threshold: null },
+      processing: { naming: null, metadata: null, mode: null, threshold: null },
     });
     expect(response.statusCode).toBe(200);
     expect(response.json<SettingsBody>()).toMatchObject({

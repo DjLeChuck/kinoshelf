@@ -6,7 +6,7 @@ import {
   createPlan,
   KinoshelfError,
   executePlan,
-  loadBundledProfile,
+  buildProfile,
   MemoryJournal,
   type BatchResult,
   type Plan,
@@ -23,7 +23,7 @@ import {
   SHM,
 } from './workspace.js';
 
-const plex = await loadBundledProfile('plex');
+const plex = buildProfile({ naming: 'with-id', metadata: 'none' });
 const dune = movie(438631, 'Dune', 2021);
 const FOLDER = 'Dune (2021) {tmdb-438631}';
 const STEM = 'Dune (2021) {tmdb-438631}';

@@ -1,17 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import {
-  companionKindOf,
-  companionsWritten,
-  loadBundledProfile,
-  showFileNames,
-} from '../src/index.js';
+import { companionKindOf, companionsWritten, buildProfile, showFileNames } from '../src/index.js';
 import { parseProfile } from '../src/profiles/loader.js';
 import type { Profile } from '../src/types/profile.js';
 
 const profile = (nfo: string, artwork: string): Profile =>
   parseProfile(`
 id: test
-name: Test
 episodeRangeSeparator: '-e'
 templates:
   movieFolder: ''
@@ -25,8 +19,10 @@ filesystem: { forbidden: windows, replacement: '_', maxSegmentBytes: 255 }
 `);
 
 describe('companionsWritten', () => {
-  it('writes every file of a movie that has its own folder', async () => {
-    expect(companionsWritten(await loadBundledProfile('jellyfin'), 'movie', false)).toEqual({
+  it('writes every file of a movie that has its own folder', () => {
+    expect(
+      companionsWritten(buildProfile({ naming: 'with-id', metadata: 'nfo' }), 'movie', false),
+    ).toEqual({
       nfo: true,
       poster: true,
       fanart: true,
@@ -55,20 +51,24 @@ describe('companionsWritten', () => {
     expect(companionsWritten(literal, 'movie', true).nfo).toBe(false);
   });
 
-  it('counts only its own NFO for an episode', async () => {
-    expect(companionsWritten(await loadBundledProfile('jellyfin'), 'series', false)).toEqual({
+  it('counts only its own NFO for an episode', () => {
+    expect(
+      companionsWritten(buildProfile({ naming: 'with-id', metadata: 'nfo' }), 'series', false),
+    ).toEqual({
       nfo: true,
       poster: false,
       fanart: false,
       logo: false,
     });
-    expect(companionsWritten(await loadBundledProfile('plex'), 'series', false).nfo).toBe(false);
+    expect(
+      companionsWritten(buildProfile({ naming: 'with-id', metadata: 'none' }), 'series', false).nfo,
+    ).toBe(false);
   });
 });
 
 describe('companionKindOf', () => {
-  it('tells an episode or movie NFO and images apart from the show’s NFO', async () => {
-    const jellyfin = await loadBundledProfile('jellyfin');
+  it('tells an episode or movie NFO and images apart from the show’s NFO', () => {
+    const jellyfin = buildProfile({ naming: 'with-id', metadata: 'nfo' });
     expect(companionKindOf(jellyfin, 'Show s01e01.nfo')).toBe('nfo');
     expect(companionKindOf(jellyfin, 'movie.nfo')).toBe('nfo');
     expect(companionKindOf(jellyfin, 'tvshow.nfo')).toBeUndefined();
@@ -83,8 +83,10 @@ describe('companionKindOf', () => {
     expect(companionKindOf(braces, '\\{cover\\}.jpg')).toBeUndefined();
   });
 
-  it('knows nothing of NFO files when the profile writes none', async () => {
-    expect(companionKindOf(await loadBundledProfile('plex'), 'movie.nfo')).toBeUndefined();
+  it('knows nothing of NFO files when the profile writes none', () => {
+    expect(
+      companionKindOf(buildProfile({ naming: 'with-id', metadata: 'none' }), 'movie.nfo'),
+    ).toBeUndefined();
   });
 });
 
@@ -99,18 +101,18 @@ describe('showFileNames', () => {
     expect(names.seasonPoster(3)).toBe('season03-poster.jpg');
   });
 
-  it('gives season 0 its own poster name when the profile has one', async () => {
-    const names = showFileNames(await loadBundledProfile('plex-nfo'));
+  it('gives season 0 its own poster name when the profile has one', () => {
+    const names = showFileNames(buildProfile({ naming: 'no-id', metadata: 'nfo' }));
     expect(names.seasonPoster(1)).toBe('season01-poster.jpg');
     expect(names.seasonPoster(0)).toBe('season-specials-poster.jpg');
     // The same file for both players: a library reads alike under either.
-    const jellyfin = showFileNames(await loadBundledProfile('jellyfin'));
+    const jellyfin = showFileNames(buildProfile({ naming: 'with-id', metadata: 'nfo' }));
     expect(jellyfin.seasonPoster(1)).toBe('season01-poster.jpg');
     expect(jellyfin.seasonPoster(0)).toBe('season-specials-poster.jpg');
   });
 
-  it('has no name for what the profile does not write', async () => {
-    const names = showFileNames(await loadBundledProfile('plex'));
+  it('has no name for what the profile does not write', () => {
+    const names = showFileNames(buildProfile({ naming: 'with-id', metadata: 'none' }));
     expect(names).toMatchObject({ nfo: undefined, poster: undefined, fanart: undefined });
     expect(names.seasonPoster(1)).toBeUndefined();
   });

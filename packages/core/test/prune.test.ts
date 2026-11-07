@@ -1,17 +1,11 @@
 import { lstat, stat, utimes } from 'node:fs/promises';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import {
-  createPlan,
-  executePlan,
-  loadBundledProfile,
-  MemoryJournal,
-  type Plan,
-} from '../src/index.js';
+import { createPlan, executePlan, buildProfile, MemoryJournal, type Plan } from '../src/index.js';
 import { movie } from './fake-provider.js';
 import { cleanup, counter, makeDir, parsedMovie, put } from './workspace.js';
 
-const plex = await loadBundledProfile('plex');
+const plex = buildProfile({ naming: 'with-id', metadata: 'none' });
 const dune = movie(438631, 'Dune', 2021);
 
 afterEach(cleanup);

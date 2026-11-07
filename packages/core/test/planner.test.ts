@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import {
   createPlan,
   executePlan,
-  loadBundledProfile,
+  buildProfile,
   MemoryJournal,
   parseProfile,
   selectItems,
@@ -27,7 +27,7 @@ import {
   SHM,
 } from './workspace.js';
 
-const plex = await loadBundledProfile('plex');
+const plex = buildProfile({ naming: 'with-id', metadata: 'none' });
 const dune = movie(438631, 'Dune', 2021);
 const bear = series(136315, 'The Bear', 2022);
 
@@ -124,7 +124,7 @@ describe('createPlan: names', () => {
     expect(result).toMatchObject({
       id: 'id-2',
       createdAt: '2026-10-28T12:00:00.000Z',
-      profileId: 'plex',
+      profileId: 'with-id.none',
       destinationRoot: lib,
       mode: 'hardlink',
     });
@@ -349,7 +349,6 @@ describe('createPlan: names that cannot be built', () => {
     const source = await put(join(src, 'a.mkv'));
     const posix = parseProfile(`
 id: raw
-name: Raw
 episodeRangeSeparator: '-e'
 templates:
   movieFolder: '{title}'
@@ -372,7 +371,6 @@ filesystem: { forbidden: posix, replacement: '', maxSegmentBytes: 255 }
 const kodi = (extra = '') =>
   parseProfile(`
 id: kodi
-name: Kodi
 episodeRangeSeparator: '-e'
 templates:
   movieFolder: '{title} ({year})'
@@ -509,7 +507,6 @@ describe('createPlan: NFO and artwork', () => {
       const details = { ...duneDetails, logoPath: '/dune-logo.png' };
       const flat = parseProfile(`
 id: flat
-name: Flat
 episodeRangeSeparator: '-e'
 templates:
   movieFolder: ''
@@ -717,7 +714,6 @@ filesystem: { forbidden: posix, replacement: '', maxSegmentBytes: 255 }
     const flat = (nfoName: string) =>
       parseProfile(`
 id: flat
-name: Flat
 episodeRangeSeparator: '-e'
 templates:
   movieFolder: ''

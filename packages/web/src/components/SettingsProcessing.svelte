@@ -2,17 +2,16 @@
   import { t } from '../lib/i18n.svelte.js';
   import {
     FormError,
-    CUSTOM_PROFILE,
+    DEFAULT_METADATA,
+    DEFAULT_NAMING,
     MODES,
-    profileForm,
-    profileHelp,
-    profileName,
-    profileOf,
     thresholdOf,
+    type Metadata,
     type Mode,
+    type Naming,
     type Settings,
   } from '../lib/settings.js';
-  import PathField from './PathField.svelte';
+  import ProfileChoice from './ProfileChoice.svelte';
   import SettingsSection from './SettingsSection.svelte';
 
   let { settings, save }: { settings: Settings; save: (patch: object) => Promise<void> } = $props();
@@ -22,29 +21,22 @@
   // Read once: the page replaces nothing under a form being edited.
   /* svelte-ignore state_referenced_locally */
   const { processing } = settings;
-  /* svelte-ignore state_referenced_locally */
-  let profile = $state(profileForm(processing.profile, settings.profiles));
+  let naming = $state<Naming | ''>(processing.naming ?? DEFAULT_NAMING);
+  let metadata = $state<Metadata | ''>(processing.metadata ?? DEFAULT_METADATA);
   let mode = $state<Mode | ''>(processing.mode ?? '');
   let threshold = $state(processing.threshold === null ? '' : String(processing.threshold));
   let detectPictureSize = $state(processing.detectPictureSize);
-
-  // The default is Plex; "my own file" is the user's to explain.
-  const shown = $derived(
-    settings.profiles.find(({ id }) => id === (profile.choice === '' ? 'plex' : profile.choice)),
-  );
 
   async function submit(): Promise<void> {
     const limit = thresholdOf(threshold);
     if (limit === undefined) {
       throw new FormError(t('web.settings.invalid.threshold'));
     }
-    const chosen = profileOf(profile);
-    if (chosen === undefined) {
-      throw new FormError(t('web.settings.invalid.profile'));
-    }
     await save({
       processing: {
-        profile: chosen,
+        // The defaults are not written: a value left at its default writes nothing.
+        naming: naming === DEFAULT_NAMING ? null : naming,
+        metadata: metadata === DEFAULT_METADATA ? null : metadata,
         mode: mode === '' ? null : mode,
         threshold: limit,
         // On is the default: a box left ticked writes nothing.
@@ -57,44 +49,7 @@
 <SettingsSection title={t('web.settings.processing.title')} onsubmit={submit}>
   <p class="muted hint">{t('web.settings.processing.intro')}</p>
 
-  <div class="field">
-    <label for="profile">{t('web.settings.processing.profile')}</label>
-    <select id="profile" class="input" bind:value={profile.choice}>
-      <option value="">{t('web.settings.processing.profile.default')}</option>
-      {#each settings.profiles as option (option.id)}
-        <option value={option.id}>{profileName(option, t)}</option>
-      {/each}
-      <option value={CUSTOM_PROFILE}>{t('web.settings.processing.profile.custom')}</option>
-    </select>
-    <span class="muted hint">{t('web.settings.processing.profile.hint')}</span>
-  </div>
-
-  {#if shown}
-    <div class="profile-box" role="group" aria-label={t('web.settings.processing.profile.explain')}>
-      {#if profileHelp(shown.id, t)}
-        <p class="muted">{profileHelp(shown.id, t)}</p>
-      {/if}
-      <dl class="layout">
-        <dt class="muted">{t('web.settings.processing.profile.example.movie')}</dt>
-        <dd><code>{shown.example.movie}</code></dd>
-        <dt class="muted">{t('web.settings.processing.profile.example.series')}</dt>
-        <dd><code>{shown.example.series}</code></dd>
-      </dl>
-    </div>
-  {/if}
-
-  {#if profile.choice === CUSTOM_PROFILE}
-    <div class="field sub">
-      <label for="profile-path">{t('web.settings.processing.profile.path')}</label>
-      <PathField
-        id="profile-path"
-        kind="file"
-        placeholder="/config/my-profile.yaml"
-        bind:value={profile.path}
-      />
-      <span class="muted hint">{t('web.settings.processing.profile.path.hint')}</span>
-    </div>
-  {/if}
+  <ProfileChoice id="processing" bind:naming bind:metadata examples={settings.namingExamples} />
 
   <fieldset>
     <legend id="mode-legend">{t('web.settings.processing.mode')}</legend>
@@ -150,45 +105,5 @@
     margin-bottom: 4px;
     color: var(--muted);
     font-size: 13px;
-  }
-
-  /* A field that belongs to the one above it. */
-  .sub {
-    margin-left: 16px;
-    padding-left: 12px;
-    border-left: 2px solid var(--border);
-  }
-
-  /* Four cards: two by two rather than three and one. */
-  /* The radio stays in the page for the keyboard and screen readers; the card is what is seen. */
-  .profile-box {
-    padding: 8px 12px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    font-size: 12.5px;
-  }
-
-  .profile-box p {
-    margin: 0 0 8px;
-  }
-
-  .layout {
-    display: grid;
-    grid-template-columns: max-content 1fr;
-    gap: 4px 12px;
-    margin: 0;
-  }
-
-  .layout dd {
-    margin: 0;
-    overflow-wrap: anywhere;
-  }
-
-  dt {
-    font-weight: 600;
-  }
-
-  dd {
-    margin: 2px 0 0;
   }
 </style>
