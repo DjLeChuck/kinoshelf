@@ -164,9 +164,13 @@ textarea {
   gap: 6px;
 }
 
-/* A checkbox row is 44px tall for touch, its text centered: take the hint back up under it. */
+/*
+ * A checkbox row is 44px tall for touch, its text centered: take the hint back up under it. The
+ * label's one line of 13px text ends about 12px above the row's bottom edge, so the pull must stay
+ * under that (plus the field's 6px gap), or the hint rides over the label.
+ */
 .check + .hint {
-  margin-top: -24px;
+  margin-top: -14px;
 }
 
 .field > label {
