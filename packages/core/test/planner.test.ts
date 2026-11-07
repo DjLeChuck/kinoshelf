@@ -574,8 +574,9 @@ filesystem: { forbidden: posix, replacement: '', maxSegmentBytes: 255 }
     expect(destinations.filter((d) => d === join(show, 'tvshow.nfo'))).toHaveLength(1);
     expect(destinations.filter((d) => d === join(show, 'poster.jpg'))).toHaveLength(1);
     expect(destinations.filter((d) => d === join(show, 'fanart.jpg'))).toHaveLength(1);
-    expect(destinations).toContain(join(show, 'Season 01', 'season01-poster.jpg'));
-    expect(destinations).toContain(join(show, 'Season 02', 'season02-poster.jpg'));
+    // A season's poster lies with the show's files, not in the season's folder.
+    expect(destinations).toContain(join(show, 'season01-poster.jpg'));
+    expect(destinations).toContain(join(show, 'season02-poster.jpg'));
     expect(destinations.filter((d) => d.endsWith('season01-poster.jpg'))).toHaveLength(1);
     // Each episode has its own NFO, named after its video.
     expect(destinations.filter((d) => d.endsWith('.nfo') && !d.endsWith('tvshow.nfo'))).toEqual([
@@ -628,18 +629,18 @@ filesystem: { forbidden: posix, replacement: '', maxSegmentBytes: 255 }
         'The Bear (2022)/tvshow.nfo',
         'The Bear (2022)/poster.jpg',
         'The Bear (2022)/fanart.jpg',
-        'Season 01/season01-poster.jpg',
+        'The Bear (2022)/season01-poster.jpg',
       ]);
       expect(names(third)).toEqual([
         'Season 02/The Bear - s02e01.nfo',
-        'Season 02/season02-poster.jpg',
+        'The Bear (2022)/season02-poster.jpg',
       ]);
     });
 
-    it('leaves out a season poster no chosen episode lives beside', async () => {
+    it('hands a season’s poster to any chosen episode of the show, since it lies in its folder', async () => {
       const { items, ids } = await threeEpisodes();
       const [third] = selectItems(items, new Set([ids[2] ?? '']));
-      expect(names(third)).not.toContain('Season 01/season01-poster.jpg');
+      expect(names(third)).toContain('The Bear (2022)/season01-poster.jpg');
       expect(names(third)).toContain('The Bear (2022)/tvshow.nfo');
     });
 
@@ -668,6 +669,9 @@ filesystem: { forbidden: posix, replacement: '', maxSegmentBytes: 255 }
         'Season 01',
         'fanart.jpg',
         'poster.jpg',
+        'season01-poster.jpg',
+        // Season 2's poster too: it lies in the show's folder, so the chosen episode adopts it.
+        'season02-poster.jpg',
         'tvshow.nfo',
       ]);
     });
@@ -811,9 +815,7 @@ describe('createPlan: an organized library that lacks its NFO and images', () =>
     // The first episode already has its NFO; the show files are missing for both.
     await put(join(show, 'Season 01', 'The Bear - s01e01.nfo'));
     await Promise.all(
-      ['poster.jpg', 'fanart.jpg', 'season01-poster.jpg'].map((name) =>
-        put(join(show, name === 'season01-poster.jpg' ? 'Season 01' : '', name)),
-      ),
+      ['poster.jpg', 'fanart.jpg', 'season01-poster.jpg'].map((name) => put(join(show, name))),
     );
 
     const { items } = await planIn(
@@ -841,7 +843,7 @@ describe('createPlan: an organized library that lacks its NFO and images', () =>
     await Promise.all([1, 2].map((n) => put(join(show, 'Season 01', `The Bear - s01e0${n}.nfo`))));
     await Promise.all(['poster.jpg', 'fanart.jpg'].map((name) => put(join(show, name))));
     await put(join(show, 'Season 01', 'poster.jpg'));
-    await put(join(show, 'Season 01', 'season01-poster.jpg'));
+    await put(join(show, 'season01-poster.jpg'));
 
     const { items } = await planIn(
       files.map((file, index) => ({

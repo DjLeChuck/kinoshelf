@@ -93,8 +93,8 @@ describe('two qualities of one episode in a library', () => {
 
     expect(run.statusCode).toBe(202);
     expect(await videos(two.season)).toEqual([
-      'Foundation (2021) S01E01 - 1080p.mkv',
-      'Foundation (2021) S01E01 - 2160p.mkv',
+      'Foundation (2021) - s01e01 - 1080p.mkv',
+      'Foundation (2021) - s01e01 - 2160p.mkv',
     ]);
   });
 
@@ -104,8 +104,8 @@ describe('two qualities of one episode in a library', () => {
     await rename(two, [itemId(two.hd), itemId(two.uhd)]);
 
     expect(await videos(two.season)).toEqual([
-      'Foundation (2021) S01E01 - 1080p.mkv',
-      'Foundation (2021) S01E01.mkv',
+      'Foundation (2021) - s01e01 - 1080p.mkv',
+      'Foundation (2021) - s01e01.mkv',
     ]);
   });
 });
@@ -133,8 +133,8 @@ describe('two releases of one episode, sent as two jobs', () => {
     }
 
     expect(await videos(season)).toEqual([
-      'Foundation (2021) S01E01 - 1080p.mkv',
-      'Foundation (2021) S01E01 - 2160p.mkv',
+      'Foundation (2021) - s01e01 - 1080p.mkv',
+      'Foundation (2021) - s01e01 - 2160p.mkv',
     ]);
   });
 });
@@ -145,7 +145,7 @@ describe('naming the version of an episode by hand', () => {
     await rename(two, [itemId(two.hd), itemId(two.uhd)]);
     await h2(two);
 
-    const bare = join(two.season, 'Foundation (2021) S01E01.mkv');
+    const bare = join(two.season, 'Foundation (2021) - s01e01.mkv');
     const preview = await two.h.request('POST', '/api/libraries/shows/execute', {
       items: [itemId(bare)],
       version: true,
@@ -159,7 +159,7 @@ describe('naming the version of an episode by hand', () => {
         .json<{ items: { results: { role: string | null; destination: string }[] }[] }>()
         .items.flatMap((i) => i.results.filter((r) => r.role === 'main'))
         .map((r) => r.destination),
-    ).toEqual([join(two.season, 'Foundation (2021) S01E01 - 2160p.mkv')]);
+    ).toEqual([join(two.season, 'Foundation (2021) - s01e01 - 2160p.mkv')]);
   });
 });
 

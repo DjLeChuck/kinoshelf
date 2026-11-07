@@ -101,9 +101,12 @@ describe('showFileNames', () => {
 
   it('gives season 0 its own poster name when the profile has one', async () => {
     const names = showFileNames(await loadBundledProfile('plex-nfo'));
-    expect(names.seasonPoster(1)).toBe('Season01.jpg');
+    expect(names.seasonPoster(1)).toBe('season01-poster.jpg');
     expect(names.seasonPoster(0)).toBe('season-specials-poster.jpg');
-    expect(showFileNames(await loadBundledProfile('jellyfin')).seasonPoster(0)).toBe('poster.jpg');
+    // The same file for both players: a library reads alike under either.
+    const jellyfin = showFileNames(await loadBundledProfile('jellyfin'));
+    expect(jellyfin.seasonPoster(1)).toBe('season01-poster.jpg');
+    expect(jellyfin.seasonPoster(0)).toBe('season-specials-poster.jpg');
   });
 
   it('has no name for what the profile does not write', async () => {

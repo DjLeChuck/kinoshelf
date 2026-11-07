@@ -56,7 +56,7 @@ export type ArtworkKind = 'poster' | 'fanart' | 'logo' | 'season-poster';
 
 export interface ArtworkSpec {
   readonly kind: ArtworkKind;
-  /** File name; a season poster may use `{season}`. */
+  /** File name; a season poster may use `{season}` and lies in the show's folder, as Kodi's does. */
   readonly name: string;
   /** Season 0's poster name when the player does not take `name` for it (no variable). */
   readonly specialsName?: string;

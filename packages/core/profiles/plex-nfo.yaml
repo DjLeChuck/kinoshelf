@@ -30,15 +30,17 @@ nfo:
   episode: '{file}.nfo'
   series: tvshow.nfo
 
-# Plex documents `poster.jpg` and `background.jpg` for a movie or a show, and `SeasonXX.jpg` for a
-# season (XX is the season number, zero-padded). The specials (season 0) take
-# `season-specials-poster`. A show's title art is `logo.png` (Plex reads `clearlogo` or `logo`).
+# Plex documents `poster.jpg` and `background.jpg` for a movie or a show. A show's title art is
+# `logo.png` (Plex reads `clearlogo` or `logo`). A season's poster is Kodi's `season01-poster.jpg`
+# in the show's folder, the name Jellyfin reads too (the same file for both players); Plex documents
+# `Season01.jpg` instead, but its Plex NFO agent also reads this name (checked on PMS 1.43.5). The
+# specials (season 0) take `season-specials-poster.jpg`, which both players name the same.
 artwork:
   - { kind: poster, name: poster.jpg }
   - { kind: fanart, name: background.jpg }
   - { kind: logo, name: logo.png }
   - kind: season-poster
-    name: 'Season{season:02}.jpg'
+    name: 'season{season:02}-poster.jpg'
     specialsName: season-specials-poster.jpg
 
 filesystem:

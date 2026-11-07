@@ -66,11 +66,12 @@ contains no player-specific rule.
 - **Profiles are kept as close to each other as the players allow**, so one library reads the same under
   either and switching from one player to the other costs next to no renaming: the same id tag
   (`{tmdb-<id>}`), the same NFO files (`movie.nfo`, `tvshow.nfo`, `<file>.nfo`), the same image names
-  (`poster.jpg`, `background.jpg`, `logo.png`), the same `Season 01` folders. A difference stays only
-  where a player needs it, and the profile's comment says why: Plex's lowercase `s01e01` and `-e` range
-  against Jellyfin's `S01E01` and `-E`, Plex's `Season01.jpg` (and `season-specials-poster.jpg` for
-  season 0) against Jellyfin's plain `poster.jpg` in the season folder, the file that must start with its
-  folder's name for Jellyfin. Before adding a rule to a profile, look for a name both players read and
+  (`poster.jpg`, `background.jpg`, `logo.png`, and a season's `season01-poster.jpg` in the show's folder,
+  `season-specials-poster.jpg` for season 0), the same `Season 01` folders, the same episode names
+  (`Show (2022) - s01e01`, ranges joined with `-e`: a `s01e04-e05` file gave two episodes in each
+  player). A difference stays only where a player needs it, and the profile's comment says why: today
+  `plex-nfo` and `jellyfin` differ only by the `{tmdb-<id>}` tag in the folder names (and the movie
+  file, which must start with its folder's name for Jellyfin). Before adding a rule to a profile, look for a name both players read and
   use it; make it specific only when there is none, after checking both documentations (and Jellyfin's
   code, which reads more than it documents).
 
@@ -88,14 +89,18 @@ contains no player-specific rule.
 - Plex has two modes: the default agents ignore NFO (profile `plex`), the optional "Plex NFO"
   agent (PMS 1.43.1+) reads Kodi-format NFO, `movie.nfo`, `tvshow.nfo`, per-episode `<file>.nfo`
   (as `jellyfin`; no season NFO, Plex ignores it), `poster.jpg`, `background.jpg`, `logo.png` and a season
-  poster `Season01.jpg`, or `season-specials-poster.jpg` for season 0 (the artwork's
-  `specialsName`) (profile `plex-nfo`: no id in the names, since the NFO carries
+  poster `season01-poster.jpg` in the show's folder, or `season-specials-poster.jpg` for season 0 (the
+  artwork's `specialsName`). A season's poster is a show-level file, written with `tvshow.nfo` (so a
+  partial selection hands it, like the other show files, to any chosen episode of the show).
+  Plex documents `Season01.jpg` instead, but the agent reads Kodi's name too (checked on PMS 1.43.5:
+  with only `season01-poster.jpg` on the disk, the season took it) (profile `plex-nfo`: no id in the names, since the NFO carries
   `<uniqueid type="tmdb">`).
 - Profile `jellyfin`: `{tmdb-<id>}` (the same as Plex's; Jellyfin's documentation gives `[tmdbid-<id>]`, its code reads `tmdb` as an alias and any of brackets, parentheses or braces) in the movie and series folders and in the movie file (the file
   must start with its folder's name), `SxxExx` episodes, `movie.nfo`, `tvshow.nfo`, `<file>.nfo`,
-  `poster.jpg`, `background.jpg` and `logo.png`. A season's poster is a plain `poster.jpg` in its folder: the
-  documentation lists nothing more, though Jellyfin's code also reads Kodi's `seasonNN-poster.jpg`
-  from the show folder, and never Plex's `SeasonNN.jpg`.
+  `poster.jpg`, `background.jpg` and `logo.png`. A season's poster is Kodi's `seasonNN-poster.jpg` in the show
+  folder (`season-specials-poster.jpg` for season 0), the file `plex-nfo` writes too: Jellyfin's
+  documentation only says a season folder may hold the show's names (a plain `poster.jpg`), but its code
+  reads the Kodi name and never Plex's `SeasonNN.jpg` (checked on Jellyfin 12.4: the season took it).
 - **Versions of a movie or an episode** (`templates.movieVersion` and `templates.episodeVersion`, both
   `' - {version}'` in every shipped profile; only `{version}` is known to them, and a profile without
   one keeps one file per work). Plex and Jellyfin take several qualities of one movie in **one
@@ -104,7 +109,7 @@ contains no player-specific rule.
   matched by `SxxExx`, no prefix rule); Plex is taken to work the same way (not verified
   against its documentation, which names only movies). A file that **arrives** is always named with
   its label when its file name gives a picture size (`ParsedMedia.screenSize`, `source`; guessit
-  reads `4K` as `2160p`): `Nightbitch (2024) {tmdb-728949} - 2160p.mkv`, `Foundation (2021) S01E01 - 2160p.mkv`.
+  reads `4K` as `2160p`): `Nightbitch (2024) {tmdb-728949} - 2160p.mkv`, `Foundation (2021) - s01e01 - 2160p.mkv`.
   The label (`planning/version.ts`) is the size; files of one work (a movie, or
   one episode: series id, season and episode numbers) in a batch that share it add the source, then
   the release group (the batch takes one level for all of them, so the result does not depend on the

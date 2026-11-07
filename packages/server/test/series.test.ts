@@ -421,7 +421,7 @@ artwork:
   - { kind: poster, name: poster.jpg }
   - { kind: fanart, name: fanart.jpg }
   - { kind: logo, name: logo.png }
-  - { kind: season-poster, name: poster.jpg }
+  - { kind: season-poster, name: 'season{season:02}-poster.jpg' }
 filesystem: { forbidden: posix, replacement: '', maxSegmentBytes: 255 }
 `;
 
@@ -435,7 +435,7 @@ describe('the files of a show and of its seasons', () => {
     await put(join(show, 'Season 02', 'Severance - s02e01.mkv'));
     await put(join(show, 'tvshow.nfo'), '<tvshow/>');
     await put(join(show, 'poster.jpg'), 'image');
-    await put(join(show, 'Season 01', 'poster.jpg'), 'image');
+    await put(join(show, 'season01-poster.jpg'), 'image');
     const h = await harness({
       config: {
         libraries: [
@@ -481,7 +481,7 @@ describe('the files of a show and of its seasons', () => {
     expect(await incomplete()).toBe(1);
     expect(await counted()).toBe(1);
     expect(await listed()).toMatchObject({ nfo: true, poster: true, fanart: false, logo: false });
-    // The season poster is a season's own file, not the show's.
+    // A season's poster is its own file, apart from the show's `poster.jpg`.
     expect(await seasonPosters()).toEqual([
       [1, true],
       [2, false],
@@ -489,7 +489,7 @@ describe('the files of a show and of its seasons', () => {
 
     // The logo alone keeps the show incomplete.
     await put(join(show, 'fanart.jpg'), 'image');
-    await put(join(show, 'Season 02', 'poster.jpg'), 'image');
+    await put(join(show, 'season02-poster.jpg'), 'image');
     await scan();
     expect(await listed()).toMatchObject({ fanart: true, logo: false });
     expect(await incomplete()).toBe(1);

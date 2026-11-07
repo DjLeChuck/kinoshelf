@@ -5,8 +5,10 @@
 id: jellyfin
 name: Jellyfin
 
-# Multi-episode files are named with the first and last episode: S02E18-E19.
-episodeRangeSeparator: '-E'
+# Multi-episode files are named with the first and last episode: s02e18-e19. The lowercase form is
+# Plex's, and both players read it (checked: a `s01e04-e05` file gave two episodes in each), so a
+# library is named the same way whichever player it is laid out for.
+episodeRangeSeparator: '-e'
 
 templates:
   # Exactly Plex's `{tmdb-<id>}`, so one library is named the same way for both. Jellyfin's
@@ -19,7 +21,8 @@ templates:
   seriesFolder: '{title} ({year}) \{tmdb-{tmdb}\}'
   # `Season 01`, never `S01`; specials go in `Season 00`.
   seasonFolder: 'Season {season:02}'
-  episodeFile: '{title} ({year}) S{season:02}E{episode:02}'
+  # Exactly Plex's, ` - ` and lowercase included (checked: Jellyfin reads it as well as `S01E01`).
+  episodeFile: '{title} ({year}) - s{season:02}e{episode:02}'
   # Several qualities of an episode share its season folder: `<file> - 2160p`.
   episodeVersion: ' - {version}'
 
@@ -32,16 +35,19 @@ nfo:
   series: tvshow.nfo
 
 # Jellyfin documents `poster` and `backdrop` (`background`, `fanart`… are accepted names) for a
-# movie or a show. For a season it only says a season folder may hold the same names, so the
-# season poster is a plain `poster.jpg` there. Its code (`LocalImageProvider`) also reads Kodi's
-# `seasonNN-poster.jpg` from the show folder (`season-specials-poster.jpg` for season 0), never
-# Plex's `SeasonNN.jpg`. It also reads `logo` (the title art, a transparent PNG) for a movie or a
-# show.
+# movie or a show. For a season it only says a season folder may hold the same names, but its code
+# (`LocalImageProvider`) also reads Kodi's `seasonNN-poster.jpg` from the show folder
+# (`season-specials-poster.jpg` for season 0), never Plex's `SeasonNN.jpg`. The season poster is
+# that file, the same one `plex-nfo` writes, so a library reads the same under either player
+# (checked on Jellyfin 12.4: the season took it). It also reads `logo` (the title art, a
+# transparent PNG) for a movie or a show.
 artwork:
   - { kind: poster, name: poster.jpg }
   - { kind: fanart, name: background.jpg }
   - { kind: logo, name: logo.png }
-  - { kind: season-poster, name: poster.jpg }
+  - kind: season-poster
+    name: 'season{season:02}-poster.jpg'
+    specialsName: season-specials-poster.jpg
 
 filesystem:
   forbidden: windows

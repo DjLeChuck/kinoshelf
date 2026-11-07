@@ -124,8 +124,9 @@ export function companionOperations(
           ? details.seasons.find((known) => known.season === season)?.posterPath
           : undefined;
       if (path && season !== undefined) {
+        // In the show's folder, with its other files: Kodi's `season01-poster.jpg`.
         download(
-          [...place.workFolders, ...place.seasonFolders],
+          place.workFolders,
           render(seasonPosterTemplate(image, season), { season }),
           path,
           image.size,

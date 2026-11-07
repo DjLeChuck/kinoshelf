@@ -60,7 +60,7 @@ describe('GET /api/settings', () => {
         name: 'Jellyfin',
         example: {
           movie: 'Dune (2021) {tmdb-438631}/Dune (2021) {tmdb-438631}.mkv',
-          series: 'The Bear (2022) {tmdb-136315}/Season 03/The Bear (2022) S03E04.mkv',
+          series: 'The Bear (2022) {tmdb-136315}/Season 03/The Bear (2022) - s03e04.mkv',
         },
       },
       {

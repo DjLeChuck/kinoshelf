@@ -108,9 +108,9 @@ describe('jellyfin profile', () => {
     expect(path(profile, 'movieFile', vars)).toEqual(path(profile, 'movieFolder', vars));
     expect(path(profile, 'seriesFolder', vars)).toEqual(['The Bear (2022) {tmdb-136315}']);
     expect(path(profile, 'seasonFolder', vars)).toEqual(['Season 03']);
-    expect(path(profile, 'episodeFile', vars)).toEqual(['The Bear (2022) S03E04']);
+    expect(path(profile, 'episodeFile', vars)).toEqual(['The Bear (2022) - s03e04']);
     expect(path(profile, 'episodeFile', { ...vars, episode: [1, 2] })).toEqual([
-      'The Bear (2022) S03E01-E02',
+      'The Bear (2022) - s03e01-e02',
     ]);
   });
 
@@ -133,8 +133,9 @@ describe('jellyfin profile', () => {
       ['poster', 'poster.jpg', 'standard'],
       ['fanart', 'background.jpg', 'original'],
       ['logo', 'logo.png', 'original'],
-      ['season-poster', 'poster.jpg', 'standard'],
+      ['season-poster', 'season{season:02}-poster.jpg', 'standard'],
     ]);
+    expect(profile.artwork[3]?.specialsName).toBe('season-specials-poster.jpg');
   });
 });
 
@@ -156,7 +157,7 @@ describe('plex-nfo profile', () => {
       ['poster', 'poster.jpg'],
       ['fanart', 'background.jpg'],
       ['logo', 'logo.png'],
-      ['season-poster', 'Season{season:02}.jpg'],
+      ['season-poster', 'season{season:02}-poster.jpg'],
     ]);
     expect(profile.artwork[3]?.specialsName).toBe('season-specials-poster.jpg');
   });

@@ -63,9 +63,10 @@ test('shows which NFO and images a show and its seasons have', async ({ page, re
   const folder = incoming('series-files');
   const show = `${folder}/Severance (2022) {tmdb-95396}`;
   await mkdir(`${show}/Season 01`, { recursive: true });
-  await writeFile(`${show}/Season 01/Severance (2022) S01E01.mkv`, 'video');
-  // The show has its NFO and poster, the season its poster; the fanart and the logo are missing.
-  for (const name of ['tvshow.nfo', 'poster.jpg', 'Season 01/poster.jpg']) {
+  await writeFile(`${show}/Season 01/Severance (2022) - s01e01.mkv`, 'video');
+  // The show has its NFO and poster, the season its poster (beside the show's files); the fanart
+  // and the logo are missing.
+  for (const name of ['tvshow.nfo', 'poster.jpg', 'season01-poster.jpg']) {
     await writeFile(`${show}/${name}`, 'x');
   }
   const created = await request.post('/api/libraries', {

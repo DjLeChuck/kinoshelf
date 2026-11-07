@@ -187,16 +187,15 @@ export class SeriesFiles {
     const names = showFileNames(profile);
     const seasonFolders = profile.templates.seasonFolder !== '';
 
-    const shows = new Map<number, { dir: string; seasons: Map<number, string> }>();
+    const shows = new Map<number, { dir: string; seasons: Set<number> }>();
     for (const item of this.deps.items.all(libraryId).filter(placed)) {
       const tmdbId = item.tmdbId ?? 0;
-      const seasonDir = seasonFolders ? dirname(item.path) : undefined;
       const show = shows.get(tmdbId) ?? {
-        dir: seasonDir === undefined ? dirname(item.path) : dirname(seasonDir),
-        seasons: new Map<number, string>(),
+        dir: seasonFolders ? dirname(dirname(item.path)) : dirname(item.path),
+        seasons: new Set<number>(),
       };
-      if (seasonDir !== undefined && item.season !== null) {
-        show.seasons.set(item.season, seasonDir);
+      if (item.season !== null) {
+        show.seasons.add(item.season);
       }
       shows.set(tmdbId, show);
     }
@@ -213,12 +212,13 @@ export class SeriesFiles {
       ]);
       const own: Found = { tmdbId, season: null, files: { nfo, poster, fanart, logo } };
       const seasons = await Promise.all(
-        [...show.seasons].map(async ([season, dir]): Promise<Found> => ({
+        [...show.seasons].map(async (season): Promise<Found> => ({
           tmdbId,
           season,
           files: {
             nfo: null,
-            poster: await has(dir, names.seasonPoster(season)),
+            // A season's poster lies with the show's files, not in the season's folder.
+            poster: await has(show.dir, names.seasonPoster(season)),
             fanart: null,
             logo: null,
           },
