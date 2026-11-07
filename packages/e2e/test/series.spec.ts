@@ -59,6 +59,39 @@ test('renames every episode of the ticked shows in one go', async ({ page, reque
   await expect(dialog.getByText(/[3-9] to move/)).toBeVisible();
 });
 
+test('refreshes a show that only lacks files of its own', async ({ page, request }) => {
+  const folder = incoming('series-refresh');
+  const show = `${folder}/Severance (2022) {tmdb-95396}`;
+  await mkdir(`${show}/Season 01`, { recursive: true });
+  await writeFile(`${show}/Season 01/Severance (2022) - s01e01.mkv`, 'video');
+  // The episode has its own NFO, so nothing is wrong with it; the show lacks its fanart.
+  for (const name of [
+    'Season 01/Severance (2022) - s01e01.nfo',
+    'tvshow.nfo',
+    'poster.jpg',
+    'season01-poster.jpg',
+  ]) {
+    await writeFile(`${show}/${name}`, 'x');
+  }
+  const created = await request.post('/api/libraries', {
+    headers: AUTH_HEADERS,
+    data: { name: 'Refresh series', source: folder, type: 'series', profile: 'jellyfin' },
+  });
+  expect(created.status()).toBe(201);
+  const { id } = (await created.json()) as { id: string };
+  expect(
+    (await request.post(`/api/libraries/${id}/scan`, { headers: AUTH_HEADERS })).status(),
+  ).toBe(202);
+
+  await signIn(page);
+  await page.goto(`/libraries/${id}`);
+  // Only the show's own files are missing, and still there is a box to refresh them with.
+  await page.getByRole('checkbox', { name: /Select Severance/ }).check();
+  await page.getByRole('button', { name: 'Refresh…' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Refresh preview' });
+  await expect(dialog.getByText(/[1-9]\d* to write/)).toBeVisible();
+});
+
 test('shows which NFO and images a show and its seasons have', async ({ page, request }) => {
   const folder = incoming('series-files');
   const show = `${folder}/Severance (2022) {tmdb-95396}`;

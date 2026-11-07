@@ -403,7 +403,11 @@ refuses to delete a library an arrival folder points at (`library.in-use`). Ther
   (the same machinery as `POST /api/plans/:id/execute`; nothing new is planned). "Rename" is the
   items in state `rename`, "Refresh" those in state `incomplete`: the scan already planned only the
   missing `write-file`/`download` operations for a video that is in place, so refreshing never
-  overwrites anything and never re-reads TMDB for what is there. A dry run answers 200 with the
+  overwrites anything and never re-reads TMDB for what is there. A video in place with any write
+  still planned is `incomplete` (`describe`, `library-items.ts`), not only one whose own flags (NFO,
+  poster, fanart, logo) are false: the files of a show and its seasons' posters go with its first
+  episode and have no flag, and a show lacking only those would otherwise have no box to refresh it.
+  A dry run answers 200 with the
   report (entries are the items' `entryId`) and `skipped` (nothing to do: done, never scanned,
   unknown); otherwise 202 with the executions, and the batch shows in the history and can be undone.
   409 `library.nothing-to-do` when nothing is left. The web's "Rename preview" dialog (`RunDialog`)

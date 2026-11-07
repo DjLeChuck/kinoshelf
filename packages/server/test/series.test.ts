@@ -553,3 +553,70 @@ describe('refreshing some episodes of a show', () => {
     expect(await exists(join(show, 'Season 01', 'Severance - s01e01.nfo'))).toBe(false);
   });
 });
+
+describe('a show lacking only files of its own', () => {
+  /** Two episodes with their own NFO, the show's files there, season 1's poster known to TMDB. */
+  async function lacking() {
+    const profile = join(await makeDir(), 'show-files.yaml');
+    await writeFile(profile, SHOW_PROFILE);
+    const root = await makeDir();
+    const show = join(root, 'Severance');
+    for (const [season, name] of [
+      ['01', 's01e01'],
+      ['02', 's02e01'],
+    ] as const) {
+      await put(join(show, `Season ${season}`, `Severance - ${name}.mkv`));
+      await put(join(show, `Season ${season}`, `Severance - ${name}.nfo`), '<episodedetails/>');
+    }
+    await put(join(show, 'tvshow.nfo'), '<tvshow/>');
+    await put(join(show, 'poster.jpg'), 'image');
+    const withPosters: SeriesDetails = {
+      ...DETAILS,
+      seasons: [{ season: 1, name: 'Season 1', posterPath: '/s1.jpg' }, { season: 2 }],
+    };
+    const h = await harness({
+      config: {
+        libraries: [
+          { id: 'films', name: 'Films', source: await makeDir(), type: 'movie' },
+          { id: 'shows', name: 'Shows', source: root, type: 'series', profile },
+        ],
+      },
+      createProvider: () => ({
+        ...provider(),
+        getSeriesDetails: () => Promise.resolve(withPosters),
+      }),
+    });
+    const scan = async (): Promise<void> => {
+      await h.request('POST', '/api/libraries/shows/scan');
+      await h.app.jobs.idle();
+    };
+    const states = async (): Promise<(string | undefined)[][]> =>
+      (await h.request('GET', '/api/libraries/shows/items'))
+        .json<{ items: { episode: number; season: number; state: string }[] }>()
+        .items.map(({ season, episode, state }) => [`s${season}e${episode}`, state]);
+    return { h, show, scan, states };
+  }
+
+  it('can be refreshed: its first episode carries what is missing', async () => {
+    const { h, scan, states, show } = await lacking();
+    await scan();
+    // Season 1's poster lies with the show's files and belongs to no flag of an episode, yet
+    // without a box to tick for it nothing could ever write it.
+    expect(await states()).toEqual([
+      ['s1e1', 'incomplete'],
+      ['s2e1', 'ok'],
+    ]);
+    const shows = (await h.request('GET', '/api/libraries/shows/shows')).json<{
+      items: { refresh: number }[];
+    }>();
+    expect(shows.items[0]?.refresh).toBe(1);
+
+    // Once the file is there, nothing is left to refresh.
+    await put(join(show, 'season01-poster.jpg'), 'image');
+    await scan();
+    expect(await states()).toEqual([
+      ['s1e1', 'ok'],
+      ['s2e1', 'ok'],
+    ]);
+  });
+});

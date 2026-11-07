@@ -1,6 +1,7 @@
 <script lang="ts">
   import { baseName, rescanPath } from '../lib/paths.js';
   import { untrack } from 'svelte';
+  import { ApiError } from '../lib/api.js';
   import { messageOf } from '../lib/errors.js';
   import { refetchOn } from '../lib/events.svelte.js';
   import { t } from '../lib/i18n.svelte.js';
@@ -102,16 +103,15 @@
     starting = true;
     runFailure = undefined;
     try {
-      // `incomplete` has no filter of its own: its files are the ones lacking an NFO or an image.
-      const states =
-        mode === 'rename' ? (['rename'] as const) : (['missing-nfo', 'missing-artwork'] as const);
-      const pages = await Promise.all(
-        states.map((state) => libraryItems.page(libraryId, { state, limit: 100_000 })),
-      );
+      // `incomplete` has no filter of its own: an episode can be so for a file that is no column of
+      // its own (a show's NFO, a season's poster), which no `missing-*` filter would show.
+      const page = await libraryItems.page(libraryId, {
+        state: mode === 'rename' ? 'rename' : undefined,
+        limit: 100_000,
+      });
       const wanted = new Set(picked);
       const found = new Map(
-        pages
-          .flatMap((page) => page.items)
+        page.items
           .filter(
             (item) =>
               item.tmdbId !== null &&
@@ -120,6 +120,10 @@
           )
           .map((item) => [item.id, item] as const),
       );
+      // Never a click that does nothing: say so when the lists no longer hold what the counts did.
+      if (found.size === 0) {
+        throw new ApiError(409, 'library.nothing-to-do');
+      }
       running = { mode, items: [...found.values()] };
     } catch (error) {
       runFailure = error;

@@ -145,8 +145,6 @@ textarea {
 }
 
 .btn-primary {
-  min-height: 48px;
-  padding: 0 22px;
   border-color: var(--accent);
   background: var(--accent);
   color: var(--on-accent);

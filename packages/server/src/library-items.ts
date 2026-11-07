@@ -24,7 +24,9 @@ import type { Probe } from './probe.js';
  * - `review`: a human must decide (ambiguous, or a conflict).
  * - `rename`: matched, the video is not where the profile wants it yet.
  * - `unrecognized`: nothing was found for it.
- * - `incomplete`: well placed, but an NFO or an image is missing beside it.
+ * - `incomplete`: well placed, but an NFO or an image is missing beside it. For the first episode
+ *   of a show it also means a file of the show, or a season's poster, is still to write: those
+ *   belong to no column of an episode, but without this nothing could refresh them.
  * - `ok`: nothing to do.
  */
 export type ItemState = 'review' | 'rename' | 'unrecognized' | 'incomplete' | 'ok';
@@ -668,9 +670,13 @@ function describe(
     fanart: presence('fanart'),
     logo: presence('logo'),
   };
+  // A video already in place only carries what is missing: the files of its show and of its
+  // seasons' posters go with its first episode, and belong to no flag above. Anything still to
+  // write beside it makes it incomplete, or a show lacking only those could not be refreshed.
+  const pending = item.operations.some((operation) => !isTransfer(operation));
   const state: ItemState = moves
     ? 'rename'
-    : Object.values(result).some((value) => value === false)
+    : pending || Object.values(result).some((value) => value === false)
       ? 'incomplete'
       : 'ok';
   // A movie to rename has all of its files still to come: they are not there to be missing.
