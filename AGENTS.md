@@ -15,7 +15,7 @@ scan progress, the page of an item) and an Arrivals tab (`/arrivals`) where a fi
 candidate, destination library. A series library reads as a tree (show, season,
 episode) with its missing episodes. Items are renamed and refreshed from the page (a preview first). The History merges batches and
 jobs in one list (see "History" below). A series is validated as a release, not file by file. The NFO
-and artwork writers and the `jellyfin` and `plex-nfo` profiles are built (see "NFO and artwork"
+and artwork writers (`metadata: nfo`) are built (see "NFO and artwork"
 below), metadata included for a library that is already organized. No stable release is tagged yet.
 
 Backlog, not built: skipping samples by size (today only by name: `sample.*`, a `Sample` folder);
@@ -60,49 +60,50 @@ packages/web               (v0.3) Svelte 5 UI
 packages/corpus            (private) matching corpus and the scripts that grow it
 ```
 
-Output profiles are declarative YAML in `packages/core/profiles/`, shipped with the core: the core
-contains no player-specific rule.
+A profile is two axes, built by `buildProfile({ naming, metadata })` (`core/src/profiles/build.ts`): no
+bundled YAML, and the core contains no player-specific rule. `naming: with-id | no-id` (default
+`with-id`) puts `{tmdb-<id>}` in the movie and series folders and the movie file, or nothing;
+`metadata: none | nfo` (default `none`) writes Kodi NFO and artwork, or nothing. They are set globally
+(`naming`/`metadata` in `config.yaml`), per typed library, or by `--naming`/`--metadata` in the CLI.
+Plex's default agents are `with-id`/`none` (or `no-id`/`none`), Plex's NFO agent `no-id`/`nfo`,
+Jellyfin `with-id`/`nfo`. `loadProfileFile`/`parseProfile` (custom YAML) stay in the core but are wired
+nowhere: a custom profile file is to be discussed again.
 
-- **Profiles are kept as close to each other as the players allow**, so one library reads the same under
-  either and switching from one player to the other costs next to no renaming: the same id tag
-  (`{tmdb-<id>}`), the same NFO files (`movie.nfo`, `tvshow.nfo`, `<file>.nfo`), the same image names
-  (`poster.jpg`, `background.jpg`, `logo.png`, and a season's `season01-poster.jpg` in the show's folder,
-  `season-specials-poster.jpg` for season 0), the same `Season 01` folders, the same episode names
-  (`Show (2022) - s01e01`, ranges joined with `-e`: a `s01e04-e05` file gave two episodes in each
-  player). A difference stays only where a player needs it, and the profile's comment says why: today
-  `plex-nfo` and `jellyfin` differ only by the `{tmdb-<id>}` tag in the folder names (and the movie
-  file, which must start with its folder's name for Jellyfin). Before adding a rule to a profile, look for a name both players read and
-  use it; make it specific only when there is none, after checking both documentations (and Jellyfin's
-  code, which reads more than it documents).
+- **One layout for both players**, as close as they allow, so one library reads the same under either and
+  switching costs next to no renaming: the same id tag (`{tmdb-<id>}`), NFO files (`movie.nfo`,
+  `tvshow.nfo`, `<file>.nfo`), image names (`poster.jpg`, `background.jpg`, `logo.png`, a season's
+  `season01-poster.jpg` in the show's folder, `season-specials-poster.jpg` for season 0), `Season 01`
+  folders and episode names (`Show (2022) - s01e01`, ranges joined with `-e`: a `s01e04-e05` file gave
+  two episodes in each player). Before adding a rule, look for a name both players read and use it;
+  make it specific only when there is none, after checking both documentations (and Jellyfin's code,
+  which reads more than it documents), and say why in `build.ts`.
 
 - The parser is [guessit-js](https://github.com/opensubtitles/guessit-js) (LGPL-3.0) behind the
   `Parser` interface. Never modify or vendor it (LGPL/MIT compatibility).
 - Profile template syntax: `{title}`, `{year}`, `{tmdb}`, `{season:02}`; `\{` and `\}` are literal
-  braces (e.g. Plex: `'{title} ({year}) \{tmdb-{tmdb}\}'`). In profile YAML, templates containing
-  a backslash must use **single quotes** (a double-quoted `"\{"` is a YAML error); the profile
-  loader must reject that case with a clear error. Verify Plex/Jellyfin conventions against their official documentation before changing a
-  profile.
-- Profiles shipped: `plex` (id as `{tmdb-<id>}` in movie folder and file, and in the series folder)
-  and `plex-no-id` (same layout, no id anywhere: cleaner names, but Plex then matches on title and
-  year alone, ambiguous for two works sharing both). The id is optional for Plex, so offering it
-  is a second profile rather than a template syntax for optional parts.
-- Plex has two modes: the default agents ignore NFO (profile `plex`), the optional "Plex NFO"
+  braces (`'{title} ({year}) \{tmdb-{tmdb}\}'`). Templates containing a backslash must use **single
+  quotes** in a profile YAML file (a double-quoted `"\{"` is a YAML error); the loader rejects that
+  case with a clear error. Verify Plex/Jellyfin conventions against their official documentation
+  before changing the layout.
+- `no-id` is cleaner but a player then matches on title and year alone, ambiguous for two works sharing
+  both; the id is optional for Plex, hence an axis rather than a template syntax for optional parts.
+- Plex has two modes: the default agents ignore NFO (`metadata: none`), the optional "Plex NFO"
   agent (PMS 1.43.1+) reads Kodi-format NFO, `movie.nfo`, `tvshow.nfo`, per-episode `<file>.nfo`
-  (as `jellyfin`; no season NFO, Plex ignores it), `poster.jpg`, `background.jpg`, `logo.png` and a season
+  (as Jellyfin; no season NFO, Plex ignores it), `poster.jpg`, `background.jpg`, `logo.png` and a season
   poster `season01-poster.jpg` in the show's folder, or `season-specials-poster.jpg` for season 0 (the
   artwork's `specialsName`). A season's poster is a show-level file, written with `tvshow.nfo` (so a
   partial selection hands it, like the other show files, to any chosen episode of the show).
   Plex documents `Season01.jpg` instead, but the agent reads Kodi's name too (checked on PMS 1.43.5:
-  with only `season01-poster.jpg` on the disk, the season took it) (profile `plex-nfo`: no id in the names, since the NFO carries
+  with only `season01-poster.jpg` on the disk, the season took it) (`no-id`/`nfo`: no id in the names, since the NFO carries
   `<uniqueid type="tmdb">`).
-- Profile `jellyfin`: `{tmdb-<id>}` (the same as Plex's; Jellyfin's documentation gives `[tmdbid-<id>]`, its code reads `tmdb` as an alias and any of brackets, parentheses or braces) in the movie and series folders and in the movie file (the file
+- Jellyfin (`with-id`/`nfo`): `{tmdb-<id>}` (the same as Plex's; Jellyfin's documentation gives `[tmdbid-<id>]`, its code reads `tmdb` as an alias and any of brackets, parentheses or braces) in the movie and series folders and in the movie file (the file
   must start with its folder's name), `SxxExx` episodes, `movie.nfo`, `tvshow.nfo`, `<file>.nfo`,
   `poster.jpg`, `background.jpg` and `logo.png`. A season's poster is Kodi's `seasonNN-poster.jpg` in the show
-  folder (`season-specials-poster.jpg` for season 0), the file `plex-nfo` writes too: Jellyfin's
+  folder (`season-specials-poster.jpg` for season 0), the file the Plex NFO agent reads too: Jellyfin's
   documentation only says a season folder may hold the show's names (a plain `poster.jpg`), but its code
   reads the Kodi name and never Plex's `SeasonNN.jpg` (checked on Jellyfin 12.4: the season took it).
 - **Versions of a movie or an episode** (`templates.movieVersion` and `templates.episodeVersion`, both
-  `' - {version}'` in every shipped profile; only `{version}` is known to them, and a profile without
+  `' - {version}'` in every layout; only `{version}` is known to them, and a profile without
   one keeps one file per work). Plex and Jellyfin take several qualities of one movie in **one
   folder**, `<name> - <label>` (Jellyfin: the file starts with its folder's name, id included), and
   Jellyfin's documentation gives the same for an episode in its season folder (`Series Name S01E01 - 1080p.mkv`,
@@ -279,7 +280,7 @@ format follows the Kodi wiki's templates, saved pages are not in the repository)
   a colon because TMDB sometimes sends `-18`. The format of the prefix is our choice, neither player
   documents one. Left out on purpose: TMM's `<crew>`, `<producer>` and the actor `<profile>` /
   `<tmdbid>`, which neither player's documentation lists.
-- **The logo** (`kind: logo`, `logo.png` in `jellyfin` and `plex-nfo`): TMDB's `images` come with the
+- **The logo** (`kind: logo`, `logo.png` with `metadata: nfo`): TMDB's `images` come with the
   details request (`append_to_response`; `include_image_language` is the metadata language, then English,
   then textless), so no extra call. `pickLogo` (`providers/tmdb`) takes the metadata language first, then
   English, then a textless one, the best voted of each (PNG or JPEG only) as `Details.logoPath`. A work
@@ -289,6 +290,8 @@ format follows the Kodi wiki's templates, saved pages are not in the repository)
   migration 024, `library.writes.logo` for the column): a work missing only its logo is `incomplete`,
   so "Refresh" writes it, and it is under `missing-artwork`. Rows from before the migration have
   `null` until the next scan (a show's, until its files are looked at again).
+- A series NFO also carries `<uniqueid type="tvdb">` (`SeriesDetails.tvdbId`, TMDB's `external_ids`), after
+  `tmdb` (the default) and `imdb`; a test holds the tmdb id of the name, `<id>` and the default `<uniqueid>`.
 - Not done: no collection overview, no episode `uniqueid`, no `<fileinfo>` (the player reads the file).
 
 ## Libraries and scan
@@ -297,10 +300,10 @@ A **library** (`libraries:` in `config.yaml`, edited through `/api/libraries`) i
 one of two kinds, told apart by which of `type` / `into` it has (exactly one):
 
 - **Organized in place**: `type: movie | series`. Its source is where the works of that type live,
-  so it is also a destination (mode `move` implied, no `mode` allowed). It may set `profile`.
+  so it is also a destination (mode `move` implied, no `mode` allowed). It may set `naming` and `metadata`.
 - **Arrival folder**: `into: { movie, series }`, ids of typed libraries. Never a destination: what
-  lands in it goes to those libraries, with its own `mode` (default `copy`). No `profile`: it takes
-  the one of its destination (until the per-library destination is built, the global one).
+  lands in it goes to those libraries, with its own `mode` (default `copy`). No `naming`/`metadata`: it takes
+  those of its destination (until the per-library destination is built, the global one).
 
 `threshold` and `watch` are allowed on both. Ids are generated from the name (`libraryId`) and never
 change; two libraries cannot share a source (`library.source-taken`); neither a source nor a job

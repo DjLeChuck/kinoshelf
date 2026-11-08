@@ -704,7 +704,7 @@ export const en = {
   'web.history.job.used.metadata': 'Metadata files',
   'web.settings.processing.title': 'Default settings',
   'web.settings.processing.intro':
-    'Used by libraries that do not set their own, and for a folder outside any library (a path you submit, or the command line).',
+    'Used by libraries that do not set their own, and for a folder outside any library (a path you submit, or scan and process on the command line).',
   'web.settings.processing.mode': 'File mode',
   'web.settings.processing.mode.default': 'Automatic',
   'web.settings.processing.mode.copy': 'Copy',

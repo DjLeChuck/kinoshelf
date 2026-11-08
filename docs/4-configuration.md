@@ -32,7 +32,8 @@ apiKey:
 
 locale: fr # language of the tool itself: fr or en
 metadataLanguage: fr # language of the titles fetched from TMDB, e.g. fr or en-US
-profile: plex # see Output profiles
+naming: with-id # with-id or no-id, see Output options
+metadata: none # none or nfo, see Output options
 mode: hardlink # copy, hardlink or move
 threshold: 85 # minimum score for an automatic match, 0 to 100
 retentionDays: 30 # days after which a settled job is forgotten, 0 keeps all
@@ -71,7 +72,8 @@ Each entry of `libraries` is either a library or an arrival folder (see
 | `source`    | the folder organized in place  | the folder files arrive in                     |
 | `type`      | `movie` or `series`            | —                                              |
 | `into`      | —                              | `{ movie: <id>, series: <id> }`, both required |
-| `profile`   | overrides the global profile   | — (takes its destination's)                    |
+| `naming`    | overrides the global naming    | — (takes its destination's)                    |
+| `metadata`  | overrides the global metadata  | — (takes its destination's)                    |
 | `mode`      | — (organized in place)         | `copy` (default), `hardlink` or `move`         |
 | `threshold` | overrides the global threshold | overrides the global threshold                 |
 | `watch`     | —                              | `true` to submit what lands in `source`        |

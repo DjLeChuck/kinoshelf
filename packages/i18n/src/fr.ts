@@ -727,7 +727,7 @@ export const fr: Record<keyof typeof en, string> = {
   'web.history.job.used.metadata': 'Fichiers de métadonnées',
   'web.settings.processing.title': 'Réglages par défaut',
   'web.settings.processing.intro':
-    'Utilisés par les bibliothèques qui n’ont pas les leurs, et pour un dossier hors bibliothèque (un chemin soumis, ou la ligne de commande).',
+    'Utilisés par les bibliothèques qui n’ont pas les leurs, et pour un dossier hors bibliothèque (un chemin soumis, ou scan et process en ligne de commande).',
   'web.settings.processing.mode': 'Mode de fichier',
   'web.settings.processing.mode.default': 'Automatique',
   'web.settings.processing.mode.copy': 'Copie',

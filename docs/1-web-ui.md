@@ -94,7 +94,7 @@ the batch is left alone, and the metadata files the batch wrote are removed.
 
 ## Settings
 
-The TMDB key, languages, output profile, file mode, threshold, your libraries and arrival folders,
+The TMDB key, languages, naming and metadata options, file mode, threshold, your libraries and arrival folders,
 Plex, Jellyfin, webhooks (with a test) and the API key. They are saved in `config.yaml` and apply at
 once, without a restart. Secrets are never shown again.
 

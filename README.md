@@ -31,7 +31,8 @@ equivalent of tinyMediaManager and a companion to Radarr/Sonarr: it never downlo
   candidates and score. You pick the candidate and the destination library.
 - **Safe by design**: a preview before every write, no existing file ever overwritten, every batch
   can be undone, no silent copy when a hardlink fails.
-- **Profiles** for Plex (`plex`, `plex-no-id`, `plex-nfo`) and Jellyfin, with NFO and artwork.
+- **Naming and metadata options** that suit Plex and Jellyfin alike: the TMDB id in the names or not,
+  and Kodi-format NFO with artwork or nothing.
 - **Getting downloads in** from your client's "on completion" hook, or by watching a folder.
 - **Notifications**: Plex and Jellyfin library refresh, webhooks (generic, Gotify, ntfy, Discord).
 - French and English, dark and light themes, multi-arch Docker image (`amd64`, `arm64`).
@@ -55,7 +56,7 @@ through your first library.
 | [Installation](docs/0-installation.md)                 | Docker, user and permissions, hardlinks, reverse proxy |
 | [Concepts and web UI](docs/1-web-ui.md)                | Libraries, Arrivals, History, Settings                 |
 | [Getting downloads in](docs/2-getting-downloads-in.md) | Download client hooks, folder watcher                  |
-| [Output profiles](docs/3-profiles.md)                  | Plex and Jellyfin naming, NFO and artwork              |
+| [Output options](docs/3-output-options.md)             | The `naming` and `metadata` options                    |
 | [Configuration](docs/4-configuration.md)               | `config.yaml`, environment variables, notifications    |
 | [Command line](docs/5-cli.md)                          | `kinoshelf scan`, `process`, `undo`, `submit`          |
 | [REST API](docs/6-api.md)                              | Authentication, jobs, arrivals, batches                |
