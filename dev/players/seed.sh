@@ -40,6 +40,13 @@ for e in 01 02; do
   put "The.Office.US.S01.720p.BluRay.x264-SEED" "The.Office.US.S01E$e.720p.BluRay.x264-SEED.mkv"
 done
 
+# Two qualities of the same episodes, in two season packs: each episode arrives named with its
+# picture size (versions), and the two files of one episode share a season folder.
+for e in 01 02; do
+  put "The.Bear.2022.S01.1080p.WEB-DL.DDP5.1.H.264-SEED" "The.Bear.2022.S01E$e.1080p.WEB-DL.DDP5.1.H.264-SEED.mkv"
+  put "The.Bear.2022.S01.2160p.WEB-DL.DDP5.1.H.265-SEED" "The.Bear.2022.S01E$e.2160p.WEB-DL.DDP5.1.H.265-SEED.mkv"
+done
+
 # A special (season 0), alone in its release: the players name it "Season 00" or "Specials".
 put "The.Office.US.S00E01.Specials.720p.BluRay.x264-SEED" "The.Office.US.S00E01.720p.BluRay.x264-SEED.mkv"
 
