@@ -5,10 +5,20 @@
   import { t } from '../lib/i18n.svelte.js';
   import { createDestinations, type StepId } from '../lib/onboarding.js';
   import { folderName, libraryApi } from '../lib/libraries.js';
-  import { FormError, isHttpUrl, nullIfBlank, type Settings } from '../lib/settings.js';
+  import {
+    DEFAULT_METADATA,
+    DEFAULT_NAMING,
+    FormError,
+    isHttpUrl,
+    nullIfBlank,
+    type Metadata,
+    type Naming,
+    type Settings,
+  } from '../lib/settings.js';
   import { shell } from '../lib/shell-state.svelte.js';
   import Link from './Link.svelte';
   import PathField from './PathField.svelte';
+  import ProfileChoice from './ProfileChoice.svelte';
 
   /**
    * `editing` reopens a step already settled: the fields start from what is saved and the save
@@ -30,23 +40,33 @@
   let busy = $state(false);
   let failure = $state<unknown>(undefined);
   let mode = $state<'once' | 'watch'>('once');
+  let naming = $state<Naming>(DEFAULT_NAMING);
+  let metadata = $state<Metadata>(DEFAULT_METADATA);
+  let settings = $state<Settings>();
 
   const needsAbsolute = (path: string): boolean => path.startsWith('/');
 
   onMount(() => {
-    if (editing) void prefill().catch((error: unknown) => (failure = error));
+    // The destination step shows the naming examples, which only the server knows.
+    if (step === 'destination' || editing)
+      void prefill().catch((error: unknown) => (failure = error));
   });
 
   /** Starts the fields from what is saved. A secret is never sent back: a blank one stays as it is. */
   async function prefill(): Promise<void> {
-    if (step === 'server') {
-      const settings = await api.get<Settings>('/api/settings');
+    if (step === 'destination' || step === 'server') {
+      settings = await api.get<Settings>('/api/settings');
+    }
+    if (step === 'server' && settings) {
       const server = settings.plex ?? settings.jellyfin;
       if (server) {
         kind = settings.plex ? 'plex' : 'jellyfin';
         url = server.url;
       }
     } else if (step === 'destination') {
+      naming = settings?.processing.naming ?? DEFAULT_NAMING;
+      metadata = settings?.processing.metadata ?? DEFAULT_METADATA;
+      if (!editing) return;
       const libraries = await libraryApi.list();
       folder = libraries.find((library) => library.type === 'movie')?.source ?? '';
       seriesFolder = libraries.find((library) => library.type === 'series')?.source ?? '';
@@ -101,6 +121,13 @@
         if (!needsAbsolute(folder.trim()) || !needsAbsolute(seriesFolder.trim())) {
           throw new FormError(t('web.onboarding.invalid.folder'));
         }
+        // The defaults are not written, as in the settings.
+        await api.patch('/api/settings', {
+          processing: {
+            naming: naming === DEFAULT_NAMING ? null : naming,
+            metadata: metadata === DEFAULT_METADATA ? null : metadata,
+          },
+        });
         if (editing) {
           await setDestination('movie', folder.trim());
           await setDestination('series', seriesFolder.trim());
@@ -221,6 +248,9 @@
         <PathField id="ob-series-folder" bind:value={seriesFolder} placeholder="/" />
         <span class="muted hint">{t('web.onboarding.form.destination.hint')}</span>
       </div>
+      {#if settings}
+        <ProfileChoice id="ob" bind:naming bind:metadata examples={settings.namingExamples} />
+      {/if}
     {:else}
       <div class="field">
         <label for="ob-folder">{t('web.onboarding.form.source')}</label>
