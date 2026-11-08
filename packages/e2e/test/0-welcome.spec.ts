@@ -28,6 +28,18 @@ test('welcomes a new install, remembers a skipped step and ends on the libraries
   await expect(progress).toHaveAttribute('aria-valuenow', '3');
   await expect(page.getByRole('heading', { name: /put your movies and series/ })).toBeVisible();
 
+  // A step already settled can be changed: its form starts from what is saved.
+  const server = page.getByRole('listitem').filter({ hasText: 'Connect Plex or Jellyfin' });
+  await server.getByRole('button', { name: 'Edit' }).click();
+  await expect(server.getByLabel('Address')).toHaveValue('http://plex.invalid:32400');
+  await server.getByLabel('Address').fill('http://plex.invalid:32401');
+  await server.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(server.getByLabel('Address')).toHaveCount(0);
+  await server.getByRole('button', { name: 'Edit' }).click();
+  await expect(server.getByLabel('Address')).toHaveValue('http://plex.invalid:32401');
+  await server.getByRole('button', { name: 'Cancel' }).click();
+  await expect(progress).toHaveAttribute('aria-valuenow', '3');
+
   // The last step makes an arrival folder of it: one that is not there is refused on the spot.
   const missing = incoming('never-created');
   await page.getByLabel('Downloads folder').fill(missing);

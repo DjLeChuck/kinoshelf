@@ -2,13 +2,21 @@
   import { api } from '../lib/api.js';
   import { messageOf } from '../lib/errors.js';
   import { t } from '../lib/i18n.svelte.js';
-  import { SKIPPABLE, nextStep, type Onboarding, type Step } from '../lib/onboarding.js';
+  import {
+    SKIPPABLE,
+    nextStep,
+    type Onboarding,
+    type Step,
+    type StepId,
+  } from '../lib/onboarding.js';
   import { shell } from '../lib/shell-state.svelte.js';
   import OnboardingStepForm from './OnboardingStepForm.svelte';
 
   let { steps }: { steps: readonly Step[] } = $props();
 
   let failure = $state<unknown>(undefined);
+  /** A settled step being changed: its form shows again, filled with what is saved. */
+  let editing = $state<StepId | undefined>(undefined);
   const next = $derived(nextStep(steps));
 
   async function mark(step: Step, state: 'done' | 'skipped' | null): Promise<void> {
@@ -42,7 +50,16 @@
         <span class="muted">{t(`web.onboarding.step.${step.id}.body`)}</span>
       </div>
       <div class="actions">
-        {#if !step.auto}
+        {#if editing === step.id}
+          <button type="button" class="btn" onclick={() => (editing = undefined)}>
+            {t('web.onboarding.cancel')}
+          </button>
+        {:else if settled && step.state === 'done'}
+          <button type="button" class="btn" onclick={() => (editing = step.id)}>
+            {t('web.onboarding.modify')}
+          </button>
+        {/if}
+        {#if !step.auto && editing !== step.id}
           {#if settled}
             <button type="button" class="btn" onclick={() => void mark(step, null)}>
               {t('web.onboarding.reopen')}
@@ -61,6 +78,8 @@
       </div>
       {#if next === step.id}
         <OnboardingStepForm step={step.id} />
+      {:else if editing === step.id}
+        <OnboardingStepForm step={step.id} editing ondone={() => (editing = undefined)} />
       {/if}
     </li>
   {/each}

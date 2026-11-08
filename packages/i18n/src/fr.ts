@@ -510,6 +510,8 @@ export const fr: Record<keyof typeof en, string> = {
   'web.onboarding.mark-done': 'Marquer comme fait',
   'web.onboarding.skip': 'Passer',
   'web.onboarding.reopen': 'Rouvrir',
+  'web.onboarding.modify': 'Modifier',
+  'web.onboarding.cancel': 'Annuler',
   'web.onboarding.skipped': 'Passée',
   'web.login.setup.title': 'Premier lancement',
   'web.login.setup.intro':

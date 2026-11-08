@@ -1,15 +1,24 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import { api, ApiError } from '../lib/api.js';
   import { messageOf } from '../lib/errors.js';
   import { t } from '../lib/i18n.svelte.js';
   import { createDestinations, type StepId } from '../lib/onboarding.js';
   import { folderName, libraryApi } from '../lib/libraries.js';
-  import { FormError, isHttpUrl, nullIfBlank } from '../lib/settings.js';
+  import { FormError, isHttpUrl, nullIfBlank, type Settings } from '../lib/settings.js';
   import { shell } from '../lib/shell-state.svelte.js';
   import Link from './Link.svelte';
   import PathField from './PathField.svelte';
 
-  let { step }: { step: StepId } = $props();
+  /**
+   * `editing` reopens a step already settled: the fields start from what is saved and the save
+   * changes it (the libraries are updated, not created again); `ondone` closes the form.
+   */
+  let {
+    step,
+    editing = false,
+    ondone,
+  }: { step: StepId; editing?: boolean; ondone?: () => void } = $props();
 
   let tmdbKey = $state('');
   let kind = $state<'plex' | 'jellyfin'>('plex');
@@ -23,6 +32,43 @@
   let mode = $state<'once' | 'watch'>('once');
 
   const needsAbsolute = (path: string): boolean => path.startsWith('/');
+
+  onMount(() => {
+    if (editing) void prefill().catch((error: unknown) => (failure = error));
+  });
+
+  /** Starts the fields from what is saved. A secret is never sent back: a blank one stays as it is. */
+  async function prefill(): Promise<void> {
+    if (step === 'server') {
+      const settings = await api.get<Settings>('/api/settings');
+      const server = settings.plex ?? settings.jellyfin;
+      if (server) {
+        kind = settings.plex ? 'plex' : 'jellyfin';
+        url = server.url;
+      }
+    } else if (step === 'destination') {
+      const libraries = await libraryApi.list();
+      folder = libraries.find((library) => library.type === 'movie')?.source ?? '';
+      seriesFolder = libraries.find((library) => library.type === 'series')?.source ?? '';
+    } else if (step === 'source') {
+      const arrival = (await libraryApi.list()).find((library) => library.into);
+      if (arrival) {
+        folder = arrival.source;
+        libraryName = arrival.name;
+        mode = arrival.watch ? 'watch' : 'once';
+      }
+    }
+  }
+
+  /** Moves the typed library to its folder, or makes it when there is none yet. */
+  async function setDestination(type: 'movie' | 'series', source: string): Promise<void> {
+    const existing = (await libraryApi.list()).find((library) => library.type === type);
+    if (!existing) {
+      await libraryApi.create({ name: folderName(source), source, type });
+    } else if (existing.source !== source) {
+      await libraryApi.update(existing.id, { source });
+    }
+  }
 
   /** Each step saves what it owns, the way the settings do, so the two can never disagree. */
   async function save(): Promise<void> {
@@ -55,6 +101,11 @@
         if (!needsAbsolute(folder.trim()) || !needsAbsolute(seriesFolder.trim())) {
           throw new FormError(t('web.onboarding.invalid.folder'));
         }
+        if (editing) {
+          await setDestination('movie', folder.trim());
+          await setDestination('series', seriesFolder.trim());
+          break;
+        }
         // The first libraries: the two folders the works end up in, organized in place.
         await createDestinations(
           libraryApi,
@@ -71,6 +122,7 @@
     }
     // The step ticks itself: ask again rather than guess what the server now settles.
     await shell.loadOnboarding();
+    ondone?.();
   }
 
   /** The source is a library either way: watched, or scanned once. A failed scan shows on the home page. */
@@ -83,12 +135,15 @@
     if (!movie || !series) {
       throw new FormError(t('web.onboarding.form.source.needs-destination'));
     }
-    const library = await libraryApi.create({
+    const body = {
       name: nullIfBlank(libraryName) ?? folderName(path),
       source: path,
-      into: { movie: movie.id, series: series.id },
       watch,
-    });
+    };
+    const existing = editing ? libraries.find((library) => library.into) : undefined;
+    const library = existing
+      ? await libraryApi.update(existing.id, body)
+      : await libraryApi.create({ ...body, into: { movie: movie.id, series: series.id } });
     if (!watch) {
       await libraryApi.scan(library.id);
       return;

@@ -490,6 +490,8 @@ export const en = {
   'web.onboarding.mark-done': 'Mark as done',
   'web.onboarding.skip': 'Skip',
   'web.onboarding.reopen': 'Reopen',
+  'web.onboarding.modify': 'Edit',
+  'web.onboarding.cancel': 'Cancel',
   'web.onboarding.skipped': 'Skipped',
   'web.login.setup.title': 'First launch',
   'web.login.setup.intro':
