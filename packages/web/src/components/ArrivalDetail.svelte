@@ -83,7 +83,15 @@
   );
 
   const reasons = (list: readonly ConflictBody[]): string =>
-    list.map((c) => t(`conflict.${c.reason}` as MessageKey)).join(', ');
+    list
+      .map((c) => {
+        const reason = t(`conflict.${c.reason}` as MessageKey);
+        // Only these two name the destination in `path`; the others point at the source file.
+        return c.reason === 'destination-exists' || c.reason === 'duplicate-destination'
+          ? t('web.queue.conflict.path', { reason, path: c.path })
+          : reason;
+      })
+      .join(', ');
 
   // The destination of the chosen candidate. An answer that comes after another choice is stale.
   let latest = 0;

@@ -567,6 +567,7 @@ export const en = {
   'web.queue.destination.pick': 'Choose a candidate to see where the file would go.',
   'web.queue.destination.folder': 'The {count} files go into this folder, each in its own place.',
   'web.queue.destination.loading': 'Checking the destination…',
+  'web.queue.conflict.path': '{reason} ({path})',
   'web.queue.conflicts': 'This choice cannot be applied: {reasons}.',
   'web.queue.ready':
     'Matched with confidence, but not transferred because the analysis only reads (applying is off in the settings). Transfer it as planned, or pick another candidate to validate instead.',

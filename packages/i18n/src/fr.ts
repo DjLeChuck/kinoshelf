@@ -589,6 +589,7 @@ export const fr: Record<keyof typeof en, string> = {
   'web.queue.destination.pick': 'Choisissez un candidat pour voir où irait le fichier.',
   'web.queue.destination.folder': 'Les {count} fichiers vont dans ce dossier, chacun à sa place.',
   'web.queue.destination.loading': 'Vérification de la destination…',
+  'web.queue.conflict.path': '{reason} ({path})',
   'web.queue.conflicts': 'Ce choix ne peut pas être appliqué : {reasons}.',
   'web.queue.ready':
     'Identifié avec confiance, mais pas transféré : l’analyse ne fait que lire (le transfert automatique est désactivé dans les réglages). Transférez-le tel que prévu, ou choisissez un autre candidat à valider.',
