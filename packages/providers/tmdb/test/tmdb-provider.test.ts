@@ -430,6 +430,17 @@ describe('getMovieDetails and getSeriesDetails', () => {
     expect((await provider.getSeriesDetails(tvId))?.imdbId).toBe('tt14452776');
   });
 
+  it('reads the tvdb id of a series from external_ids', async () => {
+    const body = JSON.parse(fixture('details-tv-136315.json')) as {
+      external_ids: { tvdb_id: number | null };
+    };
+    const { provider } = make([at('/3/tv/136315', () => json(JSON.stringify(body)))]);
+    expect((await provider.getSeriesDetails(tvId))?.tvdbId).toBe(403539);
+    body.external_ids.tvdb_id = null;
+    const { provider: none } = make([at('/3/tv/136315', () => json(JSON.stringify(body)))]);
+    expect(await none.getSeriesDetails(tvId)).not.toHaveProperty('tvdbId');
+  });
+
   it('ignores an empty imdb id on a movie', async () => {
     const body = { ...(fixtureJson('details-movie-438631.json') as object), imdb_id: '' };
     const { provider } = make([at('/3/movie/438631', () => json(JSON.stringify(body)))]);

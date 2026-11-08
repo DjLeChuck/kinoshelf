@@ -129,6 +129,7 @@ function uniqueIds(details: MovieDetails | SeriesDetails): XmlNode[] {
   return [
     ...leaf('uniqueid', details.id.id, { type: 'tmdb', default: 'true' }),
     ...leaf('uniqueid', details.imdbId, { type: 'imdb' }),
+    ...(details.kind === 'series' ? leaf('uniqueid', details.tvdbId, { type: 'tvdb' }) : []),
   ];
 }
 

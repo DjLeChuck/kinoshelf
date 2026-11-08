@@ -1,6 +1,12 @@
 import { XMLParser, XMLValidator } from 'fast-xml-parser';
 import { describe, expect, it } from 'vitest';
-import { renderEpisodeNfo, renderMovieNfo, renderSeriesNfo } from '../src/index.js';
+import {
+  buildProfile,
+  renderEpisodeNfo,
+  renderMovieNfo,
+  renderProfileTemplate,
+  renderSeriesNfo,
+} from '../src/index.js';
 import type { EpisodeInfo, MovieDetails, SeriesDetails } from '../src/index.js';
 
 const HEADER = '<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>\n';
@@ -181,6 +187,52 @@ describe('NFO writer', () => {
 </episodedetails>
 `,
     );
+  });
+
+  it('writes the tvdb id of a series after the imdb one, and never for a movie', () => {
+    const s = parse(renderSeriesNfo({ ...series, imdbId: 'tt0903747', tvdbId: 81189 }));
+    expect(at(s, 'tvshow', 'uniqueid', 0, '@_type')).toBe('tmdb');
+    expect(at(s, 'tvshow', 'uniqueid', 1, '@_type')).toBe('imdb');
+    expect(at(s, 'tvshow', 'uniqueid', 2, '@_type')).toBe('tvdb');
+    expect(at(s, 'tvshow', 'uniqueid', 2, '#text')).toBe('81189');
+    expect(renderSeriesNfo(series)).not.toContain('tvdb');
+    expect(renderMovieNfo(movie)).not.toContain('tvdb');
+  });
+
+  it('gives the same tmdb id in the name, <id> and the default <uniqueid>', () => {
+    const profile = buildProfile({ naming: 'with-id', metadata: 'nfo' });
+    const cases = [
+      {
+        root: 'movie',
+        xml: renderMovieNfo(movie),
+        details: movie,
+        folder: profile.templates.movieFolder,
+      },
+      {
+        root: 'tvshow',
+        xml: renderSeriesNfo(series),
+        details: series,
+        folder: profile.templates.seriesFolder,
+      },
+    ] as const;
+    for (const { root, xml, details, folder } of cases) {
+      const doc = parse(xml);
+      const ids = [at(doc, root, 'uniqueid')].flat() as {
+        '@_type': string;
+        '@_default'?: string;
+        '#text': string;
+      }[];
+      const def = ids.find((u) => u['@_default'] === 'true');
+      const [name] = renderProfileTemplate(profile, folder, {
+        title: details.title,
+        year: 2000,
+        tmdb: details.id.id,
+      });
+      expect(def?.['@_type']).toBe('tmdb');
+      expect(def?.['#text']).toBe(String(details.id.id));
+      expect(at(doc, root, 'id')).toBe(String(details.id.id));
+      expect(name).toContain(`{tmdb-${details.id.id}}`);
+    }
   });
 
   it('is well-formed and parses back to the same structure', () => {

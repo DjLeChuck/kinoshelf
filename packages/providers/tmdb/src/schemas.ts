@@ -146,7 +146,9 @@ export const tvFullDetailsSchema = z.object({
   original_name: z.string(),
   first_air_date: date,
   status: z.string().nullish(),
-  external_ids: z.object({ imdb_id: z.string().nullish() }).nullish(),
+  external_ids: z
+    .object({ imdb_id: z.string().nullish(), tvdb_id: z.number().nullish() })
+    .nullish(),
   keywords: z.object({ results: z.array(named).nullish() }).nullish(),
   // `append_to_response=content_ratings`: one rating per country.
   content_ratings: z

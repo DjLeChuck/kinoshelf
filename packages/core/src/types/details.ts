@@ -76,6 +76,8 @@ export interface SeriesDetails extends DetailsBase {
   readonly firstAirDate?: string;
   /** The provider's wording (`Returning Series`, `Ended`). */
   readonly status?: string;
+  /** The series' TheTVDB id, when the provider knows it. */
+  readonly tvdbId?: number;
   /** Every season the provider lists, specials (season 0) included. */
   readonly seasons: readonly SeasonSummary[];
 }

@@ -226,6 +226,7 @@ export class TmdbProvider implements MetadataProvider {
     }
     const rating = ratingOf(r.vote_average, r.vote_count);
     const imdbId = r.external_ids?.imdb_id;
+    const tvdbId = r.external_ids?.tvdb_id;
     const certification = pickCertification(
       (r.content_ratings?.results ?? []).map((c) => ({ country: c.iso_3166_1, value: c.rating })),
       language ?? this.language,
@@ -242,6 +243,7 @@ export class TmdbProvider implements MetadataProvider {
       ...(rating && { rating }),
       ...(r.first_air_date && { firstAirDate: r.first_air_date }),
       ...(r.status && { status: r.status }),
+      ...(tvdbId && { tvdbId }),
       seasons: (r.seasons ?? []).map((s) => ({
         season: s.season_number,
         ...(s.name && { name: s.name }),
