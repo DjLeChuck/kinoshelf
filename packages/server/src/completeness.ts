@@ -1,7 +1,8 @@
 import { createHash } from 'node:crypto';
 import type { SeasonInfo, SeriesDetails } from '@kinoshelf/core';
 import type { Database } from 'better-sqlite3';
-import type { LibraryItem, LibraryItemStore } from './library-items.js';
+import { versionRowOf, type LibraryItem, type LibraryItemStore } from './library-items.js';
+import { coverageOf, versionsOf, type VersionCoverage } from './versions.js';
 
 /**
  * - `present`: a file holds it.
@@ -11,14 +12,30 @@ import type { LibraryItem, LibraryItemStore } from './library-items.js';
  */
 export type EpisodeState = 'present' | 'missing' | 'unaired' | 'extra';
 
+/** The NFO of some files: how many the profile wants and how many are there. */
+export interface NfoTally {
+  readonly expected: number;
+  readonly present: number;
+}
+
+/** Each file is one version with its own NFO; a file whose profile writes none expects nothing. */
+export const nfoTally = (items: readonly LibraryItem[]): NfoTally => ({
+  expected: items.filter((item) => item.nfo !== null).length,
+  present: items.filter((item) => item.nfo === true).length,
+});
+
 export interface EpisodeReport {
   readonly season: number;
   readonly episode: number;
   readonly title: string | null;
   readonly airDate: string | null;
   readonly state: EpisodeState;
-  /** The file that holds it (a multi-episode file is shared by its episodes). */
-  readonly item: LibraryItem | null;
+  /**
+   * The files that hold it, one per version (a multi-episode file is shared by its episodes);
+   * none when it is missing or not out.
+   */
+  readonly versions: readonly LibraryItem[];
+  readonly nfo: NfoTally;
 }
 
 export interface SeasonReport {
@@ -26,6 +43,9 @@ export interface SeasonReport {
   readonly name: string | null;
   readonly posterPath: string | null;
   readonly episodes: readonly EpisodeReport[];
+  /** Each version of the show against the episodes of this season: absent here, it holds none. */
+  readonly versions: readonly VersionCoverage[];
+  readonly nfo: NfoTally;
   /** Always 0 for the specials (season 0): they are never counted. */
   readonly missing: number;
 }
@@ -56,6 +76,7 @@ export function compare(
   today: string,
 ): SeasonReport[] {
   const held = episodesOf(items);
+  const showVersions = versionsOf(held.map(versionRowOf));
   const numbers = new Set([...seasons.map((s) => s.season), ...held.map((i) => i.season ?? 0)]);
   return [...numbers]
     .sort((a, b) => a - b)
@@ -64,9 +85,9 @@ export function compare(
       const files = held.filter((item) => item.season === season);
       const covering = (episode: number): LibraryItem[] =>
         files.filter((item) => (item.episode ?? 0) <= episode && episode <= last(item));
-      // Several files may hold one episode (versions of it): each one is a row, so none is taken
-      // for a file the provider does not know.
-      const listed = (known?.episodes ?? []).flatMap((info): EpisodeReport[] => {
+      // Several files may hold one episode (versions of it): they are one episode with each of
+      // them listed, and none is taken for a file the provider does not know.
+      const listed = (known?.episodes ?? []).map((info): EpisodeReport => {
         const holders = covering(info.episode);
         const aired = info.airDate !== undefined && info.airDate <= today;
         const base = {
@@ -74,24 +95,30 @@ export function compare(
           episode: info.episode,
           title: info.title ?? null,
           airDate: info.airDate ?? null,
+          versions: holders,
+          nfo: nfoTally(holders),
         };
-        if (holders.length === 0) {
-          return [{ ...base, state: season > 0 && aired ? 'missing' : 'unaired', item: null }];
-        }
-        return holders.map((item) => ({ ...base, state: 'present', item }));
+        return holders.length === 0
+          ? { ...base, state: season > 0 && aired ? 'missing' : 'unaired' }
+          : { ...base, state: 'present' };
       });
       // The specials a library lacks are not worth listing; the ones it has are.
-      const shown = season === 0 ? listed.filter(({ item }) => item !== null) : listed;
-      const unknown = files
-        .filter((item) => !listed.some((entry) => entry.item === item))
-        .map((item): EpisodeReport => ({
-          season,
-          episode: item.episode ?? 0,
-          title: null,
-          airDate: null,
-          state: 'extra',
-          item,
-        }));
+      const shown = season === 0 ? listed.filter(({ versions }) => versions.length > 0) : listed;
+      const strays = new Map<number, LibraryItem[]>();
+      for (const item of files) {
+        if (!listed.some((entry) => entry.versions.includes(item))) {
+          strays.set(item.episode ?? 0, [...(strays.get(item.episode ?? 0) ?? []), item]);
+        }
+      }
+      const unknown = [...strays].map(([episode, versions]): EpisodeReport => ({
+        season,
+        episode,
+        title: null,
+        airDate: null,
+        state: 'extra',
+        versions,
+        nfo: nfoTally(versions),
+      }));
       const episodes = [...shown, ...unknown].sort((a, b) => a.episode - b.episode);
       const summary = summaries.find((candidate) => candidate.season === season);
       return {
@@ -99,6 +126,8 @@ export function compare(
         name: summary?.name ?? null,
         posterPath: summary?.posterPath ?? null,
         episodes,
+        versions: coverageOf(files.map(versionRowOf), showVersions),
+        nfo: nfoTally(files),
         missing: episodes.filter(({ state }) => state === 'missing').length,
       };
     });

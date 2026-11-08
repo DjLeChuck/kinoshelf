@@ -100,7 +100,7 @@ interface Show {
   seasons: {
     season: number;
     missing: number;
-    episodes: { episode: number; state: string; item: { path: string } | null }[];
+    episodes: { episode: number; state: string; versions: { path: string }[] }[];
   }[];
 }
 
@@ -253,8 +253,8 @@ describe('the page of a show', () => {
       [3, 'present'],
     ]);
     // The two episodes of the double file share it.
-    expect(first?.episodes[1]?.item?.path).toBe(files.double);
-    expect(first?.episodes[2]?.item?.path).toBe(files.double);
+    expect(first?.episodes[1]?.versions.map((v) => v.path)).toEqual([files.double]);
+    expect(first?.episodes[2]?.versions.map((v) => v.path)).toEqual([files.double]);
     expect(second?.episodes.map((e) => [e.episode, e.state])).toEqual([
       [1, 'present'],
       [2, 'unaired'],
@@ -332,7 +332,7 @@ describe('comparing the files with the provider', () => {
     expect(season?.missing).toBe(1);
   });
 
-  it('lists each version of an episode as present, never as unknown to the provider', () => {
+  it('lists the versions of an episode as one present episode, never as unknown to the provider', () => {
     const version = { ...row(1, 1), path: '/s1e1 - 2160p.mkv' };
     const [season] = compare(
       [row(1, 1), version],
@@ -340,10 +340,11 @@ describe('comparing the files with the provider', () => {
       [],
       '2026-01-01',
     );
-    expect(season?.episodes.map((e) => [e.episode, e.state, e.item?.path])).toEqual([
-      [1, 'present', '/s1e1.mkv'],
-      [1, 'present', '/s1e1 - 2160p.mkv'],
-      [2, 'missing', undefined],
+    expect(
+      season?.episodes.map((e) => [e.episode, e.state, e.versions.map((v) => v.path)]),
+    ).toEqual([
+      [1, 'present', ['/s1e1.mkv', '/s1e1 - 2160p.mkv']],
+      [2, 'missing', []],
     ]);
     expect(season?.missing).toBe(1);
   });

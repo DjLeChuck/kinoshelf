@@ -474,7 +474,9 @@
                         compact
                         {libraryId}
                         path={rescanPath(
-                          season.episodes.flatMap(({ item }) => (item ? [item.path] : [])),
+                          season.episodes.flatMap(({ versions }) =>
+                            versions.map((version) => version.path),
+                          ),
                           source,
                         )}
                         name={`${show.title ?? ''} · ${season.season === 0 ? t('web.library.season.specials') : t('web.library.season', { season: season.season })}`}
@@ -511,8 +513,8 @@
                     </td>
                   </tr>
                   {#if seasonOpen}
-                    {#each season.episodes as episode (`${episode.episode}:${episode.item?.id ?? ''}`)}
-                      {@const item = episode.item}
+                    {#each season.episodes as episode (`${episode.episode}:${episode.versions[0]?.id ?? ''}`)}
+                      {@const item = episode.versions[0]}
                       <tr
                         class="child episode"
                         class:current={selection?.kind === 'item' && item?.id === selection.item.id}

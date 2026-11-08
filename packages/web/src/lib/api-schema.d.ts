@@ -1926,7 +1926,7 @@ export interface paths {
         get: {
             parameters: {
                 query?: {
-                    state?: "review" | "rename" | "unrecognized" | "missing-nfo" | "missing-artwork";
+                    state?: "review" | "rename" | "unrecognized" | "missing-nfo" | "missing-artwork" | "multi-version";
                     q?: string;
                     limit?: number;
                     offset?: number;
@@ -1980,7 +1980,7 @@ export interface paths {
                                 total: number;
                                 current: string | null;
                             } | null;
-                            /** @description A movie library counts files. A series library counts shows, except `review` and `unrecognized`: those files belong to no show, so they stay counted as files. */
+                            /** @description A movie library counts movies, however many versions each has. A series library counts shows, except `review` and `unrecognized`: those files belong to no show, so they stay counted as files. */
                             counts: {
                                 all: number;
                                 review: number;
@@ -1988,8 +1988,10 @@ export interface paths {
                                 unrecognized: number;
                                 "missing-nfo": number;
                                 "missing-artwork": number;
+                                "multi-version": number;
                                 "missing-episodes": number;
                                 "missing-show-files": number;
+                                "incomplete-versions": number;
                             };
                             /** @description Items matching the filters, for paging. */
                             total: number;
@@ -2028,6 +2030,19 @@ export interface paths {
                                 cluster: number | null;
                                 /** @description Files a validation of this one settles: itself and the rest of its series in the release. */
                                 releaseFiles: number | null;
+                                versions: {
+                                    /** @description What `POST /api/libraries/{id}/execute` takes. */
+                                    id: string;
+                                    path: string;
+                                    /** @enum {string} */
+                                    state: "review" | "rename" | "unrecognized" | "incomplete" | "ok";
+                                    /** @description Read in the file name, e.g. `1080p`. */
+                                    resolution: string | null;
+                                    /** @description The NFO of this file is there: `<file>.nfo` for an episode, the shared `movie.nfo` for a movie (the same for every version). `null`: the profile writes none. */
+                                    nfo: boolean | null;
+                                    /** @description To validate or change the match. */
+                                    entryId: string | null;
+                                }[];
                             }[];
                         };
                     };
@@ -2178,6 +2193,30 @@ export interface paths {
                                 audio: string | null;
                                 size: number;
                             } | null;
+                            /** @description The files of the movie (this one alone for anything else), each read as `file` is. */
+                            versions: {
+                                /** @description What `POST /api/libraries/{id}/execute` takes. */
+                                id: string;
+                                path: string;
+                                /** @enum {string} */
+                                state: "review" | "rename" | "unrecognized" | "incomplete" | "ok";
+                                /** @description Read in the file name, e.g. `1080p`. */
+                                resolution: string | null;
+                                /** @description The NFO of this file is there: `<file>.nfo` for an episode, the shared `movie.nfo` for a movie (the same for every version). `null`: the profile writes none. */
+                                nfo: boolean | null;
+                                /** @description To validate or change the match. */
+                                entryId: string | null;
+                                file: {
+                                    video: string | null;
+                                    audio: string | null;
+                                    size: number;
+                                } | null;
+                            }[];
+                            /** @description The NFO the profile wants for this item, checked on the disk now: the shared `movie.nfo` of a movie, the `<file>.nfo` of an episode. Empty when it writes none. */
+                            nfoFiles: {
+                                path: string;
+                                present: boolean;
+                            }[];
                         };
                     };
                 };
@@ -2240,7 +2279,7 @@ export interface paths {
                     q?: string;
                     missing?: boolean;
                     incomplete?: boolean;
-                    state?: "review" | "rename" | "unrecognized" | "missing-nfo" | "missing-artwork";
+                    state?: "review" | "rename" | "unrecognized" | "missing-nfo" | "missing-artwork" | "multi-version" | "incomplete-versions";
                     limit?: number;
                     offset?: number;
                 };
@@ -2266,8 +2305,16 @@ export interface paths {
                                 year: number | null;
                                 /** @description Seasons the library holds files of. */
                                 seasons: number;
-                                /** @description Episodes the files hold (a range counts each). */
+                                /** @description Distinct episodes the files hold (a range counts each, a version none twice). */
                                 episodes: number;
+                                /** @description Each version of the files, from the largest picture down, with the episodes it holds out of those held (`total`). A file whose name says no size is a version only beside another of its episode (`resolution` `null`). */
+                                versions: {
+                                    resolution: string | null;
+                                    covered: number;
+                                    total: number;
+                                }[];
+                                /** @description Episodes with a version whose own NFO is missing. */
+                                episodesLackingNfo: number;
                                 /** @description Aired episodes no file holds, as last counted; `null` until it was. */
                                 missing: number | null;
                                 /** @description Episodes whose video is to rename. */
@@ -2388,6 +2435,16 @@ export interface paths {
                             seasons: {
                                 /** @description 0 is the specials. */
                                 season: number;
+                                /** @description Every version of the show against the episodes of this season: one absent from it holds none. */
+                                versions: {
+                                    resolution: string | null;
+                                    covered: number;
+                                    total: number;
+                                }[];
+                                nfo: {
+                                    expected: number;
+                                    present: number;
+                                };
                                 name: string | null;
                                 posterPath: string | null;
                                 /** @description The season poster is on the disk. `null`: the profile does not write it, or no scan or change has looked yet. */
@@ -2401,7 +2458,8 @@ export interface paths {
                                     airDate: string | null;
                                     /** @enum {string} */
                                     state: "present" | "missing" | "unaired" | "extra";
-                                    item: {
+                                    /** @description The files that hold it, one per version; none when it is missing. */
+                                    versions: {
                                         /** @description Stable for a path: `GET /api/libraries/{id}/items/{itemId}`. */
                                         id: string;
                                         path: string;
@@ -2434,7 +2492,11 @@ export interface paths {
                                         cluster: number | null;
                                         /** @description Files a validation of this one settles: itself and the rest of its series in the release. */
                                         releaseFiles: number | null;
-                                    } | null;
+                                    }[];
+                                    nfo: {
+                                        expected: number;
+                                        present: number;
+                                    };
                                 }[];
                             }[];
                         };

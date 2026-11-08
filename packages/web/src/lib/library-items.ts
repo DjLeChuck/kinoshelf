@@ -47,6 +47,21 @@ export interface LibraryItem {
   readonly releaseFiles: number | null;
 }
 
+/** One file of a movie, as a list names it. */
+export interface Version {
+  readonly id: string;
+  readonly path: string;
+  readonly state: ItemState;
+  readonly resolution: string | null;
+  readonly nfo: boolean | null;
+  readonly entryId: string | null;
+}
+
+/** An entry of a list: a movie is one, with a version per file; its state is the worst of them. */
+export interface ListedItem extends LibraryItem {
+  readonly versions: readonly Version[];
+}
+
 /** The page of one item: the work as TMDB knows it, and the file as `ffprobe` read it. */
 export interface ItemDetail extends LibraryItem {
   readonly overview: string | null;
@@ -100,7 +115,7 @@ export interface ItemsPage {
   readonly total: number;
   /** `total` as a validation settles it: a release's episodes count once. */
   readonly groups: number;
-  readonly items: readonly LibraryItem[];
+  readonly items: readonly ListedItem[];
 }
 
 export const PAGE_SIZE = 50;
@@ -148,7 +163,8 @@ export interface ShowEpisode {
   readonly title: string | null;
   readonly airDate: string | null;
   readonly state: EpisodeState;
-  readonly item: LibraryItem | null;
+  /** The files that hold it, one per version. */
+  readonly versions: readonly LibraryItem[];
 }
 
 export interface ShowSeason {
@@ -316,6 +332,25 @@ export const canNameVersion = (item: Pick<LibraryItem, 'kind' | 'entryId' | 'sta
   item.entryId !== null &&
   item.state !== 'review' &&
   item.state !== 'unrecognized';
+
+/**
+ * The files an entry asks to run in a mode: its versions in that state, each as an item of its own
+ * (an entry holds a movie, and "Rename" takes the versions that need it).
+ */
+export function versionsToRun(item: ListedItem, mode: 'rename' | 'refresh'): LibraryItem[] {
+  const state = mode === 'rename' ? 'rename' : 'incomplete';
+  return item.versions
+    .filter((version) => version.state === state)
+    .map((version) => ({
+      ...item,
+      id: version.id,
+      path: version.path,
+      state: version.state,
+      resolution: version.resolution,
+      nfo: version.nfo,
+      entryId: version.entryId,
+    }));
+}
 
 /** A selection split by what it asks: "Rename" takes the first, "Refresh" the second. */
 export function partition(items: readonly Pick<LibraryItem, 'id' | 'state'>[]): {

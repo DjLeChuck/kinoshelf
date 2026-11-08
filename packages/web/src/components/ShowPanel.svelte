@@ -26,7 +26,7 @@
     detail &&
       rescanPath(
         detail.seasons.flatMap(({ episodes }) =>
-          episodes.flatMap(({ item }) => (item ? [item.path] : [])),
+          episodes.flatMap(({ versions }) => versions.map((version) => version.path)),
         ),
         source,
       ),

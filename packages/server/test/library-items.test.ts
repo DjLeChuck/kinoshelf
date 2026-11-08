@@ -199,6 +199,7 @@ interface ItemsBody {
     poster: boolean | null;
     fanart: boolean | null;
     logo: boolean | null;
+    versions: { id: string; resolution: string | null; nfo: boolean | null }[];
   }[];
 }
 
@@ -219,8 +220,10 @@ describe('GET /api/libraries/:id/items', () => {
       unrecognized: 1,
       'missing-nfo': 2,
       'missing-artwork': 2,
+      'multi-version': 0,
       'missing-episodes': 0,
       'missing-show-files': 0,
+      'incomplete-versions': 0,
     });
     expect(body.total).toBe(3);
     // Alien, Dune, then the file nobody recognized, which has no title but its name.
@@ -270,8 +273,8 @@ describe('GET /api/libraries/:id/items', () => {
       throw new Error('the scan stored nothing');
     }
     store.replace('films', [
-      { ...base, path: join(root, 'ca.mkv'), title: 'Ça : Bienvenue à Derry' },
-      { ...base, path: join(root, 'casablanca.mkv'), title: 'Casablanca' },
+      { ...base, path: join(root, 'ca.mkv'), title: 'Ça : Bienvenue à Derry', tmdbId: 1 },
+      { ...base, path: join(root, 'casablanca.mkv'), title: 'Casablanca', tmdbId: 2 },
     ]);
     const titles = async (q: string) =>
       (await list(h, `?q=${encodeURIComponent(q)}`)).items.map((item) => item.title);
@@ -302,8 +305,10 @@ describe('GET /api/libraries/:id/items', () => {
     await put(join(root, 'Alien.1979.1080p.mkv'));
     await h.request('POST', '/api/libraries/films/scan');
     await h.app.jobs.idle();
+    // The same film as the well-placed one: one entry, two versions.
     const found = (await list(h, '?q=1080p')).items;
-    expect(found.map((i) => i.resolution)).toEqual(['1080p']);
+    expect(found).toHaveLength(1);
+    expect(found[0]?.versions.map((version) => version.resolution)).toEqual([null, '1080p']);
   });
 
   it('says a library was scanned even when it held nothing, and not before', async () => {

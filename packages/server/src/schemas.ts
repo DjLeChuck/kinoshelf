@@ -945,6 +945,65 @@ export const libraryItemSchema = {
   },
 } as const;
 
+/** One file of a work: a version of a movie or of an episode. */
+export const versionSchema = {
+  type: 'object',
+  required: ['id', 'path', 'state', 'resolution', 'nfo', 'entryId'],
+  properties: {
+    id: { type: 'string', description: 'What `POST /api/libraries/{id}/execute` takes.' },
+    path: { type: 'string' },
+    state: libraryItemSchema.properties.state,
+    resolution: libraryItemSchema.properties.resolution,
+    nfo: {
+      type: 'boolean',
+      nullable: true,
+      description:
+        'The NFO of this file is there: `<file>.nfo` for an episode, the shared `movie.nfo` for ' +
+        'a movie (the same for every version). `null`: the profile writes none.',
+    },
+    entryId: libraryItemSchema.properties.entryId,
+  },
+} as const;
+
+/**
+ * An entry of a list: a movie is one whatever its versions, the other files their own. The
+ * fields are the first file's, but for the state and the files, which are those of all versions
+ * (the worst state; a file missing from any one).
+ */
+export const workSchema = {
+  ...libraryItemSchema,
+  required: [...libraryItemSchema.required, 'versions'],
+  properties: {
+    ...libraryItemSchema.properties,
+    versions: { type: 'array', items: versionSchema },
+  },
+} as const;
+
+/** The NFO of some files: how many the profile wants and how many are there. */
+export const nfoTallySchema = {
+  type: 'object',
+  required: ['expected', 'present'],
+  properties: { expected: { type: 'integer' }, present: { type: 'integer' } },
+} as const;
+
+/** What a version holds of the episodes the versions hold together. */
+export const coverageSchema = {
+  type: 'array',
+  description:
+    'Each version of the files, from the largest picture down, with the episodes it holds out of ' +
+    'those held (`total`). A file whose name says no size is a version only beside another of ' +
+    'its episode (`resolution` `null`).',
+  items: {
+    type: 'object',
+    required: ['resolution', 'covered', 'total'],
+    properties: {
+      resolution: { type: 'string', nullable: true },
+      covered: { type: 'integer' },
+      total: { type: 'integer' },
+    },
+  },
+} as const;
+
 const presenceDescription = (file: string): string =>
   `${file} is on the disk. \`null\`: the profile does not write it, or no scan or change has looked yet.`;
 
@@ -956,10 +1015,12 @@ export const showSchema = {
     'year',
     'seasons',
     'episodes',
+    'versions',
     'missing',
     'rename',
     'refresh',
     'nfo',
+    'episodesLackingNfo',
     'poster',
     'fanart',
     'logo',
@@ -969,7 +1030,15 @@ export const showSchema = {
     title: { type: 'string', nullable: true },
     year: { type: 'integer', nullable: true },
     seasons: { type: 'integer', description: 'Seasons the library holds files of.' },
-    episodes: { type: 'integer', description: 'Episodes the files hold (a range counts each).' },
+    episodes: {
+      type: 'integer',
+      description: 'Distinct episodes the files hold (a range counts each, a version none twice).',
+    },
+    versions: coverageSchema,
+    episodesLackingNfo: {
+      type: 'integer',
+      description: 'Episodes with a version whose own NFO is missing.',
+    },
     missing: {
       type: 'integer',
       nullable: true,
@@ -998,9 +1067,15 @@ export const showSchema = {
 
 export const seasonSchema = {
   type: 'object',
-  required: ['season', 'name', 'posterPath', 'poster', 'missing', 'episodes'],
+  required: ['season', 'name', 'posterPath', 'poster', 'missing', 'versions', 'nfo', 'episodes'],
   properties: {
     season: { type: 'integer', description: '0 is the specials.' },
+    versions: {
+      ...coverageSchema,
+      description:
+        'Every version of the show against the episodes of this season: one absent from it holds none.',
+    },
+    nfo: nfoTallySchema,
     name: { type: 'string', nullable: true },
     posterPath: { type: 'string', nullable: true },
     poster: {
@@ -1013,14 +1088,19 @@ export const seasonSchema = {
       type: 'array',
       items: {
         type: 'object',
-        required: ['season', 'episode', 'title', 'airDate', 'state', 'item'],
+        required: ['season', 'episode', 'title', 'airDate', 'state', 'versions', 'nfo'],
         properties: {
           season: { type: 'integer' },
           episode: { type: 'integer' },
           title: { type: 'string', nullable: true },
           airDate: { type: 'string', nullable: true },
           state: { type: 'string', enum: ['present', 'missing', 'unaired', 'extra'] },
-          item: { ...libraryItemSchema, nullable: true },
+          versions: {
+            type: 'array',
+            description: 'The files that hold it, one per version; none when it is missing.',
+            items: libraryItemSchema,
+          },
+          nfo: nfoTallySchema,
         },
       },
     },

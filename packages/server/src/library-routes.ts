@@ -1,9 +1,12 @@
+import { existsSync } from 'node:fs';
 import { stat } from 'node:fs/promises';
-import { resolve } from 'node:path';
+import { basename, dirname, extname, resolve } from 'node:path';
 import {
   errnoCode,
   buildProfile,
+  expectedNfoPaths,
   libraryProfile,
+  nfoCoverage,
   KinoshelfError,
   libraryId,
   type MovieDetails,
@@ -22,7 +25,7 @@ import { isInside } from './notify/paths.js';
 import type { SeriesFilesStore } from './series-files.js';
 import { compare, missingOf, type Completeness, type EpisodeReport } from './completeness.js';
 import type { Execution, ExecutionStore } from './executions.js';
-import type { ProbeQueue } from './probe.js';
+import type { Probe, ProbeQueue } from './probe.js';
 import type { ExecutionReport } from './service.js';
 import type { EntryStore } from './entries.js';
 import type { EventBus } from './events.js';
@@ -32,7 +35,10 @@ import {
   itemId,
   profileWrites,
   resolutionOf,
+  SHOW_FILTERS,
   type ItemFilter,
+  type ItemState,
+  type ShowStateFilter,
   type LibraryItem,
   type LibraryItemStore,
 } from './library-items.js';
@@ -43,6 +49,8 @@ import {
   jobSchema,
   libraryCreateSchema,
   libraryItemSchema,
+  workSchema,
+  versionSchema,
   libraryPatchSchema,
   librarySchema,
   paging,
@@ -190,6 +198,54 @@ const presentItem = (item: LibraryItem, release?: ReleaseOf): unknown => ({
   cluster: release ? release.cluster : null,
   releaseFiles: release ? release.files : null,
 });
+
+/** The file of a work as a version: what a list needs to name it, run it, and tell its NFO. */
+const presentVersion = (item: LibraryItem): unknown => ({
+  id: itemId(item.path),
+  path: item.path,
+  state: item.state,
+  resolution: resolutionOf(item.path),
+  nfo: item.nfo,
+  entryId: item.entryId,
+});
+
+const fileSchema = {
+  type: 'object',
+  nullable: true,
+  required: ['video', 'audio', 'size'],
+  properties: {
+    video: { type: 'string', nullable: true },
+    audio: { type: 'string', nullable: true },
+    size: { type: 'integer' },
+  },
+} as const;
+
+const STATE_ORDER: readonly ItemState[] = ['review', 'unrecognized', 'rename', 'incomplete', 'ok'];
+
+/** `false` when any version lacks the file, `null` when none is told to write it. */
+const allThere = (values: readonly (boolean | null)[]): boolean | null =>
+  values.every((value) => value === null) ? null : !values.includes(false);
+
+/**
+ * An entry of a list: the first file with the state and files of all its versions. A movie held
+ * in two qualities is one entry, which needs renaming when any version does.
+ */
+const presentWork = (work: readonly LibraryItem[], release?: ReleaseOf): unknown => {
+  const [first] = work;
+  if (!first) {
+    return undefined;
+  }
+  const state = STATE_ORDER.find((candidate) => work.some((item) => item.state === candidate));
+  return {
+    ...(presentItem(first, release) as object),
+    state: state ?? first.state,
+    nfo: allThere(work.map((item) => item.nfo)),
+    poster: allThere(work.map((item) => item.poster)),
+    fanart: allThere(work.map((item) => item.fanart)),
+    logo: allThere(work.map((item) => item.logo)),
+    versions: work.map(presentVersion),
+  };
+};
 
 /** The year of an ISO date, if there is one. */
 const yearOf = (date: string | undefined): number | null =>
@@ -540,15 +596,25 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
               transfer: transferProgressSchema,
               counts: {
                 type: 'object',
-                required: ['all', ...ITEM_FILTERS, 'missing-episodes', 'missing-show-files'],
+                required: [
+                  'all',
+                  ...ITEM_FILTERS,
+                  'missing-episodes',
+                  'missing-show-files',
+                  'incomplete-versions',
+                ],
                 description:
-                  'A movie library counts files. A series library counts shows, except `review` and ' +
-                  '`unrecognized`: those files belong to no show, so they stay counted as files.',
+                  'A movie library counts movies, however many versions each has. A series library ' +
+                  'counts shows, except `review` and `unrecognized`: those files belong to no show, ' +
+                  'so they stay counted as files.',
                 properties: Object.fromEntries(
-                  ['all', ...ITEM_FILTERS, 'missing-episodes', 'missing-show-files'].map((key) => [
-                    key,
-                    { type: 'integer' },
-                  ]),
+                  [
+                    'all',
+                    ...ITEM_FILTERS,
+                    'missing-episodes',
+                    'missing-show-files',
+                    'incomplete-versions',
+                  ].map((key) => [key, { type: 'integer' }]),
                 ),
               },
               total: { type: 'integer', description: 'Items matching the filters, for paging.' },
@@ -558,7 +624,7 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
                   'The same items counted as a validation settles them: the episodes of one release ' +
                   'and series are one.',
               },
-              items: { type: 'array', items: libraryItemSchema },
+              items: { type: 'array', items: workSchema },
             },
           },
           401: errorSchema,
@@ -605,9 +671,10 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
         counts: items.counts(library.id, library.type === 'series'),
         total: page.total,
         groups: page.groups,
-        items: page.items.map((item) =>
-          presentItem(item, item.entryId === null ? undefined : releases.get(item.entryId)),
-        ),
+        items: page.works.map((work) => {
+          const entryId = work[0]?.entryId;
+          return presentWork(work, entryId == null ? undefined : releases.get(entryId));
+        }),
       };
     },
   );
@@ -638,6 +705,8 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
               'posterPath',
               'backdropPath',
               'file',
+              'versions',
+              'nfoFiles',
             ],
             properties: {
               ...libraryItemSchema.properties,
@@ -646,14 +715,26 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
               genres: { type: 'array', items: { type: 'string' } },
               posterPath: { type: 'string', nullable: true },
               backdropPath: { type: 'string', nullable: true },
-              file: {
-                type: 'object',
-                nullable: true,
-                required: ['video', 'audio', 'size'],
-                properties: {
-                  video: { type: 'string', nullable: true },
-                  audio: { type: 'string', nullable: true },
-                  size: { type: 'integer' },
+              file: fileSchema,
+              versions: {
+                type: 'array',
+                description:
+                  'The files of the movie (this one alone for anything else), each read as `file` is.',
+                items: {
+                  ...versionSchema,
+                  required: [...versionSchema.required, 'file'],
+                  properties: { ...versionSchema.properties, file: fileSchema },
+                },
+              },
+              nfoFiles: {
+                type: 'array',
+                description:
+                  'The NFO the profile wants for this item, checked on the disk now: the shared ' +
+                  '`movie.nfo` of a movie, the `<file>.nfo` of an episode. Empty when it writes none.',
+                items: {
+                  type: 'object',
+                  required: ['path', 'present'],
+                  properties: { path: { type: 'string' }, present: { type: 'boolean' } },
                 },
               },
             },
@@ -669,17 +750,36 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
       if (!item) {
         throw new ApiError(404, 'library.item-not-found');
       }
-      const [details, probe] = await Promise.all([
+      // The versions of a movie sit in its folder; an episode's NFO is its own, so it stands alone.
+      const movie = item.kind === 'movie' && item.tmdbId !== null;
+      const files = movie
+        ? items
+            .inFolder(library.id, dirname(item.path))
+            .filter((row) => row.kind === 'movie' && row.tmdbId === item.tmdbId)
+        : [item];
+      const [details, ...probed] = await Promise.all([
         item.kind !== null && item.tmdbId !== null
           ? ctx.details(item.kind, item.tmdbId).catch(() => null)
           : null,
-        probes.now(library.id, item.path),
+        ...files.map((row) => probes.now(library.id, row.path)),
       ]);
-      const file = (probe ?? undefined) && {
-        video: probe?.video ?? null,
-        audio: probe?.audio ?? null,
-        size: probe?.size ?? 0,
-      };
+      const readOf = (probe: Probe | null | undefined) =>
+        probe ? { video: probe.video, audio: probe.audio, size: probe.size } : null;
+      const profile = buildProfile(libraryProfile(library, store.config));
+      const folder = dirname(item.path);
+      const nfo =
+        item.kind === null
+          ? { expected: [], present: [] }
+          : nfoCoverage(
+              expectedNfoPaths(
+                profile,
+                item.kind,
+                // A movie directly in the library's folder has none of its own: nothing is shared.
+                folder === resolve(library.source) ? [] : [folder],
+                files.map((row) => basename(row.path, extname(row.path))),
+              ),
+              existsSync,
+            );
       return {
         ...(presentItem(item) as object),
         overview: details?.overview ?? null,
@@ -687,7 +787,12 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
         genres: details?.genres ?? [],
         posterPath: details?.posterPath ?? null,
         backdropPath: details?.backdropPath ?? null,
-        file: file ?? null,
+        file: readOf(probed[files.findIndex((row) => row.path === item.path)]),
+        versions: files.map((row, index) => ({
+          ...(presentVersion(row) as object),
+          file: readOf(probed[index]),
+        })),
+        nfoFiles: nfo.expected.map((path) => ({ path, present: nfo.present.includes(path) })),
       };
     },
   );
@@ -709,7 +814,7 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
       q?: string;
       missing?: boolean;
       incomplete?: boolean;
-      state?: ItemFilter;
+      state?: ShowStateFilter;
     };
   }>(
     '/api/libraries/:id/shows',
@@ -731,7 +836,7 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
             q: { type: 'string', minLength: 1 },
             missing: { type: 'boolean' },
             incomplete: { type: 'boolean' },
-            state: { type: 'string', enum: [...ITEM_FILTERS] },
+            state: { type: 'string', enum: [...SHOW_FILTERS] },
             ...paging,
           },
         },
@@ -770,7 +875,8 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
     title: episode.title,
     airDate: episode.airDate,
     state: episode.state,
-    item: episode.item && presentItem(episode.item),
+    versions: episode.versions.map((version) => presentItem(version)),
+    nfo: episode.nfo,
   });
 
   api.get<{ Params: { id: string; tmdbId: number } }>(
@@ -857,6 +963,8 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
           posterPath: season.posterPath ?? null,
           poster: ctx.seriesFiles.get(library.id, tmdbId, season.season)?.poster ?? null,
           missing: season.missing,
+          versions: season.versions,
+          nfo: season.nfo,
           episodes: season.episodes.map(presentEpisode),
         })),
       };

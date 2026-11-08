@@ -19,6 +19,14 @@ import { workKindOf as kindOf, type Entry, type EntryStore } from './entries.js'
 import { isInside } from './notify/paths.js';
 import type { Job, JobStore } from './jobs.js';
 import type { Probe } from './probe.js';
+import {
+  coverageOf,
+  distinctEpisodes,
+  hasIncompleteVersion,
+  hasSeveralVersions,
+  type VersionCoverage,
+  type VersionRow,
+} from './versions.js';
 
 /**
  * - `review`: a human must decide (ambiguous, or a conflict).
@@ -146,8 +154,11 @@ interface ShowFilter {
   missing?: boolean;
   /** Only the shows lacking a file of their own (`tvshow.nfo`, an image) or of a season. */
   incomplete?: boolean;
-  /** Only the shows holding at least one file in this state (or lacking this kind of file). */
-  state?: ItemFilter;
+  /**
+   * Only the shows holding at least one file in this state (or lacking this kind of file), or
+   * held in several versions (`multi-version`), or with a version short of an episode.
+   */
+  state?: ShowStateFilter;
 }
 
 export class LibraryItemStore {
@@ -363,11 +374,16 @@ export class LibraryItemStore {
       .map(toItem);
   }
 
-  /** One page of a library, by title (a file nobody recognized by its name), optionally filtered. */
+  /**
+   * One page of a library, by title (a file nobody recognized by its name), optionally filtered.
+   * A movie is one entry whatever its versions (`works`: all the files of each, `items`: the
+   * first), so paging and counting are in movies; the filters look at the files, and an entry
+   * the filter reaches through one of its versions still shows all of them.
+   */
   page(
     libraryId: string,
     options: { filter?: ItemFilter; query?: string; limit: number; offset: number },
-  ): { total: number; groups: number; items: LibraryItem[] } {
+  ): { total: number; groups: number; items: LibraryItem[]; works: LibraryItem[][] } {
     const where = [
       'library_id = ?',
       ...(options.filter ? [FILTER_SQL[options.filter]] : []),
@@ -384,18 +400,30 @@ export class LibraryItemStore {
     const total =
       this.database
         .prepare<unknown[], { total: number }>(
-          `SELECT COUNT(*) AS total FROM library_items WHERE ${where}`,
+          `SELECT COUNT(DISTINCT ${WORK_KEY}) AS total FROM library_items WHERE ${where}`,
         )
         .get(...params)?.total ?? 0;
     const groups = this.groupsWhere(where, params);
-    const items = this.database
-      .prepare<unknown[], Row>(
-        `SELECT ${COLUMNS} FROM library_items WHERE ${where}
-         ORDER BY sort_key(COALESCE(title, path)), path LIMIT ? OFFSET ?`,
+    const keys = this.database
+      .prepare<unknown[], { key: string }>(
+        `SELECT ${WORK_KEY} AS key FROM library_items WHERE ${where}
+         GROUP BY key ORDER BY MIN(sort_key(COALESCE(title, path))), MIN(path) LIMIT ? OFFSET ?`,
       )
       .all(...params, options.limit, options.offset)
-      .map(toItem);
-    return { total, groups, items };
+      .map(({ key }) => key);
+    const rows = this.database
+      .prepare<[string, string], Row & { key: string }>(
+        `SELECT ${COLUMNS}, ${WORK_KEY} AS key FROM library_items
+         WHERE library_id = ? AND ${WORK_KEY} IN (SELECT value FROM json_each(?))
+         ORDER BY sort_key(COALESCE(title, path)), path`,
+      )
+      .all(libraryId, JSON.stringify(keys));
+    const byKey = new Map<string, LibraryItem[]>();
+    for (const row of rows) {
+      byKey.set(row.key, [...(byKey.get(row.key) ?? []), toItem(row)]);
+    }
+    const works = keys.map((key) => byKey.get(key) ?? []).filter((work) => work.length > 0);
+    return { total, groups, items: works.flatMap((work) => work.slice(0, 1)), works };
   }
 
   /**
@@ -421,7 +449,7 @@ export class LibraryItemStore {
     const count = (extra: string): number =>
       this.database
         .prepare<[string], { total: number }>(
-          `SELECT COUNT(*) AS total FROM library_items WHERE library_id = ?${extra}`,
+          `SELECT COUNT(DISTINCT ${WORK_KEY}) AS total FROM library_items WHERE library_id = ?${extra}`,
         )
         .get(libraryId)?.total ?? 0;
     counts.all = count('');
@@ -443,6 +471,10 @@ export class LibraryItemStore {
     // Counted in shows, not files: it is the list of shows that this filter narrows.
     counts['missing-episodes'] = this.countShows(libraryId, { missing: true });
     counts['missing-show-files'] = this.countShows(libraryId, { incomplete: true });
+    // Versions are a matter of shows: a movie is never short of one.
+    counts['incomplete-versions'] = series
+      ? this.countShows(libraryId, { state: 'incomplete-versions' })
+      : 0;
     return counts;
   }
 
@@ -461,22 +493,76 @@ export class LibraryItemStore {
         `${grouped} ORDER BY sort_key(title), tmdb_id LIMIT ? OFFSET ?`,
       )
       .all(...params, options.limit, options.offset);
+    // The episodes and versions are read from the files, once for the page: a range holds several
+    // episodes and two versions hold one, which a count in SQL cannot tell.
+    const held = this.ofShows(
+      libraryId,
+      rows.map((row) => row.tmdb_id),
+    );
     return {
       total,
-      items: rows.map((row) => ({
-        tmdbId: row.tmdb_id,
-        title: row.title,
-        year: row.year,
-        seasons: row.seasons,
-        episodes: row.episodes,
-        missing: row.missing,
-        rename: row.rename,
-        refresh: row.refresh,
-        nfo: flag(row.nfo),
-        poster: flag(row.poster),
-        fanart: flag(row.fanart),
-        logo: flag(row.logo),
-      })),
+      items: rows.map((row) => {
+        const files = held.get(row.tmdb_id) ?? [];
+        const versionRows = files.map(versionRowOf);
+        return {
+          tmdbId: row.tmdb_id,
+          title: row.title,
+          year: row.year,
+          seasons: row.seasons,
+          episodes: distinctEpisodes(versionRows),
+          versions: coverageOf(versionRows),
+          missing: row.missing,
+          rename: row.rename,
+          refresh: row.refresh,
+          nfo: flag(row.nfo),
+          episodesLackingNfo: lackingNfo(files),
+          poster: flag(row.poster),
+          fanart: flag(row.fanart),
+          logo: flag(row.logo),
+        };
+      }),
+    };
+  }
+
+  /** The files of several shows of a series library, by show. */
+  private ofShows(libraryId: string, tmdbIds: readonly number[]): Map<number, LibraryItem[]> {
+    const rows = this.database
+      .prepare<[string, string], Row>(
+        `SELECT ${COLUMNS} FROM library_items
+         WHERE library_id = ? AND kind = 'series' AND tmdb_id IN (SELECT value FROM json_each(?))
+         ORDER BY path`,
+      )
+      .all(libraryId, JSON.stringify(tmdbIds))
+      .map(toItem);
+    const byShow = new Map<number, LibraryItem[]>();
+    for (const item of rows) {
+      if (item.tmdbId !== null) {
+        byShow.set(item.tmdbId, [...(byShow.get(item.tmdbId) ?? []), item]);
+      }
+    }
+    return byShow;
+  }
+
+  /**
+   * The shows held in several versions, and those where a version lacks an episode another one
+   * holds. Read from the files of the library: the sets are small, the rule is not SQL's.
+   */
+  private versionedShows(libraryId: string): { multi: number[]; incomplete: number[] } {
+    const rows = this.database
+      .prepare<[string], Row>(
+        `SELECT ${COLUMNS} FROM library_items
+         WHERE library_id = ? AND kind = 'series' AND tmdb_id IS NOT NULL`,
+      )
+      .all(libraryId)
+      .map(toItem);
+    const byShow = new Map<number, VersionRow[]>();
+    for (const item of rows) {
+      byShow.set(item.tmdbId ?? 0, [...(byShow.get(item.tmdbId ?? 0) ?? []), versionRowOf(item)]);
+    }
+    const shows = [...byShow];
+    return {
+      multi: shows.filter(([, files]) => hasSeveralVersions(files)).map(([id]) => id),
+      incomplete: shows.filter(([, files]) => hasIncompleteVersion(files)).map(([id]) => id),
     };
   }
 
@@ -488,8 +574,13 @@ export class LibraryItemStore {
     const where = [
       "i.library_id = ? AND i.kind = 'series' AND i.tmdb_id IS NOT NULL",
       ...(options.query ? ["sort_key(i.title) LIKE ? ESCAPE '\\'"] : []),
+      ...(options.state === 'multi-version' || options.state === 'incomplete-versions'
+        ? ['i.tmdb_id IN (SELECT value FROM json_each(?))']
+        : []),
       // The filter's columns are unqualified: inside the sub-query they are the inner table's.
-      ...(options.state
+      ...(options.state &&
+      options.state !== 'multi-version' &&
+      options.state !== 'incomplete-versions'
         ? [
             `EXISTS (SELECT 1 FROM library_items x WHERE x.library_id = i.library_id
                AND x.tmdb_id = i.tmdb_id AND x.kind = 'series' AND ${FILTER_SQL[options.state]})`,
@@ -507,12 +598,19 @@ export class LibraryItemStore {
     const params: (string | number)[] = [
       libraryId,
       ...(options.query ? [contains(sortKey(options.query))] : []),
+      ...(options.state === 'multi-version' || options.state === 'incomplete-versions'
+        ? [
+            JSON.stringify(
+              this.versionedShows(libraryId)[
+                options.state === 'multi-version' ? 'multi' : 'incomplete'
+              ],
+            ),
+          ]
+        : []),
     ];
     const grouped = `
       SELECT i.tmdb_id AS tmdb_id, MIN(i.title) AS title, MIN(i.year) AS year,
         COUNT(DISTINCT i.season) AS seasons,
-        SUM(CASE WHEN i.episode IS NULL THEN 1
-                 ELSE COALESCE(i.episode_end, i.episode) - i.episode + 1 END) AS episodes,
         MAX(c.missing) AS missing,
         SUM(i.state = 'rename') AS rename, SUM(i.state = 'incomplete') AS refresh,
         MAX(f.nfo) AS nfo, MAX(f.poster) AS poster, MAX(f.fanart) AS fanart,
@@ -561,6 +659,13 @@ export class LibraryItemStore {
   }
 }
 
+/**
+ * What makes one entry of a list: a movie the library identified is one whatever its versions,
+ * anything else (a file nobody identified, an episode) is its own file.
+ */
+const WORK_KEY =
+  "(CASE WHEN kind = 'movie' AND tmdb_id IS NOT NULL THEN 'm' || tmdb_id ELSE path END)";
+
 /** The views of a library: a state, or a kind of file that is missing. */
 export const ITEM_FILTERS = [
   'review',
@@ -568,8 +673,13 @@ export const ITEM_FILTERS = [
   'unrecognized',
   'missing-nfo',
   'missing-artwork',
+  'multi-version',
 ] as const;
 export type ItemFilter = (typeof ITEM_FILTERS)[number];
+
+/** What narrows the shows of a series library: those of the items, and the versions that lack. */
+export const SHOW_FILTERS = [...ITEM_FILTERS, 'incomplete-versions'] as const;
+export type ShowStateFilter = (typeof SHOW_FILTERS)[number];
 
 const FILTER_SQL: Record<ItemFilter, string> = {
   review: "state = 'review'",
@@ -577,10 +687,15 @@ const FILTER_SQL: Record<ItemFilter, string> = {
   unrecognized: "state = 'unrecognized'",
   'missing-nfo': 'nfo = 0',
   'missing-artwork': '(poster = 0 OR fanart = 0 OR logo = 0)',
+  // Another file holds the same work (and episode): a version of it.
+  'multi-version': `EXISTS (SELECT 1 FROM library_items other
+    WHERE other.library_id = library_items.library_id AND other.path <> library_items.path
+      AND other.kind = library_items.kind AND other.tmdb_id = library_items.tmdb_id
+      AND other.season IS library_items.season AND other.episode IS library_items.episode)`,
 };
 
 export type ItemCounts = Record<
-  ItemFilter | 'all' | 'missing-episodes' | 'missing-show-files',
+  ItemFilter | 'all' | 'missing-episodes' | 'missing-show-files' | 'incomplete-versions',
   number
 >;
 
@@ -590,7 +705,12 @@ export interface ShowRow {
   readonly title: string | null;
   readonly year: number | null;
   readonly seasons: number;
+  /** The distinct episodes the files hold: two versions of one are one. */
   readonly episodes: number;
+  /** Each version the files make of them, with how many episodes it holds of the total. */
+  readonly versions: readonly VersionCoverage[];
+  /** Episodes with a file lacking its NFO (any of their versions). */
+  readonly episodesLackingNfo: number;
   /** Aired episodes no file holds, as last counted; `null` until it was. */
   readonly missing: number | null;
   /** Episodes whose video is to rename, and those lacking an NFO or image: what "Rename" and "Refresh" take. */
@@ -608,7 +728,6 @@ interface ShowQuery {
   title: string | null;
   year: number | null;
   seasons: number;
-  episodes: number;
   missing: number | null;
   rename: number;
   refresh: number;
@@ -616,6 +735,23 @@ interface ShowQuery {
   poster: number | null;
   fanart: number | null;
   logo: number | null;
+}
+
+/** What a row says of its episodes and its version. */
+export const versionRowOf = (item: LibraryItem): VersionRow => ({
+  season: item.season,
+  episode: item.episode,
+  episodeEnd: item.episodeEnd,
+  resolution: resolutionOf(item.path),
+});
+
+/** The episodes with at least one file whose NFO is missing: a range is one file, so one episode. */
+export function lackingNfo(files: readonly LibraryItem[]): number {
+  return new Set(
+    files
+      .filter((item) => item.nfo === false && item.season !== null && item.episode !== null)
+      .map((item) => `${String(item.season)}:${String(item.episode)}`),
+  ).size;
 }
 
 /** Lower case without accents: what titles are ordered and searched by (`sort_key` in SQL). */
@@ -761,6 +897,49 @@ function beside(rows: readonly LibraryItem[], written: string): readonly Library
 
 const stemOf = (path: string): string => basename(path, extname(path));
 
+/**
+ * The versions of a movie share its folder's `movie.nfo` and images, and a plan writes each of
+ * them once, on the first version of its batch: the others find them taken and look complete.
+ * A file shared is there for all of them or for none, so one missing makes it missing everywhere.
+ */
+export function shareMovieFiles(items: readonly LibraryItem[]): LibraryItem[] {
+  const folders = new Map<string, LibraryItem[]>();
+  for (const item of items) {
+    if (item.kind === 'movie' && item.tmdbId !== null) {
+      const key = `${dirname(item.path)}|${String(item.tmdbId)}`;
+      folders.set(key, [...(folders.get(key) ?? []), item]);
+    }
+  }
+  const lacking = (versions: readonly LibraryItem[], name: Writable): boolean =>
+    versions.some((version) => version[name] === false);
+  return items.map((item) => {
+    const versions =
+      item.kind === 'movie' && item.tmdbId !== null
+        ? folders.get(`${dirname(item.path)}|${String(item.tmdbId)}`)
+        : undefined;
+    if (!versions || versions.length < 2) {
+      return item;
+    }
+    const share = (name: Writable): Presence =>
+      item[name] !== null && lacking(versions, name) ? false : item[name];
+    const next = {
+      nfo: share('nfo'),
+      poster: share('poster'),
+      fanart: share('fanart'),
+      logo: share('logo'),
+    };
+    // A file that now lacks something is to complete, unless the video itself is to rename.
+    return {
+      ...item,
+      ...next,
+      state:
+        item.state === 'ok' && Object.values(next).some((value) => value === false)
+          ? 'incomplete'
+          : item.state,
+    };
+  });
+}
+
 /** The typed library a file sits in, if any. */
 const typedLibraryHolding = (config: Config, path: string): LibraryConfig | undefined =>
   config.libraries?.find(
@@ -818,7 +997,9 @@ export class LibrarySnapshot {
     const now = new Date().toISOString();
     this.deps.store.replace(
       library.id,
-      this.deps.entries.mapList(job.id, (entry) => itemOf(entry, profile, library.id, now)),
+      shareMovieFiles(
+        this.deps.entries.mapList(job.id, (entry) => itemOf(entry, profile, library.id, now)),
+      ),
       job.path === library.source ? undefined : job.path,
     );
     this.deps.changed?.(library.id);

@@ -13,6 +13,7 @@
     PAGE_SIZE,
     SERIES_FILTERS,
     canRun,
+    versionsToRun,
     partition,
     lastScanFailed,
     libraryItems,
@@ -72,7 +73,9 @@
       return [];
     }
     const wanted = new Set(split[mode]);
-    return pickedItems.filter(({ id }) => wanted.has(id));
+    return pickedItems
+      .filter(({ id }) => wanted.has(id))
+      .flatMap((item) => versionsToRun(item, mode));
   });
 
   function pick(id: string, on: boolean): void {

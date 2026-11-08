@@ -117,7 +117,7 @@ describe('a size chosen by hand', () => {
 });
 
 describe('a library holding two versions of one movie', () => {
-  it('lists one row per file, both in order, each with its own size', async () => {
+  it('lists one movie with a version per file, and counts it once', async () => {
     const { h, root } = await organized(`${FOLDER} - 1080p.mkv`);
     await put(join(root, FOLDER, `${FOLDER} - 2160p.mkv`), 'dune in 4k');
     await h.request('POST', '/api/libraries/films/scan');
@@ -125,15 +125,22 @@ describe('a library holding two versions of one movie', () => {
 
     const page = (await h.request('GET', '/api/libraries/films/items')).json<{
       total: number;
-      items: { id: string; state: string; resolution: string | null; tmdbId: number }[];
+      counts: { all: number; 'multi-version': number };
+      items: {
+        tmdbId: number;
+        versions: { id: string; state: string; resolution: string | null }[];
+      }[];
     }>();
 
-    expect(page.total).toBe(2);
-    expect(page.items.map((item) => [item.state, item.resolution, item.tmdbId]).sort()).toEqual([
-      ['ok', '1080p', 438631],
-      ['ok', '2160p', 438631],
+    expect(page.total).toBe(1);
+    expect(page.counts).toMatchObject({ all: 1, 'multi-version': 1 });
+    expect(page.items.map((item) => item.tmdbId)).toEqual([438631]);
+    const versions = page.items[0]?.versions ?? [];
+    expect(versions.map(({ state, resolution }) => [state, resolution])).toEqual([
+      ['ok', '1080p'],
+      ['ok', '2160p'],
     ]);
-    expect(new Set(page.items.map(({ id }) => id)).size).toBe(2);
+    expect(new Set(versions.map(({ id }) => id)).size).toBe(2);
     expect(await readdir(join(root, FOLDER))).toHaveLength(2);
   });
 });
