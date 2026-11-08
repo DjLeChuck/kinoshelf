@@ -82,14 +82,14 @@ test('picks the source folder of a library on the server’s disk instead of typ
   // The picker opens where the typed value is.
   await section.getByRole('textbox', { name: 'Source folder' }).fill(library());
   await section.getByRole('button', { name: 'Browse…' }).click();
-  const browser = section.getByRole('group', { name: 'Folders of the server' });
+  const browser = page.getByRole('dialog', { name: 'Folders of the server' });
   await expect(browser.getByText(library(), { exact: true })).toBeVisible();
 
   await browser.getByRole('button', { name: 'Documentaries' }).click();
   await expect(browser.getByText(library('Documentaries'), { exact: true })).toBeVisible();
   await browser.getByRole('button', { name: 'Use this folder' }).click();
 
-  await expect(section.getByRole('group', { name: 'Folders of the server' })).toHaveCount(0);
+  await expect(page.getByRole('dialog', { name: 'Folders of the server' })).toHaveCount(0);
   await expect(section.getByRole('textbox', { name: 'Source folder' })).toHaveValue(
     library('Documentaries'),
   );
@@ -109,14 +109,13 @@ test('picks the Kinoshelf side of a path mapping, and types the server’s side'
   await section.getByLabel('Path in Kinoshelf').fill(library());
   await section.getByRole('button', { name: 'Browse…' }).click();
 
-  // Under the whole mapping, not squeezed into the column of the field it belongs to.
-  const panel = await section.getByRole('group', { name: 'Folders of the server' }).boundingBox();
-  const field = await section.getByLabel('Path in Kinoshelf').boundingBox();
-  const other = await section.getByLabel('Path on the server').boundingBox();
-  expect(panel?.width).toBeGreaterThan((field?.width ?? 0) + (other?.width ?? 0));
+  // A modal over the page, not squeezed into the column of the field it belongs to.
+  const browser = page.getByRole('dialog', { name: 'Folders of the server' });
+  await expect(browser).toBeVisible();
 
-  await section.getByRole('button', { name: 'Cartoons' }).click();
-  await section.getByRole('button', { name: 'Use this folder' }).click();
+  await browser.getByRole('button', { name: 'Cartoons' }).click();
+  await browser.getByRole('button', { name: 'Use this folder' }).click();
+  await expect(browser).toHaveCount(0);
 
   await expect(section.getByLabel('Path in Kinoshelf')).toHaveValue(library('Cartoons'));
   await expect(section.getByLabel('Path on the server')).toHaveValue('');

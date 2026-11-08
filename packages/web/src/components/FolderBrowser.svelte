@@ -20,6 +20,7 @@
     onclose: () => void;
   } = $props();
 
+  let dialog: HTMLDialogElement | undefined;
   let loading = $state(false);
   let listing = $state<FolderListing | undefined>(undefined);
   let failure = $state<unknown>(undefined);
@@ -39,9 +40,21 @@
   // Opened once per mounting: the parent mounts it when the user asks to browse.
   /* svelte-ignore state_referenced_locally */
   void go(start);
+
+  // A modal: the list is not squeezed under the field it fills. Escape and the backdrop's own
+  // close go through the dialog's `close` event, which tells the parent.
+  $effect(() => {
+    dialog?.showModal();
+  });
 </script>
 
-<div class="browser" id="{id}-browser" role="group" aria-label={t('web.path.browser')}>
+<dialog
+  bind:this={dialog}
+  class="card browser"
+  id="{id}-browser"
+  aria-label={t('web.path.browser')}
+  {onclose}
+>
   {#if failure}
     <p class="alert alert-danger" role="alert">{messageOf(t, failure)}</p>
   {:else if !listing}
@@ -102,21 +115,28 @@
         {t('web.path.use')}
       </button>
     {/if}
-    <button type="button" class="btn" onclick={onclose}>
+    <button type="button" class="btn" onclick={() => dialog?.close()}>
       {t('web.path.close')}
     </button>
   </div>
-</div>
+</dialog>
 
 <style>
   .browser {
+    /* A fixed size: one that follows the folder it shows jumps at every click. Only the list scrolls. */
+    width: min(560px, 94vw);
+    height: min(520px, 86vh);
+    color: var(--text);
+  }
+
+  .browser[open] {
     display: flex;
     flex-direction: column;
     gap: 8px;
-    margin-top: 8px;
-    padding: 12px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
+  }
+
+  .browser::backdrop {
+    background: rgb(0 0 0 / 50%);
   }
 
   .current {
@@ -128,7 +148,8 @@
   ul {
     display: flex;
     flex-direction: column;
-    max-height: 260px;
+    flex: 1 1 auto;
+    min-height: 0;
     margin: 0;
     padding: 0;
     overflow-y: auto;
@@ -156,6 +177,7 @@
   }
 
   .actions {
+    flex: none;
     display: flex;
     flex-wrap: wrap;
     gap: 8px;

@@ -8,7 +8,6 @@
     kind = 'folder',
     placeholder,
     open = $bindable(false),
-    inline = true,
   }: {
     id: string;
     value?: string;
@@ -17,8 +16,6 @@
     placeholder?: string;
     /** Whether the folder browser is shown. */
     open?: boolean;
-    /** `false` when the parent shows the browser itself, wider than this field. */
-    inline?: boolean;
   } = $props();
 </script>
 
@@ -37,7 +34,7 @@
   </button>
 </div>
 
-{#if open && inline}
+{#if open}
   <FolderBrowser
     {id}
     {kind}

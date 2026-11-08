@@ -1,7 +1,6 @@
 <script lang="ts">
   import { t } from '../lib/i18n.svelte.js';
   import type { PathMapping } from '../lib/settings.js';
-  import FolderBrowser from './FolderBrowser.svelte';
   import PathField from './PathField.svelte';
 
   let {
@@ -12,9 +11,6 @@
     /** Tells apart the mappings of two servers shown on the same page. */
     idPrefix: string;
   } = $props();
-
-  /** The row whose folder browser is open: shown under the whole row, not in its narrow column. */
-  let browsing = $state<number | undefined>(undefined);
 </script>
 
 <fieldset>
@@ -25,17 +21,7 @@
       <div class="row">
         <div class="field">
           <label for="{idPrefix}-map-from-{index}">{t('web.settings.server.from')}</label>
-          <PathField
-            id="{idPrefix}-map-from-{index}"
-            inline={false}
-            bind:value={row.from}
-            bind:open={
-              () => browsing === index,
-              (open) => {
-                browsing = open ? index : undefined;
-              }
-            }
-          />
+          <PathField id="{idPrefix}-map-from-{index}" bind:value={row.from} />
         </div>
         <div class="field">
           <label for="{idPrefix}-map-to-{index}">{t('web.settings.server.to')}</label>
@@ -46,23 +32,9 @@
           class="btn"
           onclick={() => {
             rows = rows.filter((_, i) => i !== index);
-            browsing = undefined;
           }}>{t('web.settings.remove')}</button
         >
       </div>
-      {#if browsing === index}
-        <FolderBrowser
-          id="{idPrefix}-map-from-{index}"
-          start={row.from}
-          onchoose={(path: string) => {
-            row.from = path;
-            browsing = undefined;
-          }}
-          onclose={() => {
-            browsing = undefined;
-          }}
-        />
-      {/if}
     </div>
   {/each}
   <button
