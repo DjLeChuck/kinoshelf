@@ -886,3 +886,89 @@ describe('createPlan: an organized library that lacks its NFO and images', () =>
     expect(await readdir(folder)).toEqual(['Dune (2021).mkv']);
   });
 });
+
+describe('createPlan: the NFO of a work kept in several versions', () => {
+  const nfoProfile = buildProfile({ naming: 'no-id', metadata: 'nfo' });
+  const planIn = (inputs: PlanInput[], lib: string, mode: 'copy' | 'move' = 'move') =>
+    createPlan(inputs, { profile: nfoProfile, destinationRoot: lib, mode, newId: counter() });
+  const season = (lib: string) => join(lib, 'The Bear (2022)', 'Season 01');
+  const episode = (version: string) => `The Bear (2022) - s01e01 - ${version}`;
+
+  const writes = (item: PlanItem | undefined) =>
+    (item?.operations ?? []).flatMap((op) => (op.type === 'write-file' ? [op] : []));
+
+  // The show's own files (`tvshow.nfo`) are left out: only what belongs to one video counts here.
+  const episodeNfo = (item: PlanItem | undefined) =>
+    writes(item)
+      .map((op) => op.destination)
+      .filter((path) => path.includes('Season 01'));
+
+  it('writes only the NFO a version in place lacks, with the content of its sibling', async () => {
+    const lib = await makeDir();
+    const files = await Promise.all(
+      ['1080p', '2160p'].map((version) => put(join(season(lib), `${episode(version)}.mkv`))),
+    );
+    // Both versions are in place and neither has an NFO: each is given its own, the same text.
+    const inputs = files.map((file) => ({
+      parsed: parsedEpisode(file, 1, [1]),
+      candidate: bear,
+      details: bearDetails,
+    }));
+
+    const both = (await planIn(inputs, lib)).items;
+    const [first, second] = both.map((item) => writes(item).filter((op) => !op.shared));
+    expect(first?.map((op) => op.destination)).toEqual([
+      join(season(lib), `${episode('1080p')}.nfo`),
+    ]);
+    expect(second?.map((op) => op.destination)).toEqual([
+      join(season(lib), `${episode('2160p')}.nfo`),
+    ]);
+    expect(first?.[0]?.content).toBe(second?.[0]?.content);
+
+    // One already has its NFO: only the other is planned.
+    await put(join(season(lib), `${episode('1080p')}.nfo`));
+    const rest = (await planIn(inputs, lib)).items;
+    expect(episodeNfo(rest[0])).toEqual([]);
+    expect(episodeNfo(rest[1])).toEqual([join(season(lib), `${episode('2160p')}.nfo`)]);
+  });
+
+  it('gives a version that arrives its own NFO, as its sibling has', async () => {
+    const [src, lib] = [await makeDir(), await makeDir()];
+    const present = await put(join(season(lib), `${episode('1080p')}.mkv`));
+    await put(join(season(lib), `${episode('1080p')}.nfo`));
+    const arriving = await put(join(src, 'The.Bear.S01E01.2160p.WEB.mkv'));
+
+    const { items } = await planIn(
+      [present, arriving].map((file) => ({
+        // The parser reads the size from the name of the file that arrives.
+        parsed: {
+          ...parsedEpisode(file, 1, [1]),
+          ...(file === arriving && { screenSize: '2160p' }),
+        },
+        candidate: bear,
+        details: bearDetails,
+      })),
+      lib,
+      'copy',
+    );
+
+    expect(episodeNfo(items[0])).toEqual([]);
+    expect(episodeNfo(items[1])).toEqual([join(season(lib), `${episode('2160p')}.nfo`)]);
+  });
+
+  it('plans one movie.nfo for two versions of a movie', async () => {
+    const lib = await makeDir();
+    const folder = join(lib, 'Dune (2021)');
+    const files = await Promise.all(
+      ['1080p', '2160p'].map((version) => put(join(folder, `Dune (2021) - ${version}.mkv`))),
+    );
+
+    const { items } = await planIn(
+      files.map((file) => ({ parsed: parsedMovie(file), candidate: dune, details: duneDetails })),
+      lib,
+    );
+
+    const destinations = items.flatMap((item) => writes(item).map((op) => op.destination));
+    expect(destinations).toEqual([join(folder, 'movie.nfo')]);
+  });
+});
