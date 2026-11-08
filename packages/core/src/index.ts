@@ -36,8 +36,11 @@ export { titleSimilarity } from './matching/title-similarity.js';
 export {
   companionKindOf,
   companionsWritten,
+  expectedNfoPaths,
+  nfoCoverage,
   showFileNames,
   type CompanionKind,
+  type NfoCoverage,
 } from './planning/companions.js';
 export {
   createPlan,

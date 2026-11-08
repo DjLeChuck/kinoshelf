@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { companionKindOf, companionsWritten, buildProfile, showFileNames } from '../src/index.js';
+import {
+  companionKindOf,
+  companionsWritten,
+  buildProfile,
+  expectedNfoPaths,
+  nfoCoverage,
+  showFileNames,
+} from '../src/index.js';
 import { parseProfile } from '../src/profiles/loader.js';
 import type { Profile } from '../src/types/profile.js';
 
@@ -115,5 +122,55 @@ describe('showFileNames', () => {
     const names = showFileNames(buildProfile({ naming: 'with-id', metadata: 'none' }));
     expect(names).toMatchObject({ nfo: undefined, poster: undefined, fanart: undefined });
     expect(names.seasonPoster(1)).toBeUndefined();
+  });
+});
+
+describe('expectedNfoPaths', () => {
+  const nfo = buildProfile({ naming: 'with-id', metadata: 'nfo' });
+  const folder = ['Dune (2021) {tmdb-438631}'];
+
+  it('wants one movie.nfo for a movie, whatever its versions', () => {
+    const stems = ['Dune (2021) {tmdb-438631} - 1080p', 'Dune (2021) {tmdb-438631} - 2160p'];
+    expect(expectedNfoPaths(nfo, 'movie', folder, stems)).toEqual([
+      'Dune (2021) {tmdb-438631}/movie.nfo',
+    ]);
+    expect(expectedNfoPaths(nfo, 'movie', folder, stems.slice(0, 1))).toEqual([
+      'Dune (2021) {tmdb-438631}/movie.nfo',
+    ]);
+  });
+
+  it('wants one NFO per video for an episode', () => {
+    const season = ['Foundation (2021)', 'Season 01'];
+    expect(
+      expectedNfoPaths(nfo, 'series', season, [
+        'Foundation (2021) - s01e01 - 1080p',
+        'Foundation (2021) - s01e01 - 2160p',
+      ]),
+    ).toEqual([
+      'Foundation (2021)/Season 01/Foundation (2021) - s01e01 - 1080p.nfo',
+      'Foundation (2021)/Season 01/Foundation (2021) - s01e01 - 2160p.nfo',
+    ]);
+  });
+
+  it('wants nothing when the profile writes no NFO', () => {
+    const none = buildProfile({ naming: 'with-id', metadata: 'none' });
+    expect(expectedNfoPaths(none, 'movie', folder, ['Dune'])).toEqual([]);
+    expect(expectedNfoPaths(none, 'series', ['Show', 'Season 01'], ['Show - s01e01'])).toEqual([]);
+  });
+
+  it('wants no movie.nfo for a movie written flat, which every movie would share', () => {
+    expect(expectedNfoPaths(nfo, 'movie', [], ['Dune (2021)'])).toEqual([]);
+  });
+});
+
+describe('nfoCoverage', () => {
+  it('counts the expected NFO that exist', () => {
+    const expected = ['a/one.nfo', 'a/two.nfo'];
+    expect(nfoCoverage(expected, (path) => path === 'a/one.nfo')).toEqual({
+      expected,
+      present: ['a/one.nfo'],
+    });
+    expect(nfoCoverage(expected, () => true).present).toEqual(expected);
+    expect(nfoCoverage([], () => true)).toEqual({ expected: [], present: [] });
   });
 });

@@ -191,6 +191,45 @@ export function companionsWritten(
 }
 
 /**
+ * The NFO paths a profile wants for one work: `movie.nfo` is one file whatever the number of
+ * versions, a `{file}.nfo` is one per video. The rule is the template's, so a movie is told from an
+ * episode by nothing but its name: each video's stem goes through it and the duplicates collapse.
+ * Empty when the profile writes no NFO, or a flat movie would get a name every movie shares.
+ * `folders` is the one holding the videos (the movie's, or the season's), relative to the root.
+ */
+export function expectedNfoPaths(
+  profile: Profile,
+  kind: 'movie' | 'series',
+  folders: readonly string[],
+  stems: readonly string[],
+): string[] {
+  const { nfo } = profile;
+  if (nfo === null || !companionsWritten(profile, kind, folders.length === 0).nfo) {
+    return [];
+  }
+  const template = kind === 'movie' ? nfo.movie : nfo.episode;
+  return [
+    ...new Set(
+      stems.map((stem) => join(...folders, companionName(profile, template, { file: stem }))),
+    ),
+  ];
+}
+
+/** What a library page reads of the NFO of a work: how many are wanted and how many exist. */
+export interface NfoCoverage {
+  readonly expected: readonly string[];
+  readonly present: readonly string[];
+}
+
+/** `expected` against the disk, through `exists` so the caller owns the file system. */
+export function nfoCoverage(
+  expected: readonly string[],
+  exists: (path: string) => boolean,
+): NfoCoverage {
+  return { expected, present: expected.filter(exists) };
+}
+
+/**
  * What a file beside a video is, by its name and the profile's templates; `undefined` for a file
  * the profile does not write per video (the show's `tvshow.nfo`, a season poster, anything else).
  */
