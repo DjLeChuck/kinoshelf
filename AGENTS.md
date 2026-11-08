@@ -65,8 +65,10 @@ bundled YAML, and the core contains no player-specific rule. `naming: with-id | 
 `with-id`) puts `{tmdb-<id>}` in the movie and series folders and the movie file, or nothing;
 `metadata: none | nfo` (default `none`) writes Kodi NFO and artwork, or nothing. They are set globally
 (`naming`/`metadata` in `config.yaml`), per typed library, or by `--naming`/`--metadata` in the CLI.
-Plex's default agents are `with-id`/`none` (or `no-id`/`none`), Plex's NFO agent `no-id`/`nfo`,
-Jellyfin `with-id`/`nfo`. `loadProfileFile`/`parseProfile` (custom YAML) stay in the core but are wired
+No combination belongs to a player: Plex's default agents read `none` (`with-id` or `no-id`), and
+Plex's NFO agent and Jellyfin both read `nfo`, whose `<uniqueid type="tmdb">` makes the id in the name
+a safety net (Jellyfin's documentation recommends it, but `no-id`/`nfo` was checked on a Jellyfin
+instance and works, as on Plex's NFO agent). `loadProfileFile`/`parseProfile` (custom YAML) stay in the core but are wired
 nowhere: a custom profile file is to be discussed again.
 
 - **One layout for both players**, as close as they allow, so one library reads the same under either and

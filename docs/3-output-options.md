@@ -15,14 +15,18 @@ globally (`naming` and `metadata` in `config.yaml`, or the Settings) or per libr
   NFO already says which work it is (`<uniqueid type="tmdb">`), so the id in the name is optional.
 - `nfo` writes `movie.nfo`, `tvshow.nfo` and one `<file>.nfo` per episode. No season NFO: Plex
   ignores it. A series NFO also carries the TheTVDB id (`<uniqueid type="tvdb">`) when TMDB knows it.
-- Which combination for which player:
+- Which combination to pick:
 
-| Player                               | `naming`  | `metadata` |
-| ------------------------------------ | --------- | ---------- |
-| Plex, default agents                 | `with-id` | `none`     |
-| Plex, default agents, no id in names | `no-id`   | `none`     |
-| Plex, "Plex NFO" agent (PMS 1.43.1+) | `no-id`   | `nfo`      |
-| Jellyfin                             | `with-id` | `nfo`      |
+| You want                                          | `naming`  | `metadata` |
+| ------------------------------------------------- | --------- | ---------- |
+| Plex with its default agents                      | `with-id` | `none`     |
+| Plex with its default agents, cleaner names       | `no-id`   | `none`     |
+| Plex's "Plex NFO" agent (PMS 1.43.1+) or Jellyfin | `with-id` | `nfo`      |
+| The same, cleaner names (the NFO carries the id)  | `no-id`   | `nfo`      |
+
+With `nfo`, the id in the name is a safety net, for when a player ignores or has not yet read the
+NFO. Jellyfin's documentation recommends it, but neither Jellyfin nor Plex's NFO agent needs it: both
+identify the work from the NFO alone.
 
 ## One layout for every player
 
