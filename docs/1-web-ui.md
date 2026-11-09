@@ -49,7 +49,8 @@ A library lists what its last scan saw, with:
 - a page per item: summary and `ffprobe` details.
 
 A series library reads as a tree (show, season, episode), with its missing episodes and, at each
-level, the NFO and images the profile writes (`tvshow.nfo`, poster, fanart, season poster).
+level, the NFO and images the profile writes (`tvshow.nfo`, poster, fanart, season poster and, for an
+episode, its thumbnail).
 
 **Rename** and **Refresh** open a preview first. Nothing is written until you confirm, and an
 existing file is never overwritten.
@@ -71,8 +72,12 @@ The lists show a movie or an episode **once**, whatever its number of files:
   stays in **Missing episodes**: it lowers no version. A file whose name gives no size counts as a
   version only when it shares an episode with another file;
 - the poster, fanart and logo are shared. A movie has one `movie.nfo`; each version of an episode
-  has its own `<file>.nfo`, which no player reads from a shared one. **Generate the missing NFO**
-  writes the ones that are absent and never touches one that exists.
+  has its own `<file>.nfo`, which no player reads from a shared one, and its own copy of the
+  episode's thumbnail (`<file>.jpg`), since a player picks the one of the version being played.
+  The page of an episode nonetheless shows **one** NFO status and **one** thumbnail for the episode:
+  **Generate the missing NFO** writes the absent ones for every version and never touches one that
+  exists, and **Change the image** picks one thumbnail (from TMDB or an address) and writes it for
+  all the versions at once, as a batch you can undo.
 
 ## Arrivals
 

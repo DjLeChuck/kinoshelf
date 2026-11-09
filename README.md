@@ -34,7 +34,8 @@ equivalent of tinyMediaManager and a companion to Radarr/Sonarr: it never downlo
 - **Safe by design**: a preview before every write, the renaming never overwrites an existing file,
   every batch can be undone, no silent copy when a hardlink fails.
 - **Artwork you choose**: from the page of a movie or a show, change the poster, the background or
-  the logo with one of the images TMDB offers or an address of your own (JPEG or PNG). The image
+  the logo, and from the page of an episode its thumbnail (one picture, written for every version of
+  the episode), with one of the images TMDB offers or an address of your own (JPEG or PNG). The image
   replaced is kept, and the change is a batch you can undo. Addresses on your local network are
   refused unless the processing settings allow them.
 - **Naming and metadata options** that suit Plex and Jellyfin alike: the TMDB id in the names or not,

@@ -254,7 +254,8 @@ A library lists a **movie or an episode once**, its files being its `versions` (
 only a movie identified with a tmdb id is grouped (`WORK_KEY`, in SQL, so paging counts movies); any
 other file is an entry of its own, and the episodes of a series are grouped by `.../shows`.
 
-- **The entry's state is the worst of its versions** (`state`, `nfo`, `poster`, `fanart`, `logo`).
+- **The entry's state is the worst of its versions** (`state`, `nfo`, `poster`, `fanart`, `logo`, and an
+  episode's `thumb`).
   `shareMovieFiles` makes `movie.nfo` and the images "there for every version or none" when the
   snapshot is written, since the planner puts them on the first version only. `total`, paging and
   `counts` count works, `missing-nfo` included; `multi-version` and `incomplete-versions` are filters
@@ -273,8 +274,11 @@ other file is an entry of its own, and the episodes of a series are grouped by `
 - **The web** (`LibraryView`, `ShowsTree`, `ItemPanel`, `EpisodePanel`, `CoverageMatrix`,
   `VersionBadges`, `SlotBadges`): one line per work with a chevron when there are several versions;
   `GET .../shows/:tmdbId` gives one episode per number with its `versions[]` and the `nfo`
-  `{expected, present}` tallies; "Generate the missing NFO" is Refresh. `canNameVersion` is false
-  when the name already ends with ` - <size>`.
+  `{expected, present}` tallies. The episode panel reads the episode, not each file: one **Thumbnail**
+  block and one **NFO** block (a status for all the versions, and one "Generate the missing NFO" that is
+  Refresh for every version lacking it), then a card per version that keeps only what is the file's own
+  (name, codecs, "Rename", "Add the version to the name"). `canNameVersion` is false when the name
+  already ends with ` - <size>`.
 
 ## NFO and artwork
 
@@ -318,7 +322,7 @@ format follows the Kodi wiki's templates, saved pages are not in the repository)
   CLI says "already named as the profile wants"). Files already there are left out of the plan
   rather than reported as skipped, so a rescan of a complete library stays `in-place`.
 - **The web shows them.** A library item says which of its NFO and images are there (`nfo`, `poster`,
-  `fanart`, `logo` of `GET /api/libraries/{id}/items`), a dry run counts them apart from the ones already
+  `fanart`, `logo`, and `thumb` for an episode, of `GET /api/libraries/{id}/items`), a dry run counts them apart from the ones already
   there, and a batch's detail lists what was written
   (`extras` of `GET /api/batches/{id}`, from the journal's `generated` and `downloaded` entries).
 - **What the NFO carries beyond the basics.** `<tag>` (TMDB keywords, English, not translated) and
@@ -343,8 +347,8 @@ format follows the Kodi wiki's templates, saved pages are not in the repository)
 - A series NFO also carries `<uniqueid type="tvdb">` (`SeriesDetails.tvdbId`, TMDB's `external_ids`), after
   `tmdb` (the default) and `imdb`; a test holds the tmdb id of the name, `<id>` and the default `<uniqueid>`.
 - **Changing an image** (`artwork.ts`, `artwork-routes.ts`; the web's `ImagesDialog`): the poster,
-  background and logo of a movie, or of a show (its own folder, never a season's; seasons and episode
-  thumbnails are out). `GET .../images` lists what TMDB offers (`MetadataProvider.listImages`, in
+  background and logo of a movie, or of a show (its own folder, never a season's; a season's poster is
+  out), and the thumbnail of an episode (below). `GET .../images` lists what TMDB offers (`MetadataProvider.listImages`, in
   TMDB's order: the web sorts) and what is in place; `POST` writes one to three images as one batch.
   The page of a work says whether to offer it (`images` of `GET .../items/:itemId` and `.../shows/:tmdbId`:
   which files are on the disk, `null` when the profile writes none or the work has no folder of its own;
@@ -450,7 +454,7 @@ refuses to delete a library an arrival folder points at (`library.in-use`). Ther
 - **Events** (`GET /api/events`): the payload-less topics are `jobs` (queued, started, ended), `progress`, `arrivals` (files waiting for a human changed:
   match, ignore, cancel, a job ending), `history`, `settings`, and `ready` on each (re)connection.
 - **Snapshot** (`library_items`, server migration 012, `library-items.ts`): what a typed library holds,
-  as its last scan saw it (title, year, tmdb id, state, presence of NFO / poster / fanart / logo, entry id).
+  as its last scan saw it (title, year, tmdb id, state, presence of NFO / poster / fanart / logo / thumb, entry id).
   Replaced as a whole when a scan of the whole source ends, then patched by path after a transfer,
   an undo or a manual match, so listing never reads the disk nor asks TMDB. `GET
 /api/libraries/:id/items` lists it (filters `review|rename|unrecognized|missing-nfo|missing-artwork`,
