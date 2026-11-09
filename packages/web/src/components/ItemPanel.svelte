@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { baseName, rescanPath } from '../lib/paths.js';
+  import { baseName, dirName, rescanPath } from '../lib/paths.js';
   import { imageUrl, workImageUrl, type ImageKind } from '../lib/arrivals.js';
   import { api } from '../lib/api.js';
   import { messageOf } from '../lib/errors.js';
@@ -173,7 +173,7 @@
 
     <dl class="facts">
       <dt class="muted">{t('web.library.path')}</dt>
-      <dd class="mono">{detail.path}</dd>
+      <dd class="mono">{compared ? dirName(detail.path) : detail.path}</dd>
       {#if detail.file}
         <dt class="muted">{t('web.library.file')}</dt>
         <dd>
@@ -183,10 +183,15 @@
         </dd>
       {/if}
       <dt class="muted">{t('web.library.metadata')}</dt>
-      <dd>
-        NFO: {present(detail.nfo)} · {t('web.library.col.poster')}: {present(detail.poster)} ·
-        {t('web.library.col.fanart')}: {present(detail.fanart)} ·
-        {t('web.library.col.logo')}: {present(detail.logo)}
+      <dd class="marks">
+        {#each [['NFO', detail.nfo], [t('web.library.col.poster'), detail.poster], [t('web.library.col.fanart'), detail.fanart], [t('web.library.col.logo'), detail.logo]] as const as [label, value] (label)}
+          <span>
+            <span aria-hidden="true" class:ok={value === true} class:ko={value === false}
+              >{value === null ? '—' : value ? '✓' : '✗'}</span
+            >
+            {label}<span class="sr-only">: {present(value)}</span>
+          </span>
+        {/each}
       </dd>
     </dl>
     {#if compared}
@@ -375,6 +380,20 @@
     grid-template-columns: max-content 1fr;
     gap: 6px 16px;
     margin: 0;
+  }
+
+  .marks {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 14px;
+  }
+
+  .ok {
+    color: var(--ok);
+  }
+
+  .ko {
+    color: var(--danger);
   }
 
   .facts dd {

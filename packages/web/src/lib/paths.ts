@@ -2,6 +2,12 @@
 export const baseName = (path: string): string => path.split('/').filter(Boolean).pop() ?? path;
 
 /** Strictly inside `source`: a folder is not inside itself. */
+/** The folder holding a file: what several versions of a movie share. */
+export const dirName = (path: string): string => {
+  const cut = path.lastIndexOf('/');
+  return cut > 0 ? path.slice(0, cut) : path;
+};
+
 export function isBelow(path: string, source: string): boolean {
   const root = trimEnd(source);
   return path.startsWith(root === '/' ? '/' : `${root}/`) && path !== root;
