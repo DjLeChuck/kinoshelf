@@ -345,7 +345,6 @@ export const en = {
   'web.library.version.subtitles': 'Subs {languages}',
   'web.library.versions.summary': '{count, plural, one {# version} other {# versions}} · {size}',
   'web.library.compare.title': 'Compare the versions',
-  'web.library.compare.resolution': 'Resolution',
   'web.library.compare.hdr': 'HDR',
   'web.library.compare.sdr': 'SDR',
   'web.library.compare.video': 'Video',

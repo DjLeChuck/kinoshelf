@@ -5,7 +5,7 @@
   import { messageOf } from '../lib/errors.js';
   import { formatBytes } from '@kinoshelf/i18n';
   import { locale, t } from '../lib/i18n.svelte.js';
-  import { languageName, totalSize, versionLabel, HDR_LABEL } from '../lib/versions.js';
+  import { languageName, totalSize, HDR_LABEL } from '../lib/versions.js';
   import type { Arrival } from '../lib/arrivals.js';
   import {
     canNameVersion,
@@ -73,7 +73,7 @@
   const size = $derived(totalSize((detail?.versions ?? []).map(({ file }) => file)));
   const compared = $derived(item.kind === 'movie' && (detail?.versions.length ?? 0) > 1);
   type Row = {
-    readonly key: 'resolution' | 'hdr' | 'video' | 'audio' | 'subtitles' | 'size' | 'file';
+    readonly key: 'hdr' | 'video' | 'audio' | 'subtitles' | 'size' | 'file';
     readonly read: (version: Version) => string;
   };
   const dash = '—';
@@ -81,7 +81,6 @@
     codes.map((code) => languageName(code, locale.value)).join(', ');
   // What the "Compare" table lists, one line per fact; a file not read yet has none to give.
   const compareRows: readonly Row[] = [
-    { key: 'resolution', read: (v) => v.resolution ?? dash },
     {
       key: 'hdr',
       read: (v) =>
@@ -157,7 +156,7 @@
               <tr>
                 <th scope="col"></th>
                 {#each detail.versions as version (version.id)}
-                  <th scope="col">{versionLabel(version.resolution, version.file).join(' ')}</th>
+                  <th scope="col">{version.resolution ?? t('web.library.version.unknown')}</th>
                 {/each}
               </tr>
             </thead>
@@ -273,7 +272,8 @@
   }
 
   .compare {
-    width: 100%;
+    width: max-content;
+    min-width: 100%;
     border-collapse: collapse;
     font-size: 12.5px;
   }
@@ -287,9 +287,29 @@
     overflow-wrap: anywhere;
   }
 
+  /* The versions make the columns, so there is no telling how many: the table scrolls sideways
+     rather than crushing the names of the lines, which stay in view. */
+  .compare td,
+  .compare th[scope='col'] {
+    min-width: 64px;
+    /* A long file name wraps in its column instead of widening every one of them. */
+    max-width: 92px;
+  }
+
+  /* The corner is held with the names of the lines, so a header scrolling sideways never slides over it. */
+  .compare th[scope='row'],
+  .compare thead th:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    box-shadow: 1px 0 0 var(--border);
+    background: var(--surface);
+  }
+
   .compare th[scope='row'] {
     color: var(--muted);
     font-weight: 600;
+    white-space: nowrap;
   }
 
   .nfos {

@@ -359,7 +359,6 @@ export const fr: Record<keyof typeof en, string> = {
   'web.library.version.subtitles': 'ST {languages}',
   'web.library.versions.summary': '{count, plural, one {# version} other {# versions}} · {size}',
   'web.library.compare.title': 'Comparer les versions',
-  'web.library.compare.resolution': 'Résolution',
   'web.library.compare.hdr': 'HDR',
   'web.library.compare.sdr': 'SDR',
   'web.library.compare.video': 'Vidéo',
