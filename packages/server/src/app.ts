@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import swagger from '@fastify/swagger';
 import { KinoshelfError, SqliteJournal, type ImageFetcher, type Journal } from '@kinoshelf/core';
@@ -17,6 +18,7 @@ import { JobStore } from './jobs.js';
 import { createTranslator, detectLocale } from '@kinoshelf/i18n';
 import type { DeliveryOptions } from './notify/delivery.js';
 import { Notifier } from './notify/notifier.js';
+import { revertedFolders } from './notify/paths.js';
 import { createProcessor, type ProcessorDeps } from './processor.js';
 import { forgetReplacedScans, purgeHistory, type LibraryScan } from './purge.js';
 import { registerFsRoutes } from './fs-routes.js';
@@ -489,6 +491,9 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
       touched: (libraryId) => {
         seriesFiles.touch(libraryId);
       },
+      changed: (folder) => {
+        notifier.foldersChanged([folder]);
+      },
       ...(options.fetchImage && { fetchImage: options.fetchImage }),
     });
     registerLibraryRoutes(api, {
@@ -537,6 +542,11 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
       service,
       runner,
       notifier,
+      reverted: (report) => {
+        notifier.foldersChanged(
+          revertedFolders(report.entries, configStore.config.libraries ?? [], existsSync),
+        );
+      },
       events,
       history,
       progress,

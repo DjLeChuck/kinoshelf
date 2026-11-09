@@ -97,6 +97,8 @@ export interface ArtworkDeps {
   readonly fetchImage?: ImageFetcher;
   /** The folder of a show's files changed: looked at again. */
   readonly touched: (libraryId: string) => void;
+  /** The work's folder changed: the media servers are asked to look at it again. */
+  readonly changed?: (folder: { path: string; kind: 'movie' | 'series' }) => void;
 }
 
 const listed = (image: ImageCandidate): ListedImage => ({
@@ -402,6 +404,7 @@ export class Artwork {
       this.deps.snapshot.written(destination);
     }
     this.deps.touched(target.library.id);
+    this.deps.changed?.({ path: target.folder, kind: target.kind });
     return batchId;
   }
 }

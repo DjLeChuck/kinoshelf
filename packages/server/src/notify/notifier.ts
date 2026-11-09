@@ -196,6 +196,14 @@ export class Notifier {
     }
   }
 
+  /**
+   * Folders whose files changed without a transfer (an image replaced): the media servers keep
+   * what they drew until they look again.
+   */
+  foldersChanged(targets: readonly RefreshTarget[]): void {
+    this.refreshFolders(targets);
+  }
+
   private refreshMediaServers(outcome: ExecutionOutcome): void {
     // The folder each file landed in (a movie's, a season's): enough for a media server to find it.
     const targets = new Map<string, RefreshTarget>();
@@ -205,7 +213,10 @@ export class Notifier {
         targets.set(path, { path, kind: file.kind });
       }
     }
-    const list = [...targets.values()];
+    this.refreshFolders([...targets.values()]);
+  }
+
+  private refreshFolders(list: readonly RefreshTarget[]): void {
     if (this.plex) {
       const plex = this.plex;
       this.track(async () => {

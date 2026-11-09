@@ -41,7 +41,12 @@ const json = (received: Received): Payload => JSON.parse(received.body) as Paylo
 
 /** An app that reports to a webhook, Plex and Jellyfin, which are three real local servers. */
 async function reporting(
-  options: { locale?: 'en' | 'fr'; webhooks?: NotifyConfig['webhooks'] } = {},
+  options: {
+    locale?: 'en' | 'fr';
+    webhooks?: NotifyConfig['webhooks'];
+    /** The library writes images, and the provider’s are served from memory. */
+    artwork?: boolean;
+  } = {},
 ) {
   const hook = await fakeServer();
   const plex = await fakeServer((r) =>
@@ -52,8 +57,17 @@ async function reporting(
   );
   const destination = await makeDir();
   const h = await harness({
+    ...(options.artwork && {
+      configDir: await makeDir(),
+      fetchImage: () => Promise.resolve(Uint8Array.from([0xff, 0xd8, 0xff, 0xe0, 1, 2])),
+    }),
     config: {
-      libraries: [...librariesAt(destination)],
+      libraries: options.artwork
+        ? [
+            { id: 'films', name: 'Films', source: destination, type: 'movie', metadata: 'nfo' },
+            { id: 'shows', name: 'Shows', source: destination, type: 'series' },
+          ]
+        : [...librariesAt(destination)],
       ...(options.locale && { locale: options.locale }),
       apiKey: { plex: 'PTOKEN', jellyfin: 'JKEY' },
       notify: {
@@ -174,6 +188,50 @@ describe('after a transfer', () => {
 
     expect(plexRefreshes(plex)).toEqual([]);
     expect(jellyfin.received.filter((r) => r.method === 'POST')).toEqual([]);
+  });
+});
+
+describe('when an image is replaced', () => {
+  it('asks the media servers to look at the work’s folder again', async () => {
+    const { h, plex, jellyfin, destination } = await reporting({ artwork: true });
+    const folder = movieFolder(destination, 'Dune (2021) {tmdb-438631}');
+    await put(join(folder, 'Dune (2021) {tmdb-438631}.mkv'), 'dune');
+    await h.request('POST', '/api/libraries/films/scan');
+    await h.app.jobs.idle();
+    const items = (await h.request('GET', '/api/libraries/films/items')).json<{
+      items: { id: string }[];
+    }>();
+    const id = items.items[0]?.id ?? '';
+
+    const response = await h.request('POST', `/api/libraries/films/items/${id}/images`, {
+      images: [{ type: 'poster', source: 'tmdb', value: '/poster.jpg' }],
+    });
+    expect(response.statusCode).toBe(200);
+    await h.app.notifier.idle();
+
+    const refresh = `/library/sections/3/refresh?path=${encodeURIComponent('/mnt/videos/movies/Dune (2021) {tmdb-438631}')}`;
+    expect(plexRefreshes(plex).map((r) => r.url)).toEqual([refresh]);
+    expect(jellyfin.received.filter((r) => r.method === 'POST')).toHaveLength(1);
+
+    // Undoing the batch takes the image back: the media servers look again, too.
+    const { batchId } = response.json<{ batchId: string }>();
+    expect((await h.request('POST', `/api/batches/${batchId}/undo`)).statusCode).toBe(200);
+    await h.app.notifier.idle();
+    expect(plexRefreshes(plex).map((r) => r.url)).toEqual([refresh, refresh]);
+    expect(jellyfin.received.filter((r) => r.method === 'POST')).toHaveLength(2);
+  });
+
+  it('leaves them alone when the undo removed the folder', async () => {
+    const { h, plex } = await reporting({ artwork: true });
+    await apply(h, { 'Dune.2021.mkv': 'dune' });
+    const before = plexRefreshes(plex).length;
+    const batch = (await h.request('GET', '/api/history')).json<{ items: { id: string }[] }>()
+      .items[0];
+    expect(batch).toBeDefined();
+    await h.request('POST', `/api/batches/${batch?.id ?? ''}/undo`);
+    await h.app.notifier.idle();
+    // The NFO the transfer wrote went with its folder: nothing is left to look at.
+    expect(plexRefreshes(plex)).toHaveLength(before);
   });
 });
 

@@ -1,3 +1,4 @@
+import { dirname } from 'node:path';
 export interface PathMapping {
   /** A folder as Kinoshelf sees it… */
   readonly from: string;
@@ -39,4 +40,37 @@ export function redactUrl(url: string): string {
   } catch {
     return '[invalid url]';
   }
+}
+
+/** What `POST /api/batches/{id}/undo` says of one file, as far as the media servers are concerned. */
+export interface RevertedFile {
+  readonly destination: string;
+  readonly status: string;
+  readonly mode: string;
+}
+
+/**
+ * The folders whose NFO or images an undo took back (or took away), for the media servers to look
+ * at again, each with the kind of library holding it. A folder that is gone is left out: there is
+ * nothing in it to look at. Videos are not named here, so a move back is not reported.
+ */
+export function revertedFolders(
+  files: readonly RevertedFile[],
+  libraries: readonly { source: string; type?: 'movie' | 'series' | undefined }[],
+  exists: (path: string) => boolean,
+): { path: string; kind: 'movie' | 'series' }[] {
+  const folders = new Map<string, { path: string; kind: 'movie' | 'series' }>();
+  for (const file of files) {
+    if (file.status !== 'undone' || !['generated', 'downloaded', 'replaced'].includes(file.mode)) {
+      continue;
+    }
+    const path = dirname(file.destination);
+    const kind = libraries.find(
+      (library) => library.type !== undefined && isInside(path, library.source),
+    )?.type;
+    if (kind !== undefined && exists(path)) {
+      folders.set(path, { path, kind });
+    }
+  }
+  return [...folders.values()];
 }

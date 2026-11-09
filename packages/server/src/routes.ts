@@ -31,7 +31,7 @@ import {
   MAX_SELECTION,
 } from './schemas.js';
 import type { Notifier } from './notify/notifier.js';
-import type { Service } from './service.js';
+import type { Service, UndoReport } from './service.js';
 
 export interface RouteContext {
   readonly jobs: JobStore;
@@ -40,6 +40,8 @@ export interface RouteContext {
   readonly service: Service;
   readonly runner: JobRunner;
   readonly notifier: Notifier;
+  /** An undo took files back: the media servers are asked to look at the folders again. */
+  readonly reverted?: (report: UndoReport) => void;
   readonly events: EventBus;
   readonly history: History;
   readonly progress: ProgressTracker;
@@ -568,6 +570,7 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
       const report = await service.undo(request.params.id, { dryRun });
       if (!dryRun) {
         events.emit('history', 'arrivals');
+        ctx.reverted?.(report);
       }
       return report;
     },
