@@ -1,7 +1,7 @@
 import { join } from 'node:path';
 import type { MetadataProvider, SeriesDetails } from '@kinoshelf/core';
 import { afterEach, describe, expect, it } from 'vitest';
-import { ITEM_FILTERS, itemId } from '../src/library-items.js';
+import { ITEM_FILTERS, itemId, SHOW_FILTERS } from '../src/library-items.js';
 import { cleanup, fakeProvider, harness, makeDir, put } from './harness.js';
 
 afterEach(cleanup);
@@ -252,6 +252,28 @@ const FULL: [number, string][] = [
   [1, '2160p'],
   [2, '2160p'],
 ];
+
+describe('the counts of a series library', () => {
+  it('equal the total of the tree each filter opens, shows counted once', async () => {
+    const h = await show(FULL, 'nfo');
+    const tally = await counts(h);
+    // Those files belong to no show: their tabs list a "To validate" node, not shows.
+    const looseFiles = ['review', 'unrecognized'];
+    for (const filter of SHOW_FILTERS.filter((name) => !looseFiles.includes(name))) {
+      expect(tally[filter], filter).toBe((await shows(h, `?state=${filter}`)).total);
+    }
+    expect(tally['missing-episodes'], 'missing-episodes').toBe(
+      (await shows(h, '?missing=true')).total,
+    );
+    expect(tally['missing-show-files'], 'missing-show-files').toBe(
+      (await shows(h, '?incomplete=true')).total,
+    );
+    expect(tally.all).toBe((await shows(h)).total);
+    // One show, whatever its five files: the mix must exercise the versions filters.
+    expect(tally.all).toBe(1);
+    expect(tally['incomplete-versions']).toBe(1);
+  });
+});
 
 describe('a series held in two versions', () => {
   it('counts the distinct episodes, and each version against them', async () => {
