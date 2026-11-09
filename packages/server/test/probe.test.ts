@@ -409,6 +409,38 @@ describe('the probe queue', () => {
     expect(store.unprobed('films')).toEqual([]);
   });
 
+  it('reads again, after a scan, a file replaced under the same name, and only that one', async () => {
+    const dir = await makeDir();
+    const a = await put(join(dir, 'a.mkv'), 'one');
+    const b = await put(join(dir, 'b.mkv'), 'two');
+    const { stat } = await import('node:fs/promises');
+    const { store, probes, calls } = queue({
+      prober: async (path) => {
+        const info = await stat(path);
+        return {
+          ...EMPTY,
+          video: `read ${String(calls.length)}`,
+          size: info.size,
+          mtime: Math.floor(info.mtimeMs),
+        };
+      },
+    });
+    store.replace('films', [item(a), item(b)]);
+    probes.refresh('films');
+    await probes.idle();
+    expect(calls).toHaveLength(2);
+
+    await put(a, 'another, longer release');
+    store.replace('films', [item(a), item(b)]);
+    // The scan alone cannot tell: the old specs are still there.
+    expect(store.probeOf('films', a)?.video).toBe('read 1');
+    probes.refresh('films');
+    await probes.idle();
+    expect(calls.filter((path) => path === a)).toHaveLength(2);
+    expect(calls.filter((path) => path === b)).toHaveLength(1);
+    expect(store.probeOf('films', a)?.size).toBe('another, longer release'.length);
+  });
+
   it('stores the HDR and the languages, and gives them back', async () => {
     const dir = await makeDir();
     const a = await put(join(dir, 'a.mkv'));

@@ -255,7 +255,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
           forgetReplacedScans(options.database, typedScans());
         }
         if (job.libraryId) {
-          probes.enqueue(job.libraryId);
+          probes.refresh(job.libraryId);
         }
       },
       idle: () => {

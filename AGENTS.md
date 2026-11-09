@@ -472,9 +472,10 @@ refuses to delete a library an arrival folder points at (`library.in-use`). Ther
   The core reports through `discoverVideos`' `onFound`, and `analyze`'s `onParsing` (names read: synchronous, so
   slices of 20 ms leave the event loop free), `onMatching`, `onProgress` (with the file) and `onPlanning`.
 - **ffprobe** (`probe.ts`): `ProbeQueue` fills `video`, `audio`, `size`, `mtime`, `probed_at` in the
-  background, only while the job queue is idle (the runner's `idle` hook wakes it), and rebuilds from
-  the rows without `probed_at` at startup. A page's probe jumps the line; a row whose size and date
-  are unchanged is not read again. Missing `ffprobe` remembers nothing; a file it cannot read is
+  background, only while the job queue is idle (the runner's `idle` hook wakes it), and goes
+  over every row of a library (`refresh`) when a scan ends and at startup. A scan keeps the probe of a
+  path it sees again, so the size and date are what tell a file replaced under the same name: a row
+  whose size and date are unchanged costs one `stat` and is not read again. A page's probe jumps the line. Missing `ffprobe` remembers nothing; a file it cannot read is
   remembered empty. Tests use a fake prober; `probe.test.ts` reads a real clip made with `ffmpeg`.
 - The folders the watcher uses are `watchedFolders(config)` (the libraries with `watch: true`),
   read-only in the settings; `watch` keeps only `settleSeconds`, `pollSeconds` and `apply`.

@@ -295,6 +295,16 @@ export class LibraryItemStore {
       );
   }
 
+  /** Every row's path: what a refresh checks against the disk. */
+  paths(libraryId: string): string[] {
+    return this.database
+      .prepare<[string], { path: string }>(
+        'SELECT path FROM library_items WHERE library_id = ? ORDER BY path',
+      )
+      .all(libraryId)
+      .map(({ path }) => path);
+  }
+
   /** The rows nobody looked at yet. */
   unprobed(libraryId: string): string[] {
     return this.database

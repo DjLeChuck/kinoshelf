@@ -247,10 +247,24 @@ export class ProbeQueue {
     this.kick();
   }
 
-  /** After a restart: every library's rows without a probe. */
+  /**
+   * Queues every row of a library, probed or not. A scan keeps the probe of a path it sees again,
+   * and cannot tell that another file now lies there: `probe` compares the size and the date (one
+   * `stat`, no `ffprobe` for a file that did not change), so a replaced file is read again here
+   * instead of showing the specs of the old one until its page is opened.
+   */
+  refresh(libraryId: string): void {
+    for (const path of this.deps.store.paths(libraryId)) {
+      const wanted = { libraryId, path };
+      this.waiting.set(ProbeQueue.key(wanted), wanted);
+    }
+    this.kick();
+  }
+
+  /** After a restart: every library's rows, files may have changed while Kinoshelf was down. */
   rebuild(libraryIds: readonly string[]): void {
     libraryIds.forEach((id) => {
-      this.enqueue(id);
+      this.refresh(id);
     });
   }
 
