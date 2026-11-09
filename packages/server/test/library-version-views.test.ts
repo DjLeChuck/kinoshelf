@@ -1,7 +1,7 @@
 import { join } from 'node:path';
 import type { MetadataProvider, SeriesDetails } from '@kinoshelf/core';
 import { afterEach, describe, expect, it } from 'vitest';
-import { itemId } from '../src/library-items.js';
+import { ITEM_FILTERS, itemId } from '../src/library-items.js';
 import { cleanup, fakeProvider, harness, makeDir, put } from './harness.js';
 
 afterEach(cleanup);
@@ -103,6 +103,47 @@ describe('a movie held in two versions', () => {
     await h.request('POST', '/api/libraries/films/scan');
     await h.app.jobs.idle();
     expect((await list(h)).counts).toMatchObject({ all: 1, 'multi-version': 0 });
+  });
+});
+
+/** A filter's badge and the list it opens must agree, whatever the mix of works and files. */
+describe('the counts of a movie library', () => {
+  it('equal the total of the list each filter opens', async () => {
+    const root = await makeDir();
+    await put(join(root, 'Dune (2021)', 'Dune (2021) - 1080p.mkv'), 'hd');
+    await put(join(root, 'Dune (2021)', 'Dune (2021) - 2160p.mkv'), 'the bigger one');
+    await put(join(root, 'Alien (1979)', 'Alien (1979).mkv'));
+    await put(join(root, 'Alien (1979)', 'movie.nfo'), '<movie/>');
+    await put(join(root, 'zzz-unknown.mkv'));
+    const h = await harness({
+      config: {
+        libraries: [
+          {
+            id: 'films',
+            name: 'Films',
+            source: root,
+            type: 'movie',
+            naming: 'no-id',
+            metadata: 'nfo',
+          },
+        ],
+      },
+    });
+    await h.request('POST', '/api/libraries/films/scan');
+    await h.app.jobs.idle();
+
+    const page = async (query: string) =>
+      (await h.request('GET', `/api/libraries/films/items${query}`)).json<{
+        total: number;
+        counts: Record<string, number>;
+      }>();
+    const { counts } = await page('');
+    for (const filter of ITEM_FILTERS) {
+      expect(counts[filter], filter).toBe((await page(`?state=${filter}`)).total);
+    }
+    expect(counts.all).toBe((await page('')).total);
+    // The mix must exercise something, or the loop proves nothing.
+    expect(counts['multi-version']).toBe(1);
   });
 });
 
