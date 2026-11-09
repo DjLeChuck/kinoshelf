@@ -194,6 +194,22 @@ nowhere: a custom profile file is to be discussed again.
 - **The first key** (`POST /api/setup/api-key`, while none exists) is only made through a local host
   name (IP, `localhost`, no dot, `.local`/`.lan`/`.home.arpa`/`.internal`, or
   `KINOSHELF_ALLOWED_HOSTS`): a DNS-rebinding page sends its own domain as both `Origin` and `Host`.
+- **Signing in to Plex** (`notify/plex-auth.ts`, `plex-session.ts`, `plex-routes.ts`; `PlexSignIn.svelte`): Plex's
+  JWT flow, the one its documentation recommends for a new app. The device holds an Ed25519 key
+  (`newIdentity`: client id, JWK, RFC 7638 `kid`), registers its public half with
+  `POST clients.plex.tv/api/v2/pins`, and the user approves on `app.plex.tv/auth` while the page polls
+  `GET /api/plex/auth/:id` (the server signs `deviceJWT`; a PIN other than the one made is refused,
+  404 `plex.pin-unknown`). The token lasts 7 days and **renews on demand** (nonce, signed JWT,
+  `POST /api/v2/auth/token`): Plex accepts a renewal after expiry, so there is no timer, and
+  `PlexSession.token()` renews a day early, one at a time. A media server's 401 renews once and retries
+  (`PlexClient.request`). plex.tv refusing the key (401/403/422/498) sets `plexAccount: 'expired'`
+  (409 `plex.not-signed-in`); plex.tv being down keeps a still-valid token and is a 502
+  `plex.unreachable`. **The state is in the database** (`plex_auth`, migration 026: a secret that
+  changes every week does not belong in a file people edit), shared with `kinoshelf-server notify`
+  which reads it too. `signOut` keeps the device identity (a new sign-in is not one more authorized
+  device). A token typed in `apiKey.plex` wins in `Notifier.configure`; signing in removes it.
+  `KINOSHELF_PLEX_TV_URL` points at a fake plex.tv (the e2e stack, and `test/fake-plex-tv.ts` which
+  checks the signatures against the registered key).
 - **Exposed server** (`app.ts`, `attempts.ts`, `web.ts`): everything under `/api` needs the key, the
   OpenAPI document included (only `/health` and the sign-in/setup routes are public). An address with
   ten wrong keys in ten minutes gets a 429 (`auth.too-many-attempts`), a right key included: that is

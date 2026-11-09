@@ -27,7 +27,7 @@ A variable wins over what the Settings could save.
 ```yaml
 apiKey:
   tmdb: ...
-  plex: ... # Plex admin token, to refresh a library after a transfer
+  plex: ... # Plex token typed by hand, optional: Settings can sign in with Plex instead
   jellyfin: ...
 
 locale: fr # language of the tool itself: fr or en
@@ -91,6 +91,11 @@ webhook is told what happened.
 - **Events** (`on`): `transferred`, `failed`, `needs-review`.
 - **Other paths**: if the media server sees the folders under other paths, map them with
   `paths: [{ from, to }]` on `plex` or `jellyfin`.
+- **Plex sign-in**: in Settings, “Sign in with Plex” opens plex.tv to approve Kinoshelf, then lists the
+  servers of your account to pick one. Nothing to copy: the access lasts a week and renews itself, even
+  if the server was stopped for longer. It is kept in the database, not in `config.yaml`, and a token
+  typed in `apiKey.plex` wins over it. Sign-in replaces a typed token; sign out to type one again.
+  The device stays in your Plex account’s authorized devices, where you can revoke it.
 
 Check the setup without starting the server:
 
