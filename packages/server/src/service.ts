@@ -18,6 +18,7 @@ import {
   type Classification,
   type ErrorInfo,
   type ImageSize,
+  type ImageCandidate,
   type WorkImages,
   type Journal,
   type LibraryConfig,
@@ -223,6 +224,16 @@ export class Service {
   async listImages(kind: 'movie' | 'series', tmdbId: number): Promise<WorkImages | null> {
     const provider = this.provider();
     return provider.listImages({ provider: provider.name, id: tmdbId }, kind);
+  }
+
+  /** The stills the provider offers for an episode, in the configured language. */
+  async listStills(
+    tmdbId: number,
+    season: number,
+    episode: number,
+  ): Promise<readonly ImageCandidate[] | null> {
+    const provider = this.provider();
+    return provider.listEpisodeImages({ provider: provider.name, id: tmdbId }, season, episode);
   }
 
   imageUrl(path: string, size: ImageSize): string {

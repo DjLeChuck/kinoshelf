@@ -80,7 +80,7 @@ const bodySchema = {
 } as const;
 
 /**
- * The images of a movie and of a show: what the provider offers and what is in place, the file
+ * The images of a movie, of a show and of an episode: what the provider offers and what is in place, the file
  * in place, and the replacement. Both kinds of page share one handler; only how the work is found
  * differs.
  */
@@ -115,6 +115,23 @@ export function registerArtworkRoutes(api: FastifyInstance, ctx: ArtworkRoutesCo
       params: { id: { type: 'string' }, tmdbId: { type: 'integer' } },
       find: (params: Record<string, string>): ImageTarget =>
         artwork.show(library(params.id ?? ''), Number(params.tmdbId)),
+    },
+    {
+      path: '/api/libraries/:id/shows/:tmdbId/seasons/:season/episodes/:episode/images',
+      what: 'an episode (its `thumb`, written for every version)',
+      params: {
+        id: { type: 'string' },
+        tmdbId: { type: 'integer' },
+        season: { type: 'integer' },
+        episode: { type: 'integer' },
+      },
+      find: (params: Record<string, string>): ImageTarget =>
+        artwork.episode(
+          library(params.id ?? ''),
+          Number(params.tmdbId),
+          Number(params.season),
+          Number(params.episode),
+        ),
     },
   ];
 

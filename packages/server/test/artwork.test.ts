@@ -108,6 +108,7 @@ describe('the images of a movie', () => {
       poster: 'poster.jpg',
       fanart: 'background.jpg',
       logo: 'logo.png',
+      thumb: null,
     });
     expect(listing.current.poster).toMatchObject({ width: 1000, height: 1500, path: null });
     expect(listing.current.logo).toBeNull();
@@ -453,5 +454,129 @@ describe('the images of a show', () => {
     const response = await h.request('GET', '/api/libraries/shows/shows/1/images');
     expect(response.statusCode).toBe(409);
     expect(codeOf(response)).toBe('image.not-editable');
+  });
+});
+
+describe('the image of an episode', () => {
+  const SHOW = { provider: 'tmdb', id: 95396 };
+  const provider = {
+    ...fakeProvider,
+    searchSeries: () =>
+      Promise.resolve([
+        {
+          kind: 'series' as const,
+          id: SHOW,
+          title: 'Severance',
+          originalTitle: 'Severance',
+          alternativeTitles: [],
+          year: 2022,
+        },
+      ]),
+    getSeriesDetails: () =>
+      Promise.resolve({
+        kind: 'series' as const,
+        id: SHOW,
+        title: 'Severance',
+        originalTitle: 'Severance',
+        genres: [],
+        tags: [],
+        studios: [],
+        countries: [],
+        cast: [],
+        firstAirDate: '2022-02-18',
+        seasons: [{ season: 1 }],
+      }),
+    getSeason: (_id: unknown, season: number) =>
+      Promise.resolve({
+        season,
+        episodes: [{ season, episode: 1, title: 'Good News', airDate: '2022-02-18' }],
+      }),
+  };
+
+  async function twoVersions() {
+    const root = await makeDir();
+    const season = join(root, 'Severance (2022)', 'Season 01');
+    const hd = await put(join(season, 'Severance (2022) - s01e01 - 1080p.mkv'), 'hd');
+    await put(join(season, 'Severance (2022) - s01e01 - 2160p.mkv'), 'uhd');
+    // Only the 1080p copy has its image: the other gets it with the change.
+    await writeFile(join(season, 'Severance (2022) - s01e01 - 1080p.jpg'), OLD_POSTER);
+    const h = await harness({
+      configDir: await makeDir(),
+      fetchImage,
+      createProvider: () => provider,
+      config: {
+        libraries: [
+          {
+            id: 'shows',
+            name: 'Shows',
+            source: root,
+            type: 'series',
+            naming: 'no-id',
+            metadata: 'nfo',
+          },
+        ],
+      },
+    });
+    await h.request('POST', '/api/libraries/shows/scan');
+    await h.app.jobs.idle();
+    return {
+      h,
+      season,
+      hd,
+      base: `/api/libraries/shows/shows/${String(SHOW.id)}/seasons/1/episodes/1/images`,
+    };
+  }
+
+  it('offers the stills of the episode, and nothing for the images of a work', async () => {
+    const { h, base } = await twoVersions();
+    const listing = (await h.request('GET', base)).json<Listing>();
+
+    expect(listing.files).toEqual({
+      poster: null,
+      fanart: null,
+      logo: null,
+      thumb: 'Severance (2022) - s01e01 - 1080p.jpg',
+    });
+    expect(listing.current.thumb).toMatchObject({ width: 1000, height: 1500 });
+    expect(listing.candidates.thumb?.map(({ path }) => path)).toEqual([
+      '/still.jpg',
+      '/still2.jpg',
+    ]);
+    expect(listing.candidates.poster).toEqual([]);
+  });
+
+  it('writes the one picture chosen for every version, and undoes it as one batch', async () => {
+    const { h, season, base } = await twoVersions();
+    const hdImage = join(season, 'Severance (2022) - s01e01 - 1080p.jpg');
+    const uhdImage = join(season, 'Severance (2022) - s01e01 - 2160p.jpg');
+
+    const response = await apply(h, base, [
+      { type: 'thumb', source: 'tmdb', value: '/still2.jpg' },
+    ]);
+    expect(response.statusCode).toBe(200);
+
+    const [hd, uhd] = await Promise.all([readFile(hdImage), readFile(uhdImage)]);
+    expect(hd.equals(uhd)).toBe(true);
+    expect(hd.toString()).toContain('/still2.jpg');
+    // Both copies are there for the list, the one that was missing included.
+    const items = (await h.request('GET', '/api/libraries/shows/items')).json<{
+      items: { thumb: boolean | null }[];
+    }>().items;
+    expect(items.map((item) => item.thumb)).toEqual([true, true]);
+
+    const { batchId } = response.json<{ batchId: string }>();
+    expect((await h.request('POST', `/api/batches/${batchId}/undo`)).statusCode).toBe(200);
+    expect((await readFile(hdImage)).equals(OLD_POSTER)).toBe(true);
+    await expect(readFile(uhdImage)).rejects.toThrow();
+  });
+
+  it('refuses a still the provider does not offer, and an image a work has but an episode has not', async () => {
+    const { h, base } = await twoVersions();
+    expect(
+      codeOf(await apply(h, base, [{ type: 'thumb', source: 'tmdb', value: '/other.jpg' }])),
+    ).toBe('image.not-offered');
+    expect(
+      codeOf(await apply(h, base, [{ type: 'poster', source: 'tmdb', value: '/poster.jpg' }])),
+    ).toBe('image.not-editable');
   });
 });

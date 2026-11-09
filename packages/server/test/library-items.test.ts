@@ -210,7 +210,9 @@ describe('GET /api/libraries/:id/items', () => {
   it('lists the snapshot with its counts, by title', async () => {
     const { h, root, dune, alien } = await scanned();
     const body = await list(h);
-    expect(body.library).toEqual({ writes: { nfo: true, artwork: true, logo: true } });
+    expect(body.library).toEqual({
+      writes: { nfo: true, artwork: true, logo: true, thumb: false },
+    });
     expect(body.scannedAt).toEqual(expect.any(String));
     expect(body.scan).toBeNull();
     expect(body.counts).toEqual({
@@ -384,7 +386,9 @@ describe('the logo of a library item', () => {
     await h.app.jobs.idle();
 
     const body = (await h.request('GET', '/api/libraries/films/items')).json<ItemsBody>();
-    expect(body.library).toEqual({ writes: { nfo: true, artwork: true, logo: true } });
+    expect(body.library).toEqual({
+      writes: { nfo: true, artwork: true, logo: true, thumb: false },
+    });
     const byPath = new Map(body.items.map((item) => [item.path, item]));
     expect(byPath.get(alien)).toMatchObject({ poster: true, fanart: true, logo: false });
     expect(byPath.get(alien)?.state).toBe('incomplete');
@@ -601,6 +605,7 @@ describe('the lookups of the item store', () => {
     poster: null,
     fanart: null,
     logo: null,
+    thumb: null,
     entryId: null,
     scanJobId: null,
     scannedAt: '2026-11-02T00:00:00.000Z',
@@ -725,6 +730,7 @@ describe('the snapshot after an undo', () => {
     poster: null,
     fanart: null,
     logo: null,
+    thumb: null,
     entryId: null,
     scanJobId: null,
     scannedAt: '2026-11-02T00:00:00.000Z',

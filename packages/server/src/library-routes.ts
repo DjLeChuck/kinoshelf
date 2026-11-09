@@ -198,6 +198,7 @@ const presentItem = (item: LibraryItem, release?: ReleaseOf): unknown => ({
   poster: item.poster,
   fanart: item.fanart,
   logo: item.logo,
+  thumb: item.thumb,
   entryId: item.entryId,
   release: release?.release ?? null,
   cluster: release ? release.cluster : null,
@@ -254,6 +255,7 @@ const presentWork = (
     poster: allThere(work.map((item) => item.poster)),
     fanart: allThere(work.map((item) => item.fanart)),
     logo: allThere(work.map((item) => item.logo)),
+    thumb: allThere(work.map((item) => item.thumb)),
     versions: largestFirst(work, (item) => resolutionOf(item.path)).map((item) =>
       presentVersion(item, probeOf(item.path)),
     ),
@@ -597,11 +599,12 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
                 properties: {
                   writes: {
                     type: 'object',
-                    required: ['nfo', 'artwork', 'logo'],
+                    required: ['nfo', 'artwork', 'logo', 'thumb'],
                     properties: {
                       nfo: { type: 'boolean' },
                       artwork: { type: 'boolean' },
                       logo: { type: 'boolean' },
+                      thumb: { type: 'boolean' },
                     },
                   },
                 },

@@ -1,9 +1,10 @@
 import { randomUUID } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { open, readFile, stat } from 'node:fs/promises';
-import { dirname, extname, join, resolve } from 'node:path';
+import { basename, dirname, extname, join, parse, resolve } from 'node:path';
 import {
   buildProfile,
+  episodeThumbName,
   fetchImage as defaultFetchImage,
   libraryProfile,
   replaceImage,
@@ -23,10 +24,18 @@ import { dimensionsOf, fetchCustomImage, type ImageFormat } from './custom-image
 import type { LibraryItem, LibraryItemStore, LibrarySnapshot } from './library-items.js';
 import { isInside } from './notify/paths.js';
 
-export const IMAGE_TYPES = ['poster', 'fanart', 'logo'] as const satisfies readonly WorkImageKind[];
+/** A work's three images, and an episode's own (`thumb`, one file per version of the episode). */
+export type ImageType = WorkImageKind | 'thumb';
+
+export const IMAGE_TYPES = [
+  'poster',
+  'fanart',
+  'logo',
+  'thumb',
+] as const satisfies readonly ImageType[];
 
 export interface ImageChoice {
-  readonly type: WorkImageKind;
+  readonly type: ImageType;
   readonly source: 'tmdb' | 'url';
   /** A provider path (`/abc.jpg`) for `tmdb`, an address for `url`. */
   readonly value: string;
@@ -40,8 +49,14 @@ export interface ImageTarget {
   readonly tmdbId: number;
   readonly title: string | null;
   readonly year: number | null;
-  /** The work's own folder: a movie's, a show's (never a season's). */
+  /** The work's own folder: a movie's, a show's (never a season's), an episode's season folder. */
   readonly folder: string;
+  /**
+   * An episode only: where its image goes for each version, since the picture is one and every
+   * file wants its own copy (`<file>.jpg`). Empty for a movie or a show.
+   */
+  readonly thumbs: readonly string[];
+  readonly episode?: { readonly season: number; readonly episode: number };
 }
 
 export interface CurrentImage {
@@ -78,10 +93,10 @@ export interface ImageListing {
   readonly year: number | null;
   readonly folder: string;
   /** The file written for each type, `null` when the profile writes none (nothing to change). */
-  readonly files: Record<WorkImageKind, string | null>;
-  readonly current: Record<WorkImageKind, CurrentImage | null>;
+  readonly files: Record<ImageType, string | null>;
+  readonly current: Record<ImageType, CurrentImage | null>;
   /** What can be written under the profile's name: a JPEG for a `.jpg`, a PNG for a `.png`. */
-  readonly candidates: Record<WorkImageKind, readonly ListedImage[]>;
+  readonly candidates: Record<ImageType, readonly ListedImage[]>;
 }
 
 export interface ArtworkDeps {
@@ -92,6 +107,11 @@ export interface ArtworkDeps {
   /** Where replaced files are kept so that undo can bring them back. */
   readonly backupDir: string;
   readonly listImages: (kind: 'movie' | 'series', tmdbId: number) => Promise<WorkImages | null>;
+  readonly listStills: (
+    tmdbId: number,
+    season: number,
+    episode: number,
+  ) => Promise<readonly ImageCandidate[] | null>;
   readonly imageUrl: (path: string, size: ImageSize) => string;
   /** Replaces the network for the provider's images, for tests. */
   readonly fetchImage?: ImageFetcher;
@@ -109,6 +129,14 @@ const listed = (image: ImageCandidate): ListedImage => ({
   rating: image.rating?.value ?? null,
   votes: image.rating?.votes ?? 0,
 });
+
+/** One value per image type, computed together. */
+async function byType<T>(make: (type: ImageType) => Promise<T>): Promise<Record<ImageType, T>> {
+  const entries = await Promise.all(
+    IMAGE_TYPES.map(async (type) => [type, await make(type)] as const),
+  );
+  return Object.fromEntries(entries) as Record<ImageType, T>;
+}
 
 const formatOfName = (name: string): ImageFormat =>
   extname(name).toLowerCase() === '.png' ? 'png' : 'jpeg';
@@ -182,6 +210,43 @@ export class Artwork {
     return this.target(library, 'series', placed, folder);
   }
 
+  /**
+   * An episode of a series library: the files that hold it (its versions), each wanting the same
+   * picture under its own name. A file holding several episodes is the episode's too.
+   */
+  episode(library: LibraryConfig, tmdbId: number, season: number, episode: number): ImageTarget {
+    const holders = this.deps.items
+      .ofShow(library.id, tmdbId)
+      .filter(
+        (row) =>
+          (row.state === 'ok' || row.state === 'incomplete') &&
+          row.season === season &&
+          row.episode !== null &&
+          row.episode <= episode &&
+          episode <= (row.episodeEnd ?? row.episode),
+      );
+    const profile = this.profile(library);
+    const thumbs = holders.flatMap((row) => {
+      const name = episodeThumbName(profile, parse(row.path).name);
+      return name === undefined ? [] : [join(dirname(row.path), name)];
+    });
+    const [first] = holders;
+    if (library.type !== 'series' || !first || thumbs.length === 0) {
+      throw new ApiError(409, 'image.not-editable');
+    }
+    return {
+      library,
+      profile,
+      kind: 'series',
+      tmdbId,
+      title: first.title,
+      year: first.year,
+      folder: dirname(first.path),
+      thumbs,
+      episode: { season, episode },
+    };
+  }
+
   private profile(library: LibraryConfig): Profile {
     return buildProfile(libraryProfile(library, this.deps.config()));
   }
@@ -209,31 +274,72 @@ export class Artwork {
       title: item.title,
       year: item.year,
       folder,
+      thumbs: [],
     };
   }
 
   /** The file the profile writes for a type, `null` when it writes none. */
-  fileName(target: ImageTarget, type: WorkImageKind): string | null {
+  fileName(target: ImageTarget, type: ImageType): string | null {
+    if (type === 'thumb') {
+      const [first] = target.thumbs;
+      return first === undefined ? null : basename(first);
+    }
+    // An episode has no poster, background or logo of its own to change.
+    if (target.episode) {
+      return null;
+    }
     const names = showFileNames(target.profile);
     return (
       (type === 'poster' ? names.poster : type === 'fanart' ? names.fanart : names.logo) ?? null
     );
   }
 
-  private sizeOf(target: ImageTarget, type: WorkImageKind): ImageSize {
-    return target.profile.artwork.find((spec) => spec.kind === type)?.size ?? 'original';
+  /** The files an image of this type is written to: every version's `.jpg` for a thumbnail. */
+  private destinations(target: ImageTarget, type: ImageType): readonly string[] {
+    if (type === 'thumb') {
+      return target.thumbs;
+    }
+    const name = this.fileName(target, type);
+    return name === null ? [] : [join(target.folder, name)];
+  }
+
+  /** The offered images of a type: a work's, or an episode's stills. */
+  private async offered(target: ImageTarget, type: ImageType): Promise<readonly ImageCandidate[]> {
+    if (target.episode) {
+      return type === 'thumb'
+        ? ((await this.deps.listStills(
+            target.tmdbId,
+            target.episode.season,
+            target.episode.episode,
+          )) ?? [])
+        : [];
+    }
+    return type === 'thumb'
+      ? []
+      : ((await this.deps.listImages(target.kind, target.tmdbId))?.[type] ?? []);
+  }
+
+  private sizeOf(target: ImageTarget, type: ImageType): ImageSize {
+    const kind = type === 'thumb' ? 'episode-thumb' : type;
+    return target.profile.artwork.find((spec) => spec.kind === kind)?.size ?? 'original';
   }
 
   /** The bytes of the image in place, for the page to show it. */
   async file(
     target: ImageTarget,
-    type: WorkImageKind,
+    type: ImageType,
   ): Promise<{ bytes: Buffer; format: ImageFormat }> {
-    const name = this.fileName(target, type);
-    if (name === null) {
+    if (this.fileName(target, type) === null) {
       throw new ApiError(409, 'image.not-editable');
     }
-    const bytes = await readFile(join(target.folder, name)).catch(() => undefined);
+    // Every version's copy is the same picture: the first one there stands for them.
+    let bytes: Buffer | undefined;
+    for (const path of this.destinations(target, type)) {
+      bytes = await readFile(path).catch(() => undefined);
+      if (bytes) {
+        break;
+      }
+    }
     const format = bytes && sniff(bytes);
     if (!bytes || !format) {
       throw new ApiError(404, 'image.not-found');
@@ -242,52 +348,38 @@ export class Artwork {
   }
 
   async list(target: ImageTarget): Promise<ImageListing> {
-    const offered = await this.deps.listImages(target.kind, target.tmdbId);
     const files = Object.fromEntries(
       IMAGE_TYPES.map((type) => [type, this.fileName(target, type)]),
-    ) as Record<WorkImageKind, string | null>;
-    const candidatesOf = (type: WorkImageKind): readonly ImageCandidate[] => {
+    ) as Record<ImageType, string | null>;
+    // Only what can be written under the profile's name: a JPEG for a `.jpg`, a PNG for a `.png`.
+    const candidates = await byType(async (type) => {
       const name = files[type];
-      return name === null
-        ? []
-        : (offered?.[type] ?? []).filter(
-            (image) => formatOfPath(image.path) === formatOfName(name),
-          );
-    };
-    const candidates: Record<WorkImageKind, readonly ImageCandidate[]> = {
-      poster: candidatesOf('poster'),
-      fanart: candidatesOf('fanart'),
-      logo: candidatesOf('logo'),
-    };
-    const entries = await Promise.all(
-      IMAGE_TYPES.map(async (type) => {
-        const name = files[type];
-        return [
-          type,
-          name === null ? null : await this.currentOf(target, name, candidates[type]),
-        ] as const;
-      }),
-    );
+      const offered = name === null ? [] : await this.offered(target, type);
+      return offered.filter((image) => formatOfPath(image.path) === formatOfName(name ?? ''));
+    });
+    const current = await byType(async (type): Promise<CurrentImage | null> => {
+      for (const path of this.destinations(target, type)) {
+        const found = await this.currentOf(path, candidates[type]);
+        if (found) {
+          return found;
+        }
+      }
+      return null;
+    });
     return {
       title: target.title,
       year: target.year,
       folder: target.folder,
       files,
-      current: Object.fromEntries(entries) as Record<WorkImageKind, CurrentImage | null>,
-      candidates: {
-        poster: candidates.poster.map(listed),
-        fanart: candidates.fanart.map(listed),
-        logo: candidates.logo.map(listed),
-      },
+      current,
+      candidates: await byType((type) => Promise.resolve(candidates[type].map(listed))),
     };
   }
 
   private async currentOf(
-    target: ImageTarget,
-    name: string,
+    path: string,
     candidates: readonly ImageCandidate[],
   ): Promise<CurrentImage | null> {
-    const path = join(target.folder, name);
     const info = await stat(path).catch(() => null);
     if (!info?.isFile()) {
       return null;
@@ -317,7 +409,7 @@ export class Artwork {
    * What an address gives, for the page to show before anything is written: the same download,
    * limits and format check as `apply`, with nothing kept.
    */
-  async preview(target: ImageTarget, type: WorkImageKind, address: string): Promise<ImagePreview> {
+  async preview(target: ImageTarget, type: ImageType, address: string): Promise<ImagePreview> {
     const name = this.fileName(target, type);
     if (name === null) {
       throw new ApiError(409, 'image.not-editable');
@@ -349,9 +441,6 @@ export class Artwork {
     if (choices.length === 0 || types.size !== choices.length) {
       throw new ApiError(400, 'request.invalid');
     }
-    const offered = choices.some(({ source }) => source === 'tmdb')
-      ? await this.deps.listImages(target.kind, target.tmdbId)
-      : null;
     const allowLocalNetwork = this.deps.config().allowLocalImageUrls ?? false;
     const fetchImage = this.deps.fetchImage ?? defaultFetchImage;
 
@@ -366,7 +455,8 @@ export class Artwork {
       let source: string;
       let found: ImageFormat | undefined;
       if (choice.source === 'tmdb') {
-        if (!offered?.[choice.type].some((image) => image.path === choice.value)) {
+        const offered = await this.offered(target, choice.type);
+        if (!offered.some((image) => image.path === choice.value)) {
           throw new ApiError(422, 'image.not-offered');
         }
         source = this.deps.imageUrl(choice.value, this.sizeOf(target, choice.type));
@@ -388,7 +478,10 @@ export class Artwork {
           expected: expected.toUpperCase(),
         });
       }
-      fetched.push({ destination: join(target.folder, name), data, source });
+      // One picture, written for each place the type has: an episode's versions all get it.
+      for (const destination of this.destinations(target, choice.type)) {
+        fetched.push({ destination, data, source });
+      }
     }
 
     const batchId = randomUUID();

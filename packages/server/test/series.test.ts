@@ -313,6 +313,7 @@ describe('comparing the files with the provider', () => {
     poster: null,
     fanart: null,
     logo: null,
+    thumb: null,
     entryId: null,
     scanJobId: null,
     scannedAt: '2026-01-01T00:00:00Z',
@@ -618,5 +619,61 @@ describe('a show lacking only files of its own', () => {
       ['s1e1', 'ok'],
       ['s2e1', 'ok'],
     ]);
+  });
+});
+
+describe('the thumbnail of an episode', () => {
+  it('is tracked per file, and an episode lacking it is incomplete and under missing-artwork', async () => {
+    const root = await makeDir();
+    const season = join(root, 'Severance (2022)', 'Season 01');
+    const withThumb = await put(join(season, 'Severance (2022) - s01e01.mkv'));
+    await put(join(season, 'Severance (2022) - s01e01.nfo'), '<episodedetails/>');
+    await put(join(season, 'Severance (2022) - s01e01.jpg'), 'image');
+    const without = await put(join(season, 'Severance (2022) - s01e02.mkv'));
+    await put(join(season, 'Severance (2022) - s01e02.nfo'), '<episodedetails/>');
+    const base = provider();
+    const h = await harness({
+      config: {
+        libraries: [
+          { id: 'films', name: 'Films', source: await makeDir(), type: 'movie' },
+          {
+            id: 'shows',
+            name: 'Shows',
+            source: root,
+            type: 'series',
+            naming: 'no-id',
+            metadata: 'nfo',
+          },
+        ],
+      },
+      createProvider: () => ({
+        ...base,
+        getSeason: async (id, number) => {
+          const found = await base.getSeason(id, number);
+          return found && number === 1
+            ? {
+                ...found,
+                episodes: found.episodes.map((info) => ({ ...info, stillPath: '/still.jpg' })),
+              }
+            : found;
+        },
+      }),
+    });
+    await h.request('POST', '/api/libraries/shows/scan');
+    await h.app.jobs.idle();
+
+    const page = (await h.request('GET', '/api/libraries/shows/items')).json<{
+      library: { writes: { thumb: boolean } };
+      items: { path: string; thumb: boolean | null; state: string }[];
+    }>();
+    expect(page.library.writes.thumb).toBe(true);
+    const byPath = new Map(page.items.map((item) => [item.path, item]));
+    expect(byPath.get(withThumb)).toMatchObject({ thumb: true });
+    expect(byPath.get(without)).toMatchObject({ thumb: false, state: 'incomplete' });
+
+    const missing = (
+      await h.request('GET', '/api/libraries/shows/items?state=missing-artwork')
+    ).json<{ items: { path: string }[] }>();
+    expect(missing.items.map((item) => item.path)).toEqual([without]);
   });
 });

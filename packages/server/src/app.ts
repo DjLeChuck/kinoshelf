@@ -501,6 +501,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
       snapshot,
       backupDir: join(options.configDir, 'replaced'),
       listImages: (kind, id) => service.listImages(kind, id),
+      listStills: (id, season, episode) => service.listStills(id, season, episode),
       imageUrl: (path, size) => service.imageUrl(path, size),
       touched: (libraryId) => {
         seriesFiles.touch(libraryId);

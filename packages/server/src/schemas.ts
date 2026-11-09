@@ -896,6 +896,7 @@ export const libraryItemSchema = {
     'poster',
     'fanart',
     'logo',
+    'thumb',
     'entryId',
     'release',
     'cluster',
@@ -936,6 +937,11 @@ export const libraryItemSchema = {
     poster: { type: 'boolean', nullable: true },
     fanart: { type: 'boolean', nullable: true },
     logo: { type: 'boolean', nullable: true },
+    thumb: {
+      type: 'boolean',
+      nullable: true,
+      description: 'An episode’s own image, `<file>.jpg`; `null` for any other file.',
+    },
     entryId: { type: 'string', nullable: true, description: 'To validate or change the match.' },
     release: {
       type: 'string',

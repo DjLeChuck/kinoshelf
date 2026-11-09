@@ -60,6 +60,8 @@ export interface LibraryItem {
   readonly poster: Presence;
   readonly fanart: Presence;
   readonly logo: Presence;
+  /** An episode's own image, `<file>.jpg`. */
+  readonly thumb: Presence;
   /** The entry of the scan that saw it: what to validate or re-match. */
   readonly entryId: string | null;
   readonly scanJobId: string | null;
@@ -81,13 +83,14 @@ interface Row {
   poster: number | null;
   fanart: number | null;
   logo: number | null;
+  thumb: number | null;
   entry_id: string | null;
   scan_job_id: string | null;
   scanned_at: string;
 }
 
 const COLUMNS =
-  'library_id, path, kind, tmdb_id, title, year, season, episode, episode_end, state, nfo, poster, fanart, logo, entry_id, scan_job_id, scanned_at';
+  'library_id, path, kind, tmdb_id, title, year, season, episode, episode_end, state, nfo, poster, fanart, logo, thumb, entry_id, scan_job_id, scanned_at';
 
 /** The columns a row is written with: `item_id` is derived from the path, never read back. */
 const WRITTEN_COLUMNS = `${COLUMNS}, item_id`;
@@ -131,6 +134,7 @@ const valuesOf = (item: LibraryItem): (string | number | null)[] => [
   bit(item.poster),
   bit(item.fanart),
   bit(item.logo),
+  bit(item.thumb),
   item.entryId,
   item.scanJobId,
   item.scannedAt,
@@ -152,6 +156,7 @@ const toItem = (row: Row): LibraryItem => ({
   poster: flag(row.poster),
   fanart: flag(row.fanart),
   logo: flag(row.logo),
+  thumb: flag(row.thumb),
   entryId: row.entry_id,
   scanJobId: row.scan_job_id,
   scannedAt: row.scanned_at,
@@ -726,7 +731,7 @@ const FILTER_SQL: Record<ItemFilter, string> = {
   rename: "state = 'rename'",
   unrecognized: "state = 'unrecognized'",
   'missing-nfo': 'nfo = 0',
-  'missing-artwork': '(poster = 0 OR fanart = 0 OR logo = 0)',
+  'missing-artwork': '(poster = 0 OR fanart = 0 OR logo = 0 OR thumb = 0)',
   // Another file holds the same work (and episode): a version of it.
   'multi-version': `EXISTS (SELECT 1 FROM library_items other
     WHERE other.library_id = library_items.library_id AND other.path <> library_items.path
@@ -806,7 +811,7 @@ type Writable = CompanionKind;
 /** Which files the profile writes for a work of this kind (none for a file nobody identified). */
 const writes = (profile: Profile, kind: 'movie' | 'series' | null): Record<Writable, boolean> =>
   kind === null
-    ? { nfo: false, poster: false, fanart: false, logo: false }
+    ? { nfo: false, poster: false, fanart: false, logo: false, thumb: false }
     : companionsWritten(profile, kind, kind === 'movie' && profile.templates.movieFolder === '');
 
 /** What an NFO or image path is, according to the profile; `undefined` for any other file. */
@@ -821,7 +826,7 @@ function describe(
   profile: Profile,
   kind: 'movie' | 'series' | null,
 ): { state: ItemState } & Record<Writable, Presence> {
-  const none = { nfo: null, poster: null, fanart: null, logo: null };
+  const none = { nfo: null, poster: null, fanart: null, logo: null, thumb: null };
   const { classification, item } = entry;
   if (classification === 'unrecognized') {
     return { state: 'unrecognized', ...none };
@@ -845,6 +850,7 @@ function describe(
     poster: presence('poster'),
     fanart: presence('fanart'),
     logo: presence('logo'),
+    thumb: presence('thumb'),
   };
   // A video already in place only carries what is missing: the files of its show and of its
   // seasons' posters go with its first episode, and belong to no flag above. Anything still to
@@ -863,16 +869,22 @@ function describe(
 export function profileWrites(
   profile: Profile,
   type: 'movie' | 'series',
-): { nfo: boolean; artwork: boolean; logo: boolean } {
+): { nfo: boolean; artwork: boolean; logo: boolean; thumb: boolean } {
   if (type === 'series') {
     return {
       nfo: profile.nfo !== null,
       artwork: profile.artwork.some(({ kind }) => kind === 'poster' || kind === 'fanart'),
       logo: profile.artwork.some(({ kind }) => kind === 'logo'),
+      thumb: profile.artwork.some(({ kind }) => kind === 'episode-thumb'),
     };
   }
   const wanted = writes(profile, 'movie');
-  return { nfo: wanted.nfo, artwork: wanted.poster || wanted.fanart, logo: wanted.logo };
+  return {
+    nfo: wanted.nfo,
+    artwork: wanted.poster || wanted.fanart,
+    logo: wanted.logo,
+    thumb: false,
+  };
 }
 
 /** The picture size a release name announces (`2160p`, `4K`…), the one cheap thing it says of the video. */
@@ -967,6 +979,7 @@ export function shareMovieFiles(items: readonly LibraryItem[]): LibraryItem[] {
       poster: share('poster'),
       fanart: share('fanart'),
       logo: share('logo'),
+      thumb: share('thumb'),
     };
     // A file that now lacks something is to complete, unless the video itself is to rename.
     return {
@@ -1124,6 +1137,7 @@ export class LibrarySnapshot {
         poster: present('poster'),
         fanart: present('fanart'),
         logo: present('logo'),
+        thumb: present('thumb'),
       };
       this.deps.store.put({
         ...row,
@@ -1206,6 +1220,7 @@ export class LibrarySnapshot {
       poster: apply('poster'),
       fanart: apply('fanart'),
       logo: apply('logo'),
+      thumb: apply('thumb'),
     };
     // After an undo the video is back at its source, to be renamed again.
     const missing = Object.values(next).some((presence) => presence === false);

@@ -350,6 +350,13 @@ export const SERVER_MIGRATIONS: readonly { readonly name: string; readonly sql: 
       );
     `,
   },
+  {
+    // Whether an episode's own image (`<file>.jpg`) is there: 1 or 0, NULL when the profile writes
+    // none or the row predates it (a rescan fills it). An episode TMDB has no still for plans
+    // nothing, so it reads as there, like a work without a logo.
+    name: 'server:027-episode-thumb',
+    sql: 'ALTER TABLE library_items ADD COLUMN thumb INTEGER;',
+  },
 ];
 
 /** Opens the single SQLite file of the config directory, shared with the CLI and the cache. */
