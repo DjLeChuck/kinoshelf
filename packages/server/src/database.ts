@@ -321,6 +321,18 @@ export const SERVER_MIGRATIONS: readonly { readonly name: string; readonly sql: 
       ALTER TABLE series_files ADD COLUMN logo INTEGER;
     `,
   },
+  {
+    // What ffprobe says beyond the codecs: the dynamic range (`dolby-vision`, `hdr10-plus`,
+    // `hdr10`, `hlg`, NULL for SDR) and the languages of the audio and subtitle tracks (JSON
+    // arrays). Rows already probed lack them, so they are probed again in the background.
+    name: 'server:025-probe-details',
+    sql: `
+      ALTER TABLE library_items ADD COLUMN hdr TEXT;
+      ALTER TABLE library_items ADD COLUMN audio_languages TEXT;
+      ALTER TABLE library_items ADD COLUMN subtitle_languages TEXT;
+      UPDATE library_items SET probed_at = NULL;
+    `,
+  },
 ];
 
 /** Opens the single SQLite file of the config directory, shared with the CLI and the cache. */

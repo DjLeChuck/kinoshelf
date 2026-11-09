@@ -3,12 +3,22 @@ import { stat } from 'node:fs/promises';
 import { errnoCode, pictureSize } from '@kinoshelf/core';
 import type { LibraryItemStore } from './library-items.js';
 
+/** Strongest first: a Dolby Vision file often carries an HDR10 base layer too. */
+export const HDR_FORMATS = ['dolby-vision', 'hdr10-plus', 'hdr10', 'hlg'] as const;
+export type Hdr = (typeof HDR_FORMATS)[number];
+
 /** What `ffprobe` tells of a video, plus the file's size and date, which tell when to look again. */
 export interface Probe {
   /** Codec of the first video stream, e.g. `hevc`. */
   readonly video: string | null;
   /** Codec and layout of the first audio stream, e.g. `eac3 5.1`. */
   readonly audio: string | null;
+  /** The dynamic range of the first video stream, `null` for SDR. */
+  readonly hdr: Hdr | null;
+  /** Languages (ISO 639-2, as the file tags them) of the audio tracks, first seen first, each once. */
+  readonly audioLanguages: readonly string[];
+  /** Same for the subtitle tracks. */
+  readonly subtitleLanguages: readonly string[];
   readonly size: number;
   /** Modification time, in whole milliseconds. */
   readonly mtime: number;
@@ -34,6 +44,57 @@ interface Stream {
   codec_type?: string;
   codec_name?: string;
   channels?: number;
+  color_transfer?: string;
+  tags?: { language?: string };
+  side_data_list?: { side_data_type?: string }[];
+}
+
+const isHdr10Plus = (type: string): boolean =>
+  type.includes('HDR10+') || type.includes('SMPTE2094-40');
+
+/** Whether the first frame ffprobe printed (`-show_frames`) carries HDR10+ dynamic metadata. */
+export function hasHdr10Plus(output: string): boolean {
+  const { frames = [] } = JSON.parse(output) as {
+    frames?: { side_data_list?: { side_data_type?: string }[] }[];
+  };
+  return frames.some(({ side_data_list = [] }) =>
+    side_data_list.some(({ side_data_type = '' }) => isHdr10Plus(side_data_type)),
+  );
+}
+
+/** `und` and `zxx` say no language; a missing tag says nothing either. */
+const languagesOf = (streams: readonly Stream[], type: string): string[] => [
+  ...new Set(
+    streams
+      .filter(({ codec_type }) => codec_type === type)
+      .map(({ tags }) => tags?.language?.toLowerCase())
+      .filter(
+        (language): language is string => !!language && language !== 'und' && language !== 'zxx',
+      ),
+  ),
+];
+
+/**
+ * `smpte2084` is PQ (HDR10), `arib-std-b67` is HLG. Dolby Vision travels as side data of the stream
+ * (`DOVI configuration record`, checked on an iPhone clip), HDR10+ only in the frames: see
+ * `hasHdr10Plus`, which the reader calls on a stream that says `hdr10`.
+ */
+export function hdrOf(video: Stream | undefined): Hdr | null {
+  const sideData = (video?.side_data_list ?? []).map(({ side_data_type = '' }) => side_data_type);
+  if (sideData.some((type) => type.includes('DOVI'))) {
+    return 'dolby-vision';
+  }
+  if (sideData.some(isHdr10Plus)) {
+    return 'hdr10-plus';
+  }
+  switch (video?.color_transfer) {
+    case 'smpte2084':
+      return 'hdr10';
+    case 'arib-std-b67':
+      return 'hlg';
+    default:
+      return null;
+  }
 }
 
 const LAYOUTS: Record<number, string> = { 1: '1.0', 2: '2.0', 6: '5.1', 8: '7.1' };
@@ -52,6 +113,9 @@ export function summarize(output: string, file: { size: number; mtime: number })
     audio: audio?.codec_name
       ? [audio.codec_name, layout].filter((part) => part !== undefined).join(' ')
       : null,
+    hdr: hdrOf(video),
+    audioLanguages: languagesOf(streams, 'audio'),
+    subtitleLanguages: languagesOf(streams, 'subtitle'),
     ...file,
   };
 }
@@ -104,23 +168,12 @@ export const probePictureSize: SizeReader = (path) =>
     );
   });
 
-export const ffprobe: Prober = async (path, stamp) => {
-  const info = stamp ?? (await stat(path));
-  const output = await new Promise<string>((resolve, reject) => {
+const run = (args: readonly string[]): Promise<string> =>
+  new Promise<string>((resolve, reject) => {
     execFile(
       'ffprobe',
       // A file name is only ever read as a local file, never as a URL or a playlist to follow.
-      [
-        '-v',
-        'error',
-        '-protocol_whitelist',
-        'file',
-        '-print_format',
-        'json',
-        '-show_streams',
-        '--',
-        path,
-      ],
+      ['-v', 'error', '-protocol_whitelist', 'file', '-print_format', 'json', ...args],
       { timeout: TIMEOUT_MS, maxBuffer: 4_000_000 },
       (error, stdout) => {
         if (error) {
@@ -131,7 +184,30 @@ export const ffprobe: Prober = async (path, stamp) => {
       },
     );
   });
-  return summarize(output, { size: info.size, mtime: Math.floor(info.mtimeMs) });
+
+export const ffprobe: Prober = async (path, stamp) => {
+  const info = stamp ?? (await stat(path));
+  const probe = summarize(await run(['-show_streams', '--', path]), {
+    size: info.size,
+    mtime: Math.floor(info.mtimeMs),
+  });
+  if (probe.hdr !== 'hdr10') {
+    return probe;
+  }
+  // The stream's own data cannot tell HDR10+ from HDR10: its metadata rides on each frame, so the
+  // first one is read, which costs a few milliseconds.
+  const frame = await run([
+    '-select_streams',
+    'v:0',
+    '-show_frames',
+    '-read_intervals',
+    '%+#1',
+    '-show_entries',
+    'frame=side_data_list',
+    '--',
+    path,
+  ]).catch(() => undefined);
+  return frame !== undefined && hasHdr10Plus(frame) ? { ...probe, hdr: 'hdr10-plus' } : probe;
 };
 
 interface Wanted {
@@ -246,6 +322,9 @@ export class ProbeQueue {
           const empty = {
             video: null,
             audio: null,
+            hdr: null,
+            audioLanguages: [],
+            subtitleLanguages: [],
             size: info.size,
             mtime: Math.floor(info.mtimeMs),
           };

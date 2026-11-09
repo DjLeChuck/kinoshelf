@@ -56,6 +56,9 @@ export const fakeProber: Prober = async (path) => {
   return {
     video: path.includes('hevc') ? 'hevc' : 'h264',
     audio: 'aac 2.0',
+    hdr: path.includes('hdr') ? 'hdr10' : null,
+    audioLanguages: ['eng', 'fre'],
+    subtitleLanguages: ['fre'],
     size: info.size,
     mtime: Math.floor(info.mtimeMs),
   };

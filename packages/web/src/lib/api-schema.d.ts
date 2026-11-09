@@ -2191,6 +2191,10 @@ export interface paths {
                             file: {
                                 video: string | null;
                                 audio: string | null;
+                                /** @enum {string|null} */
+                                hdr: "dolby-vision" | "hdr10-plus" | "hdr10" | "hlg" | null;
+                                audioLanguages: string[];
+                                subtitleLanguages: string[];
                                 size: number;
                             } | null;
                             /** @description The files of the movie (this one alone for anything else), each read as `file` is. */
@@ -2209,6 +2213,10 @@ export interface paths {
                                 file: {
                                     video: string | null;
                                     audio: string | null;
+                                    /** @enum {string|null} */
+                                    hdr: "dolby-vision" | "hdr10-plus" | "hdr10" | "hlg" | null;
+                                    audioLanguages: string[];
+                                    subtitleLanguages: string[];
                                     size: number;
                                 } | null;
                             }[];

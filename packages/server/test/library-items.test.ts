@@ -409,7 +409,14 @@ describe('GET /api/libraries/:id/items/:itemId', () => {
     runtime: number | null;
     genres: string[];
     posterPath: string | null;
-    file: { video: string | null; audio: string | null; size: number } | null;
+    file: {
+      video: string | null;
+      audio: string | null;
+      hdr: string | null;
+      audioLanguages: string[];
+      subtitleLanguages: string[];
+      size: number;
+    } | null;
   }
 
   const itemOf = async (
@@ -430,7 +437,14 @@ describe('GET /api/libraries/:id/items/:itemId', () => {
       title: 'Dune',
       genres: [],
       overview: null,
-      file: { video: 'h264', audio: 'aac 2.0', size: 4 },
+      file: {
+        video: 'h264',
+        audio: 'aac 2.0',
+        hdr: null,
+        audioLanguages: ['eng', 'fre'],
+        subtitleLanguages: ['fre'],
+        size: 4,
+      },
     });
   });
 

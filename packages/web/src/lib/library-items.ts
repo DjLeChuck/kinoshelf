@@ -72,6 +72,9 @@ export interface ItemDetail extends LibraryItem {
   readonly file: {
     readonly video: string | null;
     readonly audio: string | null;
+    readonly hdr: 'dolby-vision' | 'hdr10-plus' | 'hdr10' | 'hlg' | null;
+    readonly audioLanguages: readonly string[];
+    readonly subtitleLanguages: readonly string[];
     readonly size: number;
   } | null;
 }

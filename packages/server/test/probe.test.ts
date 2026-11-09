@@ -7,6 +7,7 @@ import { migrated } from '../src/database.js';
 import { LibraryItemStore, type LibraryItem } from '../src/library-items.js';
 import {
   ffprobe,
+  hasHdr10Plus,
   ProbeQueue,
   ProbeUnavailableError,
   probePictureSize,
@@ -32,6 +33,9 @@ describe('summarize', () => {
     expect(summarize(json, { size: 10, mtime: 20 })).toEqual({
       video: 'hevc',
       audio: 'eac3 5.1',
+      hdr: null,
+      audioLanguages: [],
+      subtitleLanguages: [],
       size: 10,
       mtime: 20,
     });
@@ -48,6 +52,99 @@ describe('summarize', () => {
         mtime: 2,
       }).audio,
     ).toBe('dts 3ch');
+  });
+});
+
+describe('summarize: HDR and languages', () => {
+  const read = (...streams: object[]) =>
+    summarize(JSON.stringify({ streams }), { size: 1, mtime: 2 });
+  const video = (extra: object) => ({ codec_type: 'video', codec_name: 'hevc', ...extra });
+
+  it('tells PQ from HLG from SDR by the transfer characteristics', () => {
+    expect(read(video({ color_transfer: 'smpte2084' })).hdr).toBe('hdr10');
+    expect(read(video({ color_transfer: 'arib-std-b67' })).hdr).toBe('hlg');
+    expect(read(video({ color_transfer: 'bt709' })).hdr).toBeNull();
+    expect(read(video({})).hdr).toBeNull();
+  });
+
+  it('prefers Dolby Vision, then HDR10+, over the HDR10 base layer', () => {
+    const base = { color_transfer: 'smpte2084' };
+    expect(
+      read(video({ ...base, side_data_list: [{ side_data_type: 'DOVI configuration record' }] }))
+        .hdr,
+    ).toBe('dolby-vision');
+    expect(
+      read(
+        video({
+          ...base,
+          side_data_list: [{ side_data_type: 'HDR Dynamic Metadata SMPTE2094-40 (HDR10+)' }],
+        }),
+      ).hdr,
+    ).toBe('hdr10-plus');
+  });
+
+  it('lists the languages of every audio and subtitle track once, leaving out the undetermined', () => {
+    const probe = read(
+      video({}),
+      { codec_type: 'audio', codec_name: 'eac3', tags: { language: 'fre' } },
+      { codec_type: 'audio', codec_name: 'aac', tags: { language: 'eng' } },
+      { codec_type: 'audio', codec_name: 'aac', tags: { language: 'FRE' } },
+      { codec_type: 'audio', codec_name: 'aac' },
+      { codec_type: 'subtitle', codec_name: 'subrip', tags: { language: 'eng' } },
+      { codec_type: 'subtitle', codec_name: 'subrip', tags: { language: 'und' } },
+    );
+    expect(probe.audioLanguages).toEqual(['fre', 'eng']);
+    expect(probe.subtitleLanguages).toEqual(['eng']);
+  });
+});
+
+// Captured with ffprobe 8 from the clips the Kodi wiki's Samples page links to.
+describe('real streams of the Kodi samples', () => {
+  it('reads Dolby Vision with an HLG base from the stream (an iPhone clip)', () => {
+    const json = JSON.stringify({
+      streams: [
+        {
+          codec_type: 'video',
+          codec_name: 'hevc',
+          color_transfer: 'arib-std-b67',
+          side_data_list: [
+            { side_data_type: 'DOVI configuration record', dv_profile: 8, dv_level: 10 },
+            { side_data_type: 'Ambient viewing environment' },
+          ],
+        },
+      ],
+    });
+    expect(summarize(json, { size: 1, mtime: 2 }).hdr).toBe('dolby-vision');
+  });
+
+  it('finds HDR10+ in the first frame, not in the stream (the WebM project clip)', () => {
+    const stream = {
+      codec_type: 'video',
+      codec_name: 'vp9',
+      color_transfer: 'smpte2084',
+      side_data_list: [
+        { side_data_type: 'Content light level metadata' },
+        { side_data_type: 'Mastering display metadata' },
+      ],
+    };
+    expect(summarize(JSON.stringify({ streams: [stream] }), { size: 1, mtime: 2 }).hdr).toBe(
+      'hdr10',
+    );
+    const frame = (...types: string[]) =>
+      JSON.stringify({
+        frames: [{ side_data_list: types.map((side_data_type) => ({ side_data_type })) }],
+      });
+    expect(
+      hasHdr10Plus(
+        frame(
+          'Mastering display metadata',
+          'Content light level metadata',
+          'HDR Dynamic Metadata SMPTE2094-40 (HDR10+)',
+        ),
+      ),
+    ).toBe(true);
+    expect(hasHdr10Plus(frame('Mastering display metadata'))).toBe(false);
+    expect(hasHdr10Plus('{}')).toBe(false);
   });
 });
 
@@ -121,11 +218,40 @@ describe('ffprobe', () => {
       'mpeg4',
       '-c:a',
       'ac3',
+      '-metadata:s:a:0',
+      'language=fre',
       clip,
     ]);
     const probe = await ffprobe(clip);
-    expect(probe).toMatchObject({ video: 'mpeg4', audio: 'ac3 1.0' });
+    expect(probe).toMatchObject({
+      video: 'mpeg4',
+      audio: 'ac3 1.0',
+      hdr: null,
+      audioLanguages: ['fre'],
+      subtitleLanguages: [],
+    });
     expect(probe.size).toBeGreaterThan(0);
+  });
+
+  it('sees the HDR of a real file', async () => {
+    const dir = await makeDir();
+    const clip = join(dir, 'hdr.mkv');
+    await promisify(execFile)('ffmpeg', [
+      '-v',
+      'error',
+      '-f',
+      'lavfi',
+      '-i',
+      'testsrc=duration=1:size=64x64:rate=5',
+      '-vf',
+      'setparams=color_primaries=bt2020:color_trc=smpte2084:colorspace=bt2020nc',
+      '-c:v',
+      'libx265',
+      '-x265-params',
+      'log-level=error',
+      clip,
+    ]);
+    expect(await ffprobe(clip)).toMatchObject({ video: 'hevc', hdr: 'hdr10' });
   });
 
   it('rejects a file that is not a video', async () => {
@@ -134,6 +260,16 @@ describe('ffprobe', () => {
     await expect(ffprobe(file)).rejects.not.toBeInstanceOf(ProbeUnavailableError);
   });
 });
+
+const EMPTY: Probe = {
+  video: null,
+  audio: null,
+  hdr: null,
+  audioLanguages: [],
+  subtitleLanguages: [],
+  size: 0,
+  mtime: 0,
+};
 
 const item = (path: string): LibraryItem => ({
   libraryId: 'films',
@@ -160,7 +296,16 @@ function queue(options: { prober?: Prober; busy?: () => boolean } = {}) {
   const calls: string[] = [];
   const prober: Prober =
     options.prober ??
-    (() => Promise.resolve({ video: 'h264', audio: 'aac 2.0', size: 1, mtime: 1 }));
+    (() =>
+      Promise.resolve({
+        video: 'h264',
+        audio: 'aac 2.0',
+        hdr: null,
+        audioLanguages: [],
+        subtitleLanguages: [],
+        size: 1,
+        mtime: 1,
+      }));
   const errors: unknown[] = [];
   const probes = new ProbeQueue({
     store,
@@ -217,9 +362,9 @@ describe('the probe queue', () => {
     let busy = false;
     const { store, probes, calls } = queue({
       busy: () => busy,
-      prober: (path) => {
+      prober: () => {
         busy = true; // a scan was queued while this file was being read
-        return Promise.resolve({ video: 'h264', audio: null, size: 1, mtime: 1, path } as Probe);
+        return Promise.resolve({ ...EMPTY, video: 'h264', size: 1, mtime: 1 });
       },
     });
     store.replace('films', files.map(item));
@@ -236,7 +381,7 @@ describe('the probe queue', () => {
       prober: async (path) => {
         const { stat } = await import('node:fs/promises');
         const info = await stat(path);
-        return { video: 'h264', audio: null, size: info.size, mtime: Math.floor(info.mtimeMs) };
+        return { ...EMPTY, video: 'h264', size: info.size, mtime: Math.floor(info.mtimeMs) };
       },
     });
     store.replace('films', [item(a)]);
@@ -262,6 +407,32 @@ describe('the probe queue', () => {
     store.replace('films', [item(a)]);
     expect(store.probeOf('films', a)).toMatchObject({ video: 'h264' });
     expect(store.unprobed('films')).toEqual([]);
+  });
+
+  it('stores the HDR and the languages, and gives them back', async () => {
+    const dir = await makeDir();
+    const a = await put(join(dir, 'a.mkv'));
+    const { store, probes } = queue({
+      prober: () =>
+        Promise.resolve({
+          video: 'hevc',
+          audio: 'eac3 5.1',
+          hdr: 'dolby-vision',
+          audioLanguages: ['fre', 'eng'],
+          subtitleLanguages: ['fre'],
+          size: 1,
+          mtime: 1,
+        }),
+    });
+    store.replace('films', [item(a)]);
+    await probes.now('films', a);
+
+    store.replace('films', [item(a)]);
+    expect(store.probeOf('films', a)).toMatchObject({
+      hdr: 'dolby-vision',
+      audioLanguages: ['fre', 'eng'],
+      subtitleLanguages: ['fre'],
+    });
   });
 
   it('remembers nothing when ffprobe is missing, and an empty answer for a file it cannot read', async () => {

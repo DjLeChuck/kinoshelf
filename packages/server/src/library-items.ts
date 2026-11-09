@@ -18,7 +18,7 @@ import type { Database, Statement } from 'better-sqlite3';
 import { workKindOf as kindOf, type Entry, type EntryStore } from './entries.js';
 import { isInside } from './notify/paths.js';
 import type { Job, JobStore } from './jobs.js';
-import type { Probe } from './probe.js';
+import type { Hdr, Probe } from './probe.js';
 import {
   coverageOf,
   distinctEpisodes,
@@ -96,12 +96,21 @@ interface ProbeRow {
   path: string;
   video: string | null;
   audio: string | null;
+  hdr: string | null;
+  audio_languages: string | null;
+  subtitle_languages: string | null;
   size: number | null;
   mtime: number | null;
   probed_at: string | null;
 }
 
-const PROBE_COLUMNS = 'path, video, audio, size, mtime, probed_at';
+const PROBE_COLUMNS =
+  'path, video, audio, hdr, audio_languages, subtitle_languages, size, mtime, probed_at';
+const PROBE_ASSIGNMENTS =
+  'video = ?, audio = ?, hdr = ?, audio_languages = ?, subtitle_languages = ?, size = ?, mtime = ?, probed_at = ?';
+
+const languages = (json: string | null): string[] =>
+  json === null ? [] : (JSON.parse(json) as string[]);
 
 const bit = (value: Presence): number | null => (value === null ? null : value ? 1 : 0);
 const flag = (value: number | null): Presence => (value === null ? null : value === 1);
@@ -198,7 +207,7 @@ export class LibraryItemStore {
       // Prepared once: preparing per row costs more than the insert itself on a large library.
       const put = this.putStatement();
       const restore = this.database.prepare(
-        `UPDATE library_items SET video = ?, audio = ?, size = ?, mtime = ?, probed_at = ?
+        `UPDATE library_items SET ${PROBE_ASSIGNMENTS}
          WHERE library_id = ? AND path = ?`,
       );
       for (const item of items) {
@@ -208,6 +217,9 @@ export class LibraryItemStore {
           restore.run(
             probe.video,
             probe.audio,
+            probe.hdr,
+            probe.audio_languages,
+            probe.subtitle_languages,
             probe.size,
             probe.mtime,
             probe.probed_at,
@@ -241,6 +253,9 @@ export class LibraryItemStore {
       row && {
         video: row.video,
         audio: row.audio,
+        hdr: row.hdr as Hdr | null,
+        audioLanguages: languages(row.audio_languages),
+        subtitleLanguages: languages(row.subtitle_languages),
         size: row.size ?? 0,
         mtime: row.mtime ?? 0,
         probedAt: row.probed_at,
@@ -251,12 +266,15 @@ export class LibraryItemStore {
   setProbe(libraryId: string, path: string, probe: Probe): void {
     this.database
       .prepare(
-        `UPDATE library_items SET video = ?, audio = ?, size = ?, mtime = ?, probed_at = ?
+        `UPDATE library_items SET ${PROBE_ASSIGNMENTS}
          WHERE library_id = ? AND path = ?`,
       )
       .run(
         probe.video,
         probe.audio,
+        probe.hdr,
+        JSON.stringify(probe.audioLanguages),
+        JSON.stringify(probe.subtitleLanguages),
         probe.size,
         probe.mtime,
         new Date().toISOString(),

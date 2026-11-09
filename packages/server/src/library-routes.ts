@@ -25,7 +25,7 @@ import { isInside } from './notify/paths.js';
 import type { SeriesFilesStore } from './series-files.js';
 import { compare, missingOf, type Completeness, type EpisodeReport } from './completeness.js';
 import type { Execution, ExecutionStore } from './executions.js';
-import type { Probe, ProbeQueue } from './probe.js';
+import { HDR_FORMATS, type Probe, type ProbeQueue } from './probe.js';
 import type { ExecutionReport } from './service.js';
 import type { EntryStore } from './entries.js';
 import type { EventBus } from './events.js';
@@ -212,10 +212,13 @@ const presentVersion = (item: LibraryItem): unknown => ({
 const fileSchema = {
   type: 'object',
   nullable: true,
-  required: ['video', 'audio', 'size'],
+  required: ['video', 'audio', 'hdr', 'audioLanguages', 'subtitleLanguages', 'size'],
   properties: {
     video: { type: 'string', nullable: true },
     audio: { type: 'string', nullable: true },
+    hdr: { type: 'string', enum: [...HDR_FORMATS], nullable: true },
+    audioLanguages: { type: 'array', items: { type: 'string' } },
+    subtitleLanguages: { type: 'array', items: { type: 'string' } },
     size: { type: 'integer' },
   },
 } as const;
@@ -764,7 +767,16 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
         ...files.map((row) => probes.now(library.id, row.path)),
       ]);
       const readOf = (probe: Probe | null | undefined) =>
-        probe ? { video: probe.video, audio: probe.audio, size: probe.size } : null;
+        probe
+          ? {
+              video: probe.video,
+              audio: probe.audio,
+              hdr: probe.hdr,
+              audioLanguages: probe.audioLanguages,
+              subtitleLanguages: probe.subtitleLanguages,
+              size: probe.size,
+            }
+          : null;
       const profile = buildProfile(libraryProfile(library, store.config));
       const folder = dirname(item.path);
       const nfo =
