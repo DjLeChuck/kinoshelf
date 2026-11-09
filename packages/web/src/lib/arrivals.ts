@@ -200,7 +200,8 @@ export function imageUrl(
   return file ? `/api/images/${size}/${file}` : undefined;
 }
 
-export type ImageKind = 'poster' | 'fanart' | 'logo';
+/** A work's three images, and an episode's own (`thumb`, one file per version). */
+export type ImageKind = 'poster' | 'fanart' | 'logo' | 'thumb';
 
 /**
  * The image a work has in its folder (`base` is the work's API path), for the page to show what a

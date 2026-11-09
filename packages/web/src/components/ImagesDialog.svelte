@@ -21,6 +21,8 @@
   let {
     base,
     initial,
+    kinds = IMAGE_KINDS,
+    heading: headingOverride,
     onclose,
     ondone,
   }: {
@@ -28,6 +30,10 @@
     base: string;
     /** The tab to open on. */
     initial: ImageKind;
+    /** The tabs to offer: a work's three images by default, an episode's one. */
+    kinds?: readonly ImageKind[];
+    /** What to call the work in the title, when the listing's title is not it. */
+    heading?: string;
     onclose: () => void;
     /** The images were replaced: what to tell the user. */
     ondone: (message: string) => void;
@@ -93,7 +99,7 @@
   // What the profile writes under that name: the only format an address may give.
   const formatOf = (file: string): string => (file.endsWith('.png') ? 'PNG' : 'JPEG');
   const fileOf = (kind: ImageKind): string => listing?.files[kind] ?? '';
-  const changes = $derived(IMAGE_KINDS.filter((kind) => picks[kind] !== undefined));
+  const changes = $derived(kinds.filter((kind) => picks[kind] !== undefined));
   const summary = $derived(
     changes.length === 0
       ? t('web.images.summary.none')
@@ -107,7 +113,10 @@
   const thumbSize = (kind: ImageKind): 'w342' | 'w300' => (kind === 'poster' ? 'w342' : 'w300');
   const thumb = (path: string): string | undefined => imageUrl(thumbSize(tab), path);
   const bigThumb = (path: string): string | undefined =>
-    imageUrl(tab === 'poster' ? 'w342' : tab === 'fanart' ? 'w780' : 'w500', path);
+    imageUrl(
+      tab === 'poster' ? 'w342' : tab === 'fanart' || tab === 'thumb' ? 'w780' : 'w500',
+      path,
+    );
   const describe = (candidate: Candidate): string =>
     t('web.images.source.tmdb', {
       language: languageLabel(candidate.language),
@@ -181,7 +190,7 @@
       return;
     }
     event.preventDefault();
-    const next = IMAGE_KINDS[(IMAGE_KINDS.indexOf(tab) + step + IMAGE_KINDS.length) % 3];
+    const next = kinds[(kinds.indexOf(tab) + step + kinds.length) % kinds.length];
     if (next) {
       pickTab(next);
       document.getElementById(`images-tab-${next}`)?.focus();
@@ -207,7 +216,9 @@
 
   const heading = $derived(
     t('web.images.title', {
-      title: `${listing?.title ?? ''}${listing?.year ? ` (${listing.year})` : ''}`.trim(),
+      title:
+        headingOverride ??
+        `${listing?.title ?? ''}${listing?.year ? ` (${listing.year})` : ''}`.trim(),
     }),
   );
 </script>
@@ -227,7 +238,13 @@
     <header>
       <div>
         <h2 id="images-title">{heading}</h2>
-        <p class="muted">{t('web.images.intro')}</p>
+        <p class="muted">
+          {t(
+            kinds.length === 1 && kinds[0] === 'thumb'
+              ? 'web.images.intro.episode'
+              : 'web.images.intro',
+          )}
+        </p>
       </div>
       <button
         type="button"
@@ -237,34 +254,42 @@
       >
     </header>
 
-    <div class="tabs" role="tablist" aria-label={t('web.images.tabs')}>
-      {#each IMAGE_KINDS as kind (kind)}
-        <button
-          type="button"
-          role="tab"
-          id={`images-tab-${kind}`}
-          aria-selected={tab === kind}
-          aria-controls="images-panel"
-          tabindex={tab === kind ? 0 : -1}
-          class:on={tab === kind}
-          onclick={() => {
-            pickTab(kind);
-          }}
-          onkeydown={moveTab}
-        >
-          {t(`web.images.tab.${kind}`)}
-          <span class="count">{listing?.candidates[kind].length ?? ''}</span>
-          {#if picks[kind]}<span class="dot" aria-hidden="true"></span>{/if}
-        </button>
-      {/each}
-    </div>
+    {#if kinds.length > 1}
+      <div class="tabs" role="tablist" aria-label={t('web.images.tabs')}>
+        {#each kinds as kind (kind)}
+          <button
+            type="button"
+            role="tab"
+            id={`images-tab-${kind}`}
+            aria-selected={tab === kind}
+            aria-controls="images-panel"
+            tabindex={tab === kind ? 0 : -1}
+            class:on={tab === kind}
+            onclick={() => {
+              pickTab(kind);
+            }}
+            onkeydown={moveTab}
+          >
+            {t(`web.images.tab.${kind}`)}
+            <span class="count">{listing?.candidates[kind].length ?? ''}</span>
+            {#if picks[kind]}<span class="dot" aria-hidden="true"></span>{/if}
+          </button>
+        {/each}
+      </div>
+    {/if}
 
     {#if listing === undefined && failure === undefined}
       <p class="muted pad" role="status">{t('web.loading')}</p>
     {:else if listing === undefined}
       <p class="alert alert-danger pad" role="alert">{messageOf(t, failure)}</p>
     {:else}
-      <div class="panel" id="images-panel" role="tabpanel" aria-labelledby={`images-tab-${tab}`}>
+      <div
+        class="panel"
+        id="images-panel"
+        role={kinds.length > 1 ? 'tabpanel' : 'group'}
+        aria-labelledby={kinds.length > 1 ? `images-tab-${tab}` : undefined}
+        aria-label={kinds.length > 1 ? undefined : t(`web.images.tab.${tab}`)}
+      >
         <div class="body">
           <aside>
             <div class="side">

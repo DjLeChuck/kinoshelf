@@ -48,6 +48,8 @@ export interface LibraryItem {
   readonly poster: boolean | null;
   readonly fanart: boolean | null;
   readonly logo: boolean | null;
+  /** An episode's own image (`<file>.jpg`); `null` for any other file. */
+  readonly thumb: boolean | null;
   /** What settles it: `GET /api/entries/{id}`. */
   readonly entryId: string | null;
   /** The folder it came in; files sharing it and `cluster` are validated together. `null`: not told. */
@@ -124,6 +126,7 @@ export interface ItemsPage {
       readonly nfo: boolean;
       readonly artwork: boolean;
       readonly logo: boolean;
+      readonly thumb: boolean;
     };
   };
   /** `null` until a scan of the source has ended. */
@@ -411,6 +414,18 @@ export function versionsToRun(item: ListedItem, mode: 'rename' | 'refresh'): Lib
       nfo: version.nfo,
       entryId: version.entryId,
     }));
+}
+
+/** An episode's thumbnail across its versions: missing if any version lacks it, `null` if none writes one. */
+export function thumbOf(versions: readonly Pick<LibraryItem, 'thumb'>[]): boolean | null {
+  const told = versions.filter((version) => version.thumb !== null);
+  return told.length === 0 ? null : told.every((version) => version.thumb === true);
+}
+
+/** An episode's NFO across its versions: missing if any version lacks it, `null` if none writes one. */
+export function nfoOf(versions: readonly Pick<LibraryItem, 'nfo'>[]): boolean | null {
+  const told = versions.filter((version) => version.nfo !== null);
+  return told.length === 0 ? null : told.every((version) => version.nfo === true);
 }
 
 /** A selection split by what it asks: "Rename" takes the first, "Refresh" the second. */

@@ -13,6 +13,7 @@
     groupSettling,
     libraryItems,
     settleKey,
+    thumbOf,
     type Coverage,
     type EpisodeState,
     type ShowEpisode,
@@ -45,7 +46,7 @@
     libraryId: string;
     /** The library's folder: what a scan of one show or season must stay inside. */
     source: string;
-    writes: { nfo: boolean; artwork: boolean; logo: boolean };
+    writes: { nfo: boolean; artwork: boolean; logo: boolean; thumb: boolean };
     query: string;
     /** The tab: the shows it keeps, and the files waiting for a person (`review`, `unrecognized`). */
     filter: ShowFilter | undefined;
@@ -266,7 +267,11 @@
   }
 
   const columns = $derived(
-    6 + (writes.nfo ? 1 : 0) + (writes.artwork ? 2 : 0) + (writes.logo ? 1 : 0),
+    6 +
+      (writes.nfo ? 1 : 0) +
+      (writes.artwork ? 2 : 0) +
+      (writes.logo ? 1 : 0) +
+      (writes.thumb ? 1 : 0),
   );
 </script>
 
@@ -330,6 +335,7 @@
               <th>{t('web.library.col.fanart')}</th>
             {/if}
             {#if writes.logo}<th>{t('web.library.col.logo')}</th>{/if}
+            {#if writes.thumb}<th>{t('web.library.col.thumb')}</th>{/if}
             <th>{t('web.library.col.missing')}</th>
           </tr>
         </thead>
@@ -457,6 +463,7 @@
                 <td><Presence value={show.fanart} /></td>
               {/if}
               {#if writes.logo}<td><Presence value={show.logo} /></td>{/if}
+              {#if writes.thumb}<td></td>{/if}
               <td>
                 {#if show.missing}
                   <!-- The column's header says what it counts; the tooltip spells it out. -->
@@ -548,6 +555,7 @@
                       <td></td>
                     {/if}
                     {#if writes.logo}<td></td>{/if}
+                    {#if writes.thumb}<td></td>{/if}
                     <td>
                       {#if season.missing > 0}
                         <span
@@ -610,6 +618,8 @@
                           {#if writes.nfo}<td><NfoTally tally={episode.nfo} /></td>{/if}
                           {#if writes.artwork}<td></td><td></td>{/if}
                           {#if writes.logo}<td></td>{/if}
+                          {#if writes.thumb}<td><Presence value={thumbOf(episode.versions)} /></td
+                            >{/if}
                           <td></td>
                         {/if}
                       </tr>
@@ -662,12 +672,18 @@
         {#key `${chosen.episode.season}:${chosen.episode.episode}`}
           <EpisodePanel
             {libraryId}
+            tmdbId={chosen.tmdbId}
             showTitle={shows.items.find((show) => show.tmdbId === chosen.tmdbId)?.title ?? ''}
             episode={chosen.episode}
             coverage={chosen.coverage}
             {busy}
             ondone={(message: string) => {
               selection = undefined;
+              onsettled(message);
+              void load();
+            }}
+            onimage={(message: string) => {
+              // The episode stays selected: only the lists behind it are read again.
               onsettled(message);
               void load();
             }}

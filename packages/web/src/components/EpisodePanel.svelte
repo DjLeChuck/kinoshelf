@@ -1,5 +1,6 @@
 <script lang="ts">
   import { formatBytes } from '@kinoshelf/i18n';
+  import { workImageUrl } from '../lib/arrivals.js';
   import { messageOf } from '../lib/errors.js';
   import { t } from '../lib/i18n.svelte.js';
   import {
@@ -7,6 +8,8 @@
     canRun,
     episodeLabel,
     libraryItems,
+    nfoOf,
+    thumbOf,
     type Coverage,
     type ItemDetail,
     type LibraryItem,
@@ -14,18 +17,23 @@
   } from '../lib/library-items.js';
   import { baseName } from '../lib/paths.js';
   import { codecLine, languageShort, slotsOf, versionLabel, type Slot } from '../lib/versions.js';
+  import { EPISODE_KINDS } from '../lib/images.js';
+  import ImagesDialog from './ImagesDialog.svelte';
   import RunDialog from './RunDialog.svelte';
   import WorkCard from './WorkCard.svelte';
 
   let {
     libraryId,
+    tmdbId,
     showTitle,
     episode,
     coverage,
     busy = false,
     ondone,
+    onimage,
   }: {
     libraryId: string;
+    tmdbId: number;
     showTitle: string;
     episode: ShowEpisode;
     /** The versions of the show, as its season lists them. */
@@ -33,14 +41,16 @@
     busy?: boolean;
     /** A batch was queued: what to tell the user. */
     ondone: (message: string) => void;
+    /** The image was changed: the panel stays on the episode, the page only reads its lists again. */
+    onimage: (message: string) => void;
   } = $props();
 
   // The parent keys this panel on the episode, so the files read here once are right for its life.
   let details = $state<Readonly<Record<string, ItemDetail>>>({});
   let failure = $state<unknown>(undefined);
-  let running = $state<{ mode: 'rename' | 'refresh' | 'version'; item: LibraryItem } | undefined>(
-    undefined,
-  );
+  let running = $state<
+    { mode: 'rename' | 'refresh' | 'version'; items: readonly LibraryItem[] } | undefined
+  >(undefined);
 
   /* svelte-ignore state_referenced_locally */
   const files = episode.versions;
@@ -56,6 +66,20 @@
   );
 
   const slots = $derived(slotsOf(coverage, files));
+  // The files are read once: after a change every version has the picture, so the panel says so.
+  let imageChanged = $state(false);
+  const nfo = $derived(nfoOf(files));
+  // The files that lack their NFO: one button writes them all, whatever the version.
+  const lackingNfo = $derived(files.filter((file) => file.nfo === false));
+  const thumb = $derived(imageChanged ? true : thumbOf(files));
+  // The picture is the episode's, one for all its versions: it is changed from here, not per file.
+  const imagesBase = $derived(
+    `/api/libraries/${libraryId}/shows/${String(tmdbId)}/seasons/${String(episode.season)}/episodes/${String(episode.episode)}`,
+  );
+  const hasImage = $derived(imageChanged || files.some((file) => file.thumb === true));
+  let stamp = $state(Date.now());
+  let editing = $state(false);
+  let imageFailed = $state(false);
   const statusChip = {
     complete: 'chip-ok',
     'nfo-missing': 'chip-warn',
@@ -81,7 +105,6 @@
       .join(' · ');
   };
 
-  const nfoMissing = (slot: Slot): boolean => slot.status === 'nfo-missing';
   const label = (slot: Slot): string =>
     versionLabel(slot.resolution, slot.file ? (details[slot.file.id]?.file ?? null) : null).join(
       ' ',
@@ -95,6 +118,62 @@
   {#if failure}
     <p class="alert alert-danger" role="alert">{messageOf(t, failure)}</p>
   {/if}
+  {#if thumb !== null}
+    <section aria-labelledby="thumb">
+      <h3 id="thumb">{t('web.library.episode.thumb')}</h3>
+      {#if hasImage && !imageFailed}
+        <img
+          class="still"
+          src={workImageUrl(imagesBase, 'thumb', stamp)}
+          alt=""
+          onerror={() => {
+            imageFailed = true;
+          }}
+        />
+      {/if}
+      <p class="state">
+        <span class={thumb ? 'ok' : 'missing'} aria-hidden="true">{thumb ? '✓' : '✗'}</span>
+        {t(thumb ? 'web.library.present' : 'web.library.missing')}
+      </p>
+      {#if files.some((file) => file.state === 'ok' || file.state === 'incomplete')}
+        <button type="button" class="btn" disabled={busy} onclick={() => (editing = true)}>
+          {t(hasImage ? 'web.images.change-thumb' : 'web.images.add-thumb')}
+        </button>
+      {/if}
+    </section>
+  {/if}
+
+  <!-- One NFO status for the episode: each version has its own file, written from the same data. -->
+  {#if nfo !== null}
+    <section aria-labelledby="nfo">
+      <h3 id="nfo">{t('web.library.nfo.title')}</h3>
+      <p class="state">
+        <span class={nfo ? 'ok' : 'missing'} aria-hidden="true">{nfo ? '✓' : '✗'}</span>
+        {t(nfo ? 'web.library.present' : 'web.library.missing')}
+      </p>
+      <!-- With several versions, which of them lack theirs. -->
+      {#if files.length > 1}
+        {#each lackingNfo as file (file.id)}
+          {#each (details[file.id]?.nfoFiles ?? []).filter((known) => !known.present) as lacking (lacking.path)}
+            <p class="muted mono lacking">{baseName(lacking.path)}</p>
+          {/each}
+        {/each}
+      {/if}
+      {#if lackingNfo.some((file) => canRun(file))}
+        <button
+          type="button"
+          class="btn"
+          disabled={busy}
+          onclick={() => {
+            running = { mode: 'refresh', items: lackingNfo.filter((file) => canRun(file)) };
+          }}
+        >
+          {t('web.library.nfo.generate')}
+        </button>
+      {/if}
+    </section>
+  {/if}
+
   <section aria-labelledby="versions">
     <h3 id="versions">{t('web.library.episode.versions')}</h3>
     <ul class="cards">
@@ -113,45 +192,17 @@
           {:else}
             {#if specs(detail)}<p class="muted">{specs(detail)}</p>{/if}
             <p class="mono">{baseName(file.path)}</p>
-            {#each detail?.nfoFiles ?? [] as nfo (nfo.path)}
-              <p class="mono">
-                <span class={nfo.present ? 'ok' : 'missing'} aria-hidden="true"
-                  >{nfo.present ? '✓' : '✗'}</span
-                >
-                {baseName(nfo.path)}
-                <span class="sr-only"
-                  >: {t(nfo.present ? 'web.library.present' : 'web.library.missing')}</span
-                >
-              </p>
-            {/each}
             <div class="actions">
-              {#if canRun(file) && (nfoMissing(slot) || file.state === 'rename')}
+              {#if canRun(file) && file.state === 'rename'}
                 <button
                   type="button"
-                  class="btn"
-                  class:btn-primary={file.state === 'rename'}
+                  class="btn btn-primary"
                   disabled={busy}
                   onclick={() => {
-                    running = {
-                      mode: file.state === 'rename' ? 'rename' : 'refresh',
-                      item: file,
-                    };
+                    running = { mode: 'rename', items: [file] };
                   }}
                 >
-                  {t(
-                    file.state === 'rename' ? 'web.library.run.rename' : 'web.library.nfo.generate',
-                  )}
-                </button>
-              {:else if canRun(file)}
-                <button
-                  type="button"
-                  class="btn"
-                  disabled={busy}
-                  onclick={() => {
-                    running = { mode: 'refresh', item: file };
-                  }}
-                >
-                  {t('web.library.run.refresh')}
+                  {t('web.library.run.rename')}
                 </button>
               {/if}
               {#if canNameVersion(file)}
@@ -160,7 +211,7 @@
                   class="btn"
                   disabled={busy}
                   onclick={() => {
-                    running = { mode: 'version', item: file };
+                    running = { mode: 'version', items: [file] };
                   }}
                 >
                   {t('web.library.run.version')}
@@ -174,10 +225,28 @@
   </section>
 </WorkCard>
 
+{#if editing}
+  <ImagesDialog
+    base={imagesBase}
+    initial="thumb"
+    kinds={EPISODE_KINDS}
+    heading={`${showTitle} — ${episodeLabel(episode.season, episode.episode)}`}
+    onclose={() => {
+      editing = false;
+    }}
+    ondone={(message: string) => {
+      imageChanged = true;
+      imageFailed = false;
+      stamp = Date.now();
+      onimage(message);
+    }}
+  />
+{/if}
+
 {#if running}
   <RunDialog
     {libraryId}
-    items={[running.item]}
+    items={running.items}
     mode={running.mode}
     onclose={() => {
       running = undefined;
@@ -187,6 +256,24 @@
 {/if}
 
 <style>
+  .lacking {
+    margin: 0 0 6px;
+  }
+
+  .state {
+    margin: 0 0 10px;
+  }
+
+  .still {
+    display: block;
+    width: 100%;
+    max-width: 360px;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    border-radius: 6px;
+    margin: 0 0 8px;
+  }
+
   p {
     margin: 0;
   }

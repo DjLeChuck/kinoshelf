@@ -113,6 +113,14 @@ createServer((request, response) => {
       .end(jpeg ? JPEG : PNG);
   } else if (/^\/3\/(movie|tv)\/\d+\/images$/.test(url.pathname)) {
     json(IMAGES);
+  } else if (/^\/3\/tv\/\d+\/season\/\d+\/episode\/\d+\/images$/.test(url.pathname)) {
+    // An episode's stills: no text on them.
+    json({
+      stills: [
+        image('/stilla.jpg', null, 1920, 1080, 8),
+        image('/stillb.jpg', null, 1920, 1080, 3),
+      ],
+    });
   } else if (url.pathname === '/3/search/movie') {
     const word = (url.searchParams.get('query') ?? '').toLowerCase().split(' ')[0];
     json({ results: word ? catalog.filter((c) => c.title.toLowerCase().startsWith(word)) : [] });

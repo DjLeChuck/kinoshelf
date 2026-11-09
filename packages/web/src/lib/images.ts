@@ -37,11 +37,15 @@ export interface ImageChoice {
 
 export const IMAGE_KINDS = ['poster', 'fanart', 'logo'] as const satisfies readonly ImageKind[];
 
+/** What the dialog offers for an episode: one image, written for each of its versions. */
+export const EPISODE_KINDS = ['thumb'] as const satisfies readonly ImageKind[];
+
 /** What each tab draws: the grid's ratio and the narrowest a card may be. */
 export const KIND_LAYOUT: Record<ImageKind, { ratio: string; min: number }> = {
   poster: { ratio: '2 / 3', min: 150 },
   fanart: { ratio: '16 / 9', min: 260 },
   logo: { ratio: '3 / 1', min: 220 },
+  thumb: { ratio: '16 / 9', min: 260 },
 };
 
 /**
