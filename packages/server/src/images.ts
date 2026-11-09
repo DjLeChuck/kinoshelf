@@ -9,9 +9,10 @@ const TMDB_IMAGES = 'https://image.tmdb.org/t/p';
 
 /**
  * The widths the UI asks for (w780 for the backdrop behind a work's page); anything else would let
- * a client fill the disk with variants.
+ * a client fill the disk with variants. TMDB serves each kind its own: `w300` and `w500` are the
+ * ones a logo has (a logo has no `w342` nor `w780`), `w300` also fits a backdrop's grid.
  */
-const IMAGE_SIZES = ['w92', 'w154', 'w342', 'w780'] as const;
+const IMAGE_SIZES = ['w92', 'w154', 'w300', 'w342', 'w500', 'w780'] as const;
 
 /** TMDB's file names are a hash and an extension. Nothing else may reach the path or the URL. */
 const FILE = /^[A-Za-z0-9]{1,64}\.(jpg|png)$/;

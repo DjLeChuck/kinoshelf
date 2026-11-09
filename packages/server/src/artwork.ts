@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { existsSync } from 'node:fs';
 import { open, readFile, stat } from 'node:fs/promises';
 import { dirname, extname, join, resolve } from 'node:path';
 import {
@@ -61,6 +62,15 @@ export interface ListedImage {
   readonly height: number;
   readonly rating: number | null;
   readonly votes: number;
+}
+
+export interface ImagePreview {
+  readonly format: ImageFormat;
+  readonly width: number;
+  readonly height: number;
+  readonly size: number;
+  /** The image itself as a `data:` address: the page's policy allows no other origin. */
+  readonly data: string;
 }
 
 export interface ImageListing {
@@ -130,6 +140,28 @@ export class Artwork {
       throw new ApiError(409, 'image.not-editable');
     }
     return this.target(library, 'movie', item, folder);
+  }
+
+  /**
+   * Which of the work's images are on the disk, for a page that may offer to change them; `null`
+   * when it may not (`find` throws `image.not-editable`). The list's `poster`/`fanart`/`logo` say
+   * nothing planned is missing, which a work with no logo to write also is: not what a page needs.
+   */
+  presence(find: () => ImageTarget): Record<WorkImageKind, boolean> | null {
+    let target: ImageTarget;
+    try {
+      target = find();
+    } catch (error) {
+      if (error instanceof ApiError && error.code === 'image.not-editable') {
+        return null;
+      }
+      throw error;
+    }
+    const there = (type: WorkImageKind): boolean => {
+      const name = this.fileName(target, type);
+      return name !== null && existsSync(join(target.folder, name));
+    };
+    return { poster: there('poster'), fanart: there('fanart'), logo: there('logo') };
   }
 
   show(library: LibraryConfig, tmdbId: number): ImageTarget {
@@ -276,6 +308,33 @@ export class Artwork {
       width: size ? size.width : null,
       height: size ? size.height : null,
       path: (source && candidates.find((image) => source.endsWith(image.path))?.path) || null,
+    };
+  }
+
+  /**
+   * What an address gives, for the page to show before anything is written: the same download,
+   * limits and format check as `apply`, with nothing kept.
+   */
+  async preview(target: ImageTarget, type: WorkImageKind, address: string): Promise<ImagePreview> {
+    const name = this.fileName(target, type);
+    if (name === null) {
+      throw new ApiError(409, 'image.not-editable');
+    }
+    const allowLocalNetwork = this.deps.config().allowLocalImageUrls ?? false;
+    const image = await fetchCustomImage(address, { allowLocalNetwork });
+    const expected = formatOfName(name);
+    if (image.format !== expected) {
+      throw new ApiError(422, 'image.format-mismatch', {
+        found: image.format.toUpperCase(),
+        expected: expected.toUpperCase(),
+      });
+    }
+    return {
+      format: image.format,
+      width: image.width,
+      height: image.height,
+      size: image.bytes.length,
+      data: `data:image/${image.format};base64,${Buffer.from(image.bytes).toString('base64')}`,
     };
   }
 

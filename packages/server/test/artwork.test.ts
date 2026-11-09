@@ -231,6 +231,30 @@ describe('the images of a movie', () => {
   });
 });
 
+describe('the page of a movie says whether its images can be changed', () => {
+  const page = async (h: Harness, base: string) =>
+    (await h.request('GET', base.replace(/\/images$/, ''))).json<{
+      images: { poster: boolean; fanart: boolean; logo: boolean } | null;
+      logoPath: string | null;
+    }>();
+
+  it('does when the profile writes images', async () => {
+    const { h, base } = await organized();
+    expect(await page(h, base)).toMatchObject({
+      images: { poster: true, fanart: false, logo: false },
+      logoPath: '/logo.png',
+    });
+  });
+
+  it.each([
+    ['without metadata', { metadata: 'none' as const }],
+    ['loose in the library folder', { flat: true }],
+  ])('does not for a movie %s', async (_name, options) => {
+    const { h, base } = await organized(options);
+    expect((await page(h, base)).images).toBeNull();
+  });
+});
+
 describe('an image given by address', () => {
   it('is downloaded and written when the settings allow the local network', async () => {
     const { h, base, dir } = await organized({ allowLocal: true });
@@ -242,6 +266,36 @@ describe('an image given by address', () => {
     expect((await readFile(join(dir, 'logo.png'))).equals(PNG)).toBe(true);
     const listing = (await h.request('GET', base)).json<Listing>();
     expect(listing.current.logo).toMatchObject({ width: 800, height: 300, path: null });
+  });
+
+  it('is previewed with its size, writing nothing', async () => {
+    const { h, base, dir } = await organized({ allowLocal: true });
+    const origin = await serve(PNG);
+    const response = await h.request('POST', `${base}/preview`, {
+      type: 'logo',
+      url: `${origin}/mine.png`,
+    });
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({ format: 'png', width: 800, height: 300 });
+    expect(response.json<{ data: string }>().data).toMatch(/^data:image\/png;base64,/);
+    await expect(readFile(join(dir, 'logo.png'))).rejects.toThrow();
+  });
+
+  it('is not previewed when its format is not the file’s, nor on the local network', async () => {
+    const { h, base } = await organized();
+    const origin = await serve(PNG);
+    const blocked = await h.request('POST', `${base}/preview`, {
+      type: 'logo',
+      url: `${origin}/mine.png`,
+    });
+    expect(codeOf(blocked)).toBe('image.url-blocked');
+    const local = await organized({ allowLocal: true });
+    const mismatch = await local.h.request('POST', `${local.base}/preview`, {
+      type: 'poster',
+      url: `${origin}/mine.png`,
+    });
+    expect(mismatch.statusCode).toBe(422);
+    expect(codeOf(mismatch)).toBe('image.format-mismatch');
   });
 
   it('is refused on the local network by default, writing nothing', async () => {
@@ -382,6 +436,16 @@ describe('the images of a show', () => {
       items: { logo: boolean | null }[];
     }>();
     expect(shows.items[0]?.logo).toBe(true);
+  });
+
+  it('says on its page that the images can be changed, with its logo', async () => {
+    const { h, base } = await show();
+    const page = (await h.request('GET', base.replace(/\/images$/, ''))).json<{
+      images: { poster: boolean; fanart: boolean; logo: boolean } | null;
+      logoPath: string | null;
+    }>();
+    expect(page.images).toEqual({ poster: true, fanart: false, logo: false });
+    expect(page).toHaveProperty('logoPath');
   });
 
   it('has nothing to change for a show the library does not hold', async () => {

@@ -2201,6 +2201,13 @@ export interface paths {
                             genres: string[];
                             posterPath: string | null;
                             backdropPath: string | null;
+                            logoPath: string | null;
+                            /** @description Which images the profile writes are on the disk (`poster`, `fanart`, `logo`), `null` when they cannot be changed from here: the profile writes none, or the work has no folder of its own. `GET .../images` can be asked only when this is not `null`. */
+                            images: {
+                                poster: boolean;
+                                fanart: boolean;
+                                logo: boolean;
+                            } | null;
                             file: {
                                 video: string | null;
                                 audio: string | null;
@@ -2450,6 +2457,13 @@ export interface paths {
                             genres: string[];
                             posterPath: string | null;
                             backdropPath: string | null;
+                            logoPath: string | null;
+                            /** @description Which images the profile writes are on the disk (`poster`, `fanart`, `logo`), `null` when they cannot be changed from here: the profile writes none, or the work has no folder of its own. `GET .../images` can be asked only when this is not `null`. */
+                            images: {
+                                poster: boolean;
+                                fanart: boolean;
+                                logo: boolean;
+                            } | null;
                             /** @description The provider’s wording. */
                             status: string | null;
                             determined: boolean;
@@ -3124,6 +3138,144 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/libraries/{id}/items/{itemId}/images/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Previews an image given by address for a movie
+         * @description Downloads the address as `POST` of the images would (same limits, same refusals, including the format of the file the profile writes for `type`) and answers with what was found, the image as a `data:` address included. Nothing is written or kept.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    itemId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        type: "poster" | "fanart" | "logo";
+                        url: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {string} */
+                            format: "jpeg" | "png";
+                            width: number;
+                            height: number;
+                            /** @description Bytes. */
+                            size: number;
+                            data: string;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Default Response */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Default Response */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Default Response */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Default Response */
+                502: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/libraries/{id}/shows/{tmdbId}/images": {
         parameters: {
             query?: never;
@@ -3502,6 +3654,144 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/libraries/{id}/shows/{tmdbId}/images/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Previews an image given by address for a show
+         * @description Downloads the address as `POST` of the images would (same limits, same refusals, including the format of the file the profile writes for `type`) and answers with what was found, the image as a `data:` address included. Nothing is written or kept.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    tmdbId: number;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        type: "poster" | "fanart" | "logo";
+                        url: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {string} */
+                            format: "jpeg" | "png";
+                            width: number;
+                            height: number;
+                            /** @description Bytes. */
+                            size: number;
+                            data: string;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Default Response */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Default Response */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Default Response */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Default Response */
+                502: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/watch": {
         parameters: {
             query?: never;
@@ -3654,7 +3944,7 @@ export interface paths {
                 query?: never;
                 header?: never;
                 path: {
-                    size: "w92" | "w154" | "w342" | "w780";
+                    size: "w92" | "w154" | "w300" | "w342" | "w500" | "w780";
                     file: string;
                 };
                 cookie?: never;

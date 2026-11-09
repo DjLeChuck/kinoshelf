@@ -47,6 +47,9 @@ describe('GET /api/images', () => {
   it('serves a backdrop in the width the page of a work asks for', async () => {
     const h = await withImages(() => new Response(PNG));
     expect((await h.request('GET', '/api/images/w780/back.jpg')).statusCode).toBe(200);
+    // The widths a logo and a grid of backdrops ask for.
+    expect((await h.request('GET', '/api/images/w300/logo.png')).statusCode).toBe(200);
+    expect((await h.request('GET', '/api/images/w500/logo.png')).statusCode).toBe(200);
     expect((await h.request('GET', '/api/images/original/back.jpg')).statusCode).toBe(400);
     await h.drop();
   });

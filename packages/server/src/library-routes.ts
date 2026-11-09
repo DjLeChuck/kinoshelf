@@ -1,3 +1,4 @@
+import type { Artwork } from './artwork.js';
 import { existsSync } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import { basename, dirname, extname, resolve } from 'node:path';
@@ -78,6 +79,8 @@ export interface LibraryContext {
   /** The missing episodes of a show, counted on opening it (and in the background otherwise). */
   readonly completeness: Completeness;
   readonly seriesFiles: SeriesFilesStore;
+  /** Says whether the images of a work can be changed from its page, and which are there. */
+  readonly artwork: Artwork;
   /** Plans and queues the transfers of a scan's files (see `POST /api/plans/{id}/execute`). */
   readonly batch: {
     readonly dryRun: (
@@ -270,6 +273,21 @@ const find = (config: Config, id: string): LibraryConfig => {
 };
 
 /** `config.yaml` is the only home of libraries: every route edits it through the store. */
+const imagesSchema = {
+  type: 'object',
+  nullable: true,
+  description:
+    'Which images the profile writes are on the disk (`poster`, `fanart`, `logo`), `null` when ' +
+    'they cannot be changed from here: the profile writes none, or the work has no folder of its ' +
+    'own. `GET .../images` can be asked only when this is not `null`.',
+  required: ['poster', 'fanart', 'logo'],
+  properties: {
+    poster: { type: 'boolean' },
+    fanart: { type: 'boolean' },
+    logo: { type: 'boolean' },
+  },
+} as const;
+
 export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext): void {
   const { config: store, jobs, entries, items, probes, events, runner } = ctx;
 
@@ -722,6 +740,8 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
               'genres',
               'posterPath',
               'backdropPath',
+              'logoPath',
+              'images',
               'file',
               'versions',
               'nfoFiles',
@@ -733,6 +753,8 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
               genres: { type: 'array', items: { type: 'string' } },
               posterPath: { type: 'string', nullable: true },
               backdropPath: { type: 'string', nullable: true },
+              logoPath: { type: 'string', nullable: true },
+              images: imagesSchema,
               file: fileSchema,
               versions: {
                 type: 'array',
@@ -804,6 +826,8 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
         genres: details?.genres ?? [],
         posterPath: details?.posterPath ?? null,
         backdropPath: details?.backdropPath ?? null,
+        logoPath: details?.logoPath ?? null,
+        images: ctx.artwork.presence(() => ctx.artwork.movie(library, item)),
         file: presentFile(probed[files.findIndex((row) => row.path === item.path)]),
         versions: files.map((row, index) => ({
           ...(presentVersion(row, probed[index]) as object),
@@ -923,6 +947,8 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
               'genres',
               'posterPath',
               'backdropPath',
+              'logoPath',
+              'images',
               'status',
               'determined',
               'missing',
@@ -936,6 +962,8 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
               genres: { type: 'array', items: { type: 'string' } },
               posterPath: { type: 'string', nullable: true },
               backdropPath: { type: 'string', nullable: true },
+              logoPath: { type: 'string', nullable: true },
+              images: imagesSchema,
               status: { type: 'string', nullable: true, description: 'The provider’s wording.' },
               determined: { type: 'boolean' },
               missing: { type: 'integer', nullable: true },
@@ -970,6 +998,8 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
         genres: details?.genres ?? [],
         posterPath: details?.posterPath ?? null,
         backdropPath: details?.backdropPath ?? null,
+        logoPath: details?.logoPath ?? null,
+        images: ctx.artwork.presence(() => ctx.artwork.show(library, tmdbId)),
         status: details?.status ?? null,
         determined: counted !== null,
         missing: counted ? missingOf(counted.seasons) : null,

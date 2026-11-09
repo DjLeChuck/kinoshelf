@@ -173,6 +173,52 @@ export function registerArtworkRoutes(api: FastifyInstance, ctx: ArtworkRoutesCo
       },
     );
 
+    api.post<{
+      Params: Record<string, string>;
+      Body: { type: (typeof IMAGE_TYPES)[number]; url: string };
+    }>(
+      `${route.path}/preview`,
+      {
+        schema: {
+          summary: `Previews an image given by address for ${route.what}`,
+          description:
+            'Downloads the address as `POST` of the images would (same limits, same refusals, ' +
+            'including the format of the file the profile writes for `type`) and answers with ' +
+            'what was found, the image as a `data:` address included. Nothing is written or kept.',
+          params,
+          body: {
+            type: 'object',
+            required: ['type', 'url'],
+            additionalProperties: false,
+            properties: {
+              type: { type: 'string', enum: [...IMAGE_TYPES] },
+              url: { type: 'string', minLength: 1, maxLength: 2048 },
+            },
+          },
+          response: {
+            200: {
+              type: 'object',
+              required: ['format', 'width', 'height', 'size', 'data'],
+              properties: {
+                format: { type: 'string', enum: ['jpeg', 'png'] },
+                width: { type: 'integer' },
+                height: { type: 'integer' },
+                size: { type: 'integer', description: 'Bytes.' },
+                data: { type: 'string' },
+              },
+            },
+            401: errorSchema,
+            404: errorSchema,
+            409: errorSchema,
+            422: errorSchema,
+            502: errorSchema,
+          },
+        },
+      },
+      async (request) =>
+        artwork.preview(route.find(request.params), request.body.type, request.body.url),
+    );
+
     api.post<{ Params: Record<string, string>; Body: { images: ImageChoice[] } }>(
       route.path,
       {

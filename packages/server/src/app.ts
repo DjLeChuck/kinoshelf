@@ -478,8 +478,22 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
       hasWork: () => jobs.list(1).length > 0 || history.hasBatch(),
     });
     registerFsRoutes(api);
+    const artwork = new Artwork({
+      config: () => options.config,
+      journal,
+      items,
+      snapshot,
+      backupDir: join(options.configDir, 'replaced'),
+      listImages: (kind, id) => service.listImages(kind, id),
+      imageUrl: (path, size) => service.imageUrl(path, size),
+      touched: (libraryId) => {
+        seriesFiles.touch(libraryId);
+      },
+      ...(options.fetchImage && { fetchImage: options.fetchImage }),
+    });
     registerLibraryRoutes(api, {
       config: configStore,
+      artwork,
       jobs,
       entries,
       items,
@@ -504,19 +518,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     });
     registerArtworkRoutes(api, {
       config: () => options.config,
-      artwork: new Artwork({
-        config: () => options.config,
-        journal,
-        items,
-        snapshot,
-        backupDir: join(options.configDir, 'replaced'),
-        listImages: (kind, id) => service.listImages(kind, id),
-        imageUrl: (path, size) => service.imageUrl(path, size),
-        touched: (libraryId) => {
-          seriesFiles.touch(libraryId);
-        },
-        ...(options.fetchImage && { fetchImage: options.fetchImage }),
-      }),
+      artwork,
       items,
       events,
     });
