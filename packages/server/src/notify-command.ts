@@ -1,7 +1,7 @@
 import { isAbsolute } from 'node:path';
 import type { Config } from '@kinoshelf/core';
 import { createTranslator, detectLocale } from '@kinoshelf/i18n';
-import { Notifier } from './notify/notifier.js';
+import { Notifier, type NotifierDeps } from './notify/notifier.js';
 import type { RefreshTarget } from './notify/plex.js';
 
 export interface NotifyCommandContext {
@@ -13,6 +13,8 @@ export interface NotifyCommandContext {
   readonly usage: string;
   /** Replaced in tests. */
   readonly fetch?: typeof fetch;
+  /** The sign-in with Plex, when the token was not typed in `config.yaml`. */
+  readonly plexSession?: NonNullable<NotifierDeps['plexSession']>;
 }
 
 /**
@@ -57,6 +59,7 @@ export async function runNotifyCommand(
   };
 
   const notifier = new Notifier({
+    ...(context.plexSession && { plexSession: context.plexSession }),
     config: context.config,
     translate: createTranslator(detectLocale(undefined, context.config.locale, context.env)),
     log: {

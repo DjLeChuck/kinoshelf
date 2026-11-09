@@ -18,7 +18,13 @@ import {
   type NotificationEvent,
 } from './message.js';
 import { redactUrl } from './paths.js';
-import { PlexClient, type Logger, type RefreshReport, type RefreshTarget } from './plex.js';
+import {
+  PlexClient,
+  type Logger,
+  type PlexTokenSource,
+  type RefreshReport,
+  type RefreshTarget,
+} from './plex.js';
 
 /** What a target hears about when it does not say: the news, and what went wrong. */
 const DEFAULT_EVENTS: readonly NotificationEvent[] = ['transferred', 'failed'];
@@ -29,6 +35,8 @@ export interface NotifierDeps {
   readonly log: Logger & { error(error: unknown): void };
   readonly delivery?: DeliveryOptions;
   readonly now?: () => Date;
+  /** The Plex sign-in, when the user did not type a token (see `PlexSession`). */
+  readonly plexSession?: PlexTokenSource & { readonly account: { readonly connected: boolean } };
 }
 
 export interface TestResult {
@@ -67,8 +75,12 @@ export class Notifier {
     this.webhooks = config.notify?.webhooks ?? [];
 
     const { plex, jellyfin } = config.notify ?? {};
-    if (plex && !config.apiKey?.plex) {
-      log.warn('notify.plex is set without apiKey.plex: Plex will not be asked to refresh');
+    // A token typed in the settings wins; otherwise the one the sign-in with Plex made.
+    const session = this.deps.plexSession;
+    const plexToken: string | PlexTokenSource | undefined =
+      config.apiKey?.plex ?? (session?.account.connected === true ? session : undefined);
+    if (plex && plexToken === undefined) {
+      log.warn('notify.plex is set without a token: Plex will not be asked to refresh');
     }
     if (jellyfin && !config.apiKey?.jellyfin) {
       log.warn(
@@ -76,8 +88,8 @@ export class Notifier {
       );
     }
     this.plex =
-      plex && config.apiKey?.plex
-        ? new PlexClient({ ...plex, token: config.apiKey.plex }, (r) => this.send(r), log)
+      plex && plexToken !== undefined
+        ? new PlexClient({ ...plex, token: plexToken }, (r) => this.send(r), log)
         : undefined;
     this.jellyfin =
       jellyfin && config.apiKey?.jellyfin

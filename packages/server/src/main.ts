@@ -19,7 +19,9 @@ import {
   setApiKey,
 } from './auth.js';
 import { openDatabase } from './database.js';
+import { PlexTv } from './notify/plex-auth.js';
 import { runNotifyCommand } from './notify-command.js';
+import { PlexSession } from './plex-session.js';
 import { createShutdown } from './shutdown.js';
 import { findWebRoot } from './web.js';
 import { describeListenError, parseServerCommand } from './startup.js';
@@ -65,9 +67,16 @@ if (command.kind === 'api-key') {
 // from inside the container, without starting the server (see notify-command.ts).
 if (command.kind === 'notify') {
   const config = await loadConfig(configDir).catch(failStartup);
+  // The sign-in with Plex lives in the database, which the command reads (and renews a token in).
+  const notifyDatabase = await openDatabase(configDir).catch(failStartup);
+  const plexTvUrl = (process.env.KINOSHELF_PLEX_TV_URL ?? '').trim();
   process.exit(
     await runNotifyCommand(command.args, {
       config,
+      plexSession: new PlexSession(
+        notifyDatabase,
+        new PlexTv(plexTvUrl === '' ? {} : { clientsUrl: plexTvUrl }),
+      ),
       env: process.env,
       out: (line) => process.stdout.write(`${line}\n`),
       err: (line) => process.stderr.write(`${line}\n`),

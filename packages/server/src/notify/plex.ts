@@ -58,9 +58,16 @@ const SECTIONS_TTL_MS = 10 * 60_000;
 
 const PLEX_TYPE = { movie: 'movie', series: 'show' } as const;
 
+/** Where the token comes from when it is not typed: signed-in tokens last a week and are renewed. */
+export interface PlexTokenSource {
+  token(): Promise<string | undefined>;
+  /** A new token after the server refused the last one; `undefined` when there is none. */
+  renew(): Promise<string | undefined>;
+}
+
 export interface PlexOptions {
   readonly url: string;
-  readonly token: string;
+  readonly token: string | PlexTokenSource;
   /** The library to scan, when it should not be found by the folder. */
   readonly section?: number | undefined;
   readonly paths?: readonly PathMapping[] | undefined;
@@ -85,7 +92,7 @@ export class PlexClient {
 
   /** Used by the test endpoint: can Plex be reached, and does it accept the token? */
   async check(): Promise<DeliveryResult & { sections?: number }> {
-    const result = await this.send(this.get('/library/sections'));
+    const result = await this.request('/library/sections');
     return result.ok && result.text !== undefined
       ? { ...result, sections: parseSections(result.text).length }
       : result;
@@ -120,7 +127,7 @@ export class PlexClient {
       : resolved;
     for (const { section, path } of calls) {
       const query = path === undefined ? '' : `?path=${encodeURIComponent(path)}`;
-      const result = await this.send(this.get(`/library/sections/${section}/refresh${query}`));
+      const result = await this.request(`/library/sections/${section}/refresh${query}`);
       if (result.ok) {
         report.refreshed++;
       } else {
@@ -159,7 +166,7 @@ export class PlexClient {
     if (this.sections && this.now() - this.sections.at < SECTIONS_TTL_MS) {
       return this.sections.list;
     }
-    const result = await this.send(this.get('/library/sections'));
+    const result = await this.request('/library/sections');
     if (!result.ok || result.text === undefined) {
       this.log.warn(`Plex: could not list the libraries (${result.error ?? result.status})`);
       return [];
@@ -168,11 +175,29 @@ export class PlexClient {
     return this.sections.list;
   }
 
-  private get(path: string): HttpRequest {
+  /**
+   * One call to the server. A refused token is renewed and the call made again, once: a media
+   * server may drop a token plex.tv still counts good (it was revoked, or the server restarted).
+   */
+  private async request(path: string): Promise<DeliveryResult> {
+    const source = this.options.token;
+    const first = typeof source === 'string' ? source : await source.token();
+    if (first === undefined) {
+      return { ok: false, attempts: 0, error: 'not signed in' };
+    }
+    const result = await this.send(this.get(path, first));
+    if (result.status !== 401 || typeof source === 'string') {
+      return result;
+    }
+    const renewed = await source.renew();
+    return renewed === undefined || renewed === first ? result : this.send(this.get(path, renewed));
+  }
+
+  private get(path: string, token: string): HttpRequest {
     return {
       method: 'GET',
       url: `${this.options.url.replace(/\/+$/, '')}${path}`,
-      headers: { 'X-Plex-Token': this.options.token, Accept: 'application/xml' },
+      headers: { 'X-Plex-Token': token, Accept: 'application/xml' },
     };
   }
 }

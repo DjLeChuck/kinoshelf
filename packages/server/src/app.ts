@@ -36,6 +36,9 @@ import { Service } from './service.js';
 import { isValidSession } from './sessions.js';
 import { OnboardingStore } from './onboarding.js';
 import { registerOnboardingRoutes } from './onboarding-routes.js';
+import { PlexTv, type PlexTvOptions } from './notify/plex-auth.js';
+import { registerPlexRoutes } from './plex-routes.js';
+import { PlexSession } from './plex-session.js';
 import { registerSettingsRoutes } from './settings-routes.js';
 import { ConfigStore } from './settings.js';
 import { registerWatchRoutes } from './watch-routes.js';
@@ -78,6 +81,8 @@ export interface AppOptions extends Omit<ProcessorDeps, 'database'> {
   readonly retentionDays?: number;
   /** How notifications are delivered (retries, timeout); tests make them instant. */
   readonly delivery?: DeliveryOptions;
+  /** Replaces plex.tv's network and clock, for tests (the address is `KINOSHELF_PLEX_TV_URL`). */
+  readonly plexTv?: PlexTvOptions;
   /** The built web UI to serve, if any (see `findWebRoot`). */
   readonly webRoot?: string;
   /** Replaces the network for poster downloads, for tests. */
@@ -165,7 +170,14 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     snapshot,
   });
   const history = new History(journal, executions, jobs);
+  const plexTvUrl = (options.env.KINOSHELF_PLEX_TV_URL ?? '').trim();
+  const plexSession = new PlexSession(
+    options.database,
+    new PlexTv({ ...(plexTvUrl !== '' && { clientsUrl: plexTvUrl }), ...options.plexTv }),
+    options.plexTv?.now,
+  );
   const notifier = new Notifier({
+    plexSession,
     config: options.config,
     translate: createTranslator(detectLocale(undefined, options.config.locale, options.env)),
     log: {
@@ -471,7 +483,9 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
       env: options.env,
       events,
       service,
+      plexSession,
     });
+    registerPlexRoutes(api, { session: plexSession, store: configStore, events });
     registerOnboardingRoutes(api, {
       store: new OnboardingStore(options.database),
       config: configStore,

@@ -333,6 +333,23 @@ export const SERVER_MIGRATIONS: readonly { readonly name: string; readonly sql: 
       UPDATE library_items SET probed_at = NULL;
     `,
   },
+  {
+    // Signing in to Plex with its JWT flow: the device's id and Ed25519 key (kept for as long as it
+    // signs in) and the token it was given (renewed every week). One row; a secret, so it stays
+    // out of config.yaml, which people edit, share and paste.
+    name: 'server:026-plex-auth',
+    sql: `
+      CREATE TABLE plex_auth (
+        id INTEGER PRIMARY KEY CHECK (id = 1),
+        client_id TEXT NOT NULL,
+        private_jwk TEXT NOT NULL,
+        kid TEXT NOT NULL,
+        token TEXT,
+        expires_at INTEGER,
+        pin_id INTEGER
+      );
+    `,
+  },
 ];
 
 /** Opens the single SQLite file of the config directory, shared with the CLI and the cache. */

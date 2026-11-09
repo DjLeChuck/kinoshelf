@@ -13,6 +13,7 @@ import { ApiError } from './api-error.js';
 import { generateApiKey, hasApiKey, setApiKey } from './auth.js';
 import type { EventBus } from './events.js';
 import { errorSchema, settingsPatchSchema, settingsSchema } from './schemas.js';
+import type { PlexSession } from './plex-session.js';
 import type { Service } from './service.js';
 import { createSession, SESSION_TTL_MS, sessionCookie } from './sessions.js';
 import { sessionToken } from './session-routes.js';
@@ -24,6 +25,7 @@ export interface SettingsContext {
   readonly env: Readonly<Record<string, string | undefined>>;
   readonly events: EventBus;
   readonly service: Service;
+  readonly plexSession: PlexSession;
 }
 
 /** What a profile writes, rendered from its own templates so the UI never repeats them. */
@@ -56,10 +58,17 @@ function namingExamples(): Record<Naming, { movie: string; series: string }> {
 const apiKeySource = (ctx: SettingsContext): 'env' | 'database' | null =>
   (ctx.env.KINOSHELF_API_KEY ?? '') !== '' ? 'env' : hasApiKey(ctx.database) ? 'database' : null;
 
+/** Whether the user signed in with Plex, and whether plex.tv still accepts that. */
+function plexAccount(session: PlexSession): 'signed-in' | 'expired' | null {
+  const { connected, error } = session.account;
+  return error ? 'expired' : connected ? 'signed-in' : null;
+}
+
 export function registerSettingsRoutes(api: FastifyInstance, ctx: SettingsContext): void {
   const present = (): unknown => ({
     ...(presentSettings(ctx.store.config, ctx.env) as object),
     apiKey: { source: apiKeySource(ctx) },
+    plexAccount: plexAccount(ctx.plexSession),
     namingExamples: namingExamples(),
   });
 
