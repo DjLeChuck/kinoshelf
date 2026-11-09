@@ -15,6 +15,8 @@ export interface Settings {
     readonly language: string | null;
   };
   readonly locale: 'en' | 'fr' | null;
+  /** Signed in with Plex (a token that renews itself), or `expired` once plex.tv refuses it. */
+  readonly plexAccount: 'signed-in' | 'expired' | null;
   readonly plex: {
     readonly url: string;
     readonly section: number | null;

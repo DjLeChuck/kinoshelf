@@ -6,6 +6,7 @@ import type { paths } from './api-schema.js';
 import type { Arrival, ArrivalPage, Preview } from './arrivals.js';
 import type { Activity, BatchDetail, JobDetail, UndoReport } from './history.js';
 import type { AddressPreview, ImageListing } from './images.js';
+import type { PlexPin, PlexServer } from './plex.js';
 import type { Settings } from './settings.js';
 import type { Library } from './libraries.js';
 import type { ItemDetail, ItemsPage, RunReport, Show, ShowDetail } from './library-items.js';
@@ -35,6 +36,8 @@ export type Contract = [
   Expect<Fits<Got<'/api/libraries'>[number], Library>>,
   Expect<Fits<Got<'/api/jobs/{id}'>, JobDetail>>,
   Expect<Fits<Got<'/api/settings'>, Settings>>,
+  Expect<Fits<Posted<'/api/plex/auth', 200>, PlexPin>>,
+  Expect<Fits<Got<'/api/plex/servers'>['servers'][number], PlexServer>>,
   Expect<Fits<Got<'/api/history'>['items'][number], Activity>>,
   Expect<Fits<Got<'/api/libraries/{id}/items'>, ItemsPage>>,
   Expect<Fits<Got<'/api/libraries/{id}/items/{itemId}'>, ItemDetail>>,

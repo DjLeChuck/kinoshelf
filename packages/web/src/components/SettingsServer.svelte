@@ -9,6 +9,7 @@
     type Settings,
   } from '../lib/settings.js';
   import PathMappings from './PathMappings.svelte';
+  import PlexSignIn from './PlexSignIn.svelte';
   import SettingsSection from './SettingsSection.svelte';
 
   let {
@@ -32,6 +33,10 @@
   const savedSection = settings.plex?.section ?? null;
   let section = $state(savedSection === null ? '' : String(savedSection));
   let token = $state('');
+  /* svelte-ignore state_referenced_locally */
+  let account = $state(settings.plexAccount);
+  // Signed in, the typed token is replaced; it stays the way in for anyone who prefers it.
+  const signedIn = $derived(isPlex && account === 'signed-in');
   let paths = $state<PathMapping[]>(current ? current.paths.map((p) => ({ ...p })) : []);
 
   async function submit(): Promise<void> {
@@ -90,19 +95,27 @@
       </div>
     {/if}
 
-    <div class="field">
-      <label for="{kind}-token">{t('web.settings.server.token')}</label>
-      <input
-        id="{kind}-token"
-        class="input mono"
-        type="password"
-        autocomplete="off"
-        bind:value={token}
-      />
-      {#if current?.tokenConfigured}
-        <span class="muted hint">{t('web.settings.server.token.set')}</span>
-      {/if}
-    </div>
+    {#if isPlex}
+      <PlexSignIn bind:account bind:url />
+    {/if}
+
+    {#if !signedIn}
+      <div class="field">
+        <label for="{kind}-token">
+          {isPlex ? t('web.settings.plex.token.alt') : t('web.settings.server.token')}
+        </label>
+        <input
+          id="{kind}-token"
+          class="input mono"
+          type="password"
+          autocomplete="off"
+          bind:value={token}
+        />
+        {#if current?.tokenConfigured}
+          <span class="muted hint">{t('web.settings.server.token.set')}</span>
+        {/if}
+      </div>
+    {/if}
 
     <PathMappings bind:rows={paths} idPrefix={kind} />
   {/if}
