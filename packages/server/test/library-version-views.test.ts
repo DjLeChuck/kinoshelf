@@ -81,6 +81,17 @@ describe('a movie held in two versions', () => {
     }
   });
 
+  it('gives each version what ffprobe read of its file', async () => {
+    const { h } = await twoVersions(true);
+    await h.app.probes.idle();
+    const page = (await h.request('GET', '/api/libraries/films/items')).json<{
+      items: { versions: { file: { video: string; hdr: string | null; size: number } | null }[] }[];
+    }>();
+    const files = page.items[0]?.versions.map(({ file }) => file);
+    expect(files?.map((file) => file?.video)).toEqual(['h264', 'h264']);
+    expect(files?.map((file) => file?.size)).toEqual(['hd'.length, 'the bigger one'.length]);
+  });
+
   it('is not multi-version with one file', async () => {
     const root = await makeDir();
     await put(join(root, FOLDER, `${FOLDER}.mkv`));

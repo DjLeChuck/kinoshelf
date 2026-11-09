@@ -25,7 +25,7 @@ import { isInside } from './notify/paths.js';
 import type { SeriesFilesStore } from './series-files.js';
 import { compare, missingOf, type Completeness, type EpisodeReport } from './completeness.js';
 import type { Execution, ExecutionStore } from './executions.js';
-import { HDR_FORMATS, type Probe, type ProbeQueue } from './probe.js';
+import type { Probe, ProbeQueue } from './probe.js';
 import type { ExecutionReport } from './service.js';
 import type { EntryStore } from './entries.js';
 import type { EventBus } from './events.js';
@@ -50,6 +50,7 @@ import {
   libraryCreateSchema,
   libraryItemSchema,
   workSchema,
+  fileSchema,
   versionSchema,
   libraryPatchSchema,
   librarySchema,
@@ -199,29 +200,28 @@ const presentItem = (item: LibraryItem, release?: ReleaseOf): unknown => ({
   releaseFiles: release ? release.files : null,
 });
 
+const presentFile = (probe: Probe | null | undefined): unknown =>
+  probe
+    ? {
+        video: probe.video,
+        audio: probe.audio,
+        hdr: probe.hdr,
+        audioLanguages: probe.audioLanguages,
+        subtitleLanguages: probe.subtitleLanguages,
+        size: probe.size,
+      }
+    : null;
+
 /** The file of a work as a version: what a list needs to name it, run it, and tell its NFO. */
-const presentVersion = (item: LibraryItem): unknown => ({
+const presentVersion = (item: LibraryItem, probe?: Probe | null): unknown => ({
   id: itemId(item.path),
   path: item.path,
   state: item.state,
   resolution: resolutionOf(item.path),
   nfo: item.nfo,
   entryId: item.entryId,
+  file: presentFile(probe),
 });
-
-const fileSchema = {
-  type: 'object',
-  nullable: true,
-  required: ['video', 'audio', 'hdr', 'audioLanguages', 'subtitleLanguages', 'size'],
-  properties: {
-    video: { type: 'string', nullable: true },
-    audio: { type: 'string', nullable: true },
-    hdr: { type: 'string', enum: [...HDR_FORMATS], nullable: true },
-    audioLanguages: { type: 'array', items: { type: 'string' } },
-    subtitleLanguages: { type: 'array', items: { type: 'string' } },
-    size: { type: 'integer' },
-  },
-} as const;
 
 const STATE_ORDER: readonly ItemState[] = ['review', 'unrecognized', 'rename', 'incomplete', 'ok'];
 
@@ -233,7 +233,11 @@ const allThere = (values: readonly (boolean | null)[]): boolean | null =>
  * An entry of a list: the first file with the state and files of all its versions. A movie held
  * in two qualities is one entry, which needs renaming when any version does.
  */
-const presentWork = (work: readonly LibraryItem[], release?: ReleaseOf): unknown => {
+const presentWork = (
+  work: readonly LibraryItem[],
+  probeOf: (path: string) => Probe | undefined,
+  release?: ReleaseOf,
+): unknown => {
   const [first] = work;
   if (!first) {
     return undefined;
@@ -246,7 +250,7 @@ const presentWork = (work: readonly LibraryItem[], release?: ReleaseOf): unknown
     poster: allThere(work.map((item) => item.poster)),
     fanart: allThere(work.map((item) => item.fanart)),
     logo: allThere(work.map((item) => item.logo)),
-    versions: work.map(presentVersion),
+    versions: work.map((item) => presentVersion(item, probeOf(item.path))),
   };
 };
 
@@ -654,6 +658,10 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
       const releases = ctx.entries.releasesOf(
         page.items.flatMap((item) => (item.entryId === null ? [] : [item.entryId])),
       );
+      const probed = items.probesOf(
+        library.id,
+        page.works.flatMap((work) => work.map(({ path }) => path)),
+      );
       const last = jobs.lastScan(library.id, library.source);
       const running = last?.status === 'queued' || last?.status === 'running' ? last : undefined;
       return {
@@ -676,7 +684,11 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
         groups: page.groups,
         items: page.works.map((work) => {
           const entryId = work[0]?.entryId;
-          return presentWork(work, entryId == null ? undefined : releases.get(entryId));
+          return presentWork(
+            work,
+            (path) => probed.get(path),
+            entryId == null ? undefined : releases.get(entryId),
+          );
         }),
       };
     },
@@ -725,8 +737,6 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
                   'The files of the movie (this one alone for anything else), each read as `file` is.',
                 items: {
                   ...versionSchema,
-                  required: [...versionSchema.required, 'file'],
-                  properties: { ...versionSchema.properties, file: fileSchema },
                 },
               },
               nfoFiles: {
@@ -766,17 +776,6 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
           : null,
         ...files.map((row) => probes.now(library.id, row.path)),
       ]);
-      const readOf = (probe: Probe | null | undefined) =>
-        probe
-          ? {
-              video: probe.video,
-              audio: probe.audio,
-              hdr: probe.hdr,
-              audioLanguages: probe.audioLanguages,
-              subtitleLanguages: probe.subtitleLanguages,
-              size: probe.size,
-            }
-          : null;
       const profile = buildProfile(libraryProfile(library, store.config));
       const folder = dirname(item.path);
       const nfo =
@@ -799,10 +798,9 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
         genres: details?.genres ?? [],
         posterPath: details?.posterPath ?? null,
         backdropPath: details?.backdropPath ?? null,
-        file: readOf(probed[files.findIndex((row) => row.path === item.path)]),
+        file: presentFile(probed[files.findIndex((row) => row.path === item.path)]),
         versions: files.map((row, index) => ({
-          ...(presentVersion(row) as object),
-          file: readOf(probed[index]),
+          ...(presentVersion(row, probed[index]) as object),
         })),
         nfoFiles: nfo.expected.map((path) => ({ path, present: nfo.present.includes(path) })),
       };

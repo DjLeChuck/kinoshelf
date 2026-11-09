@@ -263,6 +263,18 @@ export class LibraryItemStore {
     );
   }
 
+  /** What is known of these files, for those that were read: a list asks, it never probes. */
+  probesOf(libraryId: string, paths: readonly string[]): Map<string, Probe> {
+    const found = new Map<string, Probe>();
+    for (const path of paths) {
+      const known = this.probeOf(libraryId, path);
+      if (known?.probedAt) {
+        found.set(path, known);
+      }
+    }
+    return found;
+  }
+
   setProbe(libraryId: string, path: string, probe: Probe): void {
     this.database
       .prepare(

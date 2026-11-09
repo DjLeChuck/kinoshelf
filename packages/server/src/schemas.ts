@@ -1,5 +1,6 @@
 /** JSON Schemas of the API: they validate requests, shape responses and feed the OpenAPI file. */
 import { METADATAS, NAMINGS } from '@kinoshelf/core';
+import { HDR_FORMATS } from './probe.js';
 
 const namings = NAMINGS;
 const metadatas = METADATAS;
@@ -945,10 +946,25 @@ export const libraryItemSchema = {
   },
 } as const;
 
+/** What `ffprobe` read of a file; `null` while it has not been read (or cannot be). */
+export const fileSchema = {
+  type: 'object',
+  nullable: true,
+  required: ['video', 'audio', 'hdr', 'audioLanguages', 'subtitleLanguages', 'size'],
+  properties: {
+    video: { type: 'string', nullable: true },
+    audio: { type: 'string', nullable: true },
+    hdr: { type: 'string', enum: [...HDR_FORMATS], nullable: true },
+    audioLanguages: { type: 'array', items: { type: 'string' } },
+    subtitleLanguages: { type: 'array', items: { type: 'string' } },
+    size: { type: 'integer' },
+  },
+} as const;
+
 /** One file of a work: a version of a movie or of an episode. */
 export const versionSchema = {
   type: 'object',
-  required: ['id', 'path', 'state', 'resolution', 'nfo', 'entryId'],
+  required: ['id', 'path', 'state', 'resolution', 'nfo', 'entryId', 'file'],
   properties: {
     id: { type: 'string', description: 'What `POST /api/libraries/{id}/execute` takes.' },
     path: { type: 'string' },
@@ -962,6 +978,12 @@ export const versionSchema = {
         'a movie (the same for every version). `null`: the profile writes none.',
     },
     entryId: libraryItemSchema.properties.entryId,
+    file: {
+      ...fileSchema,
+      description:
+        'What the snapshot knows of the file: a list never reads the disk, so `null` until the ' +
+        'background probe got to it (the page of the item reads it at once).',
+    },
   },
 } as const;
 

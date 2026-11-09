@@ -2042,6 +2042,16 @@ export interface paths {
                                     nfo: boolean | null;
                                     /** @description To validate or change the match. */
                                     entryId: string | null;
+                                    /** @description What the snapshot knows of the file: a list never reads the disk, so `null` until the background probe got to it (the page of the item reads it at once). */
+                                    file: {
+                                        video: string | null;
+                                        audio: string | null;
+                                        /** @enum {string|null} */
+                                        hdr: "dolby-vision" | "hdr10-plus" | "hdr10" | "hlg" | null;
+                                        audioLanguages: string[];
+                                        subtitleLanguages: string[];
+                                        size: number;
+                                    } | null;
                                 }[];
                             }[];
                         };
@@ -2210,6 +2220,7 @@ export interface paths {
                                 nfo: boolean | null;
                                 /** @description To validate or change the match. */
                                 entryId: string | null;
+                                /** @description What the snapshot knows of the file: a list never reads the disk, so `null` until the background probe got to it (the page of the item reads it at once). */
                                 file: {
                                     video: string | null;
                                     audio: string | null;
