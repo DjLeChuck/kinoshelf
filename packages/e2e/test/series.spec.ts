@@ -22,8 +22,9 @@ test('browses a series library as a tree and finds the episode it lacks', async 
   const show = page.getByRole('button', { name: 'Show the seasons of Severance' });
   await expect(show).toBeVisible();
 
-  // The count is made in the background, then shown on the line of the show.
-  await expect(page.getByText('Missing: 1').first()).toBeVisible();
+  // The count is made in the background, then shown on the line of the show (the number alone,
+  // the column says what it counts; the tooltip spells it out).
+  await expect(page.getByTitle('Missing: 1').first()).toBeVisible();
 
   await show.click();
   await page.getByRole('button', { name: /Season 1/ }).click();

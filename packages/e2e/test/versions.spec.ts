@@ -44,11 +44,12 @@ test('lists a movie held in two versions once, and unfolds them', async ({ page,
   await expect(page).toHaveURL(/state=multi-version/);
   await expect(page.getByRole('row').filter({ hasText: '1984' })).toHaveCount(1);
 
-  // The panel compares the versions and counts the one NFO the profile expects.
+  // The panel compares the versions and lists the one NFO the profile expects, without a tally.
   await row.locator('button.link').click();
   const panel = page.getByRole('region', { name: 'Compare the versions' });
   await expect(panel.getByRole('columnheader', { name: '2160p' })).toBeVisible();
   await expect(panel.getByRole('row', { name: /File/ })).toContainText('- 1080p.mkv');
-  await expect(page.getByText('1 of 1 expected')).toBeVisible();
+  await expect(page.getByText('movie.nfo')).toBeVisible();
+  await expect(page.getByText(/expected/)).toHaveCount(0);
   await patch(null);
 });
