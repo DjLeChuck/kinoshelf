@@ -49,11 +49,13 @@ test('chooses the naming and whether NFO files are written, and finds both after
   await expect(section.getByRole('radio', { name: /^None/ })).toBeChecked();
   await expect(section).toContainText('Dune (2021) {tmdb-438631}/Dune (2021) {tmdb-438631}.mkv');
   await expect(section).toContainText('Dune (2021)/Dune (2021).mkv');
-  // The consequence of writing metadata is said before choosing it.
-  await expect(section).toContainText('Plex only does with the optional “Plex NFO” agent');
+  // Each choice of metadata says what it does, the consequence for Plex included, as it is chosen.
+  await expect(section).toContainText('Only the videos are renamed.');
+  await expect(section).not.toContainText('Plex only does with the optional “Plex NFO” agent');
 
   await section.getByRole('radio', { name: /^Without the id/ }).check({ force: true });
   await section.getByRole('radio', { name: /^NFO files and images/ }).check({ force: true });
+  await expect(section).toContainText('Plex only does with the optional “Plex NFO” agent');
   await section.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(section.getByText('Saved.')).toBeVisible();
 
