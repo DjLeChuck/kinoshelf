@@ -4,6 +4,7 @@ import { dirname, join } from 'node:path';
 import type {
   Candidate,
   ExternalId,
+  ImageCandidate,
   ImageSize,
   MetadataProvider,
   MovieCandidate,
@@ -12,6 +13,7 @@ import type {
   SeasonInfo,
   SeriesCandidate,
   SeriesDetails,
+  WorkImages,
 } from './index.js';
 
 /**
@@ -139,6 +141,21 @@ export class FakeProvider implements MetadataProvider {
           }
         : null,
     );
+  }
+
+  listImages(id: ExternalId): Promise<WorkImages | null> {
+    this.calls.push({ method: 'listImages', id });
+    const one = (path: string, language?: string): ImageCandidate => ({
+      path,
+      ...(language && { language }),
+      width: 1000,
+      height: 1500,
+    });
+    return Promise.resolve({
+      poster: [one('/poster.jpg', 'en'), one('/poster2.jpg')],
+      fanart: [one('/backdrop.jpg'), one('/backdrop2.jpg', 'en')],
+      logo: [one('/logo.png', 'en')],
+    });
   }
 
   imageUrl(path: string, size: ImageSize): string {

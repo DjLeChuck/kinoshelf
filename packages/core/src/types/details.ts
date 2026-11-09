@@ -86,3 +86,21 @@ export type Details = MovieDetails | SeriesDetails;
 
 /** Which image a profile asks for, so the provider can pick a size that suits it. */
 export type ImageSize = 'preview' | 'standard' | 'original';
+
+/** The three images a work owns and a user may replace. */
+export type WorkImageKind = 'poster' | 'fanart' | 'logo';
+
+/** One image a provider offers for a work, as listed (nothing is downloaded). */
+export interface ImageCandidate {
+  /** The provider's path (`/abc.jpg`), what `MetadataProvider.imageUrl` turns into a URL. */
+  readonly path: string;
+  /** ISO 639-1; absent for an image with no text on it. */
+  readonly language?: string;
+  readonly width: number;
+  readonly height: number;
+  /** Absent when nobody voted. */
+  readonly rating?: Rating;
+}
+
+/** Every image the provider offers for a work, by kind, in the provider's order. */
+export type WorkImages = Readonly<Record<WorkImageKind, readonly ImageCandidate[]>>;

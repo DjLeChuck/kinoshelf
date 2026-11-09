@@ -11,12 +11,15 @@ import {
   type SearchQuery,
   type SeasonInfo,
   type SeriesCandidate,
+  type ImageCandidate,
+  type WorkImages,
 } from '@kinoshelf/core';
 import { movieRating, pickCertification } from './certification.js';
 import { TmdbClient, type TmdbClientOptions } from './client.js';
 import {
   movieAlternativeTitlesSchema,
   movieFullDetailsSchema,
+  imagesSchema,
   movieSearchSchema,
   seasonSchema,
   tvAlternativeTitlesSchema,
@@ -249,6 +252,42 @@ export class TmdbProvider implements MetadataProvider {
         ...(s.name && { name: s.name }),
         ...imageField('posterPath', s.poster_path),
       })),
+    };
+  }
+
+  async listImages(
+    id: ExternalId,
+    kind: 'movie' | 'series',
+    language?: string,
+  ): Promise<WorkImages | null> {
+    this.requireOwn(id);
+    const r = await this.client.get(
+      `/3/${kind === 'movie' ? 'movie' : 'tv'}/${id.id}/images`,
+      { include_image_language: logoLanguages(language ?? this.language) },
+      imagesSchema,
+      { ttlMs: DETAIL_TTL_MS, nullOn404: true },
+    );
+    if (!r) {
+      return null;
+    }
+    // Only what can be written next to a video: an SVG logo is dropped, as in `pickLogo`.
+    const candidates = (list: typeof r.posters): ImageCandidate[] =>
+      (list ?? [])
+        .filter((image) => IMAGE_PATH.test(image.file_path))
+        .map((image) => {
+          const rating = ratingOf(image.vote_average, image.vote_count);
+          return {
+            path: image.file_path,
+            ...(image.iso_639_1 && { language: image.iso_639_1 }),
+            width: image.width,
+            height: image.height,
+            ...(rating && { rating }),
+          };
+        });
+    return {
+      poster: candidates(r.posters),
+      fanart: candidates(r.backdrops),
+      logo: candidates(r.logos),
     };
   }
 

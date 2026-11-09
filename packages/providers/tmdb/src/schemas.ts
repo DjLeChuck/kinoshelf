@@ -168,3 +168,23 @@ export const tvFullDetailsSchema = z.object({
     )
     .nullish(),
 });
+
+const imageList = z
+  .array(
+    z.object({
+      file_path: z.string(),
+      iso_639_1: z.string().nullish(),
+      width: z.number().int(),
+      height: z.number().int(),
+      vote_average: z.number().nullish(),
+      vote_count: z.number().nullish(),
+    }),
+  )
+  .nullish();
+
+/** `/movie/{id}/images` and `/tv/{id}/images`. */
+export const imagesSchema = z.object({
+  posters: imageList,
+  backdrops: imageList,
+  logos: imageList,
+});

@@ -1,4 +1,4 @@
-import type { ImageSize, Rating, MovieDetails, SeriesDetails } from './details.js';
+import type { ImageSize, Rating, MovieDetails, SeriesDetails, WorkImages } from './details.js';
 import type { ExternalId } from './media.js';
 
 export interface SearchQuery {
@@ -73,6 +73,15 @@ export interface MetadataProvider {
   /** Full record for a metadata file; `null` if unknown (any other failure throws). */
   getMovieDetails(id: ExternalId, language?: string): Promise<MovieDetails | null>;
   getSeriesDetails(id: ExternalId, language?: string): Promise<SeriesDetails | null>;
+  /**
+   * The images offered for a work in `language` (ISO 639-1), textless and English, in the
+   * provider's order; `null` if the work is unknown. Only lists: nothing is downloaded.
+   */
+  listImages(
+    id: ExternalId,
+    kind: 'movie' | 'series',
+    language?: string,
+  ): Promise<WorkImages | null>;
   /** URL of an image given its provider path. Pure: no request is made. */
   imageUrl(path: string, size: ImageSize): string;
 }

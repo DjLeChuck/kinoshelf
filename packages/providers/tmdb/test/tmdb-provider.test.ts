@@ -833,3 +833,66 @@ describe('requests shared between providers', () => {
     expect(slow.peak()).toBe(2);
   });
 });
+
+describe('listImages', () => {
+  const images = JSON.stringify({
+    id: 438631,
+    posters: [
+      {
+        file_path: '/aaa.jpg',
+        iso_639_1: 'fr',
+        width: 2000,
+        height: 3000,
+        vote_average: 5.5,
+        vote_count: 10,
+      },
+      {
+        file_path: '/bbb.jpg',
+        iso_639_1: null,
+        width: 1000,
+        height: 1500,
+        vote_average: 0,
+        vote_count: 0,
+      },
+    ],
+    backdrops: [{ file_path: '/ccc.jpg', iso_639_1: null, width: 3840, height: 2160 }],
+    logos: [
+      {
+        file_path: '/ddd.png',
+        iso_639_1: 'en',
+        width: 800,
+        height: 300,
+        vote_average: 5.2,
+        vote_count: 2,
+      },
+      { file_path: '/eee.svg', iso_639_1: 'en', width: 800, height: 300 },
+    ],
+  });
+
+  it('asks for the library language, textless and English, and keeps what can be written', async () => {
+    const { provider, requests } = make([at('/3/movie/438631/images', () => json(images))]);
+    const result = await provider.listImages({ provider: 'tmdb', id: 438631 }, 'movie', 'fr-FR');
+
+    expect(requests[0]?.url.searchParams.get('include_image_language')).toBe('fr,en,null');
+    expect(result?.poster).toEqual([
+      {
+        path: '/aaa.jpg',
+        language: 'fr',
+        width: 2000,
+        height: 3000,
+        rating: { value: 5.5, votes: 10 },
+      },
+      { path: '/bbb.jpg', width: 1000, height: 1500 },
+    ]);
+    expect(result?.fanart).toHaveLength(1);
+    expect(result?.logo.map((logo) => logo.path)).toEqual(['/ddd.png']);
+  });
+
+  it('uses the tv endpoint for a series and answers null for an unknown work', async () => {
+    const { provider, requests } = make([
+      at('/3/tv/1/images', () => json('{"success":false}', 404)),
+    ]);
+    expect(await provider.listImages({ provider: 'tmdb', id: 1 }, 'series')).toBeNull();
+    expect(requests[0]?.url.pathname).toBe('/3/tv/1/images');
+  });
+});
