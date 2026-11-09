@@ -182,6 +182,11 @@ const imageList = z
   )
   .nullish();
 
+export type ImageList = z.infer<typeof imageList>;
+
+/** `/tv/{id}/season/{n}/episode/{n}/images`. */
+export const episodeImagesSchema = z.object({ stills: imageList });
+
 /** `/movie/{id}/images` and `/tv/{id}/images`. */
 export const imagesSchema = z.object({
   posters: imageList,

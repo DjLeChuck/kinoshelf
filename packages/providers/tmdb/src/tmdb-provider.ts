@@ -19,7 +19,9 @@ import { TmdbClient, type TmdbClientOptions } from './client.js';
 import {
   movieAlternativeTitlesSchema,
   movieFullDetailsSchema,
+  episodeImagesSchema,
   imagesSchema,
+  type ImageList,
   movieSearchSchema,
   seasonSchema,
   tvAlternativeTitlesSchema,
@@ -62,6 +64,21 @@ function imageField<K extends string>(
   return path != null && IMAGE_PATH.test(path) ? ({ [key]: path } as Record<K, string>) : {};
 }
 // Sizes TMDB serves: w185 is enough for a list, w780 for a poster file.
+/** Only what can be written next to a video: an SVG logo is dropped, as in `pickLogo`. */
+const imageCandidates = (list: ImageList): ImageCandidate[] =>
+  (list ?? [])
+    .filter((image) => IMAGE_PATH.test(image.file_path))
+    .map((image) => {
+      const rating = ratingOf(image.vote_average, image.vote_count);
+      return {
+        path: image.file_path,
+        ...(image.iso_639_1 && { language: image.iso_639_1 }),
+        width: image.width,
+        height: image.height,
+        ...(rating && { rating }),
+      };
+    });
+
 const IMAGE_SIZES: Record<ImageSize, string> = {
   preview: 'w185',
   standard: 'w780',
@@ -270,25 +287,26 @@ export class TmdbProvider implements MetadataProvider {
     if (!r) {
       return null;
     }
-    // Only what can be written next to a video: an SVG logo is dropped, as in `pickLogo`.
-    const candidates = (list: typeof r.posters): ImageCandidate[] =>
-      (list ?? [])
-        .filter((image) => IMAGE_PATH.test(image.file_path))
-        .map((image) => {
-          const rating = ratingOf(image.vote_average, image.vote_count);
-          return {
-            path: image.file_path,
-            ...(image.iso_639_1 && { language: image.iso_639_1 }),
-            width: image.width,
-            height: image.height,
-            ...(rating && { rating }),
-          };
-        });
     return {
-      poster: candidates(r.posters),
-      fanart: candidates(r.backdrops),
-      logo: candidates(r.logos),
+      poster: imageCandidates(r.posters),
+      fanart: imageCandidates(r.backdrops),
+      logo: imageCandidates(r.logos),
     };
+  }
+
+  async listEpisodeImages(
+    id: ExternalId,
+    season: number,
+    episode: number,
+  ): Promise<readonly ImageCandidate[] | null> {
+    this.requireOwn(id);
+    const r = await this.client.get(
+      `/3/tv/${String(id.id)}/season/${String(season)}/episode/${String(episode)}/images`,
+      {},
+      episodeImagesSchema,
+      { ttlMs: DETAIL_TTL_MS, nullOn404: true },
+    );
+    return r ? imageCandidates(r.stills) : null;
   }
 
   imageUrl(path: string, size: ImageSize): string {
