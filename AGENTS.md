@@ -366,6 +366,29 @@ format follows the Kodi wiki's templates, saved pages are not in the repository)
     redirection. `POST .../images/preview` downloads the same way, for the dialog, and keeps nothing;
     it answers with the image as a `data:` address, the only foreign thing the page's policy allows.
     Every image is downloaded before any is written: one failure changes nothing.
+- **An episode's thumbnail** (`kind: episode-thumb`, `<video>.jpg` beside the video, one per version): TMDB's
+  `still_path` (`EpisodeInfo.stillPath`, already in the season request, so no extra call) downloaded at its
+  `original` size, TMDB having no `w780` for stills. Plex's NFO agent and Jellyfin both read the bare
+  `<file>.jpg` (checked by hand on both; Jellyfin's documentation only gives `<file>-thumb.jpg`, Plex's
+  could not be read). Without it Plex showed a black square and Jellyfin the season's image. An
+  episode with no still on TMDB gets none. **Tracked per file** like the NFO (`thumb` of `library_items`,
+  server migration 027, `CompanionKind` `thumb`): an episode whose planned plan still holds the
+  download is `incomplete` (so "Refresh" writes it) and under `missing-artwork`. An episode TMDB has
+  no still for plans nothing, so it reads as there, as a work without a logo does. The files tell
+  the thumbnail from a season poster by the profile's names (`isEpisodeThumb`), not by a stem. The
+  web shows it in the tree's "Thumbnail" column (`writes.thumb`, an episode's versions together) and
+  in the episode panel, as **one image for the episode**, never per version; a show or a season
+  carries no total. Players pick the version's own `<file>.jpg` (Jellyfin changes it with the
+  quality being played), so every version gets a copy, and a **single choice** writes them all.
+  - **Changing it** (`.../shows/:tmdbId/seasons/:season/episodes/:episode/images`, the same routes as a
+    work's, with the type `thumb`, the only one an episode has; its poster, background and logo are
+    `null` there): `Artwork.episode` finds the files holding the episode (a multi-episode file is the
+    episode's too, with the first one's stills offered) and `apply` writes the one picture to each
+    version's `.jpg`, replacing (backup, journal) or creating, as **one batch** so one undo puts all
+    back. TMDB's `/tv/{id}/season/{n}/episode/{n}/images` gives the stills (`listEpisodeImages`, the
+    provider's, listed only: the dialog downloads through our own server). The dialog takes `kinds`
+    (`EPISODE_KINDS`: one tab, so none is drawn); the panel shows the image in place
+    (`.../images/thumb/file`, the first copy found) and "Change the image" / "Add an image".
 - Not done: no collection overview, no episode `uniqueid`, no `<fileinfo>` (the player reads the file).
 
 ## Libraries and scan
