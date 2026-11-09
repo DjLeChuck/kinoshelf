@@ -1,7 +1,7 @@
 <script lang="ts">
   import { imageUrl } from '../lib/arrivals.js';
   import { t } from '../lib/i18n.svelte.js';
-  import type { Show, ShowDetail } from '../lib/library-items.js';
+  import { showStatusKey, type Show, type ShowDetail } from '../lib/library-items.js';
   import { rescanPath } from '../lib/paths.js';
   import CoverageMatrix from './CoverageMatrix.svelte';
   import RescanButton from './RescanButton.svelte';
@@ -35,6 +35,7 @@
 
   const poster = $derived(imageUrl('w154', detail?.posterPath));
   const backdrop = $derived(imageUrl('w780', detail?.backdropPath));
+  const statusKey = $derived(detail?.status ? showStatusKey(detail.status) : undefined);
   const missing = $derived(detail?.missing ?? show.missing);
 </script>
 
@@ -63,7 +64,7 @@
     <dl class="facts">
       {#if detail.status}
         <dt class="muted">{t('web.library.show.status')}</dt>
-        <dd>{detail.status}</dd>
+        <dd>{statusKey ? t(statusKey) : detail.status}</dd>
       {/if}
       <dt class="muted">{t('web.library.show.missing')}</dt>
       <dd>{missing === null || missing === 0 ? t('web.library.show.none-missing') : missing}</dd>

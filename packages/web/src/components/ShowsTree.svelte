@@ -560,7 +560,8 @@
                           selection.episode.season === episode.season &&
                           selection.episode.episode === episode.episode}
                       >
-                        <td class="indent2" colspan="3">
+                        <!-- An episode no file holds has only a title and its tag: the whole row is theirs. -->
+                        <td class="indent2" colspan={item ? 4 : columns}>
                           {#if item}
                             <button
                               type="button"
@@ -573,12 +574,16 @@
                                   coverage: season.versions,
                                 })}
                             >
-                              {episodeLabel(episode.season, episode.episode)}
+                              <span class="code"
+                                >{episodeLabel(episode.season, episode.episode)}</span
+                              >
                               {episode.title ?? ''}
                             </button>
                           {:else}
                             <span class="muted">
-                              {episodeLabel(episode.season, episode.episode)}
+                              <span class="code"
+                                >{episodeLabel(episode.season, episode.episode)}</span
+                              >
                               {episode.title ?? ''}
                             </span>
                           {/if}
@@ -588,16 +593,15 @@
                             >
                           {/if}
                         </td>
-                        <td></td>
-                        <td>
-                          {#if item}<SlotBadges
-                              slots={slotsOf(season.versions, episode.versions)}
-                            />{/if}
-                        </td>
-                        {#if writes.nfo}<td><NfoTally tally={episode.nfo} /></td>{/if}
-                        {#if writes.artwork}<td></td><td></td>{/if}
-                        {#if writes.logo}<td></td>{/if}
-                        <td></td>
+                        {#if item}
+                          <td>
+                            <SlotBadges slots={slotsOf(season.versions, episode.versions)} />
+                          </td>
+                          {#if writes.nfo}<td><NfoTally tally={episode.nfo} /></td>{/if}
+                          {#if writes.artwork}<td></td><td></td>{/if}
+                          {#if writes.logo}<td></td>{/if}
+                          <td></td>
+                        {/if}
                       </tr>
                     {/each}
                   {/if}
@@ -763,6 +767,15 @@
 
   tr.current {
     background: var(--surface-2);
+  }
+
+  /* An inset shadow, not a border: a border on a row of a collapsed table is not drawn everywhere. */
+  tr.current > :first-child {
+    box-shadow: inset 3px 0 0 var(--accent);
+  }
+
+  .code {
+    color: var(--muted);
   }
 
   .group td {

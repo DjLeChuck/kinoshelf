@@ -15,6 +15,7 @@ import {
   tally,
   scanPercent,
   showsUrl,
+  showStatusKey,
   type ScanProgress,
 } from '../src/lib/library-items.js';
 
@@ -109,12 +110,31 @@ describe('canRun and partition', () => {
 });
 
 describe('canNameVersion', () => {
-  const movie = { kind: 'movie', entryId: 'e', state: 'ok' } as const;
+  const movie = {
+    kind: 'movie',
+    entryId: 'e',
+    state: 'ok',
+    path: '/films/Dune (2021)/Dune (2021).mkv',
+    resolution: null,
+  } as const;
 
   it('is offered for a movie or an episode, whatever its state and its name', () => {
     expect(canNameVersion(movie)).toBe(true);
     expect(canNameVersion({ ...movie, kind: 'series' })).toBe(true);
     expect(canNameVersion({ ...movie, state: 'rename' })).toBe(true);
+  });
+
+  it('is not offered when the name already says the size, as the server would find nothing to do', () => {
+    const named = {
+      ...movie,
+      path: '/films/Dune (2021)/Dune (2021) - 2160p.mkv',
+      resolution: '2160p',
+    };
+    expect(canNameVersion(named)).toBe(false);
+    // A size elsewhere in the name still has a label to add.
+    expect(
+      canNameVersion({ ...movie, path: '/films/Alien.1979.1080p.mkv', resolution: '1080p' }),
+    ).toBe(true);
   });
 
   it('is not offered when the server would refuse', () => {
@@ -216,5 +236,14 @@ describe('groupSettling', () => {
       file('/lib/c.mkv', { release: null, cluster: null }),
     ]);
     expect(groups).toHaveLength(3);
+  });
+});
+
+describe('showStatusKey', () => {
+  it('names the statuses TMDB gives a series, and leaves any other as it came', () => {
+    expect(showStatusKey('Returning Series')).toBe('web.library.show.status.returning');
+    expect(showStatusKey('Ended')).toBe('web.library.show.status.ended');
+    expect(showStatusKey('Cancelled')).toBeUndefined();
+    expect(showStatusKey('toString')).toBeUndefined();
   });
 });

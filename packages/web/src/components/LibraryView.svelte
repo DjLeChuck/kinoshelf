@@ -645,6 +645,11 @@
     background: var(--surface-2);
   }
 
+  /* An inset shadow, not a border: a border on a row of a collapsed table is not drawn everywhere. */
+  tr.current > :first-child {
+    box-shadow: inset 3px 0 0 var(--accent);
+  }
+
   @media (max-width: 960px) {
     .layout {
       grid-template-columns: 1fr;

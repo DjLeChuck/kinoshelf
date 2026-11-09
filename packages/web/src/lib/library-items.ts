@@ -362,15 +362,23 @@ const versionBody = (version: VersionRequest | undefined) =>
 export const sizeOfItem = (item: Pick<LibraryItem, 'resolution'>): string =>
   PICTURE_SIZES.find((size) => size === item.resolution) ?? '';
 
+/** The file's name already ends with its size (`Dune (2021) - 2160p.mkv`): naming it again changes nothing. */
+export const hasVersionLabel = (item: Pick<LibraryItem, 'path' | 'resolution'>): boolean =>
+  item.resolution !== null && new RegExp(` - ${item.resolution}\\.[^./]+$`, 'i').test(item.path);
+
 /**
  * A movie or an episode can be asked to name its version (`- 2160p`) whatever its state: the size
- * is the one its file name says, then the one read from the file, or one chosen by hand.
+ * is the one its file name says, then the one read from the file, or one chosen by hand. Not when
+ * its name already says it: the server would answer that there is nothing to do.
  */
-export const canNameVersion = (item: Pick<LibraryItem, 'kind' | 'entryId' | 'state'>): boolean =>
+export const canNameVersion = (
+  item: Pick<LibraryItem, 'kind' | 'entryId' | 'state' | 'path' | 'resolution'>,
+): boolean =>
   item.kind !== null &&
   item.entryId !== null &&
   item.state !== 'review' &&
-  item.state !== 'unrecognized';
+  item.state !== 'unrecognized' &&
+  !hasVersionLabel(item);
 
 /** A list entry (it carries its versions), as opposed to the bare file of a show's episode. */
 export const isListed = (item: LibraryItem): item is ListedItem => 'versions' in item;
@@ -497,3 +505,18 @@ export const isStalled = (progress: ScanProgress | null): boolean =>
 /** A scan that failed and that nothing newer has replaced. */
 export const lastScanFailed = (library: Pick<Library, 'lastScan' | 'scanning'>): boolean =>
   !library.scanning && library.lastScan?.status === 'failed';
+
+/** The statuses TMDB gives a series, as the catalog names them; any other is shown as it came. */
+const SHOW_STATUS = {
+  'Returning Series': 'web.library.show.status.returning',
+  Planned: 'web.library.show.status.planned',
+  'In Production': 'web.library.show.status.in-production',
+  Ended: 'web.library.show.status.ended',
+  Canceled: 'web.library.show.status.canceled',
+  Pilot: 'web.library.show.status.pilot',
+} as const;
+
+export const showStatusKey = (
+  status: string,
+): (typeof SHOW_STATUS)[keyof typeof SHOW_STATUS] | undefined =>
+  Object.hasOwn(SHOW_STATUS, status) ? SHOW_STATUS[status as keyof typeof SHOW_STATUS] : undefined;
