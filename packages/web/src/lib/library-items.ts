@@ -24,6 +24,12 @@ export const SERIES_FILTERS: readonly ShowFilter[] = [
 export type Counts = Readonly<Record<ShowFilter | 'all', number>>;
 
 /** What a library holds, as `GET /api/libraries/{id}/items` lists it. */
+export interface ImagesPresent {
+  readonly poster: boolean;
+  readonly fanart: boolean;
+  readonly logo: boolean;
+}
+
 export interface LibraryItem {
   readonly id: string;
   readonly path: string;
@@ -86,6 +92,9 @@ export interface ItemDetail extends LibraryItem {
   readonly genres: readonly string[];
   readonly posterPath: string | null;
   readonly backdropPath: string | null;
+  readonly logoPath: string | null;
+  /** Which images are on the disk; `null` when they cannot be changed (no image written, no folder). */
+  readonly images: ImagesPresent | null;
   readonly file: ProbedFile | null;
   /** The files of the work (an episode: itself alone), each with what `ffprobe` read of it. */
   readonly versions: readonly Version[];
@@ -225,6 +234,8 @@ export interface ShowDetail {
   readonly genres: readonly string[];
   readonly posterPath: string | null;
   readonly backdropPath: string | null;
+  readonly logoPath: string | null;
+  readonly images: ImagesPresent | null;
   readonly status: string | null;
   /** `false` when TMDB could not be asked: only the files are listed, nothing is missing. */
   readonly determined: boolean;

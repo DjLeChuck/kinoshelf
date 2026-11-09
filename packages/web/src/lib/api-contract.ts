@@ -5,6 +5,7 @@
 import type { paths } from './api-schema.js';
 import type { Arrival, ArrivalPage, Preview } from './arrivals.js';
 import type { Activity, BatchDetail, JobDetail, UndoReport } from './history.js';
+import type { AddressPreview, ImageListing } from './images.js';
 import type { Settings } from './settings.js';
 import type { Library } from './libraries.js';
 import type { ItemDetail, ItemsPage, RunReport, Show, ShowDetail } from './library-items.js';
@@ -39,6 +40,10 @@ export type Contract = [
   Expect<Fits<Got<'/api/libraries/{id}/items/{itemId}'>, ItemDetail>>,
   Expect<Fits<Got<'/api/libraries/{id}/shows'>['items'][number], Show>>,
   Expect<Fits<Got<'/api/libraries/{id}/shows/{tmdbId}'>, ShowDetail>>,
+  Expect<Fits<Got<'/api/libraries/{id}/items/{itemId}/images'>, ImageListing>>,
+  Expect<Fits<Got<'/api/libraries/{id}/shows/{tmdbId}/images'>, ImageListing>>,
+  Expect<Fits<Posted<'/api/libraries/{id}/items/{itemId}/images/preview', 200>, AddressPreview>>,
+  Expect<Fits<Posted<'/api/libraries/{id}/shows/{tmdbId}/images/preview', 200>, AddressPreview>>,
   Expect<Fits<Got<'/api/batches/{id}'>, BatchDetail>>,
   Expect<Fits<Posted<'/api/libraries/{id}/execute', 200>, RunReport>>,
   Expect<Fits<Posted<'/api/entries/{id}/preview', 200>, Preview>>,

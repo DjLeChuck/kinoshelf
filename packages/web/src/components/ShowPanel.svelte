@@ -1,9 +1,10 @@
 <script lang="ts">
-  import { imageUrl } from '../lib/arrivals.js';
+  import { imageUrl, workImageUrl, type ImageKind } from '../lib/arrivals.js';
   import { t } from '../lib/i18n.svelte.js';
-  import { showStatusKey, type Show, type ShowDetail } from '../lib/library-items.js';
+  import { libraryItems, showStatusKey, type Show, type ShowDetail } from '../lib/library-items.js';
   import { rescanPath } from '../lib/paths.js';
   import CoverageMatrix from './CoverageMatrix.svelte';
+  import ImagesDialog from './ImagesDialog.svelte';
   import RescanButton from './RescanButton.svelte';
   import WorkCard from './WorkCard.svelte';
 
@@ -33,8 +34,42 @@
       ),
   );
 
-  const poster = $derived(imageUrl('w154', detail?.posterPath));
-  const backdrop = $derived(imageUrl('w780', detail?.backdropPath));
+  // The files in place when the page can say they are there, else what TMDB offers.
+  let shown = $state(Date.now());
+  const work = $derived(`/api/libraries/${libraryId}/shows/${show.tmdbId}`);
+  // Read again after an image is replaced; until then, what the page said.
+  let changed = $state<ShowDetail['images'] | undefined>(undefined);
+  const images = $derived(changed === undefined ? detail?.images : changed);
+  const editable = $derived(images != null);
+  const poster = $derived(
+    images?.poster ? workImageUrl(work, 'poster', shown) : imageUrl('w154', detail?.posterPath),
+  );
+  const backdrop = $derived(
+    images?.fanart ? workImageUrl(work, 'fanart', shown) : imageUrl('w780', detail?.backdropPath),
+  );
+  const logo = $derived(
+    editable
+      ? images?.logo
+        ? workImageUrl(work, 'logo', shown)
+        : undefined
+      : imageUrl('w500', detail?.logoPath),
+  );
+  // The image dialog, open on the tab of the image clicked.
+  let imagesTab = $state<ImageKind | undefined>(undefined);
+  let imagesNotice = $state<string | undefined>(undefined);
+  function edit(type: ImageKind): void {
+    imagesTab = type;
+  }
+  function imagesChanged(message: string): void {
+    imagesNotice = message;
+    shown = Date.now();
+    void libraryItems.show(libraryId, show.tmdbId).then(
+      (fresh) => {
+        changed = fresh.images;
+      },
+      () => undefined,
+    );
+  }
   const statusKey = $derived(detail?.status ? showStatusKey(detail.status) : undefined);
   const missing = $derived(detail?.missing ?? show.missing);
 </script>
@@ -54,10 +89,13 @@
   tmdbUrl={`https://www.themoviedb.org/tv/${show.tmdbId}`}
   {poster}
   {backdrop}
+  {logo}
+  onedit={editable ? edit : undefined}
 >
   {#if detail === undefined}
     <p class="muted" role="status">{t('web.loading')}</p>
   {:else}
+    {#if imagesNotice}<p class="alert" role="status">{imagesNotice}</p>{/if}
     {#if detail.overview}<p>{detail.overview}</p>{:else}<p class="muted">
         {t('web.library.no-overview')}
       </p>{/if}
@@ -78,6 +116,16 @@
     </div>
   {/if}
 </WorkCard>
+{#if imagesTab}
+  <ImagesDialog
+    base={work}
+    initial={imagesTab}
+    onclose={() => {
+      imagesTab = undefined;
+    }}
+    ondone={imagesChanged}
+  />
+{/if}
 
 <style>
   p {

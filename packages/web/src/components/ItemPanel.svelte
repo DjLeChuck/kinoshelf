@@ -1,6 +1,6 @@
 <script lang="ts">
   import { baseName, rescanPath } from '../lib/paths.js';
-  import { imageUrl } from '../lib/arrivals.js';
+  import { imageUrl, workImageUrl, type ImageKind } from '../lib/arrivals.js';
   import { api } from '../lib/api.js';
   import { messageOf } from '../lib/errors.js';
   import { formatBytes } from '@kinoshelf/i18n';
@@ -19,6 +19,7 @@
     type LibraryItem,
   } from '../lib/library-items.js';
   import ArrivalDetail from './ArrivalDetail.svelte';
+  import ImagesDialog from './ImagesDialog.svelte';
   import RescanButton from './RescanButton.svelte';
   import RunDialog from './RunDialog.svelte';
   import WorkCard from './WorkCard.svelte';
@@ -66,8 +67,46 @@
 
   void load();
 
-  const backdrop = $derived(imageUrl('w780', detail?.backdropPath));
-  const poster = $derived(imageUrl('w154', detail?.posterPath));
+  // The files in place when the page can say they are there, else what TMDB offers. `shown` changes
+  // after an image is replaced, so the browser draws the new file under the same address.
+  let shown = $state(Date.now());
+  const work = $derived(`/api/libraries/${libraryId}/items/${item.id}`);
+  const editable = $derived(detail?.images != null);
+  const backdrop = $derived(
+    detail?.images?.fanart
+      ? workImageUrl(work, 'fanart', shown)
+      : imageUrl('w780', detail?.backdropPath),
+  );
+  const poster = $derived(
+    detail?.images?.poster
+      ? workImageUrl(work, 'poster', shown)
+      : imageUrl('w154', detail?.posterPath),
+  );
+  const logo = $derived(
+    editable
+      ? detail?.images?.logo
+        ? workImageUrl(work, 'logo', shown)
+        : undefined
+      : imageUrl('w500', detail?.logoPath),
+  );
+  // The image dialog, open on the tab of the image clicked.
+  let imagesTab = $state<ImageKind | undefined>(undefined);
+  let imagesNotice = $state<string | undefined>(undefined);
+  function edit(type: ImageKind): void {
+    imagesTab = type;
+  }
+  function imagesChanged(message: string): void {
+    imagesNotice = message;
+    // The files are served under the same address: a new one makes the browser draw the new files.
+    shown = Date.now();
+    // Which images are there changed: an added logo is no longer a box to fill.
+    void libraryItems.detail(libraryId, item.id).then(
+      (fresh) => {
+        detail = fresh;
+      },
+      () => undefined,
+    );
+  }
   const runItems = $derived(isListed(item) ? versionsToRun(item, 'refresh') : [item]);
   const missingNfo = $derived((detail?.nfoFiles ?? []).filter(({ present: there }) => !there));
   const size = $derived(totalSize((detail?.versions ?? []).map(({ file }) => file)));
@@ -124,7 +163,10 @@
       : undefined}
     {poster}
     {backdrop}
+    {logo}
+    onedit={editable ? edit : undefined}
   >
+    {#if imagesNotice}<p class="alert" role="status">{imagesNotice}</p>{/if}
     {#if detail.overview}<p>{detail.overview}</p>{:else}<p class="muted">
         {t('web.library.no-overview')}
       </p>{/if}
@@ -242,6 +284,16 @@
       </div>
     {/if}
   </WorkCard>
+  {#if imagesTab}
+    <ImagesDialog
+      base={work}
+      initial={imagesTab}
+      onclose={() => {
+        imagesTab = undefined;
+      }}
+      ondone={imagesChanged}
+    />
+  {/if}
   {#if running}
     <RunDialog
       {libraryId}

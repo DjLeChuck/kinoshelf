@@ -193,12 +193,22 @@ export function folderOf(path: string): string {
  * TMDB. The API gives TMDB's path as is, with its leading slash.
  */
 export function imageUrl(
-  size: 'w92' | 'w154' | 'w342' | 'w780',
+  size: 'w92' | 'w154' | 'w300' | 'w342' | 'w500' | 'w780',
   path: string | null | undefined,
 ): string | undefined {
   const file = path?.replace(/^\/+/, '');
   return file ? `/api/images/${size}/${file}` : undefined;
 }
+
+export type ImageKind = 'poster' | 'fanart' | 'logo';
+
+/**
+ * The image a work has in its folder (`base` is the work's API path), for the page to show what a
+ * player will read. `version` changes after a replacement: the file is served with `no-cache`, but
+ * the browser keeps what it already drew for an address.
+ */
+export const workImageUrl = (base: string, type: ImageKind, version: number): string =>
+  `${base}/images/${type}/file?v=${String(version)}`;
 
 export const posterUrl = (posterPath: string | undefined): string | undefined =>
   imageUrl('w92', posterPath);
