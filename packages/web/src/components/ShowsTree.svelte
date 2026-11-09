@@ -459,8 +459,11 @@
               {#if writes.logo}<td><Presence value={show.logo} /></td>{/if}
               <td>
                 {#if show.missing}
-                  <span class="chip chip-warn"
-                    >{t('web.library.shows.missing', { count: show.missing })}</span
+                  <!-- The column's header says what it counts; the tooltip spells it out. -->
+                  <span
+                    class="chip chip-warn"
+                    title={t('web.library.shows.missing', { count: show.missing })}
+                    >{show.missing}</span
                   >
                 {/if}
               </td>
@@ -494,34 +497,36 @@
                   ).size}
                   <tr class="child season" class:empty>
                     <td colspan="3">
-                      <button
-                        type="button"
-                        class="link indent"
-                        aria-expanded={seasonOpen}
-                        onclick={() => {
-                          toggleSeason(key);
-                        }}
-                      >
-                        <Chevron open={seasonOpen} />
-                        {season.season === 0
-                          ? t('web.library.season.specials')
-                          : t('web.library.season', { season: season.season })}
-                      </button>
-                      <RescanButton
-                        compact
-                        {libraryId}
-                        path={rescanPath(
-                          season.episodes.flatMap(({ versions }) =>
-                            versions.map((version) => version.path),
-                          ),
-                          source,
-                        )}
-                        name={`${show.title ?? ''} · ${season.season === 0 ? t('web.library.season.specials') : t('web.library.season', { season: season.season })}`}
-                        ondone={(message: string) => {
-                          onsettled(message);
-                          void load();
-                        }}
-                      />
+                      <div class="season-head">
+                        <button
+                          type="button"
+                          class="link indent"
+                          aria-expanded={seasonOpen}
+                          onclick={() => {
+                            toggleSeason(key);
+                          }}
+                        >
+                          <Chevron open={seasonOpen} />
+                          {season.season === 0
+                            ? t('web.library.season.specials')
+                            : t('web.library.season', { season: season.season })}
+                        </button>
+                        <RescanButton
+                          compact
+                          {libraryId}
+                          path={rescanPath(
+                            season.episodes.flatMap(({ versions }) =>
+                              versions.map((version) => version.path),
+                            ),
+                            source,
+                          )}
+                          name={`${show.title ?? ''} · ${season.season === 0 ? t('web.library.season.specials') : t('web.library.season', { season: season.season })}`}
+                          ondone={(message: string) => {
+                            onsettled(message);
+                            void load();
+                          }}
+                        />
+                      </div>
                     </td>
                     <td>
                       {#if listed > 0}
@@ -545,8 +550,10 @@
                     {#if writes.logo}<td></td>{/if}
                     <td>
                       {#if season.missing > 0}
-                        <span class="chip chip-warn"
-                          >{t('web.library.shows.missing', { count: season.missing })}</span
+                        <span
+                          class="chip chip-warn"
+                          title={t('web.library.shows.missing', { count: season.missing })}
+                          >{season.missing}</span
                         >
                       {/if}
                     </td>
@@ -560,8 +567,7 @@
                           selection.episode.season === episode.season &&
                           selection.episode.episode === episode.episode}
                       >
-                        <!-- An episode no file holds has only a title and its tag: the whole row is theirs. -->
-                        <td class="indent2" colspan={item ? 4 : columns}>
+                        <td class="indent2" colspan="3">
                           {#if item}
                             <button
                               type="button"
@@ -580,14 +586,18 @@
                               {episode.title ?? ''}
                             </button>
                           {:else}
-                            <span class="muted">
+                            <span class="muted row-title">
                               <span class="code"
                                 >{episodeLabel(episode.season, episode.episode)}</span
                               >
                               {episode.title ?? ''}
                             </span>
                           {/if}
-                          {#if episode.state !== 'present'}
+                        </td>
+                        <!-- The tag sits in the "Episodes" column. An episode no file holds has nothing after it: the cell takes the rest of the row, so the tag has room. -->
+                        <td colspan={item ? 1 : columns - 3}>
+                          <!-- In a season no file holds, every episode is missing: the season says it once. -->
+                          {#if episode.state !== 'present' && !(empty && episode.state === 'missing')}
                             <span class="chip {EPISODE_CHIP[episode.state]}"
                               >{t(`web.library.episode.${episode.state}`)}</span
                             >
@@ -706,6 +716,28 @@
     gap: 8px;
   }
 
+  /* The arrow stays on the first line of a title that wraps, rather than standing alone above it. */
+  .name .link,
+  .season-head .link {
+    display: flex;
+    align-items: center;
+  }
+
+  /* The title wraps, the button never does: both stay on one line while the cell has room. */
+  .season-head {
+    display: flex;
+    align-items: center;
+  }
+
+  .season-head :global(.btn) {
+    flex: none;
+    white-space: nowrap;
+  }
+
+  th:first-child {
+    min-width: 200px;
+  }
+
   .box {
     display: inline-flex;
     flex: none;
@@ -727,7 +759,8 @@
 
   .layout {
     display: grid;
-    grid-template-columns: minmax(0, 1.2fr) minmax(280px, 1fr);
+    /* The tree takes what the panel does not need: extra width goes to the columns. */
+    grid-template-columns: minmax(0, 1fr) minmax(340px, 36%);
     gap: 16px;
     align-items: start;
   }
@@ -792,12 +825,22 @@
     opacity: 0.7;
   }
 
+  /* A show's arrow sits after its select box (16px + 8px gap), so the seasons start further in than that. */
   .indent {
-    padding-left: 16px;
+    padding-left: 40px;
+  }
+
+  /* As tall as the title of an episode that has a file (a 44px button), so the rows read evenly. */
+  .row-title {
+    display: inline-flex;
+    align-items: center;
+    /* A flex container drops the space between the code and the title. */
+    gap: 0.3em;
+    min-height: 44px;
   }
 
   .indent2 {
-    padding-left: 36px;
+    padding-left: 60px;
   }
 
   p {
