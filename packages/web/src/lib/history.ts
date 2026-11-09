@@ -71,7 +71,7 @@ export interface BatchItem {
 
 /** A metadata file written beside a video: an NFO Kinoshelf generated, or an image it downloaded. */
 export interface BatchExtra {
-  readonly kind: 'generated' | 'downloaded';
+  readonly kind: 'generated' | 'downloaded' | 'replaced';
   readonly destination: string;
 }
 

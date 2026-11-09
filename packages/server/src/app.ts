@@ -1,6 +1,6 @@
 import { join } from 'node:path';
 import swagger from '@fastify/swagger';
-import { KinoshelfError, SqliteJournal, type Journal } from '@kinoshelf/core';
+import { KinoshelfError, SqliteJournal, type ImageFetcher, type Journal } from '@kinoshelf/core';
 import type { Database } from 'better-sqlite3';
 import Fastify, { type FastifyInstance } from 'fastify';
 import { SqliteHttpCache } from '@kinoshelf/provider-tmdb';
@@ -20,6 +20,8 @@ import { Notifier } from './notify/notifier.js';
 import { createProcessor, type ProcessorDeps } from './processor.js';
 import { forgetReplacedScans, purgeHistory, type LibraryScan } from './purge.js';
 import { registerFsRoutes } from './fs-routes.js';
+import { Artwork } from './artwork.js';
+import { registerArtworkRoutes } from './artwork-routes.js';
 import { registerLibraryRoutes } from './library-routes.js';
 import { jobPresenter, registerRoutes } from './routes.js';
 import { Completeness, CompletenessStore } from './completeness.js';
@@ -78,6 +80,8 @@ export interface AppOptions extends Omit<ProcessorDeps, 'database'> {
   readonly webRoot?: string;
   /** Replaces the network for poster downloads, for tests. */
   readonly fetch?: typeof fetch;
+  /** Replaces the download of the provider's images when one is replaced, for tests. */
+  readonly fetchImage?: ImageFetcher;
   /** Replaces `ffprobe`, for tests. */
   readonly prober?: Prober;
   /** Wraps or replaces the journal, for tests. */
@@ -497,6 +501,24 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
       runner,
       presentJob: jobPresenter({ jobs, entries, executions, progress }),
       progress,
+    });
+    registerArtworkRoutes(api, {
+      config: () => options.config,
+      artwork: new Artwork({
+        config: () => options.config,
+        journal,
+        items,
+        snapshot,
+        backupDir: join(options.configDir, 'replaced'),
+        listImages: (kind, id) => service.listImages(kind, id),
+        imageUrl: (path, size) => service.imageUrl(path, size),
+        touched: (libraryId) => {
+          seriesFiles.touch(libraryId);
+        },
+        ...(options.fetchImage && { fetchImage: options.fetchImage }),
+      }),
+      items,
+      events,
     });
     registerWatchRoutes(api, watcher);
     registerImageRoutes(api, {

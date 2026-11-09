@@ -53,6 +53,8 @@ export { type Sidecar } from './planning/sidecars.js';
 export { pictureSize, versionLabel, versionLabels } from './planning/version.js';
 export { executePlan, type ExecuteOptions } from './execution/executor.js';
 export { madeByUs } from './execution/prune.js';
+export { fetchImage, type ImageFetcher } from './execution/download.js';
+export { replaceImage, type ReplaceImageOptions } from './execution/replace.js';
 export { MemoryJournal } from './journal/memory-journal.js';
 export { SqliteJournal } from './journal/sqlite-journal.js';
 export { undoBatch, undoLastBatch, type UndoEntryResult, type UndoResult } from './journal/undo.js';

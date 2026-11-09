@@ -216,6 +216,7 @@ describe('SqliteJournal storage', () => {
       { name: 'core:002-journal-kind' },
       { name: 'core:003-journal-identity' },
       { name: 'core:004-journal-destination' },
+      { name: 'core:005-journal-backup' },
     ]);
     expect(new SqliteJournal(sqlite).lastBatchId()).toBe('b1');
   });

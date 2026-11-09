@@ -2746,6 +2746,762 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/libraries/{id}/items/{itemId}/images": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The images of a movie
+         * @description What the provider offers (`candidates`, in the metadata language, then English, then with no text; only those that can be written under the profile’s name) and what is in place (`current`, `null` when the file is missing). `files` is the name the profile writes, `null` when it writes none: that image cannot be changed (409 `image.not-editable` when none can).
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    itemId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            title: string | null;
+                            year: number | null;
+                            folder: string;
+                            files: {
+                                poster: string | null;
+                                fanart: string | null;
+                                logo: string | null;
+                            };
+                            current: {
+                                poster: {
+                                    size: number;
+                                    modified: number;
+                                    width: number | null;
+                                    height: number | null;
+                                    path: string | null;
+                                } | null;
+                                fanart: {
+                                    size: number;
+                                    modified: number;
+                                    width: number | null;
+                                    height: number | null;
+                                    path: string | null;
+                                } | null;
+                                logo: {
+                                    size: number;
+                                    modified: number;
+                                    width: number | null;
+                                    height: number | null;
+                                    path: string | null;
+                                } | null;
+                            };
+                            candidates: {
+                                poster: {
+                                    /** @description The provider’s path, for `GET /api/images`. */
+                                    path: string;
+                                    /** @description ISO 639-1; `null`: no text. */
+                                    language: string | null;
+                                    width: number;
+                                    height: number;
+                                    rating: number | null;
+                                    votes: number;
+                                }[];
+                                fanart: {
+                                    /** @description The provider’s path, for `GET /api/images`. */
+                                    path: string;
+                                    /** @description ISO 639-1; `null`: no text. */
+                                    language: string | null;
+                                    width: number;
+                                    height: number;
+                                    rating: number | null;
+                                    votes: number;
+                                }[];
+                                logo: {
+                                    /** @description The provider’s path, for `GET /api/images`. */
+                                    path: string;
+                                    /** @description ISO 639-1; `null`: no text. */
+                                    language: string | null;
+                                    width: number;
+                                    height: number;
+                                    rating: number | null;
+                                    votes: number;
+                                }[];
+                            };
+                        };
+                    };
+                };
+                /** @description Default Response */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Default Response */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Default Response */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        /**
+         * Replaces images of a movie
+         * @description Each image is `{ type, source, value }`: `tmdb` with one of the provider’s paths (`candidates`), or `url` with an address. Every image is downloaded before any is written, so a bad one changes nothing. The address must be http or https, a JPEG or a PNG of at most 20 MB, in the format of the file the profile writes, and not on the local network unless the settings allow it (422 `image.url-*`). The file in place is kept and the batch can be undone from the history.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    itemId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        images: {
+                            /** @enum {string} */
+                            type: "poster" | "fanart" | "logo";
+                            /** @enum {string} */
+                            source: "tmdb" | "url";
+                            value: string;
+                        }[];
+                    };
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            batchId: string;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Default Response */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Default Response */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Default Response */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Default Response */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Default Response */
+                502: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/libraries/{id}/items/{itemId}/images/{type}/file": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The image in place for a movie */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    itemId: string;
+                    type: "poster" | "fanart" | "logo";
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": string;
+                    };
+                };
+                /** @description Default Response */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Default Response */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Default Response */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/libraries/{id}/shows/{tmdbId}/images": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The images of a show
+         * @description What the provider offers (`candidates`, in the metadata language, then English, then with no text; only those that can be written under the profile’s name) and what is in place (`current`, `null` when the file is missing). `files` is the name the profile writes, `null` when it writes none: that image cannot be changed (409 `image.not-editable` when none can).
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    tmdbId: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            title: string | null;
+                            year: number | null;
+                            folder: string;
+                            files: {
+                                poster: string | null;
+                                fanart: string | null;
+                                logo: string | null;
+                            };
+                            current: {
+                                poster: {
+                                    size: number;
+                                    modified: number;
+                                    width: number | null;
+                                    height: number | null;
+                                    path: string | null;
+                                } | null;
+                                fanart: {
+                                    size: number;
+                                    modified: number;
+                                    width: number | null;
+                                    height: number | null;
+                                    path: string | null;
+                                } | null;
+                                logo: {
+                                    size: number;
+                                    modified: number;
+                                    width: number | null;
+                                    height: number | null;
+                                    path: string | null;
+                                } | null;
+                            };
+                            candidates: {
+                                poster: {
+                                    /** @description The provider’s path, for `GET /api/images`. */
+                                    path: string;
+                                    /** @description ISO 639-1; `null`: no text. */
+                                    language: string | null;
+                                    width: number;
+                                    height: number;
+                                    rating: number | null;
+                                    votes: number;
+                                }[];
+                                fanart: {
+                                    /** @description The provider’s path, for `GET /api/images`. */
+                                    path: string;
+                                    /** @description ISO 639-1; `null`: no text. */
+                                    language: string | null;
+                                    width: number;
+                                    height: number;
+                                    rating: number | null;
+                                    votes: number;
+                                }[];
+                                logo: {
+                                    /** @description The provider’s path, for `GET /api/images`. */
+                                    path: string;
+                                    /** @description ISO 639-1; `null`: no text. */
+                                    language: string | null;
+                                    width: number;
+                                    height: number;
+                                    rating: number | null;
+                                    votes: number;
+                                }[];
+                            };
+                        };
+                    };
+                };
+                /** @description Default Response */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Default Response */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Default Response */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        /**
+         * Replaces images of a show
+         * @description Each image is `{ type, source, value }`: `tmdb` with one of the provider’s paths (`candidates`), or `url` with an address. Every image is downloaded before any is written, so a bad one changes nothing. The address must be http or https, a JPEG or a PNG of at most 20 MB, in the format of the file the profile writes, and not on the local network unless the settings allow it (422 `image.url-*`). The file in place is kept and the batch can be undone from the history.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    tmdbId: number;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        images: {
+                            /** @enum {string} */
+                            type: "poster" | "fanart" | "logo";
+                            /** @enum {string} */
+                            source: "tmdb" | "url";
+                            value: string;
+                        }[];
+                    };
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            batchId: string;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Default Response */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Default Response */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Default Response */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Default Response */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Default Response */
+                502: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/libraries/{id}/shows/{tmdbId}/images/{type}/file": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The image in place for a show */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    tmdbId: number;
+                    type: "poster" | "fanart" | "logo";
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": string;
+                    };
+                };
+                /** @description Default Response */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Default Response */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Default Response */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/watch": {
         parameters: {
             query?: never;
@@ -4370,7 +5126,7 @@ export interface paths {
                             } | null;
                             extras: {
                                 /** @enum {string} */
-                                kind: "generated" | "downloaded";
+                                kind: "generated" | "downloaded" | "replaced";
                                 destination: string;
                             }[];
                             items: {

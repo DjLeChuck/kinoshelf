@@ -65,6 +65,8 @@ export const fr: Record<keyof typeof en, string> = {
   'error.config.dir-not-writable':
     'Impossible d’écrire dans le dossier de configuration {path} (exécuté avec l’uid {uid}). Rendez-le accessible en écriture à cet utilisateur.',
   'error.config.invalid': 'Fichier de configuration invalide {path} : {detail}',
+  'error.undo.backup-missing':
+    'L’image qui était là avant n’est plus conservée ({path}) : elle ne peut pas être remise.',
   'error.undo.destination-changed':
     '{path} est conservé : il a changé depuis que Kinoshelf l’a écrit (remplacé ou modifié), ce n’est donc plus à lui de le supprimer.',
   'error.undo.batch-already-undone': 'Le lot {batch} a déjà été annulé.',
@@ -684,6 +686,7 @@ export const fr: Record<keyof typeof en, string> = {
     'NFO et images placés à côté des vidéos. Annuler le lot les supprime aussi.',
   'web.history.extra.generated': 'NFO généré',
   'web.history.extra.downloaded': 'Image téléchargée',
+  'web.history.extra.replaced': 'Image remplacée',
   'web.history.from': 'Chemin d’origine',
   'web.history.to': 'Emplacement final',
   'web.history.item.done': 'Fait',

@@ -1143,7 +1143,6 @@ export class LibrarySnapshot {
    */
   undone(entries: readonly JournalEntry[]): void {
     const config = this.deps.config();
-    const profileOf = profilesOf(config);
     // The written files first: once a video is moved back, its folder is no longer the one to look in.
     const ordered = [...entries].sort(
       (a, b) => Number(a.kind === 'transfer') - Number(b.kind === 'transfer'),
@@ -1164,16 +1163,31 @@ export class LibrarySnapshot {
         }
         continue;
       }
-      const kind = fileKind(profileOf(library), entry.destination);
-      if (kind === undefined) {
-        continue;
+      // A replaced image is back as it was, still there: only a new one is gone.
+      if (entry.kind !== 'replaced') {
+        this.mark(library, entry.destination, 'gone');
       }
-      for (const row of beside(
-        this.deps.store.inFolder(library.id, dirname(entry.destination)),
-        entry.destination,
-      )) {
-        this.settle(row, row.path, new Set<Writable>([kind]), 'gone');
-      }
+    }
+  }
+
+  /** An image was put beside a video by hand (a replacement): the rows next to it have it. */
+  written(destination: string): void {
+    const library = typedLibraryHolding(this.deps.config(), destination);
+    if (library) {
+      this.mark(library, destination, 'present');
+    }
+  }
+
+  private mark(library: LibraryConfig, destination: string, change: 'present' | 'gone'): void {
+    const kind = fileKind(profilesOf(this.deps.config())(library), destination);
+    if (kind === undefined) {
+      return;
+    }
+    for (const row of beside(
+      this.deps.store.inFolder(library.id, dirname(destination)),
+      destination,
+    )) {
+      this.settle(row, row.path, new Set<Writable>([kind]), change);
     }
   }
 

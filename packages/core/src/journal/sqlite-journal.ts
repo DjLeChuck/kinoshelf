@@ -19,6 +19,7 @@ const journalEntries = sqliteTable('journal_entries', {
   createdDirectories: text('created_directories').notNull(),
   undoneAt: text('undone_at'),
   identity: text('identity'),
+  backup: text('backup'),
 });
 
 /** Durable journal in the caller's SQLite database (the single file in `/config`). */
@@ -38,6 +39,7 @@ export class SqliteJournal implements Journal {
         mode: entry.kind === 'transfer' ? entry.mode : '',
         createdDirectories: JSON.stringify(entry.createdDirectories),
         identity: entry.identity ? JSON.stringify(entry.identity) : null,
+        backup: entry.kind === 'replaced' ? entry.backup : null,
       })
       .run();
   }
@@ -82,9 +84,13 @@ export class SqliteJournal implements Journal {
             identity: JSON.parse(row.identity) as FileIdentity,
           }),
         };
-        return row.kind === 'transfer' && row.mode !== ''
-          ? { ...common, kind: 'transfer', mode: row.mode }
-          : { ...common, kind: row.kind === 'downloaded' ? 'downloaded' : 'generated' };
+        if (row.kind === 'transfer' && row.mode !== '') {
+          return { ...common, kind: 'transfer', mode: row.mode };
+        }
+        if (row.kind === 'replaced' && row.backup !== null) {
+          return { ...common, kind: 'replaced', backup: row.backup };
+        }
+        return { ...common, kind: row.kind === 'downloaded' ? 'downloaded' : 'generated' };
       });
   }
 
@@ -123,7 +129,7 @@ export class SqliteJournal implements Journal {
       .where(
         and(
           eq(journalEntries.destination, path),
-          inArray(journalEntries.kind, ['generated', 'downloaded']),
+          inArray(journalEntries.kind, ['generated', 'downloaded', 'replaced']),
           isNull(journalEntries.undoneAt),
         ),
       )
@@ -131,6 +137,22 @@ export class SqliteJournal implements Journal {
       .limit(1)
       .get();
     return row?.identity ? (JSON.parse(row.identity) as FileIdentity) : undefined;
+  }
+
+  madeFileSource(path: string): string | undefined {
+    return this.db
+      .select({ source: journalEntries.source })
+      .from(journalEntries)
+      .where(
+        and(
+          eq(journalEntries.destination, path),
+          inArray(journalEntries.kind, ['downloaded', 'replaced']),
+          isNull(journalEntries.undoneAt),
+        ),
+      )
+      .orderBy(desc(journalEntries.seq))
+      .limit(1)
+      .get()?.source;
   }
 
   hasBatches(): boolean {

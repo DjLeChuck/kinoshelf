@@ -181,6 +181,22 @@ export async function writeAtomic(destination: string, data: string | Uint8Array
   }
 }
 
+/**
+ * Writes `data` and publishes it under `destination`, replacing what is there. The one primitive
+ * that overwrites, so it is not used by the pipeline: only an explicit, journaled replacement
+ * (`replaceImage`, and undoing it) calls it. The file is complete or untouched, never half written.
+ */
+export async function replaceAtomic(destination: string, data: Uint8Array): Promise<void> {
+  const temporary = temporaryPathFor(destination);
+  try {
+    await writeFile(temporary, data, { flag: 'wx' });
+    await rename(temporary, destination);
+  } catch (error) {
+    await unlink(temporary).catch(() => undefined);
+    throw error;
+  }
+}
+
 /** Hardlinks; failing explicitly, never copying instead. */
 export async function hardlinkFile(source: string, destination: string): Promise<void> {
   try {

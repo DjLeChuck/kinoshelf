@@ -1,6 +1,12 @@
-import { rmdir, stat, unlink } from 'node:fs/promises';
+import { readFile, rmdir, stat, unlink, utimes } from 'node:fs/promises';
 import { dirname } from 'node:path';
-import { describeFsError, ensureDirectory, exists, moveFile } from '../execution/fs-ops.js';
+import {
+  describeFsError,
+  ensureDirectory,
+  exists,
+  moveFile,
+  replaceAtomic,
+} from '../execution/fs-ops.js';
 import type { ErrorCode } from '../error-codes.js';
 import type { ErrorInfo } from '../types/errors.js';
 import type { FileIdentity, Journal, JournalEntry } from '../types/journal.js';
@@ -32,6 +38,25 @@ async function revert(entry: JournalEntry, dryRun: boolean): Promise<UndoEntryRe
     // Replaced or edited since (a poster of the user's own, a hand-corrected NFO): it is not what
     // Kinoshelf made any more, so neither deleting it nor moving it back is ours to do.
     return skipped('undo.destination-changed', entry.destination);
+  }
+  if (entry.kind === 'replaced') {
+    // Ours and untouched: the image that was there before comes back (this is the one undo that
+    // writes over a file, and only over the one the replacement itself made).
+    if (!(await exists(entry.backup))) {
+      return skipped('undo.backup-missing', entry.backup);
+    }
+    if (dryRun) {
+      return { entry, status: 'undone' };
+    }
+    try {
+      const kept = await stat(entry.backup);
+      await replaceAtomic(entry.destination, await readFile(entry.backup));
+      await utimes(entry.destination, kept.atimeMs / 1000, kept.mtimeMs / 1000);
+      await unlink(entry.backup).catch(() => undefined);
+      return { entry, status: 'undone' };
+    } catch (error) {
+      return { entry, status: 'failed', error: describeFsError(error, entry.destination).info };
+    }
   }
   if (entry.kind !== 'transfer') {
     // Ours and untouched: there is no original to put back.

@@ -41,6 +41,15 @@ export class MemoryJournal implements Journal {
     )?.entry.identity;
   }
 
+  madeFileSource(path: string): string | undefined {
+    return this.entries.findLast(
+      (e) =>
+        !e.undone &&
+        (e.entry.kind === 'downloaded' || e.entry.kind === 'replaced') &&
+        e.entry.destination === path,
+    )?.entry.source;
+  }
+
   hasBatches(): boolean {
     return this.batches().length > 0;
   }

@@ -40,8 +40,8 @@ export interface BatchOperation {
 }
 
 export interface BatchExtra {
-  /** `generated` is an NFO written by Kinoshelf, `downloaded` an image. */
-  readonly kind: 'generated' | 'downloaded';
+  /** `generated` is an NFO written by Kinoshelf, `downloaded` an image, `replaced` an image chosen by the user over another. */
+  readonly kind: 'generated' | 'downloaded' | 'replaced';
   readonly destination: string;
 }
 

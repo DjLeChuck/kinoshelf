@@ -411,7 +411,7 @@ export const batchDetailSchema = {
         type: 'object',
         required: ['kind', 'destination'],
         properties: {
-          kind: { type: 'string', enum: ['generated', 'downloaded'] },
+          kind: { type: 'string', enum: ['generated', 'downloaded', 'replaced'] },
           destination: { type: 'string' },
         },
       },

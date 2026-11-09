@@ -17,6 +17,8 @@ import {
   classifyItem,
   type Classification,
   type ErrorInfo,
+  type ImageSize,
+  type WorkImages,
   type Journal,
   type LibraryConfig,
   type MetadataProvider,
@@ -215,6 +217,16 @@ export class Service {
       details.seasons.map(({ season }) => provider.getSeason(id, season)),
     );
     return { details, seasons: seasons.filter((season) => season !== null) };
+  }
+
+  /** The images the provider offers for a work, in the configured language. */
+  async listImages(kind: 'movie' | 'series', tmdbId: number): Promise<WorkImages | null> {
+    const provider = this.provider();
+    return provider.listImages({ provider: provider.name, id: tmdbId }, kind);
+  }
+
+  imageUrl(path: string, size: ImageSize): string {
+    return this.provider().imageUrl(path, size);
   }
 
   private provider(): MetadataProvider {

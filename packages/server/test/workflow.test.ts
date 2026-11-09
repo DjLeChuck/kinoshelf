@@ -444,6 +444,7 @@ describe('a transfer in progress', () => {
           },
           undoneEntryIds: (batchId) => real.undoneEntryIds(batchId),
           madeFileIdentity: (path) => real.madeFileIdentity(path),
+          madeFileSource: (path) => real.madeFileSource(path),
           hasBatches: () => real.hasBatches(),
           batches: (limit) => real.batches(limit),
           countBatches: () => real.countBatches(),

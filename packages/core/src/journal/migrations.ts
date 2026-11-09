@@ -39,6 +39,11 @@ export const CORE_MIGRATIONS: readonly { readonly name: string; readonly sql: st
     name: 'core:004-journal-destination',
     sql: `CREATE INDEX journal_entries_destination ON journal_entries (destination);`,
   },
+  {
+    // Where the file an image replaced was kept; NULL for every other kind.
+    name: 'core:005-journal-backup',
+    sql: `ALTER TABLE journal_entries ADD COLUMN backup TEXT;`,
+  },
 ];
 
 export function applyMigrations(

@@ -47,7 +47,18 @@ export interface CreatedJournalEntry extends JournalEntryBase {
   readonly mode?: undefined;
 }
 
-export type JournalEntry = TransferJournalEntry | CreatedJournalEntry;
+/**
+ * An image the user replaced (the only way Kinoshelf overwrites a file, and never silently: the
+ * old one is kept at `backup`, so undo can put it back). `source` is where the new one came from.
+ */
+export interface ReplacedJournalEntry extends JournalEntryBase {
+  readonly kind: 'replaced';
+  readonly mode?: undefined;
+  /** The file that was there before, in Kinoshelf's own data folder. */
+  readonly backup: string;
+}
+
+export type JournalEntry = TransferJournalEntry | CreatedJournalEntry | ReplacedJournalEntry;
 
 /** What a list of batches shows; `entriesOf` gives the operations. */
 export interface JournalBatch {
@@ -86,6 +97,11 @@ export interface Journal {
    * journaled before identities existed read as `undefined`: they are not trusted as ours.
    */
   madeFileIdentity(path: string): FileIdentity | undefined;
+  /**
+   * Where the image Kinoshelf made or fetched at `path` came from (a download's address, as
+   * journaled), if it was not undone; `undefined` for any other file.
+   */
+  madeFileSource(path: string): string | undefined;
   /** Whether anything was ever journaled, without summing up the batches. */
   hasBatches(): boolean;
   /** The most recent batches (all of them without a `limit`), by the time they started. */

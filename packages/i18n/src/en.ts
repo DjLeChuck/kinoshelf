@@ -65,6 +65,8 @@ export const en = {
   'error.config.dir-not-writable':
     'Cannot write to the config directory {path} (running as uid {uid}). Make it writable for that user.',
   'error.config.invalid': 'Invalid configuration file {path}: {detail}',
+  'error.undo.backup-missing':
+    'The image that was there before is no longer kept ({path}): it cannot be put back.',
   'error.undo.destination-changed':
     'Kept {path}: it changed since Kinoshelf wrote it (replaced or edited), so it is no longer ours to remove.',
   'error.undo.batch-already-undone': 'Batch {batch} was already reverted.',
@@ -658,6 +660,7 @@ export const en = {
     'NFO and images placed beside the videos. Undoing the batch removes them too.',
   'web.history.extra.generated': 'NFO generated',
   'web.history.extra.downloaded': 'Image downloaded',
+  'web.history.extra.replaced': 'Image replaced',
   'web.history.from': 'Original path',
   'web.history.to': 'Placed at',
   'web.history.item.done': 'Done',
