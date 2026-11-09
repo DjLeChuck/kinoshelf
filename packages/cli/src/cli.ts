@@ -12,6 +12,7 @@ import {
   GuessitParser,
   KinoshelfError,
   loadConfig,
+  madeByUs,
   openConfigDatabase,
   SqliteJournal,
   undoBatch,
@@ -135,6 +136,7 @@ async function runPipeline(
         deps.io.err(t('report.unreadable', { path }));
       },
     });
+    const journal = new SqliteJournal(database);
     const analysis = await analyze(files, {
       parser: new GuessitParser(),
       provider,
@@ -142,6 +144,7 @@ async function runPipeline(
       destinationRoot: settings.destinations,
       mode: settings.mode,
       ...(settings.threshold !== undefined && { matching: { threshold: settings.threshold } }),
+      madeByUs: (path: string) => madeByUs(journal, path),
       ...(deps.io.progress &&
         !options.json && {
           onProgress: (done: number, total: number) => deps.io.progress?.(`${done}/${total}`),
@@ -152,9 +155,7 @@ async function runPipeline(
     });
 
     const apply = kind === 'process' && options.apply === true;
-    const batch = apply
-      ? await executePlan(analysis.plan, { journal: new SqliteJournal(database) })
-      : undefined;
+    const batch = apply ? await executePlan(analysis.plan, { journal }) : undefined;
 
     if (options.json) {
       deps.io.out(JSON.stringify(analysisToJson(analysis, batch), null, 2));

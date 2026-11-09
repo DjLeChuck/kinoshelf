@@ -243,8 +243,10 @@ format follows the Kodi wiki's templates, saved pages are not in the repository)
   A profile that writes nothing makes no extra call. An item without details is still renamed.
 - **Never overwritten, same as videos.** `write-file` and `download` publish with `link`; an
   existing file is `skipped` (`destination.exists`) in the item's results and never fails the item,
-  nor sends the video back to the queue. A `.nfo` the user already had travels as a sidecar and
-  wins over the generated one. A movie written flat (no folder) gets no fixed-name file
+  nor sends the video back to the queue. A `.nfo` beside a video travels with it as a sidecar and
+  wins over the generated one, unless Kinoshelf wrote it and nobody touched it since
+  (`madeByUs`, from the journal's size and date) and the plan writes the NFO of the video's new place:
+  an episode matched again to another show would otherwise carry the old show's text along. A movie written flat (no folder) gets no fixed-name file
   (`movie.nfo`, `poster.jpg`, `logo.png`), which every movie would share.
 - **Show-level files** (`tvshow.nfo`, the show's poster, fanart and logo, a season's poster) come with
   every episode, marked `shared`; the planner keeps the first one of the batch (`shareCompanions`).

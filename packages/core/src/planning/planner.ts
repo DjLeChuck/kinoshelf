@@ -17,7 +17,7 @@ import type { Conflict, DestinationRoots, Plan, PlanItem } from '../types/plan.j
 import type { Profile } from '../types/profile.js';
 import type { Candidate, EpisodeInfo } from '../types/provider.js';
 import { companionOperations } from './companions.js';
-import { DEFAULT_SIDECAR_EXTENSIONS, findSidecars } from './sidecars.js';
+import { DEFAULT_SIDECAR_EXTENSIONS, findSidecars, type Sidecar } from './sidecars.js';
 import { MAX_VERSION_LEVEL, versionLabel, versionLabels } from './version.js';
 
 /** A matched file, ready to be planned. `parsed.path` is the source file. */
@@ -54,6 +54,13 @@ export interface PlannerOptions {
    * the file collides with one. Absent, or `undefined` as an answer, the file stays unlabelled.
    */
   readonly sizeOf?: (path: string) => Promise<string | undefined>;
+  /**
+   * Whether a file is one Kinoshelf wrote and nobody touched since (`Journal.madeFileIdentity`).
+   * An NFO that is one does not follow its video to a new name when the plan writes the NFO of
+   * its new place: it says what the work was, and the video may now be another. Absent, every
+   * NFO beside a video follows it.
+   */
+  readonly madeByUs?: (path: string) => Promise<boolean>;
 }
 
 const blocked = (conflict: Conflict, base: Omit<PlanItem, 'status' | 'conflicts'>): PlanItem => ({
@@ -363,11 +370,26 @@ async function planItem(
       : { ...base, status: 'in-place', conflicts: [] };
   }
 
-  const sidecars = await findSidecars(
+  const generated = companionOperations(input, place, companionOptions);
+  const written = new Set(
+    generated.flatMap((op) => (op.type === 'write-file' ? [op.destination.toLowerCase()] : [])),
+  );
+  const sidecars: Sidecar[] = [];
+  for (const sidecar of await findSidecars(
     source,
     options.sidecarExtensions ?? DEFAULT_SIDECAR_EXTENSIONS,
     listings,
-  );
+  )) {
+    // Only when the plan writes its replacement: without one (a profile that writes no NFO, no
+    // details) the file is all that is left of what it said, and goes along as before.
+    const replaced =
+      sidecar.suffix.toLowerCase().endsWith('.nfo') &&
+      written.has(join(root, ...target.folders, `${target.stem}${sidecar.suffix}`).toLowerCase()) &&
+      (await options.madeByUs?.(sidecar.path)) === true;
+    if (!replaced) {
+      sidecars.push(sidecar);
+    }
+  }
   const operations: Operation[] = [
     { type: 'transfer', mode, role: 'main', source, destination },
     ...sidecars.map((sidecar): Operation => ({
@@ -382,9 +404,7 @@ async function planItem(
   // (the destination is the same, and nothing is overwritten).
   const taken = new Set(operations.map((operation) => operation.destination.toLowerCase()));
   operations.push(
-    ...companionOperations(input, place, companionOptions).filter(
-      (operation) => !taken.has(operation.destination.toLowerCase()),
-    ),
+    ...generated.filter((operation) => !taken.has(operation.destination.toLowerCase())),
   );
   const item: PlanItem = { ...base, operations, status: 'ready', conflicts: [] };
   if (needsSize) {

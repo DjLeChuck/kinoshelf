@@ -10,6 +10,7 @@ import {
   selectItems,
   type PlanInput,
   type PlanItem,
+  type PlannerOptions,
   type MovieDetails,
   type Profile,
   type SeriesDetails,
@@ -970,5 +971,81 @@ describe('createPlan: the NFO of a work kept in several versions', () => {
 
     const destinations = items.flatMap((item) => writes(item).map((op) => op.destination));
     expect(destinations).toEqual([join(folder, 'movie.nfo')]);
+  });
+});
+
+describe('createPlan: an episode matched again to another show', () => {
+  const nfoProfile = buildProfile({ naming: 'no-id', metadata: 'nfo' });
+  const foundation = series(93740, 'Foundation', 2021);
+  const foundationDetails: SeriesDetails = {
+    ...bearDetails,
+    id: { provider: 'tmdb', id: 93740 },
+    title: 'Foundation',
+    originalTitle: 'Foundation',
+    seasons: [{ season: 1 }],
+  };
+
+  /** The Bear's first episode with the NFO Kinoshelf wrote for it, now claimed by Foundation. */
+  async function wronglyNamed() {
+    const lib = await makeDir();
+    const episode = await put(
+      join(lib, 'The Bear (2022)', 'Season 01', 'The Bear (2022) - s01e01.mkv'),
+    );
+    const old = await put(
+      join(lib, 'The Bear (2022)', 'Season 01', 'The Bear (2022) - s01e01.nfo'),
+      '<episodedetails>The Bear</episodedetails>',
+    );
+    const input: PlanInput = {
+      parsed: parsedEpisode(episode, 1, [1]),
+      candidate: foundation,
+      details: foundationDetails,
+    };
+    return { lib, old, input };
+  }
+  const plan = (input: PlanInput, lib: string, extra: Partial<PlannerOptions> = {}) =>
+    createPlan([input], {
+      profile: nfoProfile,
+      destinationRoot: lib,
+      mode: 'move',
+      newId: counter(),
+      ...extra,
+    });
+  const target = (lib: string) =>
+    join(lib, 'Foundation (2021)', 'Season 01', 'Foundation (2021) - s01e01.nfo');
+
+  it('writes the new show’s NFO instead of carrying the old one along, when Kinoshelf wrote it', async () => {
+    const { lib, old, input } = await wronglyNamed();
+
+    const { items } = await plan(input, lib, { madeByUs: (path) => Promise.resolve(path === old) });
+
+    const ops = items[0]?.operations ?? [];
+    expect(ops.filter((op) => op.type === 'transfer' && op.source === old)).toEqual([]);
+    expect(
+      ops.filter((op) => op.type === 'write-file' && op.destination === target(lib)),
+    ).toHaveLength(1);
+  });
+
+  it('carries along an NFO somebody else wrote, as before', async () => {
+    const { lib, old, input } = await wronglyNamed();
+
+    const { items } = await plan(input, lib, { madeByUs: () => Promise.resolve(false) });
+
+    const ops = items[0]?.operations ?? [];
+    expect(ops.filter((op) => op.type === 'transfer' && op.source === old)).toHaveLength(1);
+    expect(ops.filter((op) => op.type === 'write-file' && op.destination === target(lib))).toEqual(
+      [],
+    );
+  });
+
+  it('keeps carrying it when nothing would replace it, so a profile without NFO loses none', async () => {
+    const { lib, old, input } = await wronglyNamed();
+
+    const withoutDetails: PlanInput = { parsed: input.parsed, candidate: input.candidate };
+    const { items } = await plan(withoutDetails, lib, {
+      madeByUs: () => Promise.resolve(true),
+    });
+
+    const ops = items[0]?.operations ?? [];
+    expect(ops.filter((op) => op.type === 'transfer' && op.source === old)).toHaveLength(1);
   });
 });

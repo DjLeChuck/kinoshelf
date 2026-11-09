@@ -10,7 +10,9 @@ import {
   GuessitParser,
   KinoshelfError,
   libraryOverrides,
+  madeByUs,
   resolveSettings,
+  SqliteJournal,
   type Config,
   type MetadataProvider,
 } from '@kinoshelf/core';
@@ -111,6 +113,7 @@ async function process(deps: ProcessorDeps, job: Job): Promise<ProcessedJob> {
     },
   );
   progress?.discovered(job.id, files.length);
+  const journal = new SqliteJournal(deps.database);
   const analysis = await analyze(files, {
     parser: new GuessitParser(),
     provider: makeProvider(deps, settings.metadataLanguage),
@@ -131,6 +134,7 @@ async function process(deps: ProcessorDeps, job: Job): Promise<ProcessedJob> {
     },
     ...(settings.threshold !== undefined && { matching: { threshold: settings.threshold } }),
     ...withSizeReader(deps),
+    madeByUs: (path) => madeByUs(journal, path),
   });
   return {
     analysis,

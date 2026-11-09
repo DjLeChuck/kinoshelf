@@ -60,6 +60,8 @@ export interface AnalyzeOptions {
   readonly sidecarExtensions?: readonly string[];
   /** Reads a picture size from a file, for a name that says none (see `PlannerOptions.sizeOf`). */
   readonly sizeOf?: (path: string) => Promise<string | undefined>;
+  /** Whether a file is one Kinoshelf wrote and left alone (see `PlannerOptions.madeByUs`). */
+  readonly madeByUs?: (path: string) => Promise<boolean>;
   /** Files matched at the same time (each may issue several provider requests). */
   readonly concurrency?: number;
   /** One more file matched; `file` is the one that just was. */
@@ -216,6 +218,7 @@ export async function analyze(
     ...(loader.needsMetadata && { imageUrl: options.provider.imageUrl.bind(options.provider) }),
     ...(options.sidecarExtensions && { sidecarExtensions: options.sidecarExtensions }),
     ...(options.sizeOf && { sizeOf: options.sizeOf }),
+    ...(options.madeByUs && { madeByUs: options.madeByUs }),
   });
 
   // Plan items follow the order of `inputs`, i.e. of the matched entries.

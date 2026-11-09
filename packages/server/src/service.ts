@@ -10,6 +10,7 @@ import {
   MetadataLoader,
   type LoadedMetadata,
   executePlan,
+  madeByUs,
   undoBatch,
   selectItems,
   type Candidate,
@@ -262,6 +263,7 @@ export class Service {
         mode: settings.mode,
         ...(loader.needsMetadata && { imageUrl: provider.imageUrl.bind(provider) }),
         ...withSizeReader(this.deps),
+        madeByUs: (path) => madeByUs(this.deps.journal, path),
       },
     );
     const item = plan.items[0];

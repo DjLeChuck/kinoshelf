@@ -42,18 +42,31 @@ export async function pruneVacated(
   }
 }
 
+/**
+ * Whether `path` is a file Kinoshelf made and nobody changed since: the journal knows it, and its
+ * size and date are what they were when written. Anything else (another file, one edited by hand
+ * or by a player, one gone) is not ours to remove or to leave behind.
+ */
+export async function madeByUs(journal: Journal, path: string): Promise<boolean> {
+  const made = journal.madeFileIdentity(path);
+  if (!made) {
+    return false;
+  }
+  try {
+    const now = await stat(path);
+    return now.isFile() && now.size === made.size && now.mtimeMs === made.mtimeMs;
+  } catch {
+    return false;
+  }
+}
+
 async function removeIfOurs(directory: string, journal: Journal): Promise<boolean> {
   try {
     const entries = await readdir(directory, { withFileTypes: true });
     const ours: string[] = [];
     for (const entry of entries) {
       const path = join(directory, entry.name);
-      const made = entry.isFile() ? journal.madeFileIdentity(path) : undefined;
-      if (!made) {
-        return false;
-      }
-      const now = await stat(path);
-      if (now.size !== made.size || now.mtimeMs !== made.mtimeMs) {
+      if (!entry.isFile() || !(await madeByUs(journal, path))) {
         return false;
       }
       ours.push(path);
