@@ -31,8 +31,12 @@ equivalent of tinyMediaManager and a companion to Radarr/Sonarr: it never downlo
   unfolded under it.
 - **Arrivals**: the files Kinoshelf could not place with confidence wait here, with their TMDB
   candidates and score. You pick the candidate and the destination library.
-- **Safe by design**: a preview before every write, no existing file ever overwritten, every batch
-  can be undone, no silent copy when a hardlink fails.
+- **Safe by design**: a preview before every write, the renaming never overwrites an existing file,
+  every batch can be undone, no silent copy when a hardlink fails.
+- **Artwork you choose**: from the page of a movie or a show, change the poster, the background or
+  the logo with one of the images TMDB offers or an address of your own (JPEG or PNG). The image
+  replaced is kept, and the change is a batch you can undo. Addresses on your local network are
+  refused unless the processing settings allow them.
 - **Naming and metadata options** that suit Plex and Jellyfin alike: the TMDB id in the names or not,
   and Kodi-format NFO with artwork or nothing.
 - **Getting downloads in** from your client's "on completion" hook, or by watching a folder.

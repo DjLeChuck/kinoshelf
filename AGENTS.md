@@ -326,6 +326,30 @@ format follows the Kodi wiki's templates, saved pages are not in the repository)
   `null` until the next scan (a show's, until its files are looked at again).
 - A series NFO also carries `<uniqueid type="tvdb">` (`SeriesDetails.tvdbId`, TMDB's `external_ids`), after
   `tmdb` (the default) and `imdb`; a test holds the tmdb id of the name, `<id>` and the default `<uniqueid>`.
+- **Changing an image** (`artwork.ts`, `artwork-routes.ts`; the web's `ImagesDialog`): the poster,
+  background and logo of a movie, or of a show (its own folder, never a season's; seasons and episode
+  thumbnails are out). `GET .../images` lists what TMDB offers (`MetadataProvider.listImages`, in
+  TMDB's order: the web sorts) and what is in place; `POST` writes one to three images as one batch.
+  The page of a work says whether to offer it (`images` of `GET .../items/:itemId` and `.../shows/:tmdbId`:
+  which files are on the disk, `null` when the profile writes none or the work has no folder of its own;
+  the list's `poster`/`fanart`/`logo` flags mean "nothing planned is missing" and say nothing of the disk).
+  - **A replacement is an explicit, journaled operation, apart from the pipeline.** `replaceAtomic`
+    (`fs-ops.ts`) is the only primitive that overwrites, called by `replaceImage` and by undo alone;
+    the planner, the executor and `writeAtomic` still refuse to. The old file goes to
+    `<config>/replaced/` (journal entry `replaced`, migration `core:005-journal-backup`), and undo restores
+    it unless the file changed since (`undo.destination-changed`). Backup and restore keep the file's
+    date, or the journal's identity check would fail on the second undo. The NFO is not rewritten: it
+    names no image.
+  - **No image library**: JPEG and PNG only, read from the bytes, dimensions from the headers, WebP
+    refused. The format must be the one the profile writes (`poster.jpg` JPEG, `logo.png` PNG), else 422
+    `image.format-mismatch`; the list offers only compatible candidates.
+  - **An address (`source: "url"`) is fetched by the server** (`custom-image.ts`): http(s), three
+    redirections, 15 s, 20 MB. Addresses on the local network are refused by default
+    (`allowLocalImageUrls` in `config.yaml`, Settings › Processing; no variable, so no 409). The check
+    is on the **resolved IP at connection time** (`lookup` of `http.request`, not `fetch`) and at every
+    redirection. `POST .../images/preview` downloads the same way, for the dialog, and keeps nothing;
+    it answers with the image as a `data:` address, the only foreign thing the page's policy allows.
+    Every image is downloaded before any is written: one failure changes nothing.
 - Not done: no collection overview, no episode `uniqueid`, no `<fileinfo>` (the player reads the file).
 
 ## Libraries and scan
