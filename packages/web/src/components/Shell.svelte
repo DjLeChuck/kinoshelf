@@ -149,7 +149,8 @@
   main {
     flex: 1;
     width: 100%;
-    max-width: 1280px;
+    /* One width for every page, so the content does not jump when changing page. */
+    max-width: 1440px;
     margin: 0 auto;
     padding: 24px;
   }

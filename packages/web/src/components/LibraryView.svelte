@@ -579,7 +579,8 @@
 
   .layout {
     display: grid;
-    grid-template-columns: minmax(0, 1.2fr) minmax(280px, 1fr);
+    /* The list takes what the panel does not need: extra width goes to the columns. */
+    grid-template-columns: minmax(0, 1fr) minmax(340px, 36%);
     gap: 16px;
     align-items: start;
   }

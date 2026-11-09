@@ -79,6 +79,8 @@
   .layout {
     display: grid;
     grid-template-columns: minmax(0, 760px) 200px;
+    /* The page and its nav sit in the middle of the shared width, not against its left edge. */
+    justify-content: center;
     gap: 32px;
     align-items: start;
   }
