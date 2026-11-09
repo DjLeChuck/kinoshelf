@@ -42,8 +42,8 @@ One tab per library, plus an **Arrivals** tab.
 
 A library lists what its last scan saw, with:
 
-- **filters**: to validate, to rename, unrecognized, missing NFO or images and, for a series
-  library, missing episodes or missing show files. They are kept in the address (`?state=…`), so a
+- **filters**: to validate, to rename, unrecognized, missing NFO or images, several versions and, for
+  a series library, missing episodes, missing show files or incomplete versions. They are kept in the address (`?state=…`), so a
   link or a reload keeps them;
 - a search and the scan progress;
 - a page per item: summary and `ffprobe` details.
@@ -54,12 +54,25 @@ level, the NFO and images the profile writes (`tvshow.nfo`, poster, fanart, seas
 **Rename** and **Refresh** open a preview first. Nothing is written until you confirm, and an
 existing file is never overwritten.
 
-### Several versions of one movie
+### Several versions of a movie or an episode
 
 A 1080p and a 2160p of the same movie live side by side in its folder, as Plex and Jellyfin
 expect: `Nightbitch (2024) {tmdb-728949} - 2160p.mkv`. The label is the picture size found in the
-file name. A file already in its folder is never renamed unless you ask for it from the movie's
-page (**Add the version to the name**).
+file name. A file already in its folder is never renamed unless you ask for it from the page of the
+movie or the episode (**Add the version to the name**).
+
+The lists show a movie or an episode **once**, whatever its number of files:
+
+- a movie with several versions has a chevron that unfolds one line per version (picture size, HDR,
+  codec, audio, languages, subtitles, file size), and its page can **compare the versions**;
+- in a series library, the **Versions** column gives each version's coverage, `2160p 7/8`: the
+  episodes that version holds out of the distinct episodes held by all of them. A season has its own
+  badges, and the page of a series draws the matrix of versions against episodes. A missing episode
+  stays in **Missing episodes**: it lowers no version. A file whose name gives no size counts as a
+  version only when it shares an episode with another file;
+- the poster, fanart and logo are shared. A movie has one `movie.nfo`; each version of an episode
+  has its own `<file>.nfo`, which no player reads from a shared one. **Generate the missing NFO**
+  writes the ones that are absent and never touches one that exists.
 
 ## Arrivals
 

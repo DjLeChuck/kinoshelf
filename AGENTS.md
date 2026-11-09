@@ -14,7 +14,8 @@ path picker. The Libraries page has a tab per typed library (list read from the 
 scan progress, the page of an item) and an Arrivals tab (`/arrivals`) where a file is validated:
 candidate, destination library. A series library reads as a tree (show, season,
 episode) with its missing episodes. Items are renamed and refreshed from the page (a preview first). The History merges batches and
-jobs in one list (see "History" below). A series is validated as a release, not file by file. The NFO
+jobs in one list (see "History" below). A series is validated as a release, not file by file. A movie or an episode held in several
+versions is listed once (see "Versions in the lists" below). The NFO
 and artwork writers (`metadata: nfo`) are built (see "NFO and artwork"
 below), metadata included for a library that is already organized. No stable release is tagged yet.
 
@@ -229,6 +230,35 @@ the job: cause, frozen settings, "Send again"). A batch made by the CLI has no j
   `POST /api/libraries/:id/scan` (so the 409 `library.scan-in-progress` guard applies), anything else is
   submitted again with `POST /api/jobs` (`resendRequest`, `lib/history.ts`). It uses today's settings, and
   the job's own, frozen, are shown beside it without being compared.
+
+## Versions in the lists
+
+A library lists a **movie or an episode once**, its files being its `versions` (`versions.ts`,
+`presentWork` in `library-routes.ts`); the snapshot keeps one row per file. In `GET .../items`
+only a movie identified with a tmdb id is grouped (`WORK_KEY`, in SQL, so paging counts movies); any
+other file is an entry of its own, and the episodes of a series are grouped by `.../shows`.
+
+- **The entry's state is the worst of its versions** (`state`, `nfo`, `poster`, `fanart`, `logo`).
+  `shareMovieFiles` makes `movie.nfo` and the images "there for every version or none" when the
+  snapshot is written, since the planner puts them on the first version only. `total`, paging and
+  `counts` count works, `missing-nfo` included; `multi-version` and `incomplete-versions` are filters
+  (`counts` gives 0 for `incomplete-versions` in a movie library).
+- **The NFO scope is fixed, not a profile axis**: one `movie.nfo` per movie, one `<file>.nfo` per
+  version of an episode (no player reads a shared episode NFO). Kinoshelf never rewrites an NFO that
+  exists, so a change of metadata leaves them, and there are no orphans to find.
+- **Coverage** (`coverageOf`): the denominator is the distinct episodes held by all the versions
+  (`2160p 7/8`), a version absent from a season counts 0 there. A missing episode (no file at all)
+  lowers nothing: it is "Missing episodes". A file whose name gives no size is a version only if it
+  shares an episode with another file, else it is in no version and not in the total.
+- The **resolution is read from the name** (`resolutionOf`, `library-items.ts`), never stored (no migration). The probe
+  (`hdr`, `audioLanguages`, `subtitleLanguages`, server migration 025) fills the details of each
+  version; the list reads them from the snapshot (`file`: `null` until probed) and never probes.
+  Languages are ISO 639-2 as the file tags them, shown short (`fre` gives `FR`), an unknown code as is.
+- **The web** (`LibraryView`, `ShowsTree`, `ItemPanel`, `EpisodePanel`, `CoverageMatrix`,
+  `VersionBadges`, `SlotBadges`): one line per work with a chevron when there are several versions;
+  `GET .../shows/:tmdbId` gives one episode per number with its `versions[]` and the `nfo`
+  `{expected, present}` tallies; "Generate the missing NFO" is Refresh. `canNameVersion` is false
+  when the name already ends with ` - <size>`.
 
 ## NFO and artwork
 

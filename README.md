@@ -26,7 +26,9 @@ equivalent of tinyMediaManager and a companion to Radarr/Sonarr: it never downlo
 ## Features
 
 - **Libraries** organized in place: filters (to validate, to rename, unrecognized, missing NFO or
-  images, missing episodes), a series tree (show, season, episode), a page per item with `ffprobe`.
+  images, missing episodes, several versions), a series tree (show, season, episode), a page per item
+  with `ffprobe`. A movie or an episode held in several qualities is listed once, its versions
+  unfolded under it.
 - **Arrivals**: the files Kinoshelf could not place with confidence wait here, with their TMDB
   candidates and score. You pick the candidate and the destination library.
 - **Safe by design**: a preview before every write, no existing file ever overwritten, every batch
