@@ -137,8 +137,8 @@ describe('a library holding two versions of one movie', () => {
     expect(page.items.map((item) => item.tmdbId)).toEqual([438631]);
     const versions = page.items[0]?.versions ?? [];
     expect(versions.map(({ state, resolution }) => [state, resolution])).toEqual([
-      ['ok', '1080p'],
       ['ok', '2160p'],
+      ['ok', '1080p'],
     ]);
     expect(new Set(versions.map(({ id }) => id)).size).toBe(2);
     expect(await readdir(join(root, FOLDER))).toHaveLength(2);

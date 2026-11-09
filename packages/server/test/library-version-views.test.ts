@@ -76,7 +76,7 @@ describe('a movie held in two versions', () => {
         versions: { resolution: string | null }[];
         nfoFiles: { path: string; present: boolean }[];
       }>();
-      expect(detail.versions.map(({ resolution }) => resolution)).toEqual(['1080p', '2160p']);
+      expect(detail.versions.map(({ resolution }) => resolution)).toEqual(['2160p', '1080p']);
       expect(detail.nfoFiles).toEqual([{ path: join(root, FOLDER, 'movie.nfo'), present: true }]);
     }
   });
@@ -89,7 +89,33 @@ describe('a movie held in two versions', () => {
     }>();
     const files = page.items[0]?.versions.map(({ file }) => file);
     expect(files?.map((file) => file?.video)).toEqual(['h264', 'h264']);
-    expect(files?.map((file) => file?.size)).toEqual(['hd'.length, 'the bigger one'.length]);
+    // Largest picture first: the 2160p file comes before the 1080p one.
+    expect(files?.map((file) => file?.size)).toEqual(['the bigger one'.length, 'hd'.length]);
+  });
+
+  it('lists four versions from the largest picture down, not by file name', async () => {
+    const root = await makeDir();
+    // By name 1080p, 2160p, 480p, 720p: the order of the disk is not the order of the picture.
+    for (const size of ['1080p', '2160p', '480p', '720p']) {
+      await put(join(root, FOLDER, `${FOLDER} - ${size}.mkv`), size);
+    }
+    const h = await harness({
+      config: {
+        libraries: [{ id: 'films', name: 'Films', source: root, type: 'movie', naming: 'no-id' }],
+      },
+    });
+    await h.request('POST', '/api/libraries/films/scan');
+    await h.app.jobs.idle();
+    const sizes = ['2160p', '1080p', '720p', '480p'];
+    const page = await list(h);
+    expect(page.items[0]?.versions.map(({ resolution }) => resolution)).toEqual(sizes);
+    const detail = (
+      await h.request(
+        'GET',
+        `/api/libraries/films/items/${itemId(join(root, FOLDER, `${FOLDER} - 480p.mkv`))}`,
+      )
+    ).json<{ versions: { resolution: string | null }[] }>();
+    expect(detail.versions.map(({ resolution }) => resolution)).toEqual(sizes);
   });
 
   it('is not multi-version with one file', async () => {

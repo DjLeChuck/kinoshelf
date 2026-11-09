@@ -305,10 +305,10 @@ describe('GET /api/libraries/:id/items', () => {
     await put(join(root, 'Alien.1979.1080p.mkv'));
     await h.request('POST', '/api/libraries/films/scan');
     await h.app.jobs.idle();
-    // The same film as the well-placed one: one entry, two versions.
+    // The same film as the well-placed one: one entry, two versions; the unsized one comes last.
     const found = (await list(h, '?q=1080p')).items;
     expect(found).toHaveLength(1);
-    expect(found[0]?.versions.map((version) => version.resolution)).toEqual([null, '1080p']);
+    expect(found[0]?.versions.map((version) => version.resolution)).toEqual(['1080p', null]);
   });
 
   it('says a library was scanned even when it held nothing, and not before', async () => {

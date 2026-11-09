@@ -26,6 +26,10 @@ put "Dune.2021.1080p.WEB-DL.DDP5.1.H.264-SEED" "Dune.2021.1080p.WEB-DL.DDP5.1.H.
 # Two qualities of one movie: both arrive named with their picture size (versions).
 put "Nightbitch.2024.1080p.WEB-DL.DDP5.1.H.264-SEED" "Nightbitch.2024.1080p.WEB-DL.DDP5.1.H.264-SEED.mkv"
 put "Nightbitch.2024.2160p.WEB-DL.DDP5.1.H.265-SEED" "Nightbitch.2024.2160p.WEB-DL.DDP5.1.H.265-SEED.mkv"
+# ...and two more, to see how a list and a page carry four versions (more than two make rows taller
+# and the comparison wider).
+put "Nightbitch.2024.720p.BluRay.x264-SEED" "Nightbitch.2024.720p.BluRay.x264-SEED.mkv"
+put "Nightbitch.2024.480p.DVDRip.x264-SEED" "Nightbitch.2024.480p.DVDRip.x264-SEED.mkv"
 
 # A bilingual title, and a part number: the matcher has to read both.
 put "Anatomy.Of.A.Fall-Anatomie.d.une.chute.2023.1080p.BluRay.x264-SEED" \
@@ -45,6 +49,12 @@ done
 for e in 01 02; do
   put "The.Bear.2022.S01.1080p.WEB-DL.DDP5.1.H.264-SEED" "The.Bear.2022.S01E$e.1080p.WEB-DL.DDP5.1.H.264-SEED.mkv"
   put "The.Bear.2022.S01.2160p.WEB-DL.DDP5.1.H.265-SEED" "The.Bear.2022.S01E$e.2160p.WEB-DL.DDP5.1.H.265-SEED.mkv"
+done
+
+# Two more qualities of the same two episodes (four versions each), for the same reason as the movie.
+for e in 01 02; do
+  put "The.Bear.2022.S01.720p.BluRay.x264-SEED" "The.Bear.2022.S01E$e.720p.BluRay.x264-SEED.mkv"
+  put "The.Bear.2022.S01.480p.DVDRip.x264-SEED" "The.Bear.2022.S01E$e.480p.DVDRip.x264-SEED.mkv"
 done
 
 # A special (season 0), alone in its release: the players name it "Season 00" or "Specials".

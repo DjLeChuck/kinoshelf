@@ -21,6 +21,7 @@ import {
 import type { FastifyInstance } from 'fastify';
 import { ApiError } from './api-error.js';
 import { isSystemPath } from './system-paths.js';
+import { largestFirst } from './versions.js';
 import { isInside } from './notify/paths.js';
 import type { SeriesFilesStore } from './series-files.js';
 import { compare, missingOf, type Completeness, type EpisodeReport } from './completeness.js';
@@ -250,7 +251,9 @@ const presentWork = (
     poster: allThere(work.map((item) => item.poster)),
     fanart: allThere(work.map((item) => item.fanart)),
     logo: allThere(work.map((item) => item.logo)),
-    versions: work.map((item) => presentVersion(item, probeOf(item.path))),
+    versions: largestFirst(work, (item) => resolutionOf(item.path)).map((item) =>
+      presentVersion(item, probeOf(item.path)),
+    ),
   };
 };
 
@@ -766,9 +769,12 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
       // The versions of a movie sit in its folder; an episode's NFO is its own, so it stands alone.
       const movie = item.kind === 'movie' && item.tmdbId !== null;
       const files = movie
-        ? items
-            .inFolder(library.id, dirname(item.path))
-            .filter((row) => row.kind === 'movie' && row.tmdbId === item.tmdbId)
+        ? largestFirst(
+            items
+              .inFolder(library.id, dirname(item.path))
+              .filter((row) => row.kind === 'movie' && row.tmdbId === item.tmdbId),
+            (row) => resolutionOf(row.path),
+          )
         : [item];
       const [details, ...probed] = await Promise.all([
         item.kind !== null && item.tmdbId !== null

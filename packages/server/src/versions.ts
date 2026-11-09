@@ -58,6 +58,10 @@ export function versionsOf(rows: readonly VersionRow[]): (string | null)[] {
 const pixels = (resolution: string | null): number =>
   resolution === null ? -1 : Number.parseInt(resolution, 10) || 0;
 
+/** The files of one work from the largest picture down; the ones nothing tells apart keep their order. */
+export const largestFirst = <T>(rows: readonly T[], resolution: (row: T) => string | null): T[] =>
+  [...rows].sort((a, b) => pixels(resolution(b)) - pixels(resolution(a)));
+
 /**
  * What each of `versions` holds of the episodes they hold together (`rows` may be a season of a
  * show: a version absent from it covers none of it). Empty when no file is a version.
