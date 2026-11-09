@@ -13,7 +13,9 @@
     groupSettling,
     libraryItems,
     settleKey,
+    type Coverage,
     type EpisodeState,
+    type ShowEpisode,
     type LibraryItem,
     type Show,
     type ShowFilter,
@@ -21,6 +23,11 @@
   } from '../lib/library-items.js';
   import Chevron from './Chevron.svelte';
   import Presence from './Presence.svelte';
+  import CoverageBadges from './CoverageBadges.svelte';
+  import EpisodePanel from './EpisodePanel.svelte';
+  import NfoTally from './NfoTally.svelte';
+  import SlotBadges from './SlotBadges.svelte';
+  import { slotsOf } from '../lib/versions.js';
   import ItemPanel from './ItemPanel.svelte';
   import RescanButton from './RescanButton.svelte';
   import RunDialog from './RunDialog.svelte';
@@ -56,7 +63,14 @@
 
   type Selection =
     | { readonly kind: 'show'; readonly tmdbId: number }
-    | { readonly kind: 'item'; readonly item: LibraryItem };
+    | { readonly kind: 'item'; readonly item: LibraryItem }
+    | {
+        readonly kind: 'episode';
+        readonly tmdbId: number;
+        readonly episode: ShowEpisode;
+        /** The versions of the show, as its season lists them. */
+        readonly coverage: readonly Coverage[];
+      };
 
   let shows = $state<{ total: number; items: readonly Show[] } | undefined>(undefined);
   let settling = $state<readonly LibraryItem[]>([]);
@@ -309,7 +323,7 @@
             <th>{t('web.library.col.year')}</th>
             <th>{t('web.library.col.seasons')}</th>
             <th>{t('web.library.col.episodes')}</th>
-            <th>{t('web.library.col.quality')}</th>
+            <th>{t('web.library.col.versions')}</th>
             {#if writes.nfo}<th>NFO</th>{/if}
             {#if writes.artwork}
               <th>{t('web.library.col.poster')}</th>
@@ -412,9 +426,32 @@
               </td>
               <td>{show.year ?? ''}</td>
               <td>{show.seasons}</td>
-              <td>{show.episodes}</td>
-              <td></td>
-              {#if writes.nfo}<td><Presence value={show.nfo} /></td>{/if}
+              <td>
+                {show.episodes}
+                {#if show.versions.length > 1}
+                  <span class="muted" aria-hidden="true">×{show.versions.length}</span>
+                  <span class="sr-only"
+                    >, {t('web.library.versions.count', { count: show.versions.length })}</span
+                  >
+                {/if}
+              </td>
+              <td><CoverageBadges coverage={show.versions} /></td>
+              {#if writes.nfo}
+                <td>
+                  <Presence value={show.nfo} />
+                  {#if show.episodesLackingNfo > 0}
+                    <span
+                      class="chip chip-warn"
+                      title={t('web.library.shows.nfo-lacking.hint', {
+                        count: show.episodesLackingNfo,
+                      })}
+                      >{t('web.library.shows.nfo-lacking', {
+                        count: show.episodesLackingNfo,
+                      })}</span
+                    >
+                  {/if}
+                </td>
+              {/if}
               {#if writes.artwork}
                 <td><Presence value={show.poster} /></td>
                 <td><Presence value={show.fanart} /></td>
@@ -497,8 +534,10 @@
                         >
                       {/if}
                     </td>
-                    <td></td>
-                    {#if writes.nfo}<td></td>{/if}
+                    <td
+                      >{#if !empty}<CoverageBadges coverage={season.versions} always />{/if}</td
+                    >
+                    {#if writes.nfo}<td><NfoTally tally={season.nfo} always /></td>{/if}
                     {#if writes.artwork}
                       <td><Presence value={season.poster} /></td>
                       <td></td>
@@ -513,18 +552,26 @@
                     </td>
                   </tr>
                   {#if seasonOpen}
-                    {#each season.episodes as episode (`${episode.episode}:${episode.versions[0]?.id ?? ''}`)}
+                    {#each season.episodes as episode (episode.episode)}
                       {@const item = episode.versions[0]}
                       <tr
                         class="child episode"
-                        class:current={selection?.kind === 'item' && item?.id === selection.item.id}
+                        class:current={selection?.kind === 'episode' &&
+                          selection.episode.season === episode.season &&
+                          selection.episode.episode === episode.episode}
                       >
                         <td class="indent2" colspan="3">
                           {#if item}
                             <button
                               type="button"
                               class="link"
-                              onclick={() => (selection = { kind: 'item', item })}
+                              onclick={() =>
+                                (selection = {
+                                  kind: 'episode',
+                                  tmdbId: show.tmdbId,
+                                  episode,
+                                  coverage: season.versions,
+                                })}
                             >
                               {episodeLabel(episode.season, episode.episode)}
                               {episode.title ?? ''}
@@ -542,8 +589,12 @@
                           {/if}
                         </td>
                         <td></td>
-                        <td>{item?.resolution ?? ''}</td>
-                        {#if writes.nfo}<td><Presence value={item?.nfo ?? null} /></td>{/if}
+                        <td>
+                          {#if item}<SlotBadges
+                              slots={slotsOf(season.versions, episode.versions)}
+                            />{/if}
+                        </td>
+                        {#if writes.nfo}<td><NfoTally tally={episode.nfo} /></td>{/if}
                         {#if writes.artwork}<td></td><td></td>{/if}
                         {#if writes.logo}<td></td>{/if}
                         <td></td>
@@ -586,6 +637,22 @@
             ondone={(message: string) => {
               // A validation lets the whole group go: lock it until the transfer empties the list.
               startedKeys = [...startedKeys, settleKey(chosenItem)];
+              selection = undefined;
+              onsettled(message);
+              void load();
+            }}
+          />
+        {/key}
+      {:else if selection?.kind === 'episode'}
+        {@const chosen = selection}
+        {#key `${chosen.episode.season}:${chosen.episode.episode}`}
+          <EpisodePanel
+            {libraryId}
+            showTitle={shows.items.find((show) => show.tmdbId === chosen.tmdbId)?.title ?? ''}
+            episode={chosen.episode}
+            coverage={chosen.coverage}
+            {busy}
+            ondone={(message: string) => {
               selection = undefined;
               onsettled(message);
               void load();

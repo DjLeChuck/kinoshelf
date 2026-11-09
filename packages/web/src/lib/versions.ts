@@ -1,4 +1,4 @@
-import type { Hdr, ProbedFile } from './library-items.js';
+import type { Coverage, Hdr, LibraryItem, ProbedFile } from './library-items.js';
 
 /** The names of the formats are the same in every language. */
 export const HDR_LABEL: Readonly<Record<Hdr, string>> = {
@@ -87,3 +87,36 @@ export function totalSize(files: readonly (Pick<ProbedFile, 'size'> | null)[]): 
   const known = files.filter((file) => file !== null);
   return known.length === 0 ? null : known.reduce((sum, { size }) => sum + size, 0);
 }
+
+/** What a version of a show is, for one episode of it. */
+export type SlotStatus = 'complete' | 'nfo-missing' | 'absent';
+
+/** One version of the show, as it stands for one episode: the file that holds it, if any. */
+export interface Slot {
+  readonly resolution: string | null;
+  readonly file: LibraryItem | undefined;
+  readonly status: SlotStatus;
+}
+
+/**
+ * Each version of the show (`coverage`, the season's) against the files of one episode: the file
+ * of that size, or none when the version exists in the show but not for this episode. A missing
+ * NFO is the file's own (`nfo === false`; `null` is a profile that writes none).
+ */
+export function slotsOf(
+  coverage: readonly Pick<Coverage, 'resolution'>[],
+  files: readonly LibraryItem[],
+): Slot[] {
+  return coverage.map(({ resolution }) => {
+    const file = files.find((candidate) => candidate.resolution === resolution);
+    return {
+      resolution,
+      file,
+      status: file === undefined ? 'absent' : file.nfo === false ? 'nfo-missing' : 'complete',
+    };
+  });
+}
+
+/** A version held in full is plain, one that lacks episodes carries its ratio (`2160p 7/8`). */
+export const isIncomplete = (coverage: Pick<Coverage, 'covered' | 'total'>): boolean =>
+  coverage.covered < coverage.total;

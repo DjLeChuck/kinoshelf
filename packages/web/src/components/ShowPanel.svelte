@@ -3,6 +3,7 @@
   import { t } from '../lib/i18n.svelte.js';
   import type { Show, ShowDetail } from '../lib/library-items.js';
   import { rescanPath } from '../lib/paths.js';
+  import CoverageMatrix from './CoverageMatrix.svelte';
   import RescanButton from './RescanButton.svelte';
   import WorkCard from './WorkCard.svelte';
 
@@ -42,6 +43,9 @@
   meta={[
     `${t('web.library.col.seasons')}: ${show.seasons}`,
     `${t('web.library.col.episodes')}: ${show.episodes}`,
+    show.versions.length > 1
+      ? t('web.library.versions.count', { count: show.versions.length })
+      : undefined,
     detail?.genres.join(', ') || undefined,
   ]
     .filter(Boolean)
@@ -67,6 +71,7 @@
     {#if !detail.determined}
       <p class="alert" role="status">{t('web.library.shows.undetermined')}</p>
     {/if}
+    {#if show.versions.length > 1}<CoverageMatrix {detail} />{/if}
     <div>
       <RescanButton {libraryId} path={folder} name={show.title ?? ''} {ondone} />
     </div>

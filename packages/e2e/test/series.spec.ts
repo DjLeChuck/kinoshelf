@@ -129,7 +129,9 @@ test('shows which NFO and images a show and its seasons have', async ({ page, re
   const row = page.getByRole('row', { name: /Severance/ }).first();
   await expect(row).toBeVisible();
   // NFO, poster, fanart, logo: the files are looked for after the scan, not when the page reads.
-  await expect(row.getByRole('cell').filter({ hasText: /^✓ present$/ })).toHaveCount(2);
+  // The show's NFO is there, but its one episode has none of its own: the orange count says so.
+  await expect(row.getByRole('cell').filter({ hasText: /^✓ present\s*1 ep\.$/ })).toHaveCount(1);
+  await expect(row.getByRole('cell').filter({ hasText: /^✓ present$/ })).toHaveCount(1);
   await expect(row.getByRole('cell').filter({ hasText: /^✗ missing$/ })).toHaveCount(2);
 
   await row.getByRole('button', { name: /Show the seasons/ }).click();

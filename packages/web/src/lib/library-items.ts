@@ -13,13 +13,15 @@ export const ITEM_FILTERS: readonly ItemFilter[] = [
   'multi-version',
 ];
 /** A series library also filters its shows. Its tabs count shows, except the files that wait for a person. */
-export type ShowFilter = ItemFilter | 'missing-episodes' | 'missing-show-files';
+export type ShowFilter =
+  ItemFilter | 'incomplete-versions' | 'missing-episodes' | 'missing-show-files';
 export const SERIES_FILTERS: readonly ShowFilter[] = [
   ...ITEM_FILTERS,
+  'incomplete-versions',
   'missing-episodes',
   'missing-show-files',
 ];
-export type Counts = Readonly<Record<ShowFilter | 'all' | 'incomplete-versions', number>>;
+export type Counts = Readonly<Record<ShowFilter | 'all', number>>;
 
 /** What a library holds, as `GET /api/libraries/{id}/items` lists it. */
 export interface LibraryItem {
@@ -152,13 +154,31 @@ export function itemsUrl(libraryId: string, { state, q, limit, offset }: ItemsQu
   return `/api/libraries/${libraryId}/items?${parameters.join('&')}`;
 }
 
+/** What a version of a show holds of the episodes all the versions hold together. */
+export interface Coverage {
+  /** `null`: a file whose name says no size, a version only beside another of its episode. */
+  readonly resolution: string | null;
+  readonly covered: number;
+  readonly total: number;
+}
+
+/** The NFO of some files: how many the profile wants and how many are there. */
+export interface NfoTally {
+  readonly expected: number;
+  readonly present: number;
+}
+
 /** A show of a series library: `missing` is `null` until it was counted. */
 export interface Show {
   readonly tmdbId: number;
   readonly title: string | null;
   readonly year: number | null;
   readonly seasons: number;
+  /** Distinct episodes: two versions of one count once. */
   readonly episodes: number;
+  readonly versions: readonly Coverage[];
+  /** Episodes with a version whose own NFO is missing. */
+  readonly episodesLackingNfo: number;
   readonly missing: number | null;
   /** Episodes to rename, and to refresh (NFO or image missing): what the show's checkbox runs. */
   readonly rename: number;
@@ -180,6 +200,7 @@ export interface ShowEpisode {
   readonly state: EpisodeState;
   /** The files that hold it, one per version. */
   readonly versions: readonly LibraryItem[];
+  readonly nfo: NfoTally;
 }
 
 export interface ShowSeason {
@@ -189,6 +210,9 @@ export interface ShowSeason {
   /** The season's poster file is on the disk; `null`: not written, or not looked at yet. */
   readonly poster: boolean | null;
   readonly missing: number;
+  /** Every version of the show against this season's episodes: one absent from it holds none. */
+  readonly versions: readonly Coverage[];
+  readonly nfo: NfoTally;
   readonly episodes: readonly ShowEpisode[];
 }
 
@@ -213,7 +237,7 @@ export interface ShowsQuery {
   readonly missing?: boolean | undefined;
   readonly incomplete?: boolean | undefined;
   /** Only the shows holding a file of this state (or lacking this kind of file). */
-  readonly state?: ItemFilter | undefined;
+  readonly state?: ItemFilter | 'incomplete-versions' | undefined;
   readonly limit: number;
   readonly offset?: number;
 }
