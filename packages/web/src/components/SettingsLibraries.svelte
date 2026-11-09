@@ -12,6 +12,14 @@
 
   /** The library being edited, or the group of the one being created. */
   let editing = $state<{ id: string } | { group: LibraryGroup } | undefined>(undefined);
+  let dialog = $state<HTMLDialogElement | undefined>(undefined);
+
+  // The form lives in a modal: opened as soon as it is mounted.
+  $effect(() => {
+    if (dialog && !dialog.open) {
+      dialog.showModal();
+    }
+  });
 
   // Libraries are part of the settings: any change of them, here or elsewhere, comes as such.
   const loaded = resource(() => libraryApi.list(), ['settings', 'ready']);
@@ -110,21 +118,33 @@
     {#if editing}
       {#key current?.id ?? ('group' in editing ? editing.group : '')}
         {#if 'group' in editing || current}
-          <LibraryForm
-            library={current}
-            group={current ? groupOf(current) : 'group' in editing ? editing.group : 'in-place'}
-            {examples}
-            {libraries}
-            onsaved={() => {
-              if (!current) {
-                close();
-              } else {
-                void loaded.reload();
+          <dialog
+            bind:this={dialog}
+            aria-label={t('web.settings.libraries.title')}
+            onclose={close}
+            onclick={(event) => {
+              // Only the backdrop is the dialog itself: the form fills the rest.
+              if (event.target === dialog) {
+                dialog.close();
               }
             }}
-            ondeleted={close}
-            oncancel={close}
-          />
+          >
+            <LibraryForm
+              library={current}
+              group={current ? groupOf(current) : 'group' in editing ? editing.group : 'in-place'}
+              {examples}
+              {libraries}
+              onsaved={() => {
+                if (!current) {
+                  close();
+                } else {
+                  void loaded.reload();
+                }
+              }}
+              ondeleted={close}
+              oncancel={close}
+            />
+          </dialog>
         {/if}
       {/key}
     {/if}
@@ -132,6 +152,21 @@
 </section>
 
 <style>
+  dialog {
+    width: min(720px, 96vw);
+    max-height: 92vh;
+    padding: 16px;
+    color: var(--text);
+    background: var(--bg, var(--surface));
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow-y: auto;
+  }
+
+  dialog::backdrop {
+    background: rgb(0 0 0 / 55%);
+  }
+
   .group {
     display: flex;
     flex-direction: column;
