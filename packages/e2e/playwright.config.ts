@@ -1,5 +1,5 @@
 import { defineConfig } from '@playwright/test';
-import { API_KEY, BASE_URL, DIR, PORT, TMDB_PORT } from './support.js';
+import { API_KEY, BASE_URL, DIR, PLEX_PORT, PORT, TMDB_PORT } from './support.js';
 
 export default defineConfig({
   testDir: './test',
@@ -26,10 +26,12 @@ export default defineConfig({
     env: {
       E2E_DIR: DIR,
       E2E_TMDB_PORT: String(TMDB_PORT),
+      E2E_PLEX_PORT: String(PLEX_PORT),
       KINOSHELF_HOST: '127.0.0.1',
       KINOSHELF_PORT: String(PORT),
       KINOSHELF_CONFIG_DIR: `${DIR}/config`,
       KINOSHELF_API_KEY: API_KEY,
+      KINOSHELF_PLEX_TV_URL: `http://127.0.0.1:${PLEX_PORT}`,
       KINOSHELF_TMDB_URL: `http://127.0.0.1:${TMDB_PORT}`,
       KINOSHELF_TMDB_IMAGES_URL: `http://127.0.0.1:${TMDB_PORT}/t/p`,
       TMDB_API_KEY: 'e2e-tmdb-key',

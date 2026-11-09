@@ -4,9 +4,9 @@ import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { join } from 'node:path';
 
-const { E2E_DIR: dir, E2E_TMDB_PORT: tmdbPort } = process.env;
-if (!dir || !tmdbPort) {
-  throw new Error('E2E_DIR and E2E_TMDB_PORT are set by playwright.config.ts');
+const { E2E_DIR: dir, E2E_TMDB_PORT: tmdbPort, E2E_PLEX_PORT: plexPort } = process.env;
+if (!dir || !tmdbPort || !plexPort) {
+  throw new Error('E2E_DIR, E2E_TMDB_PORT and E2E_PLEX_PORT are set by playwright.config.ts');
 }
 
 // A fresh disk every run: the tests count on what is (not) in the library.
@@ -169,6 +169,50 @@ createServer((request, response) => {
     response.writeHead(404).end();
   }
 }).listen(Number(tmdbPort), '127.0.0.1');
+
+// A fake plex.tv, enough for the sign-in: opening its approval page (what the user does in the
+// tab Kinoshelf opens) claims the PIN. Signatures are checked by the server's own tests, which
+// hold a fake that verifies them; this one only proves the page walks the whole way.
+let claimed = false;
+const part = (value) => Buffer.from(JSON.stringify(value)).toString('base64url');
+const plexToken = () =>
+  `${part({ alg: 'EdDSA' })}.${part({ exp: Math.floor(Date.now() / 1000) + 7 * 86400 })}.sig`;
+createServer((request, response) => {
+  const url = new URL(request.url ?? '/', 'http://plex.test');
+  const json = (body) =>
+    response.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify(body));
+  if (url.pathname === '/auth') {
+    claimed = true;
+    response.writeHead(200, { 'content-type': 'text/html' }).end('<h1>Kinoshelf approved</h1>');
+  } else if (request.method === 'POST' && url.pathname === '/api/v2/pins') {
+    claimed = false;
+    json({ id: 111, code: 'e2e-pin' });
+  } else if (url.pathname === '/api/v2/pins/111') {
+    json({ authToken: claimed ? plexToken() : null });
+  } else if (url.pathname === '/api/v2/auth/nonce') {
+    json({ nonce: 'e2e-nonce' });
+  } else if (request.method === 'POST' && url.pathname === '/api/v2/auth/token') {
+    json({ auth_token: plexToken() });
+  } else if (url.pathname === '/api/v2/resources') {
+    json([
+      {
+        name: 'Living room',
+        provides: 'server',
+        owned: true,
+        connections: [
+          { uri: 'https://relay.plex.example:8443', local: false, relay: true },
+          {
+            uri: 'https://192-168-1-10.0123456789abcdef0123456789abcdef.plex.direct:32400',
+            local: true,
+            relay: false,
+          },
+        ],
+      },
+    ]);
+  } else {
+    response.writeHead(404).end();
+  }
+}).listen(Number(plexPort), '127.0.0.1');
 
 const serverMain = new URL('../server/dist/main.js', import.meta.url);
 await import(serverMain.href);

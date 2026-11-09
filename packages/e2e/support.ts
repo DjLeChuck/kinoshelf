@@ -5,6 +5,7 @@ import { join } from 'node:path';
 export const DIR = process.env.E2E_DIR ?? join(tmpdir(), 'kinoshelf-e2e');
 export const PORT = 8587;
 export const TMDB_PORT = 8588;
+export const PLEX_PORT = 8589;
 export const BASE_URL = `http://127.0.0.1:${PORT}`;
 /** At least 32 characters, as the server demands. */
 export const API_KEY = 'e2e-api-key-0123456789-0123456789';
