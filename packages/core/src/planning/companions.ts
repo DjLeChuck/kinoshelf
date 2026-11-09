@@ -64,13 +64,19 @@ export function companionOperations(
       ...(shared && !own && { shared: true as const }),
     });
   };
-  const download = (folders: readonly string[], name: string, path: string, size: ImageSize) => {
+  const download = (
+    folders: readonly string[],
+    name: string,
+    path: string,
+    size: ImageSize,
+    own = false,
+  ) => {
     if (imageUrl) {
       operations.push({
         type: 'download',
         url: imageUrl(path, size),
         destination: join(place.root, ...folders, name),
-        ...(shared && { shared: true as const }),
+        ...(shared && !own && { shared: true as const }),
       });
     }
   };
@@ -117,6 +123,30 @@ export function companionOperations(
   }
 
   for (const image of profile.artwork) {
+    if (image.kind === 'episode-thumb') {
+      // One per video, named after it: a file holding several episodes takes the first one's still.
+      const season = input.parsed.season;
+      const path =
+        details.kind === 'series' && season !== undefined
+          ? input.parsed.episodes
+              .map((episode) =>
+                input.episodes?.find(
+                  (known) => known.season === season && known.episode === episode,
+                ),
+              )
+              .find((known) => known?.stillPath !== undefined)?.stillPath
+          : undefined;
+      if (path) {
+        download(
+          [...place.workFolders, ...place.seasonFolders],
+          render(image.name, { file: place.stem }),
+          path,
+          image.size,
+          true,
+        );
+      }
+      continue;
+    }
     if (image.kind === 'season-poster') {
       const season = input.parsed.season;
       const path =
@@ -155,7 +185,7 @@ function seasonPosterTemplate(spec: ArtworkSpec, season: number): string {
 }
 
 /** A file a profile writes beside a video, as a library page counts it. */
-export type CompanionKind = 'nfo' | 'poster' | 'fanart' | 'logo';
+export type CompanionKind = 'nfo' | 'poster' | 'fanart' | 'logo' | 'thumb';
 
 /** The name a profile gives a file it writes beside a video (no folder in it). */
 export function companionName(
@@ -169,8 +199,8 @@ export function companionName(
 /**
  * Which files a profile writes for one work of this kind. A movie written flat (no folder of its
  * own) gets no fixed-name file: `movie.nfo` or `poster.jpg` would be every movie's, so only a name
- * carrying the video's (`{file}.nfo`) is safe. For an episode only its own NFO is counted: the
- * show's and the seasons' files belong to no single video.
+ * carrying the video's (`{file}.nfo`) is safe. For an episode only its own NFO and thumbnail are
+ * counted: the show's and the seasons' files belong to no single video.
  */
 export function companionsWritten(
   profile: Profile,
@@ -179,10 +209,17 @@ export function companionsWritten(
 ): Record<CompanionKind, boolean> {
   const { nfo } = profile;
   if (kind === 'series') {
-    return { nfo: nfo !== null, poster: false, fanart: false, logo: false };
+    return {
+      nfo: nfo !== null,
+      poster: false,
+      fanart: false,
+      logo: false,
+      thumb: profile.artwork.some((spec) => spec.kind === 'episode-thumb'),
+    };
   }
   const has = (art: ArtworkKind): boolean => profile.artwork.some((spec) => spec.kind === art);
   return {
+    thumb: false,
     nfo: nfo !== null && (!flat || templateVariables(parseTemplate(nfo.movie)).includes('file')),
     poster: !flat && has('poster'),
     fanart: !flat && has('fanart'),
@@ -242,11 +279,45 @@ export function companionKindOf(profile: Profile, fileName: string): CompanionKi
   }
   const spec = profile.artwork.find(
     (candidate) =>
-      candidate.kind !== 'season-poster' && companionName(profile, candidate.name, {}) === fileName,
+      candidate.kind !== 'season-poster' &&
+      candidate.kind !== 'episode-thumb' &&
+      companionName(profile, candidate.name, {}) === fileName,
   );
-  return spec?.kind === 'poster' || spec?.kind === 'fanart' || spec?.kind === 'logo'
-    ? spec.kind
-    : undefined;
+  if (spec?.kind === 'poster' || spec?.kind === 'fanart' || spec?.kind === 'logo') {
+    return spec.kind;
+  }
+  return isEpisodeThumb(profile, fileName) ? 'thumb' : undefined;
+}
+
+/**
+ * Whether a file beside a video is its thumbnail: the name carries the video's, so it is told by
+ * what it is not (a season poster is the only other image written per video's folder) and by the
+ * template's fixed part (`.jpg`).
+ */
+function isEpisodeThumb(profile: Profile, fileName: string): boolean {
+  const spec = profile.artwork.find((candidate) => candidate.kind === 'episode-thumb');
+  if (!spec) {
+    return false;
+  }
+  const ending = companionName(profile, spec.name, { file: '' });
+  if (fileName.length <= ending.length || !fileName.endsWith(ending)) {
+    return false;
+  }
+  const season = profile.artwork.find((candidate) => candidate.kind === 'season-poster');
+  if (!season) {
+    return true;
+  }
+  // A series has far fewer than 100 seasons: this reads the template without parsing it again.
+  const posters = Array.from({ length: 100 }, (_, number) =>
+    companionName(profile, seasonPosterTemplate(season, number), { season: number }),
+  );
+  return !posters.includes(fileName);
+}
+
+/** The file name of an episode's thumbnail beside a video, `undefined` when the profile writes none. */
+export function episodeThumbName(profile: Profile, stem: string): string | undefined {
+  const spec = profile.artwork.find((candidate) => candidate.kind === 'episode-thumb');
+  return spec && companionName(profile, spec.name, { file: stem });
 }
 
 /**

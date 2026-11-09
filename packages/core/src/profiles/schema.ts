@@ -28,7 +28,7 @@ export const profileSchema = z.strictObject({
     .array(
       z
         .strictObject({
-          kind: z.enum(['poster', 'fanart', 'logo', 'season-poster']),
+          kind: z.enum(['poster', 'fanart', 'logo', 'season-poster', 'episode-thumb']),
           name: text,
           // Only a season poster has one: the file name of season 0, for a player that names it apart.
           specialsName: text.optional(),

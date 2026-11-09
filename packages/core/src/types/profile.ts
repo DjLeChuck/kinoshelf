@@ -51,11 +51,14 @@ export interface NfoSpec {
   readonly series?: string;
 }
 
-export type ArtworkKind = 'poster' | 'fanart' | 'logo' | 'season-poster';
+export type ArtworkKind = 'poster' | 'fanart' | 'logo' | 'season-poster' | 'episode-thumb';
 
 export interface ArtworkSpec {
   readonly kind: ArtworkKind;
-  /** File name; a season poster may use `{season}` and lies in the show's folder, as Kodi's does. */
+  /**
+   * File name; a season poster may use `{season}` and lies in the show's folder, as Kodi's does.
+   * An episode thumbnail uses `{file}` (the video's name) and lies beside the video.
+   */
   readonly name: string;
   /** Season 0's poster name when the player does not take `name` for it (no variable). */
   readonly specialsName?: string;

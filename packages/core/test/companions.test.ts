@@ -34,6 +34,7 @@ describe('companionsWritten', () => {
       poster: true,
       fanart: true,
       logo: true,
+      thumb: false,
     });
   });
 
@@ -47,6 +48,7 @@ describe('companionsWritten', () => {
       poster: false,
       fanart: false,
       logo: false,
+      thumb: false,
     });
   });
 
@@ -66,10 +68,24 @@ describe('companionsWritten', () => {
       poster: false,
       fanart: false,
       logo: false,
+      thumb: true,
     });
     expect(
       companionsWritten(buildProfile({ naming: 'with-id', metadata: 'none' }), 'series', false).nfo,
     ).toBe(false);
+  });
+
+  it('tells an episode thumbnail from the show files and a season poster', () => {
+    const nfo = buildProfile({ naming: 'with-id', metadata: 'nfo' });
+    expect(companionKindOf(nfo, 'The Bear (2022) - s01e01.jpg')).toBe('thumb');
+    expect(companionKindOf(nfo, 'The Bear (2022) - s01e01 - 2160p.jpg')).toBe('thumb');
+    expect(companionKindOf(nfo, 'poster.jpg')).toBe('poster');
+    expect(companionKindOf(nfo, 'season01-poster.jpg')).toBeUndefined();
+    expect(companionKindOf(nfo, 'season-specials-poster.jpg')).toBeUndefined();
+    expect(companionKindOf(nfo, 'The Bear (2022) - s01e01.nfo')).toBe('nfo');
+    expect(
+      companionKindOf(buildProfile({ naming: 'with-id', metadata: 'none' }), 'a.jpg'),
+    ).toBeUndefined();
   });
 });
 

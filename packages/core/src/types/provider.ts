@@ -1,4 +1,11 @@
-import type { ImageSize, Rating, MovieDetails, SeriesDetails, WorkImages } from './details.js';
+import type {
+  ImageCandidate,
+  ImageSize,
+  Rating,
+  MovieDetails,
+  SeriesDetails,
+  WorkImages,
+} from './details.js';
 import type { ExternalId } from './media.js';
 
 export interface SearchQuery {
@@ -82,6 +89,15 @@ export interface MetadataProvider {
     kind: 'movie' | 'series',
     language?: string,
   ): Promise<WorkImages | null>;
+  /**
+   * The stills offered for one episode, in the provider's order; `null` if the episode is
+   * unknown. Only lists: nothing is downloaded.
+   */
+  listEpisodeImages(
+    id: ExternalId,
+    season: number,
+    episode: number,
+  ): Promise<readonly ImageCandidate[] | null>;
   /** URL of an image given its provider path. Pure: no request is made. */
   imageUrl(path: string, size: ImageSize): string;
 }

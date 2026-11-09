@@ -31,7 +31,8 @@ export const DEFAULT_PROFILE_CHOICE: ProfileChoice = { naming: 'with-id', metada
  * - NFO is Kodi-format: `movie.nfo`, `tvshow.nfo`, `<video>.nfo`; Plex's agents ignore a season NFO.
  *   Images are `poster.jpg`, `background.jpg`, `logo.png`. A season's poster is Kodi's
  *   `season01-poster.jpg` in the show's folder (`season-specials-poster.jpg` for season 0): Jellyfin
- *   reads it, and so does Plex's NFO agent although its documentation says `Season01.jpg`.
+ *   reads it, and so does Plex's NFO agent although its documentation says `Season01.jpg`. An
+ *   episode's thumbnail is `<video>.jpg` beside it.
  */
 export function buildProfile(choice: ProfileChoice): Profile {
   const tag = choice.naming === 'with-id' ? ' \\{tmdb-{tmdb}\\}' : '';
@@ -63,6 +64,9 @@ export function buildProfile(choice: ProfileChoice): Profile {
               specialsName: 'season-specials-poster.jpg',
               size: 'standard',
             },
+            // `<video>.jpg`: Kodi's `-thumb.jpg` suffix is not needed, both players take the bare
+            // name (checked on Plex's NFO agent and Jellyfin). TMDB stills have no w780: original.
+            { kind: 'episode-thumb', name: '{file}.jpg', size: 'original' },
           ]
         : [],
     filesystem: { forbidden: 'windows', replacement: '', maxSegmentBytes: 255 },

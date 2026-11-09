@@ -117,6 +117,7 @@ describe('buildProfile metadata', () => {
         ['fanart', 'background.jpg', 'original'],
         ['logo', 'logo.png', 'original'],
         ['season-poster', 'season{season:02}-poster.jpg', 'standard'],
+        ['episode-thumb', '{file}.jpg', 'original'],
       ]);
       expect(profile.artwork[3]?.specialsName).toBe('season-specials-poster.jpg');
     }

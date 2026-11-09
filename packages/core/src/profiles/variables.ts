@@ -10,4 +10,5 @@ export const VARIABLES = {
   nfoName: ['file'],
   artworkName: [],
   seasonArtworkName: ['season'],
+  episodeArtworkName: ['file'],
 } as const satisfies Record<string, readonly string[]>;

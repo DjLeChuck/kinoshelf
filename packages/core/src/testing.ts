@@ -143,6 +143,15 @@ export class FakeProvider implements MetadataProvider {
     );
   }
 
+  // The fake offers the same stills whatever the episode.
+  listEpisodeImages(id: ExternalId, season: number): Promise<readonly ImageCandidate[] | null> {
+    this.calls.push({ method: 'listEpisodeImages', id, season });
+    return Promise.resolve([
+      { path: '/still.jpg', width: 1920, height: 1080 },
+      { path: '/still2.jpg', width: 1920, height: 1080 },
+    ]);
+  }
+
   listImages(id: ExternalId): Promise<WorkImages | null> {
     this.calls.push({ method: 'listImages', id });
     const one = (path: string, language?: string): ImageCandidate => ({

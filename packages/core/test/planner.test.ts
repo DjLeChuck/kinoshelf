@@ -588,6 +588,54 @@ filesystem: { forbidden: posix, replacement: '', maxSegmentBytes: 255 }
     ]);
   });
 
+  it('downloads an episode still beside its video, once per version, never shared', async () => {
+    const [src, lib] = [await makeDir(), await makeDir()];
+    const files = await Promise.all(['a', 'b'].map((name) => put(join(src, `${name}.mkv`))));
+    const base = kodi();
+    const profile = {
+      ...base,
+      artwork: [
+        ...base.artwork,
+        { kind: 'episode-thumb' as const, name: '{file}.jpg', size: 'original' as const },
+      ],
+    };
+    const { items } = await planWith(
+      [
+        {
+          parsed: parsedEpisode(files[0] ?? '', 1, [1]),
+          candidate: bear,
+          details: bearDetails,
+          episodes: [{ season: 1, episode: 1, stillPath: '/still1.jpg' }],
+        },
+        {
+          // TMDB has no still for this one: nothing is planned, the video is still renamed.
+          parsed: parsedEpisode(files[1] ?? '', 1, [2]),
+          candidate: bear,
+          details: bearDetails,
+          episodes: [{ season: 1, episode: 2 }],
+        },
+      ],
+      lib,
+      profile,
+    );
+
+    const thumbs = items.flatMap((item) =>
+      companions(item).filter((op) => op.type === 'download' && op.destination.endsWith('e01.jpg')),
+    );
+    expect(thumbs).toEqual([
+      {
+        type: 'download',
+        url: 'https://img.test/original/still1.jpg',
+        destination: join(lib, 'The Bear (2022)', 'Season 01', 'The Bear - s01e01.jpg'),
+      },
+    ]);
+    expect(
+      items
+        .flatMap((item) => companions(item).map((op) => op.destination))
+        .filter((d) => d.includes('e02.jpg')),
+    ).toEqual([]);
+  });
+
   describe('a selection that leaves out the episode carrying the show files', () => {
     async function threeEpisodes() {
       const [src, lib] = [await makeDir(), await makeDir()];

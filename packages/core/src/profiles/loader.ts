@@ -83,7 +83,12 @@ function checkTemplates(file: ProfileFile): void {
 
   artwork.forEach((image, index) => {
     checkTemplate(`artwork.${index}.name`, image.name, {
-      allowed: image.kind === 'season-poster' ? VARIABLES.seasonArtworkName : VARIABLES.artworkName,
+      allowed:
+        image.kind === 'season-poster'
+          ? VARIABLES.seasonArtworkName
+          : image.kind === 'episode-thumb'
+            ? VARIABLES.episodeArtworkName
+            : VARIABLES.artworkName,
       folder: false,
     });
     if (image.specialsName !== undefined) {

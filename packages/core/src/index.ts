@@ -38,6 +38,7 @@ export {
   companionsWritten,
   expectedNfoPaths,
   nfoCoverage,
+  episodeThumbName,
   showFileNames,
   type CompanionKind,
   type NfoCoverage,
