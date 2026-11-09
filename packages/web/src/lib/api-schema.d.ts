@@ -403,6 +403,7 @@ export interface paths {
                                 mode: "copy" | "hardlink" | "move" | null;
                                 threshold: number | null;
                                 detectPictureSize: boolean;
+                                allowLocalImageUrls: boolean;
                             };
                             /** @description A movie and an episode path as each naming would write them. */
                             namingExamples: {
@@ -512,6 +513,7 @@ export interface paths {
                             mode?: "copy" | "hardlink" | "move" | null;
                             threshold?: number | null;
                             detectPictureSize?: boolean | null;
+                            allowLocalImageUrls?: boolean | null;
                         };
                     };
                 };
@@ -572,6 +574,7 @@ export interface paths {
                                 mode: "copy" | "hardlink" | "move" | null;
                                 threshold: number | null;
                                 detectPictureSize: boolean;
+                                allowLocalImageUrls: boolean;
                             };
                             /** @description A movie and an episode path as each naming would write them. */
                             namingExamples: {

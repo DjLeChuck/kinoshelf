@@ -43,6 +43,7 @@ export interface Settings {
     readonly mode: Mode | null;
     readonly threshold: number | null;
     readonly detectPictureSize: boolean;
+    readonly allowLocalImageUrls: boolean;
   };
   readonly apiKey: { readonly source: 'env' | 'database' | null };
   /** A movie and an episode path as each naming writes them. */

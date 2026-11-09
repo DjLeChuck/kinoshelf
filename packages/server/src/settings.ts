@@ -55,6 +55,7 @@ export interface SettingsPatch {
     mode?: Nullable<'copy' | 'hardlink' | 'move'>;
     threshold?: Nullable<number>;
     detectPictureSize?: Nullable<boolean>;
+    allowLocalImageUrls?: Nullable<boolean>;
   };
 }
 
@@ -116,6 +117,7 @@ export function presentSettings(config: Config, env: Env): unknown {
       threshold: config.threshold ?? null,
       // Read from the file when it is named, so on unless turned off.
       detectPictureSize: config.detectPictureSize ?? true,
+      allowLocalImageUrls: config.allowLocalImageUrls ?? false,
     },
   };
 }

@@ -205,6 +205,19 @@ export const en = {
   'error.execution.not-found': 'This transfer does not exist.',
   'error.image.not-found': 'This image does not exist.',
   'error.image.unavailable': 'The image could not be fetched from TMDB.',
+  'error.image.not-editable':
+    'This image cannot be changed here: the profile writes no such image next to this work.',
+  'error.image.format-mismatch': 'This image is a {found} but the file written is a {expected}.',
+  'error.image.not-offered': 'This image is not one TMDB offers for this work.',
+  'error.image.url-invalid':
+    'This address is not valid: use an http or https address without a user name or password.',
+  'error.image.url-blocked':
+    'This address points to your local network, which Kinoshelf is not allowed to reach. You can allow it in the settings.',
+  'error.image.url-unreachable': 'The image could not be downloaded from this address ({status}).',
+  'error.image.url-not-image': 'This address does not serve an image ({type}).',
+  'error.image.url-unsupported': 'Only JPEG and PNG images are supported ({type} was found).',
+  'error.image.url-too-large': 'This image is larger than the {max} bytes allowed.',
+  'error.image.url-too-many-redirects': 'This address redirects too many times.',
   'error.internal.unexpected': 'Something went wrong on the server. See its log for details.',
   'error.job.not-done': 'This job has not finished its analysis yet ({status}).',
   'error.job.not-found': 'This job does not exist.',
@@ -753,6 +766,9 @@ export const en = {
   'web.settings.processing.detect-size': 'Read the picture size with ffprobe',
   'web.settings.processing.detect-size.hint':
     'When a video’s name says no size (2160p, 1080p…) and another file of the same movie or episode is in the way, its size is read from the file, so both can be kept side by side. Untick to give the size yourself, from the file’s page or when validating an arrival.',
+  'web.settings.processing.local-images': 'Allow image addresses on the local network',
+  'web.settings.processing.local-images.hint':
+    'When you replace an image by an address, Kinoshelf downloads it from the server. Addresses of your own network (a NAS, another machine at home) are refused unless you tick this: anyone holding the access key could then make the server reach your internal services.',
   'web.settings.processing.threshold.hint':
     'A match scoring below it waits for you in Arrivals. Empty: the default.',
   'web.settings.invalid.threshold': 'The threshold is a number from 0 to 100.',

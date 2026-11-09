@@ -213,6 +213,22 @@ export const fr: Record<keyof typeof en, string> = {
   'error.execution.not-found': 'Ce transfert n’existe pas.',
   'error.image.not-found': 'Cette image n’existe pas.',
   'error.image.unavailable': 'Impossible de récupérer l’image depuis TMDB.',
+  'error.image.not-editable':
+    'Cette image ne peut pas être modifiée ici : le profil n’écrit pas d’image de ce type à côté de cette œuvre.',
+  'error.image.format-mismatch':
+    'Cette image est au format {found} mais le fichier écrit est au format {expected}.',
+  'error.image.not-offered':
+    'Cette image n’est pas l’une de celles que TMDB propose pour cette œuvre.',
+  'error.image.url-invalid':
+    'Cette adresse n’est pas valide : utilisez une adresse http ou https, sans identifiant ni mot de passe.',
+  'error.image.url-blocked':
+    'Cette adresse pointe vers votre réseau local, que Kinoshelf n’a pas le droit de joindre. Vous pouvez l’autoriser dans les réglages.',
+  'error.image.url-unreachable': 'Impossible de télécharger l’image à cette adresse ({status}).',
+  'error.image.url-not-image': 'Cette adresse ne sert pas une image ({type}).',
+  'error.image.url-unsupported':
+    'Seules les images JPEG et PNG sont prises en charge ({type} trouvé).',
+  'error.image.url-too-large': 'Cette image dépasse les {max} octets autorisés.',
+  'error.image.url-too-many-redirects': 'Cette adresse redirige trop de fois.',
   'error.internal.unexpected':
     'Une erreur est survenue sur le serveur. Consultez son journal pour les détails.',
   'error.job.not-done': 'L’analyse de ce travail n’est pas terminée ({status}).',
@@ -776,6 +792,9 @@ export const fr: Record<keyof typeof en, string> = {
   'web.settings.processing.detect-size': 'Lire la taille d’image avec ffprobe',
   'web.settings.processing.detect-size.hint':
     'Quand le nom d’une vidéo n’indique pas sa taille (2160p, 1080p…) et qu’un autre fichier du même film ou du même épisode est déjà là, la taille est lue dans le fichier, pour garder les deux côte à côte. Décochez pour l’indiquer vous-même, depuis la fiche du fichier ou à la validation d’une arrivée.',
+  'web.settings.processing.local-images': 'Autoriser les adresses d’image du réseau local',
+  'web.settings.processing.local-images.hint':
+    'Quand vous remplacez une image par une adresse, Kinoshelf la télécharge depuis le serveur. Les adresses de votre propre réseau (un NAS, une autre machine chez vous) sont refusées tant que vous ne cochez pas cette case : toute personne détenant la clé d’accès pourrait sinon faire joindre vos services internes par le serveur.',
   'web.settings.processing.threshold.hint':
     'Une correspondance sous ce score vous attend dans les Arrivées. Vide : la valeur par défaut.',
   'web.settings.invalid.threshold': 'Le seuil est un nombre de 0 à 100.',

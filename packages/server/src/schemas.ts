@@ -601,13 +601,21 @@ export const settingsSchema = {
     },
     processing: {
       type: 'object',
-      required: ['naming', 'metadata', 'mode', 'threshold', 'detectPictureSize'],
+      required: [
+        'naming',
+        'metadata',
+        'mode',
+        'threshold',
+        'detectPictureSize',
+        'allowLocalImageUrls',
+      ],
       properties: {
         naming: { type: 'string', enum: [...namings, null], nullable: true },
         metadata: { type: 'string', enum: [...metadatas, null], nullable: true },
         mode: { type: 'string', enum: ['copy', 'hardlink', 'move'], nullable: true },
         threshold: { type: 'number', nullable: true },
         detectPictureSize: { type: 'boolean' },
+        allowLocalImageUrls: { type: 'boolean' },
       },
     },
     namingExamples: {
@@ -712,6 +720,8 @@ export const settingsPatchSchema = {
         threshold: nullable({ type: 'number', minimum: 0, maximum: 100 }),
         // On unless turned off: `null` goes back to that default.
         detectPictureSize: nullable({ type: 'boolean' }),
+        // Off unless turned on: `null` goes back to that default.
+        allowLocalImageUrls: nullable({ type: 'boolean' }),
       },
     },
   },

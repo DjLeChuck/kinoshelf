@@ -119,6 +119,11 @@ const configSchema = z
      * same work is in the way (default on). Off, the size is given by hand.
      */
     detectPictureSize: z.boolean().optional(),
+    /**
+     * Server: let a custom image address (`POST` of a new poster, background or logo) point to the
+     * local network, a NAS for instance. Off by default: the server downloads what it is given.
+     */
+    allowLocalImageUrls: z.boolean().optional(),
     /** Server: who is told what happened, and which media servers are asked to look again. */
     notify: z
       .strictObject({

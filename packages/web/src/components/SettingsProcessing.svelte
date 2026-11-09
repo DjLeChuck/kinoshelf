@@ -26,6 +26,7 @@
   let mode = $state<Mode | ''>(processing.mode ?? '');
   let threshold = $state(processing.threshold === null ? '' : String(processing.threshold));
   let detectPictureSize = $state(processing.detectPictureSize);
+  let allowLocalImageUrls = $state(processing.allowLocalImageUrls);
 
   async function submit(): Promise<void> {
     const limit = thresholdOf(threshold);
@@ -41,6 +42,8 @@
         threshold: limit,
         // On is the default: a box left ticked writes nothing.
         detectPictureSize: detectPictureSize ? null : false,
+        // Off is the default: a box left unticked writes nothing.
+        allowLocalImageUrls: allowLocalImageUrls ? true : null,
       },
     });
   }
@@ -87,6 +90,14 @@
       {t('web.settings.processing.detect-size')}
     </label>
     <span class="muted hint">{t('web.settings.processing.detect-size.hint')}</span>
+  </div>
+
+  <div class="field">
+    <label class="check">
+      <input type="checkbox" bind:checked={allowLocalImageUrls} />
+      {t('web.settings.processing.local-images')}
+    </label>
+    <span class="muted hint">{t('web.settings.processing.local-images.hint')}</span>
   </div>
 </SettingsSection>
 

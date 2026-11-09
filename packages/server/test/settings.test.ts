@@ -29,6 +29,7 @@ interface SettingsBody {
     mode: string | null;
     threshold: number | null;
     detectPictureSize: boolean;
+    allowLocalImageUrls: boolean;
   };
   apiKey: { source: string | null };
 }
@@ -293,6 +294,21 @@ describe('PATCH /api/settings', () => {
     const on = await h.patch({ processing: { detectPictureSize: null } });
     expect(on.json<SettingsBody>().processing.detectPictureSize).toBe(true);
     expect(await h.file()).not.toMatch(/detectPictureSize/);
+  });
+
+  it('refuses local image addresses unless allowed, and goes back to that when unset', async () => {
+    const h = await withConfig(`${librariesYaml('/media')}locale: en\n`);
+    const read = async (): Promise<boolean> =>
+      (await h.request('GET', '/api/settings')).json<SettingsBody>().processing.allowLocalImageUrls;
+    expect(await read()).toBe(false);
+
+    await h.patch({ processing: { allowLocalImageUrls: true } });
+    expect(await read()).toBe(true);
+    expect(await h.file()).toMatch(/allowLocalImageUrls: true/);
+
+    await h.patch({ processing: { allowLocalImageUrls: null } });
+    expect(await read()).toBe(false);
+    expect(await h.file()).not.toMatch(/allowLocalImageUrls/);
   });
 
   it('lets the processor see a changed setting on its next job', async () => {
