@@ -180,12 +180,6 @@
       {#if detail.nfoFiles.length === 0}
         <p class="muted">{t('web.library.nfo.none')}</p>
       {:else}
-        <p>
-          {t('web.library.nfo.summary', {
-            present: detail.nfoFiles.length - missingNfo.length,
-            expected: detail.nfoFiles.length,
-          })}
-        </p>
         <ul class="nfos">
           {#each detail.nfoFiles as file (file.path)}
             <li>

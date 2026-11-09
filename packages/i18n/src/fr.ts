@@ -369,7 +369,6 @@ export const fr: Record<keyof typeof en, string> = {
   'web.library.compare.file': 'Fichier',
   'web.library.compare.unread': 'pas encore lu',
   'web.library.nfo.title': 'NFO',
-  'web.library.nfo.summary': '{present} sur {expected} attendus',
   'web.library.nfo.none': 'Le profil n’attend aucun NFO pour cette œuvre.',
   'web.library.nfo.generate': 'Générer les NFO manquants…',
   'web.library.col.poster': 'Affiche',

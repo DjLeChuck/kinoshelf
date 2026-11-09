@@ -355,7 +355,6 @@ export const en = {
   'web.library.compare.file': 'File',
   'web.library.compare.unread': 'not read yet',
   'web.library.nfo.title': 'NFO',
-  'web.library.nfo.summary': '{present} of {expected} expected',
   'web.library.nfo.none': 'The profile expects no NFO for this work.',
   'web.library.nfo.generate': 'Generate the missing NFO…',
   'web.library.col.poster': 'Poster',
