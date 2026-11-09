@@ -4,12 +4,16 @@
   import { api } from '../lib/api.js';
   import { messageOf } from '../lib/errors.js';
   import { formatBytes } from '@kinoshelf/i18n';
-  import { t } from '../lib/i18n.svelte.js';
+  import { locale, t } from '../lib/i18n.svelte.js';
+  import { languageName, totalSize, versionLabel, HDR_LABEL } from '../lib/versions.js';
   import type { Arrival } from '../lib/arrivals.js';
   import {
     canNameVersion,
     canRun,
+    isListed,
     isSettling,
+    versionsToRun,
+    type Version,
     libraryItems,
     type ItemDetail,
     type LibraryItem,
@@ -64,6 +68,35 @@
 
   const backdrop = $derived(imageUrl('w780', detail?.backdropPath));
   const poster = $derived(imageUrl('w154', detail?.posterPath));
+  const runItems = $derived(isListed(item) ? versionsToRun(item, 'refresh') : [item]);
+  const missingNfo = $derived((detail?.nfoFiles ?? []).filter(({ present: there }) => !there));
+  const size = $derived(totalSize((detail?.versions ?? []).map(({ file }) => file)));
+  const compared = $derived(item.kind === 'movie' && (detail?.versions.length ?? 0) > 1);
+  type Row = {
+    readonly key: 'resolution' | 'hdr' | 'video' | 'audio' | 'subtitles' | 'size' | 'file';
+    readonly read: (version: Version) => string;
+  };
+  const dash = '—';
+  const names = (codes: readonly string[]): string =>
+    codes.map((code) => languageName(code, locale.value)).join(', ');
+  // What the "Compare" table lists, one line per fact; a file not read yet has none to give.
+  const compareRows: readonly Row[] = [
+    { key: 'resolution', read: (v) => v.resolution ?? dash },
+    {
+      key: 'hdr',
+      read: (v) =>
+        v.file === null ? dash : v.file.hdr ? HDR_LABEL[v.file.hdr] : t('web.library.compare.sdr'),
+    },
+    { key: 'video', read: (v) => v.file?.video ?? dash },
+    {
+      key: 'audio',
+      read: (v) =>
+        [v.file?.audio, names(v.file?.audioLanguages ?? [])].filter(Boolean).join(' · ') || dash,
+    },
+    { key: 'subtitles', read: (v) => names(v.file?.subtitleLanguages ?? []) || dash },
+    { key: 'size', read: (v) => (v.file ? formatBytes(v.file.size) : dash) },
+    { key: 'file', read: (v) => baseName(v.path) },
+  ];
   const present = (value: boolean | null): string =>
     value === null ? '—' : t(value ? 'web.library.present' : 'web.library.missing');
 </script>
@@ -78,6 +111,12 @@
     meta={[
       detail.runtime ? t('web.library.runtime', { minutes: detail.runtime }) : undefined,
       detail.genres.join(', ') || undefined,
+      size === null
+        ? undefined
+        : t('web.library.versions.summary', {
+            count: detail.versions.length,
+            size: formatBytes(size),
+          }),
     ]
       .filter(Boolean)
       .join(' · ')}
@@ -109,7 +148,68 @@
         {t('web.library.col.logo')}: {present(detail.logo)}
       </dd>
     </dl>
-    {#if canRun(item)}
+    {#if compared}
+      <section aria-labelledby="compare">
+        <h3 id="compare">{t('web.library.compare.title')}</h3>
+        <div class="scroll">
+          <table class="compare">
+            <thead>
+              <tr>
+                <th scope="col"></th>
+                {#each detail.versions as version (version.id)}
+                  <th scope="col">{versionLabel(version.resolution, version.file).join(' ')}</th>
+                {/each}
+              </tr>
+            </thead>
+            <tbody>
+              {#each compareRows as row (row.key)}
+                <tr>
+                  <th scope="row">{t(`web.library.compare.${row.key}`)}</th>
+                  {#each detail.versions as version (version.id)}
+                    <td class:mono={row.key === 'file'}>{row.read(version)}</td>
+                  {/each}
+                </tr>
+              {/each}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    {/if}
+    <section aria-labelledby="nfo">
+      <h3 id="nfo">{t('web.library.nfo.title')}</h3>
+      {#if detail.nfoFiles.length === 0}
+        <p class="muted">{t('web.library.nfo.none')}</p>
+      {:else}
+        <p>
+          {t('web.library.nfo.summary', {
+            present: detail.nfoFiles.length - missingNfo.length,
+            expected: detail.nfoFiles.length,
+          })}
+        </p>
+        <ul class="nfos">
+          {#each detail.nfoFiles as file (file.path)}
+            <li>
+              <span aria-hidden="true">{file.present ? '✓' : '✗'}</span>
+              <span class="mono">{baseName(file.path)}</span>
+              <span class="sr-only">: {present(file.present)}</span>
+            </li>
+          {/each}
+        </ul>
+        {#if missingNfo.length > 0 && canRun(item)}
+          <button
+            type="button"
+            class="btn"
+            disabled={busy}
+            onclick={() => {
+              running = 'refresh';
+            }}
+          >
+            {t('web.library.nfo.generate')}
+          </button>
+        {/if}
+      {/if}
+    </section>
+    {#if canRun(item) && !(item.state === 'incomplete' && missingNfo.length > 0)}
       <div>
         <button
           type="button"
@@ -152,7 +252,7 @@
   {#if running}
     <RunDialog
       {libraryId}
-      items={[item]}
+      items={running === 'refresh' ? runItems : [item]}
       mode={running}
       onclose={() => {
         running = undefined;
@@ -167,6 +267,41 @@
 <style>
   p {
     margin: 0;
+  }
+
+  h3 {
+    margin: 0 0 6px;
+    font-size: 14px;
+  }
+
+  .scroll {
+    overflow-x: auto;
+  }
+
+  .compare {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+  }
+
+  .compare th,
+  .compare td {
+    padding: 4px 8px;
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+    vertical-align: top;
+    overflow-wrap: anywhere;
+  }
+
+  .compare th[scope='row'] {
+    color: var(--muted);
+    font-weight: 600;
+  }
+
+  .nfos {
+    margin: 6px 0;
+    padding: 0;
+    list-style: none;
   }
 
   .facts {

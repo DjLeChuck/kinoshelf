@@ -2,13 +2,15 @@ import { api } from './api.js';
 import type { Library } from './libraries.js';
 
 export type ItemState = 'review' | 'rename' | 'unrecognized' | 'incomplete' | 'ok';
-export type ItemFilter = 'review' | 'rename' | 'unrecognized' | 'missing-nfo' | 'missing-artwork';
+export type ItemFilter =
+  'review' | 'rename' | 'unrecognized' | 'missing-nfo' | 'missing-artwork' | 'multi-version';
 export const ITEM_FILTERS: readonly ItemFilter[] = [
   'review',
   'rename',
   'unrecognized',
   'missing-nfo',
   'missing-artwork',
+  'multi-version',
 ];
 /** A series library also filters its shows. Its tabs count shows, except the files that wait for a person. */
 export type ShowFilter = ItemFilter | 'missing-episodes' | 'missing-show-files';
@@ -17,7 +19,7 @@ export const SERIES_FILTERS: readonly ShowFilter[] = [
   'missing-episodes',
   'missing-show-files',
 ];
-export type Counts = Readonly<Record<ShowFilter | 'all', number>>;
+export type Counts = Readonly<Record<ShowFilter | 'all' | 'incomplete-versions', number>>;
 
 /** What a library holds, as `GET /api/libraries/{id}/items` lists it. */
 export interface LibraryItem {
@@ -47,6 +49,18 @@ export interface LibraryItem {
   readonly releaseFiles: number | null;
 }
 
+export type Hdr = 'dolby-vision' | 'hdr10-plus' | 'hdr10' | 'hlg';
+
+/** What `ffprobe` read of a file; `null` where it was not read yet. */
+export interface ProbedFile {
+  readonly video: string | null;
+  readonly audio: string | null;
+  readonly hdr: Hdr | null;
+  readonly audioLanguages: readonly string[];
+  readonly subtitleLanguages: readonly string[];
+  readonly size: number;
+}
+
 /** One file of a movie, as a list names it. */
 export interface Version {
   readonly id: string;
@@ -55,6 +69,7 @@ export interface Version {
   readonly resolution: string | null;
   readonly nfo: boolean | null;
   readonly entryId: string | null;
+  readonly file: ProbedFile | null;
 }
 
 /** An entry of a list: a movie is one, with a version per file; its state is the worst of them. */
@@ -69,14 +84,11 @@ export interface ItemDetail extends LibraryItem {
   readonly genres: readonly string[];
   readonly posterPath: string | null;
   readonly backdropPath: string | null;
-  readonly file: {
-    readonly video: string | null;
-    readonly audio: string | null;
-    readonly hdr: 'dolby-vision' | 'hdr10-plus' | 'hdr10' | 'hlg' | null;
-    readonly audioLanguages: readonly string[];
-    readonly subtitleLanguages: readonly string[];
-    readonly size: number;
-  } | null;
+  readonly file: ProbedFile | null;
+  /** The files of the work (an episode: itself alone), each with what `ffprobe` read of it. */
+  readonly versions: readonly Version[];
+  /** The NFO files the profile expects for the work, and whether each is on the disk. */
+  readonly nfoFiles: readonly { readonly path: string; readonly present: boolean }[];
 }
 
 export interface ScanProgress {
@@ -336,6 +348,9 @@ export const canNameVersion = (item: Pick<LibraryItem, 'kind' | 'entryId' | 'sta
   item.state !== 'review' &&
   item.state !== 'unrecognized';
 
+/** A list entry (it carries its versions), as opposed to the bare file of a show's episode. */
+export const isListed = (item: LibraryItem): item is ListedItem => 'versions' in item;
+
 /**
  * The files an entry asks to run in a mode: its versions in that state, each as an item of its own
  * (an entry holds a movie, and "Rename" takes the versions that need it).
@@ -458,7 +473,3 @@ export const isStalled = (progress: ScanProgress | null): boolean =>
 /** A scan that failed and that nothing newer has replaced. */
 export const lastScanFailed = (library: Pick<Library, 'lastScan' | 'scanning'>): boolean =>
   !library.scanning && library.lastScan?.status === 'failed';
-
-/** A file's presence in a table cell: nothing when the profile writes no such file. */
-export const presenceMark = (value: boolean | null): string =>
-  value === null ? '' : value ? '✓' : '✗';

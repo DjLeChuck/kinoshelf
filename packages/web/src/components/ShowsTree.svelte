@@ -10,7 +10,6 @@
   import {
     PAGE_SIZE,
     episodeLabel,
-    presenceMark,
     groupSettling,
     libraryItems,
     settleKey,
@@ -21,6 +20,7 @@
     type ShowDetail,
   } from '../lib/library-items.js';
   import Chevron from './Chevron.svelte';
+  import Presence from './Presence.svelte';
   import ItemPanel from './ItemPanel.svelte';
   import RescanButton from './RescanButton.svelte';
   import RunDialog from './RunDialog.svelte';
@@ -414,12 +414,12 @@
               <td>{show.seasons}</td>
               <td>{show.episodes}</td>
               <td></td>
-              {#if writes.nfo}<td>{presenceMark(show.nfo)}</td>{/if}
+              {#if writes.nfo}<td><Presence value={show.nfo} /></td>{/if}
               {#if writes.artwork}
-                <td>{presenceMark(show.poster)}</td>
-                <td>{presenceMark(show.fanart)}</td>
+                <td><Presence value={show.poster} /></td>
+                <td><Presence value={show.fanart} /></td>
               {/if}
-              {#if writes.logo}<td>{presenceMark(show.logo)}</td>{/if}
+              {#if writes.logo}<td><Presence value={show.logo} /></td>{/if}
               <td>
                 {#if show.missing}
                   <span class="chip chip-warn"
@@ -500,7 +500,7 @@
                     <td></td>
                     {#if writes.nfo}<td></td>{/if}
                     {#if writes.artwork}
-                      <td>{presenceMark(season.poster)}</td>
+                      <td><Presence value={season.poster} /></td>
                       <td></td>
                     {/if}
                     {#if writes.logo}<td></td>{/if}
@@ -543,7 +543,7 @@
                         </td>
                         <td></td>
                         <td>{item?.resolution ?? ''}</td>
-                        {#if writes.nfo}<td>{presenceMark(item?.nfo ?? null)}</td>{/if}
+                        {#if writes.nfo}<td><Presence value={item?.nfo ?? null} /></td>{/if}
                         {#if writes.artwork}<td></td><td></td>{/if}
                         {#if writes.logo}<td></td>{/if}
                         <td></td>

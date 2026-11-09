@@ -129,12 +129,12 @@ test('shows which NFO and images a show and its seasons have', async ({ page, re
   const row = page.getByRole('row', { name: /Severance/ }).first();
   await expect(row).toBeVisible();
   // NFO, poster, fanart, logo: the files are looked for after the scan, not when the page reads.
-  await expect(row.getByRole('cell').filter({ hasText: /^✓$/ })).toHaveCount(2);
-  await expect(row.getByRole('cell').filter({ hasText: /^✗$/ })).toHaveCount(2);
+  await expect(row.getByRole('cell').filter({ hasText: /^✓ present$/ })).toHaveCount(2);
+  await expect(row.getByRole('cell').filter({ hasText: /^✗ missing$/ })).toHaveCount(2);
 
   await row.getByRole('button', { name: /Show the seasons/ }).click();
   const season = page.getByRole('row', { name: /Season 1/ });
-  await expect(season.getByRole('cell').filter({ hasText: /^✓$/ })).toHaveCount(1);
+  await expect(season.getByRole('cell').filter({ hasText: /^✓ present$/ })).toHaveCount(1);
 
   // What is open stays open after a reload: it is in the address.
   await expect(page).toHaveURL(/open=95396/);

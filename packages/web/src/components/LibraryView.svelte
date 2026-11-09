@@ -25,9 +25,14 @@
   import ItemPanel from './ItemPanel.svelte';
   import RunDialog from './RunDialog.svelte';
   import Link from './Link.svelte';
+  import Chevron from './Chevron.svelte';
+  import Presence from './Presence.svelte';
   import ScanProgress from './ScanProgress.svelte';
+  import VersionBadges from './VersionBadges.svelte';
+  import { codecLine, languageShort } from '../lib/versions.js';
+  import { formatBytes } from '@kinoshelf/i18n';
   import ShowsTree from './ShowsTree.svelte';
-  import { episodeLabel, presenceMark } from '../lib/library-items.js';
+  import { episodeLabel } from '../lib/library-items.js';
 
   let { library }: { library: Library } = $props();
 
@@ -63,6 +68,11 @@
   let starting = $state(false);
   let picked = $state<readonly string[]>([]);
   let running = $state<'rename' | 'refresh' | undefined>(undefined);
+  /** The movies whose versions are listed under them. */
+  let expanded = $state<readonly string[]>([]);
+  function toggle(id: string): void {
+    expanded = expanded.includes(id) ? expanded.filter((other) => other !== id) : [...expanded, id];
+  }
 
   const pickedIds = $derived(new Set(picked));
   const pickedItems = $derived((page?.items ?? []).filter(({ id }) => pickedIds.has(id)));
@@ -341,9 +351,10 @@
             <thead>
               <tr>
                 <th></th>
+                <th></th>
                 <th>{t('web.library.col.title')}</th>
                 <th>{t('web.library.col.year')}</th>
-                <th>{t('web.library.col.video')}</th>
+                <th>{t('web.library.col.versions')}</th>
                 {#if page.library.writes.nfo}<th>NFO</th>{/if}
                 {#if page.library.writes.artwork}
                   <th>{t('web.library.col.poster')}</th>
@@ -354,8 +365,31 @@
             </thead>
             <tbody>
               {#each page.items as item (item.id)}
+                {@const several = item.versions.length > 1}
+                {@const isOpen = expanded.includes(item.id)}
+                {@const name = item.title ?? baseName(item.path)}
                 <tr class:current={open?.id === item.id}>
-                  <td>
+                  <td class="narrow">
+                    {#if several}
+                      <button
+                        type="button"
+                        class="disclosure"
+                        aria-expanded={isOpen}
+                        aria-label={t(
+                          isOpen ? 'web.library.version.hide' : 'web.library.version.show',
+                          {
+                            title: name,
+                          },
+                        )}
+                        onclick={() => {
+                          toggle(item.id);
+                        }}
+                      >
+                        <Chevron open={isOpen} />
+                      </button>
+                    {/if}
+                  </td>
+                  <td class="narrow">
                     {#if canRun(item)}
                       <input
                         type="checkbox"
@@ -387,14 +421,45 @@
                       >{/if}
                   </td>
                   <td>{item.year ?? ''}</td>
-                  <td>{item.resolution ?? ''}</td>
-                  {#if page.library.writes.nfo}<td>{presenceMark(item.nfo)}</td>{/if}
+                  <td><VersionBadges versions={item.versions} /></td>
+                  {#if page.library.writes.nfo}<td><Presence value={item.nfo} /></td>{/if}
                   {#if page.library.writes.artwork}
-                    <td>{presenceMark(item.poster)}</td>
-                    <td>{presenceMark(item.fanart)}</td>
+                    <td><Presence value={item.poster} /></td>
+                    <td><Presence value={item.fanart} /></td>
                   {/if}
-                  {#if page.library.writes.logo}<td>{presenceMark(item.logo)}</td>{/if}
+                  {#if page.library.writes.logo}<td><Presence value={item.logo} /></td>{/if}
                 </tr>
+                {#if isOpen}
+                  {#each item.versions as version (version.id)}
+                    <tr class="version">
+                      <td></td>
+                      <td></td>
+                      <td colspan="2">
+                        <VersionBadges versions={[version]} />
+                        <span class="muted">
+                          {[
+                            codecLine(version.file),
+                            version.file?.audioLanguages.map(languageShort).join(' '),
+                            version.file?.subtitleLanguages.length
+                              ? t('web.library.version.subtitles', {
+                                  languages: version.file.subtitleLanguages
+                                    .map(languageShort)
+                                    .join(' '),
+                                })
+                              : '',
+                            version.file ? formatBytes(version.file.size) : '',
+                          ]
+                            .filter(Boolean)
+                            .join(' · ')}
+                        </span>
+                      </td>
+                      <td></td>
+                      {#if page.library.writes.nfo}<td></td>{/if}
+                      {#if page.library.writes.artwork}<td></td><td></td>{/if}
+                      {#if page.library.writes.logo}<td></td>{/if}
+                    </tr>
+                  {/each}
+                {/if}
               {/each}
             </tbody>
           </table>
@@ -550,6 +615,30 @@
     color: var(--muted);
     font-size: 12px;
     font-weight: 600;
+  }
+
+  .narrow {
+    width: 1%;
+    padding-right: 0;
+  }
+
+  .disclosure {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px;
+    border: 0;
+    background: none;
+    color: inherit;
+    cursor: pointer;
+  }
+
+  .disclosure :global(.chevron) {
+    margin-right: 0;
+  }
+
+  tr.version td {
+    border-bottom-style: dashed;
+    font-size: 12.5px;
   }
 
   tr.current {
