@@ -76,13 +76,43 @@ const PNG = Buffer.from(
   'base64',
 );
 
+// A 1x1 JPEG: a `.jpg` the fake serves is one for real, since an image is written only in the
+// format of the file the profile names.
+const JPEG = Buffer.from(
+  '/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////wgALCAABAAEBAREA/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPxA=',
+  'base64',
+);
+
+// What TMDB offers for a work's `/images`: two posters, a background (no text), two logos.
+const image = (file_path, iso_639_1, width, height, votes) => ({
+  file_path,
+  iso_639_1,
+  width,
+  height,
+  vote_average: 5.5,
+  vote_count: votes,
+});
+const IMAGES = {
+  posters: [
+    image('/posteren.jpg', 'en', 2000, 3000, 22),
+    image('/posterfr.jpg', 'fr', 2000, 3000, 14),
+  ],
+  backdrops: [image('/backdropa.jpg', null, 3840, 2160, 9)],
+  logos: [image('/logoen.png', 'en', 1200, 460, 6), image('/logofr.png', 'fr', 800, 310, 3)],
+};
+
 createServer((request, response) => {
   const url = new URL(request.url ?? '/', 'http://localhost');
   const json = (body) => {
     response.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify(body));
   };
   if (url.pathname.startsWith('/t/p/')) {
-    response.writeHead(200, { 'content-type': 'image/png' }).end(PNG);
+    const jpeg = url.pathname.endsWith('.jpg');
+    response
+      .writeHead(200, { 'content-type': jpeg ? 'image/jpeg' : 'image/png' })
+      .end(jpeg ? JPEG : PNG);
+  } else if (/^\/3\/(movie|tv)\/\d+\/images$/.test(url.pathname)) {
+    json(IMAGES);
   } else if (url.pathname === '/3/search/movie') {
     const word = (url.searchParams.get('query') ?? '').toLowerCase().split(' ')[0];
     json({ results: word ? catalog.filter((c) => c.title.toLowerCase().startsWith(word)) : [] });
