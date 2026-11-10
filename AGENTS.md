@@ -436,7 +436,14 @@ refuses to delete a library an arrival folder points at (`library.in-use`). Ther
   click never stacks the same work. The web's "Transfer" and "Transfer all" are
   `POST /api/plans/{id}/execute` with `entries` (`startPlanned`), with no new match; changing the
   candidate, library or size goes through `match` as before. Each item carries its `release` and `detached`; the web groups them (one line per release,
-  the detached listed under it). `POST /api/entries/:id/{match,preview,ignore}` settle a file or its release. The destination of an
+  the detached listed under it). `POST /api/entries/:id/{match,preview,ignore}` settle a file or its release. **`match` is
+  asynchronous** (202 at once, `MatchTracker` in `matches.ts`, in memory): the release is planned in the
+  background as **one** `createPlan` (so versions of an episode are told apart together, as in an
+  analysis), and `GET /api/entries/:id/match` says `running` (`done`/`total` files, announced by the
+  `progress` event), `done` (the file and its `followers`) or `failed` (the cause). One match per release
+  at a time, and a file held by a queued or running transfer is not matched, previewed or ignored (409
+  `queue.match-in-progress`, `queue.entry-held`). The web follows it in `validate`, reading the state on each `progress` event (`onTopics`, no polling), and keeps the state
+  per entry (`validations.svelte.ts`), so a row says "Validating… 3/20" whatever panel is open. The destination of an
   arrival is the library of its kind in the folder's `into` (the first of its type for a path sent
   by hand), unless `libraryId` picks another one of the work's kind (422 `library.wrong-type`): it is
   stored on the file (`job_entries.destination_library_id`, migration 013), not on the job, and the
