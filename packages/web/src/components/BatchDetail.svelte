@@ -12,10 +12,14 @@
     shortId,
     tally,
     type BatchDetail,
+    type BatchExtra,
+    type BatchItem,
     type UndoReport,
   } from '../lib/history.js';
   import JobDetail from './JobDetail.svelte';
-  import { releaseName } from '../lib/arrivals.js';
+  import { baseName } from '../lib/paths.js';
+  import { workOf, type ChangeRow, type ChipTone } from '../lib/change-list.js';
+  import ChangeList from './ChangeList.svelte';
   import type { ErrorBody } from '../lib/arrivals.js';
 
   let {
@@ -47,6 +51,97 @@
   // A failure the server stored (the job's, a file's) is a code and its parameters, not a thrown
   // ApiError: `messageOf` would only say something went wrong.
   const describe = (error: ErrorBody): string => describeError(t, error);
+
+  const ITEM_TONE: Record<BatchItem['status'], ChipTone> = {
+    done: 'ok',
+    undone: 'neutral',
+    failed: 'danger',
+  };
+
+  // One line per file, folded under the movie or the show it belongs to; what Kinoshelf wrote
+  // beside the videos (NFO, images) joins the same fold instead of a list of its own.
+  function itemRow(item: BatchItem, several: boolean): ChangeRow {
+    const work = workOf(item.destination ?? item.source);
+    const before = baseName(item.source);
+    const after = item.destination === null ? undefined : baseName(item.destination);
+    const renamed = after !== undefined && after !== before;
+    return {
+      id: `${item.source}->${item.destination}`,
+      group: work.key,
+      groupLabel: work.name,
+      ...(renamed
+        ? {
+            before,
+            after,
+            beforeTitle: `${t('web.history.from')}: ${item.source}`,
+            afterTitle: `${t('web.history.to')}: ${item.destination}`,
+          }
+        : { title: before }),
+      chips: [
+        ...(item.status === 'done'
+          ? []
+          : [{ text: t(`web.history.item.${item.status}`), tone: ITEM_TONE[item.status] }]),
+        ...(several
+          ? [{ text: t(`web.settings.processing.mode.${item.mode}`), tone: 'neutral' as const }]
+          : []),
+      ],
+      ...(item.error && { note: describe(item.error) }),
+      problem: item.status === 'failed',
+      detailCount: 0,
+    };
+  }
+
+  function extraRow(extra: BatchExtra): ChangeRow {
+    const work = workOf(extra.destination);
+    return {
+      id: `extra:${extra.destination}`,
+      group: work.key,
+      groupLabel: work.name,
+      after: baseName(extra.destination),
+      afterTitle: extra.destination,
+      chips: [{ text: t(`web.history.extra.${extra.kind}`), tone: 'neutral' }],
+      problem: false,
+      detailCount: 0,
+    };
+  }
+
+  const rows = $derived<ChangeRow[]>(
+    batch === undefined
+      ? []
+      : [
+          ...batch.items.map((item) => itemRow(item, batch?.modes.length !== 1)),
+          ...batch.extras.map(extraRow),
+        ],
+  );
+
+  const UNDO_TONE = { undone: 'ok', skipped: 'warn', failed: 'danger' } as const;
+  const undoRows = $derived<ChangeRow[]>(
+    (preview?.entries ?? []).map((entry) => {
+      const work = workOf(entry.destination);
+      return {
+        id: entry.destination,
+        group: work.key,
+        groupLabel: work.name,
+        title: baseName(entry.destination),
+        chips: [{ text: t(`web.history.undo.${entry.status}`), tone: UNDO_TONE[entry.status] }],
+        ...(entry.error && { note: describe(entry.error) }),
+        problem: entry.status !== 'undone',
+        detailCount: 0,
+      };
+    }),
+  );
+
+  const outcome = $derived({
+    done: batch?.items.filter(({ status }) => status === 'done').length ?? 0,
+    failed: batch?.items.filter(({ status }) => status === 'failed').length ?? 0,
+  });
+  const extrasSummary = $derived(
+    (['generated', 'downloaded', 'replaced'] as const)
+      .map((kind) => ({ kind, count: batch?.extras.filter((e) => e.kind === kind).length ?? 0 }))
+      .filter(({ count }) => count > 0)
+      .map(({ kind, count }) => t(`web.history.extras.count.${kind}`, { count }))
+      .join(' · '),
+  );
 
   async function check(): Promise<void> {
     busy = true;
@@ -101,51 +196,23 @@
 
     <section aria-labelledby="items-title">
       <h3 id="items-title">{t('web.history.items')}</h3>
-      <ul class="items">
-        {#each batch.items as item (`${item.source}->${item.destination}`)}
-          <li>
-            <div class="row">
-              <strong class="mono">{releaseName(item.source)}</strong>
-              <span class="chip chip-neutral">{t(`web.settings.processing.mode.${item.mode}`)}</span
-              >
-              <span class="chip {STATUS_CHIP[item.status]}"
-                >{t(`web.history.item.${item.status}`)}</span
-              >
-            </div>
-            <p class="muted mono">
-              <span class="label">{t('web.history.from')}</span>
-              {item.source}
-            </p>
-            {#if item.destination}
-              <p class="muted mono">
-                <span class="label">{t('web.history.to')}</span>
-                {item.destination}
-              </p>
-            {/if}
-            {#if item.error}<p class="alert alert-danger">{describe(item.error)}</p>{/if}
-          </li>
-        {/each}
-      </ul>
+      <p class="muted summary">
+        {t('web.history.files', { count: batch.items.length })}
+        {#if batch.items.length > 0}
+          · {t('web.history.done-files', { count: outcome.done })}
+          {#if outcome.failed > 0}· {t('web.history.failed-files', { count: outcome.failed })}{/if}
+        {/if}
+        {#if extrasSummary}
+          <br />{extrasSummary}
+        {/if}
+      </p>
+      {#if rows.length > 0}
+        <ChangeList {rows} />
+        {#if batch.extras.length > 0}
+          <p class="muted hint">{t('web.history.extras.hint')}</p>
+        {/if}
+      {/if}
     </section>
-
-    {#if batch.extras.length > 0}
-      <section aria-labelledby="extras-title">
-        <h3 id="extras-title">{t('web.history.extras')}</h3>
-        <p class="muted">{t('web.history.extras.hint')}</p>
-        <ul class="items">
-          {#each batch.extras as extra (extra.destination)}
-            <li>
-              <div class="row">
-                <strong class="mono">{releaseName(extra.destination)}</strong>
-                <span class="chip chip-neutral">{t(`web.history.extra.${extra.kind}`)}</span>
-              </div>
-              <p class="muted mono">{extra.destination}</p>
-            </li>
-          {/each}
-        </ul>
-      </section>
-    {/if}
-
     {#if batch.origin}
       <details>
         <summary>{t('web.history.job.title', { id: shortId(batch.origin.jobId) })}</summary>
@@ -157,23 +224,7 @@
       <section aria-labelledby="undo-title" aria-live="polite">
         <h3 id="undo-title">{t('web.history.undo.preview')}</h3>
         <p class="muted">{t('web.history.undo.hint')}</p>
-        <ul class="items">
-          {#each preview.entries as entry (entry.destination)}
-            <li>
-              <div class="row">
-                <strong class="mono">{releaseName(entry.destination)}</strong>
-                <span
-                  class="chip {entry.status === 'undone'
-                    ? 'chip-ok'
-                    : entry.status === 'skipped'
-                      ? 'chip-warn'
-                      : 'chip-danger'}">{t(`web.history.undo.${entry.status}`)}</span
-                >
-              </div>
-              {#if entry.error}<p class="muted">{describe(entry.error)}</p>{/if}
-            </li>
-          {/each}
-        </ul>
+        <ChangeList rows={undoRows} />
       </section>
     {/if}
 
@@ -230,39 +281,9 @@
     font-weight: 600;
   }
 
-  .items {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-  }
-
-  .items li {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    padding: 10px 12px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-  }
-
-  .row {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .row strong {
-    flex: 1;
-    min-width: 0;
-  }
-
-  .label {
-    font-family: var(--font);
-    font-weight: 600;
+  .summary,
+  .hint {
+    margin: 0 0 8px;
   }
 
   summary {
