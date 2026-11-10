@@ -71,6 +71,12 @@ test('changes the one image of an episode held in two versions, for both', async
   await page.getByRole('button', { name: 'Generate the missing NFO…' }).click();
   const preview = page.getByRole('dialog', { name: 'Refresh preview' });
   await expect(preview).toBeVisible();
+  // The show folds its episodes, and each one its other files.
+  await preview.locator('details.group > summary').click();
+  await expect(preview.getByText(/other file/)).toHaveCount(2);
+  for (const more of await preview.getByText(/other file/).all()) {
+    await more.click();
+  }
   await expect(preview.getByText(/s01e01 - 1080p\.nfo/)).toBeVisible();
   await expect(preview.getByText(/s01e01 - 2160p\.nfo/)).toBeVisible();
   await page.keyboard.press('Escape');

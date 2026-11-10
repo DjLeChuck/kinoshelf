@@ -14,7 +14,9 @@
     type RunReport,
     type VersionRequest,
   } from '../lib/library-items.js';
-  import { FOLD_FROM, previewOf, type PreviewFile, type PreviewItem } from '../lib/run-preview.js';
+  import { previewOf, type PreviewFile, type PreviewItem } from '../lib/run-preview.js';
+  import type { ChangeRow } from '../lib/change-list.js';
+  import ChangeList from './ChangeList.svelte';
 
   let {
     libraryId,
@@ -96,11 +98,57 @@
   const byEntry = $derived(new Map(items.map((item) => [item.entryId, item])));
   const totals = $derived(report ? tally(report) : undefined);
   const preview = $derived(report ? previewOf(report) : undefined);
-  const folded = $derived((preview?.items.length ?? 0) >= FOLD_FROM);
   const nameOf = (item: LibraryItem | undefined, fallback: string): string =>
     item?.title ?? (item ? baseName(item.path) : fallback);
   const blocked = (operation: ReportOperation): string | undefined =>
     operation.error ? describeError(t, operation.error) : undefined;
+
+  const seasonTag = (item: LibraryItem): string | undefined =>
+    item.season === null || item.episode === null
+      ? undefined
+      : `S${String(item.season).padStart(2, '0')}E${String(item.episode).padStart(2, '0')}${
+          item.episodeEnd !== null && item.episodeEnd !== item.episode
+            ? `-E${String(item.episodeEnd).padStart(2, '0')}`
+            : ''
+        }`;
+
+  // A show's episodes fold under the show, a movie is a line of its own.
+  function rowOf(entry: PreviewItem): ChangeRow {
+    const item = byEntry.get(entry.entryId);
+    const files = entry.folders.flatMap(({ moved }) => moved);
+    const main = files.find(({ operation }) => operation.role !== 'sidecar');
+    const failure = entry.folders
+      .flatMap(({ moved, written }) => [...moved, ...written])
+      .find(({ operation }) => operation.status === 'failed')?.operation;
+    const note = failure === undefined ? undefined : blocked(failure);
+    const title = nameOf(item, entry.entryId);
+    const tag = item ? seasonTag(item) : undefined;
+    const show = item?.kind === 'series' && item.tmdbId !== null && tag !== undefined;
+    const source = main?.operation.source ?? undefined;
+    const renamed =
+      source !== undefined &&
+      main !== undefined &&
+      baseName(source) !== baseName(main.operation.destination);
+    return {
+      id: entry.entryId,
+      group: show ? `series:${item.tmdbId}` : entry.entryId,
+      groupLabel: title,
+      ...(tag !== undefined && { tag }),
+      ...(!show && { title }),
+      ...(renamed && {
+        before: baseName(source),
+        after: baseName(main.operation.destination),
+        beforeTitle: source,
+        afterTitle: main.operation.destination,
+      }),
+      chips: entry.failed ? [{ text: t('web.library.run.blocked'), tone: 'danger' }] : [],
+      ...(note !== undefined && { note }),
+      problem: entry.failed,
+      detailCount: entry.count - (main === undefined ? 0 : 1),
+    };
+  }
+  const rows = $derived((preview?.items ?? []).map(rowOf));
+  const previewById = $derived(new Map((preview?.items ?? []).map((item) => [item.entryId, item])));
 </script>
 
 {#snippet status(file: PreviewFile)}
@@ -192,33 +240,14 @@
     {/if}
     <p class="muted root">{t('web.library.run.root', { path: preview?.root ?? '' })}</p>
     <div class="list">
-      {#each preview?.items ?? [] as item (item.entryId)}
-        {#if folded}
-          <details class="film" open={item.failed}>
-            <summary>
-              <span class="summary-main">
-                <span class="name">{nameOf(byEntry.get(item.entryId), item.entryId)}</span>
-                <span class="mono dim">{item.folders[0]?.path}/</span>
-              </span>
-              {#if item.failed}
-                <span class="chip chip-danger">{t('web.library.run.blocked')}</span>
-              {/if}
-              <span class="muted count">{t('web.library.run.files', { count: item.count })}</span>
-            </summary>
+      <ChangeList {rows}>
+        {#snippet detail(row: ChangeRow)}
+          {@const item = previewById.get(row.id)}
+          {#if item}
             {@render folders(item)}
-          </details>
-        {:else}
-          <div class="film">
-            <div class="head">
-              <span class="name">{nameOf(byEntry.get(item.entryId), item.entryId)}</span>
-              {#if item.failed}
-                <span class="chip chip-danger">{t('web.library.run.blocked')}</span>
-              {/if}
-            </div>
-            {@render folders(item)}
-          </div>
-        {/if}
-      {/each}
+          {/if}
+        {/snippet}
+      </ChangeList>
     </div>
   {/if}
 
@@ -286,43 +315,6 @@
 
   .root {
     font-size: 12.5px;
-  }
-
-  .film {
-    padding: 10px 0;
-    border-top: 1px solid var(--border);
-  }
-
-  .film:first-child {
-    border-top: 0;
-  }
-
-  .head,
-  summary {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    gap: 4px 12px;
-  }
-
-  summary {
-    cursor: pointer;
-  }
-
-  .summary-main {
-    flex: 1 1 0;
-    min-width: 0;
-    overflow-wrap: anywhere;
-  }
-
-  .name {
-    font-weight: 600;
-  }
-
-  .dim,
-  .count {
-    color: var(--muted);
-    font-size: 12px;
   }
 
   .folders {

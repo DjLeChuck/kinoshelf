@@ -27,7 +27,7 @@ test('names the version of a movie from its page, with the size picked in the di
   await expect(dialog.getByRole('button', { name: 'Run' })).toBeDisabled();
 
   await dialog.getByLabel('Picture size').selectOption('1080p');
-  await expect(dialog.getByText('… - 1080p.mkv')).toBeVisible();
+  await expect(dialog.getByText('Dune (1984) {tmdb-841} - 1080p.mkv')).toBeVisible();
   expect(await readdir(FOLDER)).toEqual(['Dune (1984) {tmdb-841}.mkv']);
 
   await dialog.getByRole('button', { name: 'Run' }).click();

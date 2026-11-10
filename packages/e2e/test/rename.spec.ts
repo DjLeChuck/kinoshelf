@@ -27,9 +27,9 @@ test('previews a rename from the library, runs it, and finds it in the history',
 
   // The dialog says what would happen, and nothing was written yet.
   const dialog = page.getByRole('dialog', { name: 'Rename preview' });
-  // The folder is told once and the file's name drops what the folder already says.
-  await expect(dialog.getByText('Alien (1979) {tmdb-348}/')).toBeVisible();
-  await expect(dialog.getByText('… - 1080p.mkv')).toBeVisible();
+  // One line per movie: the name it has, then the one it gets.
+  await expect(dialog.getByText('Alien.1979.1080p.mkv')).toBeVisible();
+  await expect(dialog.getByText('Alien (1979) {tmdb-348} - 1080p.mkv')).toBeVisible();
   expect(await exists(ALIEN)).toBe(false);
 
   await dialog.getByRole('button', { name: 'Run' }).click();

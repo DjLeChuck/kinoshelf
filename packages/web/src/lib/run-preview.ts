@@ -95,6 +95,3 @@ export function previewOf(report: Pick<RunReport, 'items'>): RunPreview {
   });
   return { root, items };
 }
-
-/** From this many files on, the preview folds each one: a long list is scanned, not read. */
-export const FOLD_FROM = 5;
