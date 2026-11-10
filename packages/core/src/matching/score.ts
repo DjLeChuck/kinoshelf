@@ -81,18 +81,43 @@ function countryAgreement(parsed: ParsedMedia, candidate: Candidate): -1 | 0 | 1
   return candidate.countries.includes(parsed.country) ? 1 : -1;
 }
 
-/** `1` the volumes agree, `-1` both name one and they differ, `0` nothing to compare. */
+/**
+ * The sequel a movie's file names without a marker, by a small number closing its title
+ * (`Dragons 3`). A year (`Blade Runner 2049`) is not one: only one or two digits count, and a
+ * title that is nothing but a number (`12`, `300`) has no sequel to name.
+ */
+function titleNumberOf(parsed: ParsedMedia): number | undefined {
+  if (parsed.kind !== 'movie') {
+    return undefined;
+  }
+  const match = /\S\s+(\d{1,2})$/u.exec(parsed.title?.trim() ?? '');
+  return match?.[1] === undefined ? undefined : Number(match[1]);
+}
+
+/** The small numbers a title spells in digits (`Dragons 3 : Le Monde caché`), apart from years. */
+const digitsOf = (title: string): number[] =>
+  [...title.matchAll(/(?<![\p{L}\p{N}])(\d{1,2})(?![\p{L}\p{N}])/gu)].map((m) => Number(m[1]));
+
+/**
+ * `1` the installments agree, `-1` both name one and they differ, `0` nothing to compare. The file
+ * names it with a marker (`Vol.2`, read by the parser) or as the number closing its title; the
+ * candidate with a marker (`Part II`, `2ème partie`) or in digits.
+ */
 function volumeAgreement(parsed: ParsedMedia, candidate: Candidate): -1 | 0 | 1 {
-  if (parsed.volume === undefined) {
+  const wanted = parsed.volume ?? titleNumberOf(parsed);
+  if (wanted === undefined) {
     return 0;
   }
-  const named = [candidate.title, candidate.originalTitle, ...candidate.alternativeTitles].flatMap(
-    installmentsOf,
+  const titles = [candidate.title, candidate.originalTitle, ...candidate.alternativeTitles];
+  const named = titles.flatMap(
+    parsed.volume === undefined
+      ? (title) => [...installmentsOf(title), ...digitsOf(title)]
+      : installmentsOf,
   );
   if (named.length === 0) {
     return 0;
   }
-  return named.includes(parsed.volume) ? 1 : -1;
+  return named.includes(wanted) ? 1 : -1;
 }
 
 const knownIdMatches = (parsed: ParsedMedia, candidate: Candidate): boolean =>

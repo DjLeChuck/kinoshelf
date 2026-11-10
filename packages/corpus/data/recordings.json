@@ -23,6 +23,10 @@
     "status": 200,
     "body": "{\"id\":10138,\"titles\":[{\"title\":\"Iron Man II\"},{\"title\":\"ไอรอน แมน 2 มหาประลัยคนเกราะเหล็ก\"},{\"title\":\"Hombre De Hierro 2\"},{\"title\":\"마블 아이언맨 2\"},{\"title\":\"Marvel Studios' Iron Man 2\"},{\"title\":\"钢铁侠2\"},{\"title\":\"Iron Man 2: Người Sắt 2\"},{\"title\":\"သံမဏိလူသား ၂\"},{\"title\":\"Demir Adam 2\"},{\"title\":\"الرجل الحديدي ٢\"},{\"title\":\"Dəmir Adam 2\"}]}"
   },
+  "/3/movie/10191/alternative_titles?": {
+    "status": 200,
+    "body": "{\"id\":10191,\"titles\":[{\"title\":\"驯龙高手\"},{\"title\":\"Így neveld a sárkányodat 3D\"},{\"title\":\"드래곤 길들이기 1\"},{\"title\":\"Draktränaren 1\"},{\"title\":\"Ako vycvičiť draka\"},{\"title\":\"Ako vycvičiť draka 1\"},{\"title\":\"Dragons\"},{\"title\":\"Hoe tem je een draak\"},{\"title\":\"Ejderhanı Nasıl Eğitirsin\"},{\"title\":\"Bí Kíp Luyện Rồng\"},{\"title\":\"Drachenzähmen leicht gemacht\"},{\"title\":\"Cómo entrenar a tu dragón\"},{\"title\":\"Näin koulutat lohikäärmeesi\"},{\"title\":\"Kako izdresirati zmaja\"},{\"title\":\"Kako da dresirate svog zmaja\"},{\"title\":\"Легенда о драконе Костоломе\"}]}"
+  },
   "/3/movie/10192/alternative_titles?": {
     "status": 200,
     "body": "{\"id\":10192,\"titles\":[{\"title\":\"Shrek 4\"},{\"title\":\"Shrek Forever After The Final Chapter\"},{\"title\":\"Shrek: The Final Chapter\"},{\"title\":\"The Final Chapter\"},{\"title\":\"Shrek 4 - Voor eeuwig en altijd: Het laatste hoofdstuk\"},{\"title\":\"Shrek den lykkelige: Sidste kapitel\"},{\"title\":\"Shrek 4: Shrek Forever After\"},{\"title\":\"Shrek 4 - Lykkelig alle sine dager\"},{\"title\":\"Shrek 4 - Forever After\"},{\"title\":\"史力加4\"},{\"title\":\"Shrek 4 Felices Para Siempre\"},{\"title\":\"Shrek 4 - Ikuinen Onni\"},{\"title\":\"Shrek 4:  Para siempre\"},{\"title\":\"Shrek Felices Para Siempre (Shrek 4)\"},{\"title\":\"Shrek nüüd ja igavesti\"},{\"title\":\"슈렉 4\"},{\"title\":\"Shrek 4 - E vissero felici e contenti\"},{\"title\":\"Shrek e vissero felici e contenti - L'ultimo capitolo\"},{\"title\":\"Shrek 4 - Il était une Fin\"},{\"title\":\"Shrek Forever\"},{\"title\":\"怪物史瑞克4\"},{\"title\":\"Shrek 4 Shrek Para Siempre\"},{\"title\":\"Shrek 4 - Für immer Shrek\"},{\"title\":\"Σρεκ 4\"},{\"title\":\"Gã Chằn Tinh Tốt Bụng: Cuộc Phiêu Lưu Cuối Cùng\"},{\"title\":\"Shrek 4 - Für immer Shrek: Das große Finale\"},{\"title\":\"史力加萬歲萬萬歲\"},{\"title\":\"怪物史莱克4\"},{\"title\":\"Шрек 4\"},{\"title\":\"Shrek Para Sempre O Capítulo Final\"},{\"title\":\"Shrek Goes Fourth\"},{\"title\":\"Şrek 4\"},{\"title\":\"شريك للأبد\"}]}"
@@ -319,6 +323,10 @@
     "status": 200,
     "body": "{\"id\":166426,\"titles\":[{\"title\":\"Pirates of the Caribbean 5\"},{\"title\":\"Карибски пирати: Мъртвите не говорят\"},{\"title\":\"Pirates of the Caribbean deel 5\"},{\"title\":\"Pirates of the Caribbean 5: Dead Men Tell No Tales\"},{\"title\":\"Пірати Карибського моря 5: Мерці не розповідають казки\"},{\"title\":\"Cướp Biển Vùng Caribe 5: Salazar Báo Thù\"},{\"title\":\"Piratas do Caribe - A Vingança de Salazar\"},{\"title\":\"Pirates of the Caribbean: Salazar's Revenge\"},{\"title\":\"Pirates des Caraïbes 5 - La Vengeance de Salazar\"},{\"title\":\"パイレーツ・オブ・カリビアン／最後の海賊\"},{\"title\":\"Piráti z Karibiku 5 - Salazarova pomsta\"},{\"title\":\"캐리비안의 해적-죽은 자는 말이 없다\"},{\"title\":\"Pirates of the Caribbean: Dead Men Tell No Tales 3D\"},{\"title\":\"La venganza de Salazar\"},{\"title\":\"Piratët e Karaibeve: Hakmarrja e Salazarit\"},{\"title\":\"Pirates of the Caribbean 5 - Dead Men Tell No Tales\"},{\"title\":\"Pirates des Caraïbes 5 - La Vengeance de Salazar\"},{\"title\":\"加勒比海盜－神鬼奇航：死無對證\"},{\"title\":\"Fluch der Karibik 5 - Salazars Rache\"},{\"title\":\"Pirates of the Caribbean: Salazars Rache\"},{\"title\":\"加勒比海盗5：死无对证\"},{\"title\":\"加勒比海盜：惡靈啟航\"},{\"title\":\"加勒比海盜5：惡靈啟航\"},{\"title\":\"Пираты Карибского моря 5\"},{\"title\":\"قراصنة الكاريبي - الموتى لا يروون حكايات\"},{\"title\":\"Karayip Korsanları: Salazar'ın İntikamı\"},{\"title\":\"Pirates of the Caribbean 5 - Salazars Rache\"},{\"title\":\"Pirates of the Caribbean: Salazar's Revenge\"}]}"
   },
+  "/3/movie/166428/alternative_titles?": {
+    "status": 200,
+    "body": "{\"id\":166428,\"titles\":[{\"title\":\"Dragons 3\"},{\"title\":\"How to Train Your Dragon 3\"},{\"title\":\"Sådan træner du din drage: Den skjulte verden\"},{\"title\":\"How to Train Your Dragon 3 - The Hidden World\"},{\"title\":\"드래곤 길들이기3\"},{\"title\":\"Dragon Trainer 3\"},{\"title\":\"Dragon Trainer 3 - Il mondo nascosto\"},{\"title\":\"ΠΩΣ ΝΑ ΕΚΠΑΙΔΕΥΣΕΤΕ ΤΟ ΔΡΑΚΟ ΣΑΣ 3\"},{\"title\":\"Dragons 3: Le monde caché\"},{\"title\":\"Drachenzähmen leicht gemacht 3 - Die geheime Welt\"},{\"title\":\"Dragetreneren 3\"},{\"title\":\"Como Treinares o Teu Dragão 3\"},{\"title\":\"How to Train Your Dragon: The Hidden World 3D\"},{\"title\":\"Ako si vycvičiť draka - Skrytý svet\"},{\"title\":\"Ako si vycvičiť draka 3\"},{\"title\":\"Ako si vycvičiť draka: Skrytý svet\"},{\"title\":\"Draktränaren 3\"},{\"title\":\"Kuidas taltsutada lohet 3\"},{\"title\":\"How to Train Your Dragon։ The Hidden World\"},{\"title\":\"Como entrenar a tu Dragon 3\"},{\"title\":\"Hoe tem je een draak 3\"},{\"title\":\"Como Treinar o Seu Dragão 3: O Mundo Escondido\"},{\"title\":\"Kako izdresirati zmaja 3: Skriveni svijet\"},{\"title\":\"驯龙高手3\"},{\"title\":\"馴龍記3\"},{\"title\":\"Cara Melatih Naga Anda: Dunia Tersembunyi\"},{\"title\":\"Kako da dresirate svog zmaja 3\"}]}"
+  },
   "/3/movie/1687059/alternative_titles?": {
     "status": 200,
     "body": "{\"id\":1687059,\"titles\":[]}"
@@ -378,6 +386,10 @@
   "/3/movie/217268/alternative_titles?": {
     "status": 200,
     "body": "{\"id\":217268,\"titles\":[{\"title\":\"Zum Gipfel der Welt\"},{\"title\":\"珠峰史诗\"},{\"title\":\"L'Epopée de l'Everest\"},{\"title\":\"Zum Gipfel der Welt\"},{\"title\":\"Эпос Эвереста\"},{\"title\":\"A l'assaut de l'inaccessible Mont-Everest\"}]}"
+  },
+  "/3/movie/21733/alternative_titles?": {
+    "status": 200,
+    "body": "{\"id\":21733,\"titles\":[{\"title\":\"Fei lung mang jeung\"},{\"title\":\"サイクロンZ\"},{\"title\":\"3 Brothers\"},{\"title\":\"Flying Dragon Fierce Challenge\"},{\"title\":\"Dragões para Sempre\"},{\"title\":\"Lohikäärmeen haaste\"},{\"title\":\"Enas sifounas pou ton elegan Jackie\"},{\"title\":\"Fei long meng jiang\"},{\"title\":\"El dragón nunca muere\"},{\"title\":\"Super Dragon\"},{\"title\":\"Змајеви заувек\"},{\"title\":\"Драконы навсегда\"},{\"title\":\"Zmajevi zauvek\"},{\"title\":\"Zmajevi zauvek\"},{\"title\":\"Dragões Para Sempre\"},{\"title\":\"Dragons Forever\"}]}"
   },
   "/3/movie/218166/alternative_titles?": {
     "status": 200,
@@ -483,6 +495,10 @@
     "status": 200,
     "body": "{\"id\":298,\"titles\":[{\"title\":\"13 друзей Оушена\"},{\"title\":\"I symmoria ton dekatrion\"},{\"title\":\"Η Συμμορία των Δεκατριών\"},{\"title\":\"海盜豪情13王牌\"},{\"title\":\"海盜豪情13王牌\"},{\"title\":\"Ocean's Thirteen\"}]}"
   },
+  "/3/movie/298115/alternative_titles?": {
+    "status": 200,
+    "body": "{\"id\":298115,\"titles\":[{\"title\":\"Drakar: Drakryttarnas tillkomst\"},{\"title\":\"Draghi: L’inizio delle corse dei draghi\"},{\"title\":\"Dragons - Premiere course de dragons - Pret feu partez\"},{\"title\":\"Dragones: Amanecer de los corredores de dragón\"},{\"title\":\"드래곤 길들이기 : 드래곤 경주의 시작\"},{\"title\":\"Драконы: Гонки Бесстрашных. Начало\"},{\"title\":\"Dragonii: Începuturile curselor cu dragoni\"}]}"
+  },
   "/3/movie/299534/alternative_titles?": {
     "status": 200,
     "body": "{\"id\":299534,\"titles\":[{\"title\":\"Avengers: Endgame 3D\"},{\"title\":\"Marvel Studios' Avengers: Endgame\"},{\"title\":\"Vengadores 4\"},{\"title\":\"复仇者联盟4：终局之战\"},{\"title\":\"Avengers 4: Hồi Kết\"},{\"title\":\"어벤져스 4\"},{\"title\":\"Hakmarrësit: Loja e Fundit\"},{\"title\":\"Ha'Nokmim: Sof Ha'Mis'hak\"},{\"title\":\"アベンジャーズ　エンドゲーム\"},{\"title\":\"Keršytojai: Pabaiga\"},{\"title\":\"اوینجرز : اینڈگیم\"},{\"title\":\"Одмаздници: Крај на игрите\"},{\"title\":\"Վրիժառուները: Վերջնախաղ\"},{\"title\":\"اونجرز : اند گیم\"},{\"title\":\"அவெஞ்சர்ஸ்: எண்ட்கேம்\"},{\"title\":\"అవెంజర్స్: ఎండ్ గేమ్\"},{\"title\":\"შურისმაძიებლები:  ენდშპილი\"},{\"title\":\"Avengers 4\"},{\"title\":\"Avengers: Infinity War Part II\"},{\"title\":\"אנדגיים\"},{\"title\":\"المنتقمون نهاية اللعبة\"},{\"title\":\"Avengers Endgame: Encore\"},{\"title\":\"Vingadores: Ultimato Encore\"},{\"title\":\"อเวนเจอร์ส เผด็จศึก\"},{\"title\":\"復仇者聯盟4：終局之戰 加碼重映\"},{\"title\":\"הנוקמים: סוף המשחק הדרן\"},{\"title\":\"Vingadores: Endgame Encore\"},{\"title\":\"Avengers Endgame: Extra\"},{\"title\":\"Marvel Studios' Avengers Endgame: Encore\"},{\"title\":\"Avengers Endgame: Bonus\"},{\"title\":\"Vengadores Endgame: Encore\"},{\"title\":\"Osvetnici: Završnica i više\"},{\"title\":\"اوینجرز : اینڈگیم\"},{\"title\":\"Avengers: Son Oyun\"},{\"title\":\"Avengers : Endgame Extended\"},{\"title\":\"Avengers : Endgame Extended\"}]}"
@@ -490,6 +506,10 @@
   "/3/movie/301959/alternative_titles?": {
     "status": 200,
     "body": "{\"id\":301959,\"titles\":[]}"
+  },
+  "/3/movie/303141/alternative_titles?": {
+    "status": 200,
+    "body": "{\"id\":303141,\"titles\":[{\"title\":\"The Dragons of Camelot - Die Legende von König Arthur\"},{\"title\":\"The Dragons of Camelot\"},{\"title\":\"The Dragons of Camelot\"},{\"title\":\"Smoki Camelotu\"},{\"title\":\"Zmajevi Kamelota\"},{\"title\":\"Haseena Aur Janwar 2\"},{\"title\":\"Dragones de Camelot\"}]}"
   },
   "/3/movie/324852/alternative_titles?": {
     "status": 200,
@@ -759,6 +779,10 @@
     "status": 200,
     "body": "{\"id\":58,\"titles\":[{\"title\":\"Pirates of the Caribbean 2: Dead Man's Chest\"},{\"title\":\"Fluch der Karibik 2\"},{\"title\":\"Pirates of the Caribbean 2\"},{\"title\":\"Karayip Korsanları: Ölü Adam'ın Sandığı\"}]}"
   },
+  "/3/movie/586839/alternative_titles?": {
+    "status": 200,
+    "body": "{\"id\":586839,\"titles\":[{\"title\":\"Big Three Dragons\"},{\"title\":\"雀侠奇缘之大三元\"}]}"
+  },
   "/3/movie/586863/alternative_titles?": {
     "status": 200,
     "body": "{\"id\":586863,\"titles\":[{\"title\":\"Die Wütenden - Les Misérables\"},{\"title\":\"I miserabili\"},{\"title\":\"Les Misérables (2019)\"},{\"title\":\"Os Miseráveis\"},{\"title\":\"悲慘世界\"},{\"title\":\"레미제라블\"},{\"title\":\"Los miserables\"}]}"
@@ -942,6 +966,10 @@
   "/3/movie/820362/alternative_titles?": {
     "status": 200,
     "body": "{\"id\":820362,\"titles\":[]}"
+  },
+  "/3/movie/82702/alternative_titles?": {
+    "status": 200,
+    "body": "{\"id\":82702,\"titles\":[{\"title\":\"Ejdahani Nece Öyredersen 2\"},{\"title\":\"Kuidas taltsutada lohet 2\"},{\"title\":\"How to Train Your Dragon 2 3D\"},{\"title\":\"Hoe tem je een draak 2\"},{\"title\":\"Jak wytresować smoka 2\"},{\"title\":\"Ako vycvičiť draka 2\"},{\"title\":\"驯龙高手2\"},{\"title\":\"Bí Kíp Luyện Rồng 2\"},{\"title\":\"Kako izdresirati zmaja 2\"},{\"title\":\"馴龍師2\"},{\"title\":\"Dragons 2\"},{\"title\":\"드래곤 길들이기2\"},{\"title\":\"Kako da dresirate svog zmaja 2\"}]}"
   },
   "/3/movie/8355/alternative_titles?": {
     "status": 200,
@@ -1258,6 +1286,18 @@
   "/3/search/movie?include_adult=false&language=fr&query=Dragon+Ball": {
     "status": 200,
     "body": "{\"results\":[{\"id\":126963,\"title\":\"Dragon Ball Z - Battle of Gods\",\"original_title\":\"ドラゴンボールZ 神と神\",\"release_date\":\"2013-03-30\",\"poster_path\":\"/dlY37gsVWFKsbMQt7LF9vFfsAsC.jpg\",\"popularity\":9.5125},{\"id\":39107,\"title\":\"Dragon Ball Z - Fusions\",\"original_title\":\"ドラゴンボールZ 復活のフュージョン!! 悟空とベジータ\",\"release_date\":\"1995-03-04\",\"poster_path\":\"/jwAF2PBrQdugBb5Ncd7krQlEubW.jpg\",\"popularity\":8.0176},{\"id\":610150,\"title\":\"Dragon Ball Super : Super Hero\",\"original_title\":\"ドラゴンボール超 スーパーヒーロー\",\"release_date\":\"2022-06-11\",\"poster_path\":\"/6wfZujKSQHfsEXyAdOFdCj29x6U.jpg\",\"popularity\":7.8079},{\"id\":39101,\"title\":\"Dragon Ball Z - Le Combat fratricide\",\"original_title\":\"ドラゴンボールZ 地球まるごと超決戦\",\"release_date\":\"1990-06-07\",\"poster_path\":\"/g8XlPMTALriy3ShCW0cjF9kaRvA.jpg\",\"popularity\":7.1673},{\"id\":1361184,\"title\":\"Dragon Ball DAIMA\",\"original_title\":\"Dragon Ball DAIMA\",\"release_date\":\"2024-11-10\",\"poster_path\":\"/5h3okzbCgJ9iEGelXoXVh1tlqGi.jpg\",\"popularity\":1.2949},{\"id\":44251,\"title\":\"Dragon Ball Z - Rivaux dangereux\",\"original_title\":\"ドラゴンボールＺ 危険なふたり！超戦士はねむれない\",\"release_date\":\"1994-03-12\",\"poster_path\":\"/81vk4aJ4nSpfQFOT8Xscra9UwoB.jpg\",\"popularity\":5.5565},{\"id\":39144,\"title\":\"Dragon Ball - La Légende de Shenron\",\"original_title\":\"ドラゴンボール 神龍の伝説\",\"release_date\":\"1986-12-20\",\"poster_path\":\"/fBcCSEiXfDIoWYmdmzEs99g7G8z.jpg\",\"popularity\":9.4362},{\"id\":24752,\"title\":\"Dragon Ball Z - La Revanche de Cooler\",\"original_title\":\"ドラゴンボールZ とびっきりの最強対最強\",\"release_date\":\"1991-07-20\",\"poster_path\":\"/uW2x0PboD4KnqZ2HfQxBwThj1WN.jpg\",\"popularity\":7.8244},{\"id\":34433,\"title\":\"Dragon Ball Z - Broly le super guerrier\",\"original_title\":\"ドラゴンボールＺ 燃え尽きろ!!熱戦・烈戦・超激戦\",\"release_date\":\"1993-03-06\",\"poster_path\":\"/lGcTDElHglWUzgjb0TBcAF6L4MU.jpg\",\"popularity\":7.3014},{\"id\":1372940,\"title\":\"Dragon Ball Z Kai\",\"original_title\":\"Dragon Ball Z Kai\",\"release_date\":\"2024-06-20\",\"poster_path\":\"/iiw6RGmLf8DZx4HfSAmOW31SpPs.jpg\",\"popularity\":1.3119},{\"id\":39102,\"title\":\"Dragon Ball Z - La Menace de Namek\",\"original_title\":\"ドラゴンボールゼット 超スーパーサイヤ人じんだ孫そん悟ご空くう\",\"release_date\":\"1991-03-19\",\"poster_path\":\"/v9yiNLk8UyuC1Ord7eLkWwOC0tF.jpg\",\"popularity\":5.0145},{\"id\":39323,\"title\":\"Dragon Ball Z - Baddack contre Freezer\",\"original_title\":\"ドラゴンボールZ たったひとりの最終決戦〜フリーザに挑んだZ戦士 孫悟空の父〜\",\"release_date\":\"1990-10-17\",\"poster_path\":\"/a5FjrOmVTlogCltQjJ4ik038eq8.jpg\",\"popularity\":5.4379},{\"id\":303857,\"title\":\"Dragon Ball Z - La Résurrection de ‘F’\",\"original_title\":\"ドラゴンボールZ 復活の「F」\",\"release_date\":\"2015-04-18\",\"poster_path\":\"/2eNCSu4hpHhULOW1AChZMXbmx6E.jpg\",\"popularity\":9.2942},{\"id\":39100,\"title\":\"Dragon Ball Z - Le Robot des glaces\",\"original_title\":\"ドラゴンボールZ この世で一番強いヤツ\",\"release_date\":\"1990-03-10\",\"poster_path\":\"/1cqdD4l9Urd2KBjOotYy5g4CtpP.jpg\",\"popularity\":6.5118},{\"id\":39106,\"title\":\"Dragon Ball Z: Bio-Broly\",\"original_title\":\"ドラゴンボールＺ 超戦士撃破!!勝のはオレだ\",\"release_date\":\"1994-07-09\",\"poster_path\":\"/pKJ3G9d8gt20P3k1swSD9KRz2Wd.jpg\",\"popularity\":4.8395},{\"id\":503314,\"title\":\"Dragon Ball Super - Broly\",\"original_title\":\"ドラゴンボール超 ブロリー\",\"release_date\":\"2018-12-14\",\"poster_path\":\"/baxPKXiQCNMdccDGebcnZdHhIzC.jpg\",\"popularity\":2.7123},{\"id\":39103,\"title\":\"Dragon Ball Z - Cent Mille Guerriers de métal\",\"original_title\":\"ドラゴンボールZ 激突!!100億パワーの戦士たち\",\"release_date\":\"1992-03-07\",\"poster_path\":\"/a0cjhGalxyYY85wQ2IJ1GUA1W30.jpg\",\"popularity\":8.166},{\"id\":39108,\"title\":\"Dragon Ball Z - L’Attaque du dragon\",\"original_title\":\"ドラゴンボールZ 龍拳爆発!!悟空がやらねば誰がやる\",\"release_date\":\"1995-07-15\",\"poster_path\":\"/n87Le7Q3kaaq3KdtxRHdUsOhymy.jpg\",\"popularity\":7.8576},{\"id\":39145,\"title\":\"Dragon Ball - Le Château du démon\",\"original_title\":\"ドラゴンボール 魔神城のねむり姫\",\"release_date\":\"1987-07-18\",\"poster_path\":\"/7z1cYNscKRcWxsKSFk6Xd3z40PY.jpg\",\"popularity\":4.3231},{\"id\":18095,\"title\":\"Dragon ball GT - 100 ans après\",\"original_title\":\"ドラゴンボールＧＴ 悟空外伝！ 勇気の証しは四星球\",\"release_date\":\"1997-03-26\",\"poster_path\":\"/dxowsH5gN035tk10XrREhTLPNxR.jpg\",\"popularity\":5.5402}]}"
+  },
+  "/3/search/movie?include_adult=false&language=fr&query=Dragons+2&year=2014": {
+    "status": 200,
+    "body": "{\"results\":[{\"id\":82702,\"title\":\"Dragons 2\",\"original_title\":\"How to Train Your Dragon 2\",\"release_date\":\"2014-06-05\",\"poster_path\":\"/q6UtQBNwyfRa5WDQqQOnvwsPOB2.jpg\",\"popularity\":12.5062},{\"id\":303141,\"title\":\"Dragons of Camelot\",\"original_title\":\"Dragons of Camelot\",\"release_date\":\"2014-09-08\",\"poster_path\":\"/4BZiPsbRaRx4bS2mfQexKySzPC3.jpg\",\"popularity\":0.8956},{\"id\":298115,\"title\":\"Dragons : Première course de dragons - Prêt, feu, partez !\",\"original_title\":\"Dragons: Dawn of the Dragon Racers\",\"release_date\":\"2014-11-01\",\"poster_path\":\"/1nWloW1RhSMUxjdVd98TIDY1KcM.jpg\",\"popularity\":2.4324}]}"
+  },
+  "/3/search/movie?include_adult=false&language=fr&query=Dragons+3&year=2014": {
+    "status": 200,
+    "body": "{\"results\":[{\"id\":21733,\"title\":\"Dragons Forever\",\"original_title\":\"飛龍猛將\",\"release_date\":\"1988-02-11\",\"poster_path\":\"/dVAAUBgnWsBJ870bOm204wBnc7Z.jpg\",\"popularity\":3.1478},{\"id\":10191,\"title\":\"Dragons\",\"original_title\":\"How to Train Your Dragon\",\"release_date\":\"2010-03-18\",\"poster_path\":\"/a2xXAG8QuFZYt4ElbDrUd0IC3Ge.jpg\",\"popularity\":13.9067},{\"id\":82702,\"title\":\"Dragons 2\",\"original_title\":\"How to Train Your Dragon 2\",\"release_date\":\"2014-06-05\",\"poster_path\":\"/q6UtQBNwyfRa5WDQqQOnvwsPOB2.jpg\",\"popularity\":12.5062}]}"
+  },
+  "/3/search/movie?include_adult=false&language=fr&query=Dragons+3&year=2019": {
+    "status": 200,
+    "body": "{\"results\":[{\"id\":166428,\"title\":\"Dragons 3 : Le monde caché\",\"original_title\":\"How to Train Your Dragon: The Hidden World\",\"release_date\":\"2019-01-03\",\"poster_path\":\"/oki89nNxoecoOTyqdPe9MS8zbiX.jpg\",\"popularity\":10.7299},{\"id\":586839,\"title\":\"大三元\",\"original_title\":\"大三元\",\"release_date\":\"2019-02-01\",\"poster_path\":\"/h1n4rQQwCkolwCdra2ZqflGZ8UF.jpg\",\"popularity\":0.6036},{\"id\":82702,\"title\":\"Dragons 2\",\"original_title\":\"How to Train Your Dragon 2\",\"release_date\":\"2014-06-05\",\"poster_path\":\"/q6UtQBNwyfRa5WDQqQOnvwsPOB2.jpg\",\"popularity\":12.5062}]}"
   },
   "/3/search/movie?include_adult=false&language=fr&query=Epic%C2%A0&year=2013": {
     "status": 200,

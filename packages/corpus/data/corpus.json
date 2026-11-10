@@ -3036,5 +3036,33 @@
     "expect": {
       "status": "review"
     }
+  },
+  {
+    "path": "Dragons 3 (2014)/Dragons 3 (2014).mkv",
+    "language": "fr",
+    "note": "reconstructed from a description, not a real path: the number says the third film and the year the second",
+    "expect": {
+      "status": "review"
+    }
+  },
+  {
+    "path": "Dragons 3 (2019)/Dragons 3 (2019).mkv",
+    "language": "fr",
+    "note": "the number and the year agree",
+    "expect": {
+      "status": "matched",
+      "tmdb": 166428,
+      "kind": "movie"
+    }
+  },
+  {
+    "path": "Dragons 2 (2014)/Dragons 2 (2014).mkv",
+    "language": "fr",
+    "note": "the number and the year agree",
+    "expect": {
+      "status": "matched",
+      "tmdb": 82702,
+      "kind": "movie"
+    }
   }
 ]

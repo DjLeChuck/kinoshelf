@@ -174,8 +174,10 @@ nowhere: a custom profile file is to be discussed again.
 - `ParsedMedia.volume` (`Kill.Bill.Vol.2`, `Deathly.Hallows.Part.2`, movies only: guessit's `volume`
   or `part`) is compared with the installment number in a candidate's title (`Volume 2`, `Part II`,
   `Part Two`, `Tome 3`, `2ème partie`, see `matching/installment.ts`): a signed adjustment like the
-  country's, neutral when either side names none. When the number and the year name different films
-  (`Part.2` with the year of Part 1) nothing is decided automatically. `ParsedMedia.otherTitles` holds the two halves of a bilingual title
+  country's, neutral when either side names none. A small number closing a movie's title (`Dragons 3`,
+  not a year) counts the same when the parser read no marker, against the digits of the candidate's titles.
+  When the number and the year name different films
+  (`Part.2` with the year of Part 1, `Dragons 3 (2014)` with the year of the second) nothing is decided automatically. `ParsedMedia.otherTitles` holds the two halves of a bilingual title
   glued by a dash (`Anatomy.Of.A.Fall-Anatomie.d.une.chute`), each a further reading of the title
   (best similarity wins); the dash must have two words on each side, so `Spider-Man` is untouched.
   The search itself still uses the whole title.

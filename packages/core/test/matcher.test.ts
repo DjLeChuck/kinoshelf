@@ -593,6 +593,58 @@ describe('volumes', () => {
   });
 });
 
+describe('a sequel number written in the title', () => {
+  // `Dragons 3 (2014)`: the number says the third film, the year says the second.
+  const two = movie(82702, 'Dragons 2', 2014, { originalTitle: 'How to Train Your Dragon 2' });
+  const three = movie(166428, 'Dragons 3 : Le Monde caché', 2019, {
+    originalTitle: 'How to Train Your Dragon: The Hidden World',
+    alternativeTitles: ['Dragons 3'],
+  });
+
+  it('leaves to a human a number and a year that name different films', async () => {
+    const matcher = new Matcher(new FakeProvider([two, three]));
+    expectAmbiguous(await matcher.match(parsedMovie('Dragons 3', 2014)));
+    // The same when the longer title is the only one TMDB gives for the third film.
+    const bare = movie(166428, 'Dragons 3 : Le Monde caché', 2019);
+    expectAmbiguous(
+      await new Matcher(new FakeProvider([two, bare])).match(parsedMovie('Dragons 3', 2014)),
+    );
+  });
+
+  it('still matches when the number and the year agree', async () => {
+    const matcher = new Matcher(new FakeProvider([two, three]));
+    expect(
+      expectMatched(await matcher.match(parsedMovie('Dragons 2', 2014))).best.candidate.id.id,
+    ).toBe(82702);
+    expect(
+      expectMatched(await matcher.match(parsedMovie('Dragons 3', 2019))).best.candidate.id.id,
+    ).toBe(166428);
+  });
+
+  it('is neutral when the candidate names no number, or the number is a year', async () => {
+    const plain = expectMatched(
+      await new Matcher(new FakeProvider([movie(1, 'Dune', 2021)])).match(
+        parsedMovie('Dune 2', 2021),
+      ),
+    );
+    expect(plain.best.breakdown.volume).toBe(0);
+    const year = expectMatched(
+      await new Matcher(new FakeProvider([movie(2, 'Blade Runner 2049', 2017)])).match(
+        parsedMovie('Blade Runner 2049', 2017),
+      ),
+    );
+    expect(year.best.breakdown.volume).toBe(0);
+  });
+
+  it('does not touch a title whose number is part of its name', async () => {
+    const apollo = movie(568, 'Apollo 13', 1995);
+    const outcome = expectMatched(
+      await new Matcher(new FakeProvider([apollo])).match(parsedMovie('Apollo 13', 1995)),
+    );
+    expect(outcome.best.candidate.id.id).toBe(568);
+  });
+});
+
 describe('parts', () => {
   const hallows = (id: number, title: string, year: number) => movie(id, title, year);
   const part1 = hallows(12444, 'Harry Potter and the Deathly Hallows: Part 1', 2010);
