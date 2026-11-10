@@ -15,7 +15,6 @@ import {
   selectItems,
   type Candidate,
   classifyItem,
-  type Classification,
   type ErrorInfo,
   type ImageSize,
   type ImageCandidate,
@@ -31,6 +30,7 @@ import {
   type TransferOperation,
   type OperationResult,
   type Plan,
+  type PlanInput,
   type PlanItem,
   type UndoEntryResult,
 } from '@kinoshelf/core';
@@ -45,6 +45,7 @@ import {
 import type { Execution, ExecutionStore } from './executions.js';
 import type { Job, JobStore, PlanSettings } from './jobs.js';
 import type { LibrarySnapshot } from './library-items.js';
+import type { MatchState, MatchTracker } from './matches.js';
 import type { ExecutionOutcome, OutcomeFile } from './notify/message.js';
 import {
   defaultMetadataLanguage,
@@ -85,12 +86,6 @@ export interface UndoReport {
   }[];
 }
 
-export interface MatchResult {
-  readonly entry: Entry;
-  /** Ids of the other episodes of the release that followed the choice (matched, no conflict). */
-  readonly followers: readonly string[];
-}
-
 export interface SearchQuery {
   readonly query: string;
   readonly year?: number;
@@ -105,6 +100,8 @@ export interface ServiceDeps extends ProcessorDeps {
   readonly journal: Journal;
   /** What each library holds, kept in step with what is matched, transferred and undone. */
   readonly snapshot: LibrarySnapshot;
+  /** The validations in flight: one match at a time per release, with their progress. */
+  readonly matches: MatchTracker;
 }
 
 const report = (result: OperationResult): OperationReport => ({
@@ -138,57 +135,158 @@ export class Service {
   }
 
   /**
-   * A human picked the candidate: it overrides the score. The file is planned like the others,
+   * A human picked the candidate: it overrides the score. The files are planned like the others,
    * so a name that cannot be built or a destination already taken still lands in conflict.
+   *
+   * What is wrong with the request is thrown now (unknown file, already settled, held by a
+   * transfer, a release already being matched). The planning itself takes as long as the release
+   * is long (one metadata read per episode, and a probe where a name says no size), so it runs on
+   * its own: the answer is in `matches`, which the client reads as it moves and when it ends.
    */
-  async match(
+  startMatch(
     entryId: string,
     candidate: Candidate,
     options: { libraryId?: string; screenSize?: string } = {},
-  ): Promise<MatchResult> {
+  ): void {
     const entry = this.pendingEntry(entryId);
     const asked = options.libraryId;
     const libraryId = this.chosenLibrary(entry, candidate, asked);
-    // A size picked by hand is this file's: its release mates have their own.
-    await this.applyChoice(entry, candidate, libraryId, options.screenSize);
-    // The choice is about the series, so the rest of the release follows; one that cannot (the
-    // provider is down, say) stays as it was and can be settled on its own.
+    // The choice is about the series, so the rest of the release follows.
+    const mates = candidate.kind === 'series' ? this.deps.entries.releaseMates(entry) : [];
+    this.requireFree(mates);
+    const lock = this.lockOf(entry);
+    this.deps.matches.begin(entry.id, lock, 1 + mates.length);
+    void this.runMatch(entry, mates, candidate, libraryId, asked, options.screenSize)
+      .then((followers) => {
+        this.deps.matches.finish(entry.id, lock, followers);
+      })
+      .catch((error: unknown) => {
+        this.deps.matches.fail(entry.id, lock, error);
+      });
+  }
+
+  /**
+   * Plans the file and its release mates, one plan for all of them like an analysis does (so two
+   * versions of one episode in the release take a label together). A mate that cannot follow (the
+   * provider is down for it, say) stays as it was and can be settled on its own; the file itself
+   * failing fails the match. A size picked by hand is this file's: its mates have their own.
+   */
+  private async runMatch(
+    entry: Entry,
+    mates: readonly Entry[],
+    candidate: Candidate,
+    libraryId: string | null,
+    asked: string | undefined,
+    screenSize: string | undefined,
+  ): Promise<string[]> {
+    const main =
+      screenSize === undefined ? entry : { ...entry, parsed: { ...entry.parsed, screenSize } };
+    const groups = new Map<string, { libraryId: string | null; files: Entry[] }>();
+    const group = (id: string | null): Entry[] => {
+      const key = id ?? '';
+      const found = groups.get(key) ?? { libraryId: id, files: [] };
+      groups.set(key, found);
+      return found.files;
+    };
+    group(libraryId).push(main);
+    for (const mate of mates) {
+      try {
+        group(this.chosenLibrary(mate, candidate, asked)).push(mate);
+      } catch {
+        // See above.
+      }
+    }
     const followers: string[] = [];
-    if (candidate.kind === 'series') {
-      for (const mate of this.deps.entries.releaseMates(entry)) {
-        try {
-          const mateLibrary = this.chosenLibrary(mate, candidate, asked);
-          if ((await this.applyChoice(mate, candidate, mateLibrary)) !== 'conflict') {
-            followers.push(mate.id);
+    let done = 0;
+    for (const { libraryId: id, files } of groups.values()) {
+      try {
+        const planned = await this.planGroup(files, main, candidate, id, (current) => {
+          done += 1;
+          this.deps.matches.progress(entry.id, done, basename(current));
+        });
+        for (const { file, item } of planned) {
+          const classification = classifyItem(item);
+          this.deps.entries.setMatch(
+            file.id,
+            classification,
+            item,
+            { candidate, score: 100 },
+            { libraryId: id },
+          );
+          this.deps.snapshot.matched(this.require(file.id), candidate);
+          if (file.id !== entry.id && classification !== 'conflict') {
+            followers.push(file.id);
           }
-        } catch {
-          // See above.
+        }
+      } catch (error) {
+        if (files.includes(main)) {
+          throw error;
         }
       }
     }
-    return { entry: this.require(entry.id), followers };
+    return followers;
   }
 
-  /** Plans one file with the chosen candidate and records it. */
-  private async applyChoice(
-    entry: Entry,
+  /** What the last validation of this file did, for the client that started it. */
+  matchOf(entryId: string): { state: MatchState; entry: Entry | undefined } {
+    const state = this.deps.matches.get(entryId);
+    if (!state) {
+      throw new ApiError(404, 'queue.match-unknown');
+    }
+    return { state, entry: state.status === 'done' ? this.require(entryId) : undefined };
+  }
+
+  /** The key a release is matched under: its series in its folder, or the file when it stands alone. */
+  private lockOf(entry: Entry): string {
+    return entry.release !== null && entry.parsed.kind === 'episode'
+      ? `${entry.jobId}|${entry.release}|${String(entry.cluster)}`
+      : entry.id;
+  }
+
+  /**
+   * Plans files that share a destination library in one go. `main` must plan (its metadata fails
+   * the whole group); another file whose metadata cannot be read is left out.
+   */
+  private async planGroup(
+    files: readonly Entry[],
+    main: Entry,
     candidate: Candidate,
     libraryId: string | null,
-    screenSize?: string,
-  ): Promise<Classification> {
-    const named =
-      screenSize === undefined ? entry : { ...entry, parsed: { ...entry.parsed, screenSize } };
-    const item = await this.planWith(named, candidate, { libraryId });
-    const classification = classifyItem(item);
-    this.deps.entries.setMatch(
-      entry.id,
-      classification,
-      item,
-      { candidate, score: 100 },
-      { libraryId },
-    );
-    this.deps.snapshot.matched(this.require(entry.id), candidate);
-    return classification;
+    onLoaded: (path: string) => void,
+  ): Promise<{ file: Entry; item: PlanItem }[]> {
+    const settings = this.settingsFor(files[0] ?? main, libraryId);
+    const profile = buildProfile(settings.profile);
+    const provider = this.provider();
+    const loader = new MetadataLoader({ provider, profile });
+    const planned: Entry[] = [];
+    const inputs: PlanInput[] = [];
+    for (const file of files) {
+      try {
+        const metadata = await loader.forCandidate(candidate, file.parsed);
+        inputs.push({ parsed: withQuality(file.parsed), candidate, ...metadata });
+        planned.push(file);
+      } catch (error) {
+        if (file === main) {
+          throw error;
+        }
+      }
+      onLoaded(file.path);
+    }
+    const plan = await createPlan(inputs, {
+      profile,
+      destinationRoot: settings.destinationRoot,
+      mode: settings.mode,
+      ...(loader.needsMetadata && { imageUrl: provider.imageUrl.bind(provider) }),
+      ...withSizeReader(this.deps),
+      madeByUs: (path) => madeByUs(this.deps.journal, path),
+    });
+    return planned.map((file, index) => {
+      const item = plan.items[index];
+      if (!item) {
+        throw new Error('the planner returned no item for one input');
+      }
+      return { file, item };
+    });
   }
 
   /** What the provider knows of a work (cached by the provider's own cache); `null` if nothing. */
@@ -443,8 +541,10 @@ export class Service {
   /** Sets a file aside, and with it the rest of its release. */
   ignore(entryId: string): Entry {
     const entry = this.pendingEntry(entryId);
+    const mates = this.deps.entries.releaseMates(entry);
+    this.requireFree(mates);
     this.deps.entries.resolve(entry.id, 'ignored');
-    for (const mate of this.deps.entries.releaseMates(entry)) {
+    for (const mate of mates) {
       this.deps.entries.resolve(mate.id, 'ignored');
     }
     return this.require(entryId);
@@ -498,7 +598,40 @@ export class Service {
    */
   enqueue(jobId: string, entryIds?: readonly string[]): Execution {
     this.requireDoneJob(jobId);
-    return this.deps.executions.create(jobId, entryIds);
+    const holding = this.deps.executions.pendingEntries().get(jobId);
+    // A transfer of the whole job holds every file of it.
+    if (holding === null) {
+      throw new ApiError(409, 'queue.entry-held');
+    }
+    // What a transfer already waiting or running holds, or a validation is rewriting the plan of,
+    // is left out: stacking it would do the same work twice, or run a plan that changes under it.
+    const free = (entry: Entry): boolean =>
+      !holding?.has(entry.id) && !this.deps.matches.locked(this.lockOf(entry));
+    if (entryIds === undefined) {
+      const executable = this.deps.entries.executable(jobId);
+      const kept = executable.filter(free);
+      if (kept.length === executable.length) {
+        return this.deps.executions.create(jobId);
+      }
+      if (kept.length === 0) {
+        throw new ApiError(409, 'queue.entry-held');
+      }
+      return this.deps.executions.create(
+        jobId,
+        kept.map(({ id }) => id),
+      );
+    }
+    if (entryIds.length === 0) {
+      throw new ApiError(409, 'library.nothing-to-do');
+    }
+    const kept = entryIds.filter((id) => {
+      const entry = this.deps.entries.get(id);
+      return entry === undefined || free(entry);
+    });
+    if (kept.length === 0) {
+      throw new ApiError(409, 'queue.entry-held');
+    }
+    return this.deps.executions.create(jobId, kept);
   }
 
   /**
@@ -874,7 +1007,25 @@ export class Service {
     if (entry.resolution === 'done' || entry.resolution === 'ignored') {
       throw new ApiError(409, 'queue.entry-resolved', { resolution: entry.resolution });
     }
+    if (this.deps.matches.locked(this.lockOf(entry))) {
+      throw new ApiError(409, 'queue.match-in-progress');
+    }
+    this.requireFree([entry]);
     return entry;
+  }
+
+  /**
+   * A transfer waiting or running holds its files: changing their plan, or setting them aside,
+   * would change what that transfer does under it.
+   */
+  private requireFree(entries: readonly Entry[]): void {
+    const held = this.deps.executions.pendingEntries();
+    for (const { id, jobId } of entries) {
+      const holding = held.get(jobId);
+      if (holding === null || holding?.has(id)) {
+        throw new ApiError(409, 'queue.entry-held');
+      }
+    }
   }
 
   private require(id: string): Entry {

@@ -730,13 +730,21 @@ export const settingsPatchSchema = {
 } as const;
 
 /** The entry as `match` returns it, with how many other episodes of its release followed. */
-export const matchResultSchema = {
-  ...entrySchema,
-  required: [...entrySchema.required, 'followers'],
+export const matchStateSchema = {
+  type: 'object',
+  required: ['status'],
   properties: {
-    ...entrySchema.properties,
-    /** Other episodes of the release that followed the choice. */
+    status: { type: 'string', enum: ['running', 'done', 'failed'] },
+    /** Files whose metadata is loaded, out of `total`: while `running`. */
+    done: { type: 'integer' },
+    total: { type: 'integer' },
+    current: { type: 'string', nullable: true },
+    /** Other episodes of the release that followed the choice: when `done`. */
     followers: { type: 'array', items: { type: 'string' } },
+    /** The file as the choice left it (`to-rename` or `conflict`): when `done`. */
+    entry: entrySchema,
+    /** Why it failed, as an error response carries it: when `failed`. */
+    error: errorSchema.properties.error,
   },
 } as const;
 

@@ -80,7 +80,15 @@ export interface Harness {
     url: string,
     payload?: object,
   ) => Promise<LightMyRequestResponse>;
+  /**
+   * Validates a file and waits for the work to end, answering as the route did when it was
+   * synchronous: the file with its `followers`. A request refused up front keeps its status.
+   */
+  readonly match: (entryId: string, body: object) => Promise<MatchAnswer>;
 }
+
+/** What `Harness.match` answers: the status and the body, read as a response's. */
+export type MatchAnswer = Pick<LightMyRequestResponse, 'statusCode' | 'json'>;
 
 /**
  * The two libraries organized in place that give every kind of work a destination. Both read the
@@ -120,18 +128,47 @@ export async function harness(
     ...options,
   });
   apps.push(app);
+  const request: Harness['request'] = (method, url, payload) =>
+    app.inject({
+      method,
+      url,
+      headers: { authorization: `Bearer ${apiKey}` },
+      ...(payload && { payload }),
+    });
   return {
     app,
     database,
     apiKey,
     destination,
-    request: (method, url, payload) =>
-      app.inject({
-        method,
-        url,
-        headers: { authorization: `Bearer ${apiKey}` },
-        ...(payload && { payload }),
-      }),
+    request,
+    match: async (entryId, body) => {
+      const started = await request('POST', `/api/entries/${entryId}/match`, body);
+      if (started.statusCode !== 202) {
+        return started;
+      }
+      for (;;) {
+        const state = await request('GET', `/api/entries/${entryId}/match`);
+        const answer = state.json<{
+          status: string;
+          entry?: object;
+          followers?: string[];
+          error?: object;
+        }>();
+        if (answer.status === 'done') {
+          return {
+            statusCode: 200,
+            json: (() => ({ ...answer.entry, followers: answer.followers })) as MatchAnswer['json'],
+          };
+        }
+        if (answer.status === 'failed') {
+          return {
+            statusCode: 500,
+            json: (() => ({ error: answer.error })) as MatchAnswer['json'],
+          };
+        }
+        await new Promise((resolve) => setTimeout(resolve, 5));
+      }
+    },
   };
 }
 

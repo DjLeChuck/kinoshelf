@@ -40,7 +40,7 @@ async function setup(options: { detailsFail?: boolean } = {}) {
 describe('metadata files in the validation queue', () => {
   it('plans the NFO of a file a human matched', async () => {
     const { h, destination, entryId } = await setup();
-    const matched = await h.request('POST', `/api/entries/${entryId}/match`, DUNE);
+    const matched = await h.match(entryId, DUNE);
     expect(matched.statusCode).toBe(200);
 
     // What the transfer will run, as stored on the file: nothing is written yet.
@@ -61,7 +61,7 @@ describe('metadata files in the validation queue', () => {
       join(destination, 'Dune (2021)', 'Dune (2021).mkv'),
     );
 
-    const matched = await h.request('POST', `/api/entries/${entryId}/match`, DUNE);
+    const matched = await h.match(entryId, DUNE);
     expect(matched.statusCode).toBeGreaterThanOrEqual(500);
     // Nothing was recorded: the file is still waiting for a decision.
     const waiting = (await h.request('GET', '/api/arrivals')).json<{ items: { id: string }[] }>();
@@ -70,7 +70,7 @@ describe('metadata files in the validation queue', () => {
 
   it('lists the NFO written for a file a human matched in its batch', async () => {
     const { h, destination, jobId, entryId } = await setup();
-    await h.request('POST', `/api/entries/${entryId}/match`, DUNE);
+    await h.match(entryId, DUNE);
     const nfo = join(destination, 'Dune (2021)', 'movie.nfo');
 
     const execution = (await h.request('POST', `/api/plans/${jobId}/execute`)).json<{

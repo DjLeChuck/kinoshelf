@@ -17,7 +17,7 @@ import {
   candidateSchema,
   arrivalsSchema,
   entrySchema,
-  matchResultSchema,
+  matchStateSchema,
   errorSchema,
   executionSchema,
   jobSchema,
@@ -365,10 +365,13 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
       schema: {
         summary: 'Validate a match',
         description:
-          'Plans the file with a candidate returned by `GET /api/search`; it overrides the score. ' +
-          'The file ends up `to-rename`, or in `conflict` if its target cannot be used. For ' +
+          'Starts planning the file with a candidate returned by `GET /api/search`; it overrides ' +
+          'the score. The answer is 202 at once: the work takes as long as the release is long, ' +
+          'and `GET /api/entries/{id}/match` tells where it is and how it ended (the file ' +
+          '`to-rename`, or in `conflict` if its target cannot be used). For ' +
           'a series, the other episodes of the same release follow the choice (the ones of ' +
-          'the same `cluster`); `followers` lists them. ' +
+          'the same `cluster`) and are planned together; `followers` lists them. 409 when the ' +
+          'release is already being validated or a transfer holds one of its files. ' +
           "`libraryId` sends the file to that library (of the work's kind) rather than to the " +
           "default one, for this file only. `screenSize` (`2160p`…) names the file's quality " +
           'when its name says none, and wins over what the name says; it is for this file only.',
@@ -381,20 +384,40 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
             screenSize: sizeSchema,
           },
         },
-        response: { 200: matchResultSchema, 401: errorSchema, 404: errorSchema, 409: errorSchema },
+        response: {
+          202: { type: 'object', required: ['id'], properties: { id: { type: 'string' } } },
+          401: errorSchema,
+          404: errorSchema,
+          409: errorSchema,
+        },
       },
     },
-    async (request) => {
-      const { entry, followers } = await service.match(
-        request.params.id,
-        toCandidate(request.body),
-        {
-          ...(request.body.libraryId !== undefined && { libraryId: request.body.libraryId }),
-          ...(request.body.screenSize !== undefined && { screenSize: request.body.screenSize }),
-        },
-      );
-      events.emit('arrivals');
-      return { ...(presentEntry(entry) as object), followers };
+    async (request, reply) => {
+      service.startMatch(request.params.id, toCandidate(request.body), {
+        ...(request.body.libraryId !== undefined && { libraryId: request.body.libraryId }),
+        ...(request.body.screenSize !== undefined && { screenSize: request.body.screenSize }),
+      });
+      return reply.code(202).send({ id: request.params.id });
+    },
+  );
+
+  api.get<{ Params: { id: string } }>(
+    '/api/entries/:id/match',
+    {
+      schema: {
+        summary: 'Where a validation is',
+        description:
+          'The last validation started for the file: `running` with how many files have their ' +
+          'metadata loaded, `done` with the file and its `followers`, or `failed` with the cause. ' +
+          "It lives in the server's memory: 404 once the server restarted (the file is simply " +
+          'still waiting). The `progress` event says when to read it again.',
+        params: idParams,
+        response: { 200: matchStateSchema, 401: errorSchema, 404: errorSchema },
+      },
+    },
+    (request) => {
+      const { state, entry } = service.matchOf(request.params.id);
+      return { ...state, ...(entry && { entry: presentEntry(entry) as object }) };
     },
   );
 
@@ -470,7 +493,9 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
           'The plan of a job is the set of its matched files not transferred yet; its id is the ' +
           "job's. The transfer is queued (202) and its batch shows in the history. Transfers run " +
           'one at a time: a request made while another ' +
-          'is queued or running waits its turn. A destination that exists is never ' +
+          'is queued or running waits its turn, but files another transfer already holds, or whose ' +
+          'release is being validated, are left out: 409 `queue.entry-held` when none is left. ' +
+          'A destination that exists is never ' +
           'overwritten, and hardlink never falls back to copy.',
         params: idParams,
         body: {

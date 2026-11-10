@@ -5633,11 +5633,135 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * Where a validation is
+         * @description The last validation started for the file: `running` with how many files have their metadata loaded, `done` with the file and its `followers`, or `failed` with the cause. It lives in the server's memory: 404 once the server restarted (the file is simply still waiting). The `progress` event says when to read it again.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {string} */
+                            status: "running" | "done" | "failed";
+                            done?: number;
+                            total?: number;
+                            current?: string | null;
+                            followers?: string[];
+                            entry?: {
+                                /** Format: uuid */
+                                id: string;
+                                /** Format: uuid */
+                                jobId: string;
+                                path: string;
+                                /** @enum {string} */
+                                classification: "compliant" | "to-rename" | "conflict" | "ambiguous" | "unrecognized";
+                                /** @enum {string|null} */
+                                resolution: "done" | "failed" | "ignored" | null;
+                                parsed: {
+                                    kind: string;
+                                    title?: string;
+                                    year?: number;
+                                    season?: number;
+                                    episodes: number[];
+                                };
+                                reason: string | null;
+                                candidates: {
+                                    /** @enum {string} */
+                                    kind: "movie" | "series";
+                                    id: {
+                                        /** @enum {string} */
+                                        provider: "tmdb";
+                                        id: number;
+                                    };
+                                    title: string;
+                                    originalTitle: string;
+                                    year?: number;
+                                    posterPath?: string;
+                                    score: number;
+                                }[];
+                                destination: string | null;
+                                conflicts: {
+                                    reason: string;
+                                    path: string;
+                                    detail: {
+                                        code: string;
+                                        params?: {
+                                            [key: string]: string | number;
+                                        };
+                                    } | null;
+                                }[];
+                                error: {
+                                    code: string;
+                                    params?: {
+                                        [key: string]: string | number;
+                                    };
+                                } | null;
+                                batchId: string | null;
+                                release: string | null;
+                                cluster: number;
+                                detached: boolean;
+                            };
+                            error?: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Default Response */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Default Response */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
         put?: never;
         /**
          * Validate a match
-         * @description Plans the file with a candidate returned by `GET /api/search`; it overrides the score. The file ends up `to-rename`, or in `conflict` if its target cannot be used. For a series, the other episodes of the same release follow the choice (the ones of the same `cluster`); `followers` lists them. `libraryId` sends the file to that library (of the work's kind) rather than to the default one, for this file only. `screenSize` (`2160p`…) names the file's quality when its name says none, and wins over what the name says; it is for this file only.
+         * @description Starts planning the file with a candidate returned by `GET /api/search`; it overrides the score. The answer is 202 at once: the work takes as long as the release is long, and `GET /api/entries/{id}/match` tells where it is and how it ended (the file `to-rename`, or in `conflict` if its target cannot be used). For a series, the other episodes of the same release follow the choice (the ones of the same `cluster`) and are planned together; `followers` lists them. 409 when the release is already being validated or a transfer holds one of its files. `libraryId` sends the file to that library (of the work's kind) rather than to the default one, for this file only. `screenSize` (`2160p`…) names the file's quality when its name says none, and wins over what the name says; it is for this file only.
          */
         post: {
             parameters: {
@@ -5673,65 +5797,13 @@ export interface paths {
             };
             responses: {
                 /** @description Default Response */
-                200: {
+                202: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
                         "application/json": {
-                            /** Format: uuid */
                             id: string;
-                            /** Format: uuid */
-                            jobId: string;
-                            path: string;
-                            /** @enum {string} */
-                            classification: "compliant" | "to-rename" | "conflict" | "ambiguous" | "unrecognized";
-                            /** @enum {string|null} */
-                            resolution: "done" | "failed" | "ignored" | null;
-                            parsed: {
-                                kind: string;
-                                title?: string;
-                                year?: number;
-                                season?: number;
-                                episodes: number[];
-                            };
-                            reason: string | null;
-                            candidates: {
-                                /** @enum {string} */
-                                kind: "movie" | "series";
-                                id: {
-                                    /** @enum {string} */
-                                    provider: "tmdb";
-                                    id: number;
-                                };
-                                title: string;
-                                originalTitle: string;
-                                year?: number;
-                                posterPath?: string;
-                                score: number;
-                            }[];
-                            destination: string | null;
-                            conflicts: {
-                                reason: string;
-                                path: string;
-                                detail: {
-                                    code: string;
-                                    params?: {
-                                        [key: string]: string | number;
-                                    };
-                                } | null;
-                            }[];
-                            error: {
-                                code: string;
-                                params?: {
-                                    [key: string]: string | number;
-                                };
-                            } | null;
-                            batchId: string | null;
-                            release: string | null;
-                            cluster: number;
-                            detached: boolean;
-                            followers: string[];
                         };
                     };
                 };
@@ -6069,7 +6141,7 @@ export interface paths {
         put?: never;
         /**
          * Execute the plan of a job
-         * @description The plan of a job is the set of its matched files not transferred yet; its id is the job's. The transfer is queued (202) and its batch shows in the history. Transfers run one at a time: a request made while another is queued or running waits its turn. A destination that exists is never overwritten, and hardlink never falls back to copy.
+         * @description The plan of a job is the set of its matched files not transferred yet; its id is the job's. The transfer is queued (202) and its batch shows in the history. Transfers run one at a time: a request made while another is queued or running waits its turn, but files another transfer already holds, or whose release is being validated, are left out: 409 `queue.entry-held` when none is left. A destination that exists is never overwritten, and hardlink never falls back to copy.
          */
         post: {
             parameters: {

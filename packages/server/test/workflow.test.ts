@@ -133,11 +133,7 @@ describe('validation queue', () => {
 
     // The object returned by the search is posted back as is.
     const candidate = found.json<unknown[]>()[0];
-    const matched = await h.request(
-      'POST',
-      `/api/entries/${mystery.id}/match`,
-      candidate as object,
-    );
+    const matched = await h.match(mystery.id, candidate as object);
     expect(matched.statusCode).toBe(200);
     expect(matched.json<EntryBody>()).toMatchObject({
       classification: 'to-rename',
@@ -173,9 +169,7 @@ describe('validation queue', () => {
     const { mystery } = await analyzed(h);
     await put(duneTarget(h), 'already here');
 
-    const matched = (
-      await h.request('POST', `/api/entries/${mystery.id}/match`, DUNE)
-    ).json<EntryBody>();
+    const matched = (await h.match(mystery.id, DUNE)).json<EntryBody>();
     expect(matched.classification).toBe('conflict');
     expect(matched.conflicts.map((c) => c.reason)).toContain('destination-exists');
     expect((await queue(h)).map((e) => e.id)).toContain(mystery.id);
@@ -188,7 +182,7 @@ describe('validation queue', () => {
     expect(ignored.json<EntryBody>().resolution).toBe('ignored');
     expect((await queue(h)).map((e) => e.id)).toEqual([dune.id]);
 
-    const again = await h.request('POST', `/api/entries/${mystery.id}/match`, DUNE);
+    const again = await h.match(mystery.id, DUNE);
     expect(again.statusCode).toBe(409);
     expect(again.json()).toMatchObject({ error: { code: 'queue.entry-resolved' } });
   });
@@ -196,10 +190,8 @@ describe('validation queue', () => {
   it('refuses an unknown entry and a malformed candidate', async () => {
     const h = await harness();
     const { mystery } = await analyzed(h);
-    expect((await h.request('POST', '/api/entries/nope/match', DUNE)).statusCode).toBe(404);
-    expect(
-      (await h.request('POST', `/api/entries/${mystery.id}/match`, { title: 'Dune' })).statusCode,
-    ).toBe(400);
+    expect((await h.match('nope', DUNE)).statusCode).toBe(404);
+    expect((await h.match(mystery.id, { title: 'Dune' })).statusCode).toBe(400);
   });
 });
 
@@ -492,23 +484,43 @@ describe('a queue that is busy', () => {
     return { h, release, destination };
   }
 
-  it('queues a second transfer of the same job behind the first rather than refusing it', async () => {
+  it('queues a transfer behind another of the job, but refuses to stack the same files twice', async () => {
     const { h, release } = await busyHarness();
     const { jobId } = await analyzed(h);
     await h.request('POST', '/api/jobs', { path: '/blocked' }); // the runner now waits on it
 
     const first = await h.request('POST', `/api/plans/${jobId}/execute`);
-    const second = await h.request('POST', `/api/plans/${jobId}/execute`);
     expect(first.statusCode).toBe(202);
-    expect(second.statusCode).toBe(202);
-    expect(second.json<{ id: string }>().id).not.toBe(first.json<{ id: string }>().id);
+    // The first holds the whole job: a second one would do the same work again.
+    const second = await h.request('POST', `/api/plans/${jobId}/execute`);
+    expect(second.statusCode).toBe(409);
+    expect(second.json()).toEqual({ error: { code: 'queue.entry-held' } });
+    const some = await h.request('POST', `/api/plans/${jobId}/execute`, { entries: ['x'] });
+    expect(some.statusCode).toBe(409);
 
     release();
     await h.app.jobs.idle();
-    const [a, b] = [first, second].map((r) => executionOf(h, r.json<{ id: string }>().id));
-    // The first took the file; the second found nothing left to do, so nothing was copied twice.
-    expect(a).toMatchObject({ status: 'done', summary: { done: 1, failed: 0 } });
-    expect(b).toMatchObject({ status: 'done', summary: { done: 0, failed: 0 } });
+    expect(executionOf(h, first.json<{ id: string }>().id)).toMatchObject({
+      status: 'done',
+      summary: { done: 1, failed: 0 },
+    });
+  });
+
+  it('leaves out of a transfer the files another one holds, and refuses when none is left', async () => {
+    const { h, release } = await busyHarness();
+    const { jobId, dune } = await analyzed(h);
+    await h.request('POST', '/api/jobs', { path: '/blocked' });
+    const one = dune.id;
+
+    const first = await h.request('POST', `/api/plans/${jobId}/execute`, { entries: [one] });
+    expect(first.statusCode).toBe(202);
+    const again = await h.request('POST', `/api/plans/${jobId}/execute`, { entries: [one] });
+    expect(again.statusCode).toBe(409);
+    expect(
+      (await h.request('POST', `/api/plans/${jobId}/execute`, { entries: [] })).statusCode,
+    ).toBe(409);
+    release();
+    await h.app.jobs.idle();
   });
 
   it('refuses a transfer of a job that is still being analyzed', async () => {

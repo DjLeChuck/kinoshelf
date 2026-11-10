@@ -418,7 +418,7 @@ describe('an episode that arrives', () => {
     // An episode can only go to a library of series.
     expect(waiting[0]).toMatchObject({ kind: 'series' });
     expect(waiting[0]?.destinationOptions.map((option) => option.id)).toEqual(['shows', 'anime']);
-    const matched = await h.request('POST', `/api/entries/${waiting[0]?.id ?? ''}/match`, {
+    const matched = await h.match(waiting[0]?.id ?? '', {
       kind: 'series',
       id: SHOW,
       title: 'Severance',

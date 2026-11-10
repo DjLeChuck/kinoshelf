@@ -72,11 +72,7 @@ describe('validating a release', () => {
     const h = await harness();
     const { named } = await scan(h);
 
-    const response = await h.request(
-      'POST',
-      `/api/entries/${(await named('Zorp.S01E01.mkv')).id}/match`,
-      ZORP,
-    );
+    const response = await h.match((await named('Zorp.S01E01.mkv')).id, ZORP);
     expect(response.json<{ followers: string[] }>().followers).toHaveLength(2);
 
     expect((await named('Zorp.S01E02.mkv')).classification).toBe('to-rename');
@@ -105,11 +101,11 @@ describe('validating a release', () => {
   it('validates the other show of the folder as a group of its own', async () => {
     const h = await harness();
     const { named } = await scan(h);
-    const response = await h.request(
-      'POST',
-      `/api/entries/${(await named('Quux.S01E01.mkv')).id}/match`,
-      { ...ZORP, id: { provider: 'tmdb', id: 78 }, title: 'Quux' },
-    );
+    const response = await h.match((await named('Quux.S01E01.mkv')).id, {
+      ...ZORP,
+      id: { provider: 'tmdb', id: 78 },
+      title: 'Quux',
+    });
     expect(response.json<{ followers: string[] }>().followers).toHaveLength(1);
     expect((await named('Quux.S01E02.mkv')).classification).toBe('to-rename');
     expect((await named('Zorp.S01E01.mkv')).classification).toBe('unrecognized');

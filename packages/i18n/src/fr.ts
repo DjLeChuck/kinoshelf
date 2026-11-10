@@ -255,6 +255,10 @@ export const fr: Record<keyof typeof en, string> = {
   'error.library.source-taken': 'La bibliothèque « {name} » lit déjà ce dossier.',
   'error.library.wrong-type': 'La bibliothèque « {name} » ne contient pas ce type d’œuvre.',
   'error.queue.entry-not-found': 'Ce fichier n’est plus dans la file.',
+  'error.queue.entry-held':
+    'Un transfert de ce fichier est en attente ou en cours : attendez qu’il se termine.',
+  'error.queue.match-in-progress': 'La validation de ce fichier est déjà en cours.',
+  'error.queue.match-unknown': 'Aucune validation de ce fichier n’est connue.',
   'error.queue.entry-resolved': 'Ce fichier a déjà été traité ({resolution}).',
   'error.request.invalid': 'La requête a été refusée : {detail}',
   'error.request.not-found': 'Rien à cette adresse.',

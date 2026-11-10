@@ -158,7 +158,7 @@ describe('choosing where an arrival goes', () => {
     const byDefault = await h.request('POST', `/api/entries/${id}/preview`, DUNE);
     expect(byDefault.json()).toMatchObject({ destination: DUNE_NAME(roots.films) });
 
-    const matched = await h.request('POST', `/api/entries/${id}/match`, {
+    const matched = await h.match(id, {
       ...DUNE,
       libraryId: 'films-4k',
     });
@@ -183,7 +183,7 @@ describe('choosing where an arrival goes', () => {
     await scanDownloads(h);
     const id = (await arrivals(h)).items[0]?.id ?? '';
 
-    const wrong = await h.request('POST', `/api/entries/${id}/match`, {
+    const wrong = await h.match(id, {
       ...DUNE,
       libraryId: 'series',
     });
@@ -191,7 +191,7 @@ describe('choosing where an arrival goes', () => {
     expect(wrong.json()).toEqual({
       error: { code: 'library.wrong-type', params: { name: 'Series' } },
     });
-    const missing = await h.request('POST', `/api/entries/${id}/match`, {
+    const missing = await h.match(id, {
       ...DUNE,
       libraryId: 'ghost',
     });
@@ -207,7 +207,7 @@ describe('choosing where a file goes', () => {
     await put(join(downloads, 'Mystery.Home.Video.mkv'));
     await scanDownloads(h);
     const id = (await arrivals(h)).items[0]?.id ?? '';
-    const matched = await h.request('POST', `/api/entries/${id}/match`, {
+    const matched = await h.match(id, {
       ...DUNE,
       libraryId: 'films-4k',
       remember: false,

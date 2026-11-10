@@ -7,6 +7,7 @@ import Fastify, { type FastifyInstance } from 'fastify';
 import { SqliteHttpCache } from '@kinoshelf/provider-tmdb';
 import { ApiError } from './api-error.js';
 import { hasApiKey, isValidApiKey } from './auth.js';
+import { MatchTracker } from './matches.js';
 import { ProgressTracker } from './progress.js';
 import { sharesFolder } from './system-paths.js';
 import { EntryStore } from './entries.js';
@@ -161,8 +162,12 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
       seriesFiles.touch(libraryId);
     },
   });
+  const matches = new MatchTracker((ended) => {
+    events.emit(...(ended ? (['progress', 'arrivals'] as const) : (['progress'] as const)));
+  });
   const service = new Service({
     ...options,
+    matches,
     jobs,
     entries,
     executions,
