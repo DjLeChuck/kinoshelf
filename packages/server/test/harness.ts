@@ -55,12 +55,15 @@ export const fakeProvider: MetadataProvider = {
 /** Reads no file: a codec chosen by the name, so a test can tell what was probed. */
 export const fakeProber: Prober = async (path) => {
   const info = await stat(path);
+  const picture = /probe(\d{3,4})/.exec(path)?.[1];
   return {
     video: path.includes('hevc') ? 'hevc' : 'h264',
     audio: 'aac 2.0',
     hdr: path.includes('hdr') ? 'hdr10' : null,
     audioLanguages: ['eng', 'fre'],
     subtitleLanguages: ['fre'],
+    // `probe1080` in a name stands for a picture the name itself does not announce.
+    picture: picture === undefined ? null : `${picture}p`,
     size: info.size,
     mtime: Math.floor(info.mtimeMs),
   };

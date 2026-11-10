@@ -317,6 +317,7 @@ describe('comparing the files with the provider', () => {
     entryId: null,
     scanJobId: null,
     scannedAt: '2026-01-01T00:00:00Z',
+    picture: null,
   });
 
   it('flags an episode a file claims and the provider does not know', () => {
@@ -348,6 +349,21 @@ describe('comparing the files with the provider', () => {
       [2, 'missing', []],
     ]);
     expect(season?.missing).toBe(1);
+  });
+
+  it('tells two versions apart by the picture the probe read when their names do not', () => {
+    const small = { ...row(1, 1), path: '/a.mkv', picture: '720p' };
+    const large = { ...row(1, 1), path: '/b.mkv', picture: '1080p' };
+    const [season] = compare(
+      [small, large, { ...row(1, 2), path: '/c.mkv', picture: '1080p' }],
+      [{ season: 1, episodes: [episode(1, 1, '2020-01-01'), episode(1, 2, '2020-01-08')] }],
+      [],
+      '2026-01-01',
+    );
+    expect(season?.versions).toEqual([
+      { resolution: '1080p', covered: 2, total: 2 },
+      { resolution: '720p', covered: 1, total: 2 },
+    ]);
   });
 
   it('reports no specials season when the library holds none of them', () => {

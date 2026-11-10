@@ -36,7 +36,7 @@ import {
   ITEM_FILTERS,
   itemId,
   profileWrites,
-  resolutionOf,
+  resolutionOfItem,
   SHOW_FILTERS,
   type ItemFilter,
   type ItemState,
@@ -193,7 +193,7 @@ const presentItem = (item: LibraryItem, release?: ReleaseOf): unknown => ({
   season: item.season,
   episode: item.episode,
   episodeEnd: item.episodeEnd,
-  resolution: resolutionOf(item.path),
+  resolution: resolutionOfItem(item),
   nfo: item.nfo,
   poster: item.poster,
   fanart: item.fanart,
@@ -222,7 +222,7 @@ const presentVersion = (item: LibraryItem, probe?: Probe | null): unknown => ({
   id: itemId(item.path),
   path: item.path,
   state: item.state,
-  resolution: resolutionOf(item.path),
+  resolution: resolutionOfItem(item),
   nfo: item.nfo,
   entryId: item.entryId,
   file: presentFile(probe),
@@ -256,7 +256,7 @@ const presentWork = (
     fanart: allThere(work.map((item) => item.fanart)),
     logo: allThere(work.map((item) => item.logo)),
     thumb: allThere(work.map((item) => item.thumb)),
-    versions: largestFirst(work, (item) => resolutionOf(item.path)).map((item) =>
+    versions: largestFirst(work, resolutionOfItem).map((item) =>
       presentVersion(item, probeOf(item.path)),
     ),
   };
@@ -798,7 +798,7 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
             items
               .inFolder(library.id, dirname(item.path))
               .filter((row) => row.kind === 'movie' && row.tmdbId === item.tmdbId),
-            (row) => resolutionOf(row.path),
+            resolutionOfItem,
           )
         : [item];
       const [details, ...probed] = await Promise.all([

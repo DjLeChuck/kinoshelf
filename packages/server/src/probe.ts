@@ -19,6 +19,8 @@ export interface Probe {
   readonly audioLanguages: readonly string[];
   /** Same for the subtitle tracks. */
   readonly subtitleLanguages: readonly string[];
+  /** The picture size read from the frame (`1080p`), `null` when the stream gives none. */
+  readonly picture: string | null;
   readonly size: number;
   /** Modification time, in whole milliseconds. */
   readonly mtime: number;
@@ -44,6 +46,8 @@ interface Stream {
   codec_type?: string;
   codec_name?: string;
   channels?: number;
+  width?: number;
+  height?: number;
   color_transfer?: string;
   tags?: { language?: string };
   side_data_list?: { side_data_type?: string }[];
@@ -116,6 +120,10 @@ export function summarize(output: string, file: { size: number; mtime: number })
     hdr: hdrOf(video),
     audioLanguages: languagesOf(streams, 'audio'),
     subtitleLanguages: languagesOf(streams, 'subtitle'),
+    picture:
+      video?.width !== undefined && video.height !== undefined && video.width > 0
+        ? pictureSize(video.width, video.height)
+        : null,
     ...file,
   };
 }
@@ -339,6 +347,7 @@ export class ProbeQueue {
             hdr: null,
             audioLanguages: [],
             subtitleLanguages: [],
+            picture: null,
             size: info.size,
             mtime: Math.floor(info.mtimeMs),
           };

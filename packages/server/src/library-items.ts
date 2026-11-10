@@ -66,6 +66,8 @@ export interface LibraryItem {
   readonly entryId: string | null;
   readonly scanJobId: string | null;
   readonly scannedAt: string;
+  /** The picture size the probe read, the fallback when the name says none; `null` until probed. */
+  readonly picture: string | null;
 }
 
 interface Row {
@@ -87,13 +89,17 @@ interface Row {
   entry_id: string | null;
   scan_job_id: string | null;
   scanned_at: string;
+  picture: string | null;
 }
 
-const COLUMNS =
+const ROW_COLUMNS =
   'library_id, path, kind, tmdb_id, title, year, season, episode, episode_end, state, nfo, poster, fanart, logo, thumb, entry_id, scan_job_id, scanned_at';
 
 /** The columns a row is written with: `item_id` is derived from the path, never read back. */
-const WRITTEN_COLUMNS = `${COLUMNS}, item_id`;
+const WRITTEN_COLUMNS = `${ROW_COLUMNS}, item_id`;
+
+/** Read with the picture size, which only the probe writes: a patch of a row never touches it. */
+const COLUMNS = `${ROW_COLUMNS}, picture`;
 
 interface ProbeRow {
   path: string;
@@ -102,15 +108,16 @@ interface ProbeRow {
   hdr: string | null;
   audio_languages: string | null;
   subtitle_languages: string | null;
+  picture: string | null;
   size: number | null;
   mtime: number | null;
   probed_at: string | null;
 }
 
 const PROBE_COLUMNS =
-  'path, video, audio, hdr, audio_languages, subtitle_languages, size, mtime, probed_at';
+  'path, video, audio, hdr, audio_languages, subtitle_languages, picture, size, mtime, probed_at';
 const PROBE_ASSIGNMENTS =
-  'video = ?, audio = ?, hdr = ?, audio_languages = ?, subtitle_languages = ?, size = ?, mtime = ?, probed_at = ?';
+  'video = ?, audio = ?, hdr = ?, audio_languages = ?, subtitle_languages = ?, picture = ?, size = ?, mtime = ?, probed_at = ?';
 
 const languages = (json: string | null): string[] =>
   json === null ? [] : (JSON.parse(json) as string[]);
@@ -160,6 +167,7 @@ const toItem = (row: Row): LibraryItem => ({
   entryId: row.entry_id,
   scanJobId: row.scan_job_id,
   scannedAt: row.scanned_at,
+  picture: row.picture,
 });
 
 /** What a library holds, in the database: a snapshot, not a second source of truth for the disk. */
@@ -225,6 +233,7 @@ export class LibraryItemStore {
             probe.hdr,
             probe.audio_languages,
             probe.subtitle_languages,
+            probe.picture,
             probe.size,
             probe.mtime,
             probe.probed_at,
@@ -261,6 +270,7 @@ export class LibraryItemStore {
         hdr: row.hdr as Hdr | null,
         audioLanguages: languages(row.audio_languages),
         subtitleLanguages: languages(row.subtitle_languages),
+        picture: row.picture,
         size: row.size ?? 0,
         mtime: row.mtime ?? 0,
         probedAt: row.probed_at,
@@ -292,6 +302,7 @@ export class LibraryItemStore {
         probe.hdr,
         JSON.stringify(probe.audioLanguages),
         JSON.stringify(probe.subtitleLanguages),
+        probe.picture,
         probe.size,
         probe.mtime,
         new Date().toISOString(),
@@ -787,7 +798,7 @@ export const versionRowOf = (item: LibraryItem): VersionRow => ({
   season: item.season,
   episode: item.episode,
   episodeEnd: item.episodeEnd,
-  resolution: resolutionOf(item.path),
+  resolution: resolutionOfItem(item),
 });
 
 /** The episodes with at least one file whose NFO is missing: a range is one file, so one episode. */
@@ -896,6 +907,10 @@ export function resolutionOf(path: string): string | null {
   return found === undefined ? null : found === '4k' || found === 'uhd' ? '2160p' : found;
 }
 
+/** The picture size of a file: its name's when it gives one, else what the probe read of it. */
+export const resolutionOfItem = (item: Pick<LibraryItem, 'path' | 'picture'>): string | null =>
+  resolutionOf(item.path) ?? item.picture;
+
 /** Stable for a path, short enough for a URL; the page asks for one item by it. */
 export const itemId = (path: string): string =>
   createHash('sha1').update(path).digest('hex').slice(0, 16);
@@ -928,6 +943,8 @@ function itemOf(
     entryId: entry.id,
     scanJobId: entry.jobId,
     scannedAt,
+    // Only the probe writes it (the row keeps its own when patched).
+    picture: null,
   };
 }
 

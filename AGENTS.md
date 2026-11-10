@@ -141,8 +141,7 @@ nowhere: a custom profile file is to be discussed again.
   The page of a movie or an episode has "Add the version to the name": a dialog whose size menu starts
   from the name's, or "Automatic", and can be changed (`POST /api/libraries/{id}/execute` with
   `version: true` and `screenSize`, which wins over the name, which wins over the file). Not done:
-  a batch action in the web, and the size of a file already in place in the library list (it is read
-  from the name).
+  a batch action in the web.
 - `ParsedMedia.knownIds` (ids found in names) is a hint, not a truth: a candidate whose id matches
   is boosted only if its type, title, season/episode and year agree. If the id designates a
   candidate yet another one scores higher (`Dune (2021) {tmdb-841}`: 841 is the 1984 film), the
@@ -267,7 +266,8 @@ other file is an entry of its own, and the episodes of a series are grouped by `
   (`2160p 7/8`), a version absent from a season counts 0 there. A missing episode (no file at all)
   lowers nothing: it is "Missing episodes". A file whose name gives no size is a version only if it
   shares an episode with another file, else it is in no version and not in the total.
-- The **resolution is read from the name** (`resolutionOf`, `library-items.ts`), never stored (no migration). The probe
+- The **resolution is read from the name** (`resolutionOf`, `library-items.ts`), else from the picture the
+  probe read (`picture`, server migration 028; `resolutionOfItem`), so a list never reads the disk. The probe
   (`hdr`, `audioLanguages`, `subtitleLanguages`, server migration 025) fills the details of each
   version; the list reads them from the snapshot (`file`: `null` until probed) and never probes.
   Languages are ISO 639-2 as the file tags them, shown short (`fre` gives `FR`), an unknown code as is.

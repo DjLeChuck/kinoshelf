@@ -313,6 +313,24 @@ describe('GET /api/libraries/:id/items', () => {
     expect(found[0]?.versions.map((version) => version.resolution)).toEqual(['1080p', null]);
   });
 
+  it('falls back to the picture the probe read when the name gives none', async () => {
+    const { h, root, alien } = await scanned();
+    await put(join(root, 'Alien.1979.1080p.mkv'));
+    await h.request('POST', '/api/libraries/films/scan');
+    await h.app.jobs.idle();
+    await h.app.probes.idle();
+    const before = (await list(h, '?q=1080p')).items;
+    expect(before[0]?.versions.map((version) => version.resolution)).toEqual(['1080p', null]);
+    // Only the probe knows the unnamed file's size; the name still wins where it speaks.
+    const probe = new LibraryItemStore(h.database).probeOf('films', alien);
+    if (!probe) {
+      throw new Error('the file was not probed');
+    }
+    new LibraryItemStore(h.database).setProbe('films', alien, { ...probe, picture: '720p' });
+    const after = (await list(h, '?q=1080p')).items;
+    expect(after[0]?.versions.map((version) => version.resolution)).toEqual(['1080p', '720p']);
+  });
+
   it('says a library was scanned even when it held nothing, and not before', async () => {
     const root = await makeDir();
     const h = await harness({
@@ -609,6 +627,7 @@ describe('the lookups of the item store', () => {
     entryId: null,
     scanJobId: null,
     scannedAt: '2026-11-02T00:00:00.000Z',
+    picture: null,
     ...extra,
   });
 
@@ -734,6 +753,7 @@ describe('the snapshot after an undo', () => {
     entryId: null,
     scanJobId: null,
     scannedAt: '2026-11-02T00:00:00.000Z',
+    picture: null,
     ...extra,
   });
   const journal = (extra: Partial<JournalEntry> & Pick<JournalEntry, 'destination'>) =>

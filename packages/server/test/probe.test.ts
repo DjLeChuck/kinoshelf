@@ -36,6 +36,7 @@ describe('summarize', () => {
       hdr: null,
       audioLanguages: [],
       subtitleLanguages: [],
+      picture: null,
       size: 10,
       mtime: 20,
     });
@@ -160,6 +161,17 @@ describe('sizeFromStreams', () => {
     );
   });
 
+  it('stores the picture size of the first video stream', () => {
+    const out = JSON.stringify({
+      streams: [{ codec_type: 'video', width: 1920, height: 800 }, { codec_type: 'audio' }],
+    });
+    expect(summarize(out, { size: 1, mtime: 1 }).picture).toBe('1080p');
+    expect(
+      summarize(JSON.stringify({ streams: [{ codec_type: 'audio' }] }), { size: 1, mtime: 1 })
+        .picture,
+    ).toBeNull();
+  });
+
   it('reads the video stream, not the audio one', () => {
     expect(
       sizeFromStreams(
@@ -229,6 +241,8 @@ describe('ffprobe', () => {
       hdr: null,
       audioLanguages: ['fre'],
       subtitleLanguages: [],
+      // The frame is 64x64: its width is what pictureSize reads, as a release name would call it.
+      picture: '480p',
     });
     expect(probe.size).toBeGreaterThan(0);
   });
@@ -267,6 +281,7 @@ const EMPTY: Probe = {
   hdr: null,
   audioLanguages: [],
   subtitleLanguages: [],
+  picture: null,
   size: 0,
   mtime: 0,
 };
@@ -290,6 +305,7 @@ const item = (path: string): LibraryItem => ({
   entryId: null,
   scanJobId: null,
   scannedAt: 'now',
+  picture: null,
 });
 
 function queue(options: { prober?: Prober; busy?: () => boolean } = {}) {
@@ -304,6 +320,7 @@ function queue(options: { prober?: Prober; busy?: () => boolean } = {}) {
         hdr: null,
         audioLanguages: [],
         subtitleLanguages: [],
+        picture: null,
         size: 1,
         mtime: 1,
       }));
@@ -453,6 +470,7 @@ describe('the probe queue', () => {
           hdr: 'dolby-vision',
           audioLanguages: ['fre', 'eng'],
           subtitleLanguages: ['fre'],
+          picture: '1080p',
           size: 1,
           mtime: 1,
         }),
@@ -465,6 +483,7 @@ describe('the probe queue', () => {
       hdr: 'dolby-vision',
       audioLanguages: ['fre', 'eng'],
       subtitleLanguages: ['fre'],
+      picture: '1080p',
     });
   });
 

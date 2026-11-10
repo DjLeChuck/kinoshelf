@@ -357,6 +357,15 @@ export const SERVER_MIGRATIONS: readonly { readonly name: string; readonly sql: 
     name: 'server:027-episode-thumb',
     sql: 'ALTER TABLE library_items ADD COLUMN thumb INTEGER;',
   },
+  {
+    // The picture size ffprobe read (`1080p`, NULL when unknown): a list falls back to it when the
+    // file's name says none. Rows already probed lack it, so they are probed again in the background.
+    name: 'server:028-probe-picture',
+    sql: `
+      ALTER TABLE library_items ADD COLUMN picture TEXT;
+      UPDATE library_items SET probed_at = NULL;
+    `,
+  },
 ];
 
 /** Opens the single SQLite file of the config directory, shared with the CLI and the cache. */

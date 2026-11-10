@@ -376,7 +376,7 @@ export const fr: Record<keyof typeof en, string> = {
   'web.library.episode.no-file': 'Aucun fichier ne tient cette version de l’épisode.',
   'web.library.version.show': 'Afficher les versions de {title}',
   'web.library.version.hide': 'Masquer les versions de {title}',
-  'web.library.version.unknown': 'taille inconnue',
+  'web.library.version.unknown': 'résolution inconnue',
   'web.library.version.subtitles': 'ST {languages}',
   'web.library.versions.summary': '{count, plural, one {# version} other {# versions}} · {size}',
   'web.library.compare.title': 'Comparer les versions',
