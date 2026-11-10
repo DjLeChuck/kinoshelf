@@ -80,7 +80,7 @@ export function compare(
   const numbers = new Set([...seasons.map((s) => s.season), ...held.map((i) => i.season ?? 0)]);
   return [...numbers]
     .sort((a, b) => a - b)
-    .map((season): SeasonReport => {
+    .flatMap((season): SeasonReport[] => {
       const known = seasons.find((candidate) => candidate.season === season);
       const files = held.filter((item) => item.season === season);
       const covering = (episode: number): LibraryItem[] =>
@@ -120,16 +120,20 @@ export function compare(
         nfo: nfoTally(versions),
       }));
       const episodes = [...shown, ...unknown].sort((a, b) => a.episode - b.episode);
+      // TMDB lists a specials season for most shows; an empty one is noise, not information.
+      if (season === 0 && episodes.length === 0) return [];
       const summary = summaries.find((candidate) => candidate.season === season);
-      return {
-        season,
-        name: summary?.name ?? null,
-        posterPath: summary?.posterPath ?? null,
-        episodes,
-        versions: coverageOf(files.map(versionRowOf), showVersions),
-        nfo: nfoTally(files),
-        missing: episodes.filter(({ state }) => state === 'missing').length,
-      };
+      return [
+        {
+          season,
+          name: summary?.name ?? null,
+          posterPath: summary?.posterPath ?? null,
+          episodes,
+          versions: coverageOf(files.map(versionRowOf), showVersions),
+          nfo: nfoTally(files),
+          missing: episodes.filter(({ state }) => state === 'missing').length,
+        },
+      ];
     });
 }
 

@@ -350,6 +350,17 @@ describe('comparing the files with the provider', () => {
     expect(season?.missing).toBe(1);
   });
 
+  it('reports no specials season when the library holds none of them', () => {
+    const seasons = [
+      { season: 0, episodes: [episode(0, 1, '2020-01-01')] },
+      { season: 1, episodes: [episode(1, 1, '2020-01-01')] },
+    ];
+    const without = compare([row(1, 1)], seasons, [], '2026-01-01');
+    expect(without.map((s) => s.season)).toEqual([1]);
+    const withOne = compare([row(1, 1), row(0, 1)], seasons, [], '2026-01-01');
+    expect(withOne.map((s) => s.season)).toEqual([0, 1]);
+  });
+
   it('is the same signature for the same episodes in any order, another when one changes', () => {
     expect(signatureOf([row(1, 1), row(1, 2)])).toBe(signatureOf([row(1, 2), row(1, 1)]));
     expect(signatureOf([row(1, 1), row(1, 2)])).not.toBe(signatureOf([row(1, 1), row(1, 2, 3)]));
