@@ -6,7 +6,7 @@
   import { formatBytes } from '@kinoshelf/i18n';
   import { locale, t } from '../lib/i18n.svelte.js';
   import { languageName, totalSize, HDR_LABEL } from '../lib/versions.js';
-  import type { Arrival } from '../lib/arrivals.js';
+  import type { Arrival, Settled } from '../lib/arrivals.js';
   import {
     canNameVersion,
     canRun,
@@ -41,7 +41,7 @@
     /** A transfer is going on: renaming again what it may hold would stack the same work. */
     busy?: boolean;
     /** The file was settled (transferred or set aside): what to tell the user. */
-    ondone: (message: string, settled?: { readonly id: string; readonly key: string }) => void;
+    ondone: (message: string, settled?: Settled) => void;
   } = $props();
 
   // The parent keys this panel on the item, so what is read here once is right for its life.

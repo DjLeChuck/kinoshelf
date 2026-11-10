@@ -3,6 +3,7 @@
   import { onDestroy, untrack } from 'svelte';
   import { refetchOn } from '../lib/events.svelte.js';
   import { locale, t } from '../lib/i18n.svelte.js';
+  import type { Settled } from '../lib/arrivals.js';
   import { formatDate } from '../lib/history.js';
   import { libraryApi, type Library } from '../lib/libraries.js';
   import { baseName } from '../lib/paths.js';
@@ -494,10 +495,7 @@
                 source={library.source}
                 item={open}
                 {busy}
-                ondone={(
-                  message: string,
-                  settled?: { readonly id: string; readonly key: string },
-                ) => {
+                ondone={(message: string, settled?: Settled) => {
                   notice = message;
                   // Another row may be open by now: close the panel only if it is the one validated.
                   if (settled === undefined || openEntryId() === settled.id) {

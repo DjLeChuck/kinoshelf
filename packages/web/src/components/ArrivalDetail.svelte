@@ -17,6 +17,7 @@
     type Candidate,
     type ConflictBody,
     type Preview,
+    type Settled,
   } from '../lib/arrivals.js';
   import { PICTURE_SIZES, settleKey } from '../lib/library-items.js';
   import type { MessageKey } from '@kinoshelf/i18n';
@@ -38,7 +39,7 @@
      * was (its id and the key of its group), read when the click happened. The panel may show
      * another row by then, and the list may no longer hold this one: validating changes its state.
      */
-    ondone: (message: string, settled: { readonly id: string; readonly key: string }) => void;
+    ondone: (message: string, settled: Settled) => void;
   } = $props();
 
   // The parent keys this component on the file, so what is read here once is right for its life.
@@ -168,7 +169,7 @@
       return;
     }
     // Read now: the await below outlives a change of row, and these must stay this file's.
-    const settled = { id: entry.id, key: settleKey(entry) };
+    const settled: Settled = { id: entry.id, key: settleKey(entry), ignored: false };
     const id = settled.id;
     const label = name;
     busy = true;
@@ -223,16 +224,20 @@
   }
 
   async function ignore(): Promise<void> {
-    const settled = { id: entry.id, key: settleKey(entry) };
+    const settled: Settled = { id: entry.id, key: settleKey(entry), ignored: true };
     const id = settled.id;
     const label = name;
     busy = true;
     failure = undefined;
+    // Marked in the list too, as a validation is: the row must not look free meanwhile.
+    validations.start(id);
     try {
       await api.post(`/api/entries/${id}/ignore`);
+      validations.clear(id);
       ondone(t('web.queue.ignored', { name: label }), settled);
     } catch (error) {
       failure = error;
+      validations.fail(id, error);
     } finally {
       busy = false;
     }

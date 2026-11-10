@@ -5,6 +5,7 @@
   import { messageOf } from '../lib/errors.js';
   import { refetchOn } from '../lib/events.svelte.js';
   import { t } from '../lib/i18n.svelte.js';
+  import type { Settled } from '../lib/arrivals.js';
   import { router } from '../lib/router.svelte.js';
   import { validations } from '../lib/validations.svelte.js';
   import { listOf, listParam } from '../lib/routes.js';
@@ -669,11 +670,12 @@
             item={chosenItem}
             {busy}
             siblings={settleGroups.find((group) => group.key === settleKey(chosenItem))?.files ?? 1}
-            ondone={(message: string, settled?: { readonly id: string; readonly key: string }) => {
+            ondone={(message: string, settled?: Settled) => {
               // A validation lets the whole group go: lock it until the transfer empties the list.
               // The group is the one validated, as read at the click: by now the list may have
               // dropped it, and the row open is another one.
-              if (settled) {
+              // (Set aside, it is not a transfer: the reload drops it from the list.)
+              if (settled && !settled.ignored) {
                 startedKeys = [...startedKeys, settled.key];
               }
               // Close the panel only if it still shows what was validated.

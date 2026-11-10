@@ -228,6 +228,18 @@ export const sameCandidate = (a: Candidate, b: Candidate): boolean =>
 
 type Post = <T>(url: string, body?: unknown) => Promise<T>;
 
+/**
+ * The file a validation or an ignore was started on, read when the click happened: the panel may
+ * show another row by the end, and the list may no longer hold this one.
+ */
+export interface Settled {
+  readonly id: string;
+  /** The group the lists settle it with (`settleKey`). */
+  readonly key: string;
+  /** Set aside, not sent to a transfer: the list must not say a transfer started. */
+  readonly ignored: boolean;
+}
+
 export interface Choice {
   readonly candidate: Candidate;
   /** Send the file to this library rather than the default one, for this file only. */
