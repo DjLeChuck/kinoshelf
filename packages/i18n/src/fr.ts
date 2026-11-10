@@ -422,6 +422,7 @@ export const fr: Record<keyof typeof en, string> = {
   'web.library.progress.stalled': 'Toujours en cours : TMDB répond peut-être lentement.',
   'web.library.present': 'présent',
   'web.library.missing': 'manquant',
+  'web.library.unavailable': 'indisponible sur TMDB',
   'web.library.runtime': '{minutes} min',
   'web.library.no-overview': 'Aucun résumé disponible.',
   'web.library.path': 'Chemin',

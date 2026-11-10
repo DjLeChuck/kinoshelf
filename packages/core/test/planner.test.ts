@@ -502,6 +502,32 @@ describe('createPlan: NFO and artwork', () => {
       expect(items[0]?.status).toBe('ready');
     });
 
+    it('says which images the provider has none of, unless the disk already holds them', async () => {
+      const [src, lib] = [await makeDir(), await makeDir()];
+      const source = await put(join(src, 'Dune.2021.mkv'));
+      const input = { parsed: parsedMovie(source), candidate: dune, details: duneDetails };
+
+      const { items } = await planWith([input], lib, withLogo());
+      expect(items[0]?.unavailable).toEqual(['logo']);
+
+      // Organized already, with a logo the user added by hand: nothing is missing, nothing is said.
+      const inPlace = await put(join(lib, 'Dune (2021)', 'Dune (2021).mkv'));
+      await put(join(lib, 'Dune (2021)', 'logo.png'));
+      const placed = await planWith(
+        [{ parsed: parsedMovie(inPlace), candidate: dune, details: duneDetails }],
+        lib,
+        withLogo(),
+      );
+      expect(placed.items[0]?.unavailable).toBeUndefined();
+
+      const withDetails = await planWith(
+        [{ ...input, details: { ...duneDetails, logoPath: '/dune-logo.png' } }],
+        lib,
+        withLogo(),
+      );
+      expect(withDetails.items[0]?.unavailable).toBeUndefined();
+    });
+
     it('gives a movie written flat no logo, and a show one in its folder, once', async () => {
       const [src, lib] = [await makeDir(), await makeDir()];
       const source = await put(join(src, 'Dune.2021.mkv'));

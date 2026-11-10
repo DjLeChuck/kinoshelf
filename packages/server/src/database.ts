@@ -366,6 +366,13 @@ export const SERVER_MIGRATIONS: readonly { readonly name: string; readonly sql: 
       UPDATE library_items SET probed_at = NULL;
     `,
   },
+  {
+    // The images of a movie the profile writes and TMDB has none of (JSON list of `poster`,
+    // `fanart`, `logo`, NULL for none): a list shows them as unavailable, not as present. Rows from
+    // before have none until the next scan.
+    name: 'server:029-unavailable-images',
+    sql: 'ALTER TABLE library_items ADD COLUMN unavailable TEXT;',
+  },
 ];
 
 /** Opens the single SQLite file of the config directory, shared with the CLI and the cache. */

@@ -15,6 +15,7 @@
     groupSettling,
     libraryItems,
     settleKey,
+    lacksOnTmdb,
     thumbOf,
     type Coverage,
     type EpisodeState,
@@ -471,10 +472,12 @@
                 </td>
               {/if}
               {#if writes.artwork}
-                <td><Presence value={show.poster} /></td>
-                <td><Presence value={show.fanart} /></td>
+                <td><Presence value={show.poster} unavailable={lacksOnTmdb(show, 'poster')} /></td>
+                <td><Presence value={show.fanart} unavailable={lacksOnTmdb(show, 'fanart')} /></td>
               {/if}
-              {#if writes.logo}<td><Presence value={show.logo} /></td>{/if}
+              {#if writes.logo}<td
+                  ><Presence value={show.logo} unavailable={lacksOnTmdb(show, 'logo')} /></td
+                >{/if}
               {#if writes.thumb}<td></td>{/if}
               <td>
                 {#if show.missing}

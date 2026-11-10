@@ -2347,6 +2347,8 @@ export interface paths {
                                 logo: boolean | null;
                                 /** @description An episode’s own image, `<file>.jpg`; `null` for any other file. */
                                 thumb: boolean | null;
+                                /** @description Movie images the profile writes that TMDB has none of (and the disk neither): their flag above reads as there, since nothing is missing, but the list shows them as unavailable. */
+                                unavailable: ("poster" | "fanart" | "logo")[];
                                 /** @description To validate or change the match. */
                                 entryId: string | null;
                                 /** @description The folder the file came in: files sharing it (and its `cluster`) are validated together. Filled by the list of items only. */
@@ -2512,6 +2514,8 @@ export interface paths {
                             logo: boolean | null;
                             /** @description An episode’s own image, `<file>.jpg`; `null` for any other file. */
                             thumb: boolean | null;
+                            /** @description Movie images the profile writes that TMDB has none of (and the disk neither): their flag above reads as there, since nothing is missing, but the list shows them as unavailable. */
+                            unavailable: ("poster" | "fanart" | "logo")[];
                             /** @description To validate or change the match. */
                             entryId: string | null;
                             /** @description The folder the file came in: files sharing it (and its `cluster`) are validated together. Filled by the list of items only. */
@@ -2682,6 +2686,8 @@ export interface paths {
                                 fanart: boolean | null;
                                 /** @description The show logo is on the disk. `null`: the profile does not write it, or no scan or change has looked yet. */
                                 logo: boolean | null;
+                                /** @description Show images the profile writes that TMDB has none of (and the disk neither): not missing, the list shows them as unavailable. */
+                                unavailable: ("poster" | "fanart" | "logo")[];
                             }[];
                         };
                     };
@@ -2846,6 +2852,8 @@ export interface paths {
                                         logo: boolean | null;
                                         /** @description An episode’s own image, `<file>.jpg`; `null` for any other file. */
                                         thumb: boolean | null;
+                                        /** @description Movie images the profile writes that TMDB has none of (and the disk neither): their flag above reads as there, since nothing is missing, but the list shows them as unavailable. */
+                                        unavailable: ("poster" | "fanart" | "logo")[];
                                         /** @description To validate or change the match. */
                                         entryId: string | null;
                                         /** @description The folder the file came in: files sharing it (and its `cluster`) are validated together. Filled by the list of items only. */

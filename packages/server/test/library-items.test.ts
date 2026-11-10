@@ -3,7 +3,7 @@ import Database from 'better-sqlite3';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { migrated } from '../src/database.js';
-import type { JournalEntry } from '@kinoshelf/core';
+import type { JournalEntry, MovieDetails } from '@kinoshelf/core';
 import type { EntryStore } from '../src/entries.js';
 import type { JobStore } from '../src/jobs.js';
 import {
@@ -12,7 +12,7 @@ import {
   itemId,
   type LibraryItem,
 } from '../src/library-items.js';
-import { cleanup, harness, batchOf, makeDir, put } from './harness.js';
+import { cleanup, fakeProvider, harness, batchOf, makeDir, put } from './harness.js';
 
 afterEach(cleanup);
 
@@ -199,6 +199,7 @@ interface ItemsBody {
     poster: boolean | null;
     fanart: boolean | null;
     logo: boolean | null;
+    unavailable: string[];
     versions: { id: string; resolution: string | null; nfo: boolean | null }[];
   }[];
 }
@@ -459,6 +460,45 @@ describe('the logo of a library item', () => {
     expect(missing).toEqual([alien]);
   });
 
+  it('says a film TMDB has no logo for is unavailable, not present, unless one is on the disk', async () => {
+    const root = await makeDir();
+    const alien = await put(join(root, 'Alien (1979)', 'Alien (1979).mkv'), 'alien');
+    await put(join(root, 'Alien (1979)', 'logo.png'), 'by hand');
+    const dune = await put(join(root, 'Dune.2021.mkv'), 'dune');
+    const h = await harness({
+      config: {
+        libraries: [
+          {
+            id: 'films',
+            name: 'Films',
+            source: root,
+            type: 'movie',
+            naming: 'no-id',
+            metadata: 'nfo',
+          },
+          { id: 'shows', name: 'Shows', source: await makeDir(), type: 'series' },
+        ],
+      },
+      // The fake catalog gives every work a logo: this TMDB has none for any of them.
+      createProvider: () => ({
+        ...fakeProvider,
+        getMovieDetails: async (id, language) => {
+          const details = (await fakeProvider.getMovieDetails(id, language)) as MovieDetails;
+          const { logoPath, ...withoutLogo } = details;
+          return logoPath === undefined ? details : withoutLogo;
+        },
+      }),
+    });
+    await h.request('POST', '/api/libraries/films/scan');
+    await h.app.jobs.idle();
+
+    const items = new Map((await list(h)).items.map((item) => [item.path, item]));
+    // To rename: nothing is on the disk and TMDB has no logo, so the dash, not a tick.
+    expect(items.get(dune)).toMatchObject({ state: 'rename', logo: true, unavailable: ['logo'] });
+    // Already in place with a logo the user added: there, nothing to say.
+    expect(items.get(alien)).toMatchObject({ logo: true, unavailable: [] });
+  });
+
   it('is not claimed when the profile writes none', async () => {
     const { h, alien } = await scanned('none');
     const item = (await list(h)).items.find((candidate) => candidate.path === alien);
@@ -670,8 +710,17 @@ describe('the lookups of the item store', () => {
     entryId: null,
     scanJobId: null,
     scannedAt: '2026-11-02T00:00:00.000Z',
+    unavailable: [],
     picture: null,
     ...extra,
+  });
+
+  it('keeps the images TMDB has none of, and says nothing for a row without any', () => {
+    const store = new LibraryItemStore(migrated(new Database(':memory:')));
+    store.put(row('/a.mkv', { unavailable: ['logo', 'fanart'] }));
+    store.put(row('/b.mkv'));
+    expect(store.get('shows', '/a.mkv')?.unavailable).toEqual(['logo', 'fanart']);
+    expect(store.get('shows', '/b.mkv')?.unavailable).toEqual([]);
   });
 
   it('counts the files to validate as a validation settles them: a release is one', () => {
@@ -796,6 +845,7 @@ describe('the snapshot after an undo', () => {
     entryId: null,
     scanJobId: null,
     scannedAt: '2026-11-02T00:00:00.000Z',
+    unavailable: [],
     picture: null,
     ...extra,
   });

@@ -50,6 +50,8 @@ export interface LibraryItem {
   readonly logo: boolean | null;
   /** An episode's own image (`<file>.jpg`); `null` for any other file. */
   readonly thumb: boolean | null;
+  /** Movie images the profile writes that TMDB has none of: their flag reads as there, but nothing is. */
+  readonly unavailable: readonly ('poster' | 'fanart' | 'logo')[];
   /** What settles it: `GET /api/entries/{id}`. */
   readonly entryId: string | null;
   /** The folder it came in; files sharing it and `cluster` are validated together. `null`: not told. */
@@ -200,6 +202,8 @@ export interface Show {
   readonly poster: boolean | null;
   readonly fanart: boolean | null;
   readonly logo: boolean | null;
+  /** Show images the profile writes that TMDB has none of: neither there nor missing. */
+  readonly unavailable: readonly ('poster' | 'fanart' | 'logo')[];
 }
 
 export type EpisodeState = 'present' | 'missing' | 'unaired' | 'extra';
@@ -417,6 +421,13 @@ export function versionsToRun(item: ListedItem, mode: 'rename' | 'refresh'): Lib
       entryId: version.entryId,
     }));
 }
+
+/**
+ * A show image TMDB has none of, shown as unavailable rather than missing. A file on the disk wins:
+ * one added by hand since the scan is there, whatever the scan said.
+ */
+export const lacksOnTmdb = (show: Show, kind: 'poster' | 'fanart' | 'logo'): boolean =>
+  show.unavailable.includes(kind) && show[kind] !== true;
 
 /** An episode's thumbnail across its versions: missing if any version lacks it, `null` if none writes one. */
 export function thumbOf(versions: readonly Pick<LibraryItem, 'thumb'>[]): boolean | null {

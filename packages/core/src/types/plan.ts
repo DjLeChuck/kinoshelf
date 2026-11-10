@@ -45,6 +45,11 @@ export interface PlanItem {
    * the sidecar operation is skipped with a warning instead.
    */
   readonly conflicts: readonly Conflict[];
+  /**
+   * Images of a movie or a show the profile writes, that the provider has none to offer for and
+   * that are not on the disk: nothing is planned for them, and a list says so instead of calling them present.
+   */
+  readonly unavailable?: readonly ('poster' | 'fanart' | 'logo')[];
 }
 
 /**

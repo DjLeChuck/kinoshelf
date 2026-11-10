@@ -16,7 +16,7 @@ import type { Operation, TransferMode } from '../types/operation.js';
 import type { Conflict, DestinationRoots, Plan, PlanItem } from '../types/plan.js';
 import type { Profile } from '../types/profile.js';
 import type { Candidate, EpisodeInfo } from '../types/provider.js';
-import { companionOperations } from './companions.js';
+import { companionOperations, unavailableImages } from './companions.js';
 import { DEFAULT_SIDECAR_EXTENSIONS, findSidecars, type Sidecar } from './sidecars.js';
 import { MAX_VERSION_LEVEL, versionLabel, versionLabels } from './version.js';
 
@@ -61,6 +61,21 @@ export interface PlannerOptions {
    * NFO beside a video follows it.
    */
   readonly madeByUs?: (path: string) => Promise<boolean>;
+}
+
+/** `unavailable` of a plan item, left out when there is none; what is already on the disk is not. */
+async function unavailableKinds(
+  input: Parameters<typeof companionOperations>[0],
+  place: Parameters<typeof companionOperations>[1],
+  options: Parameters<typeof companionOperations>[2],
+): Promise<Pick<PlanItem, 'unavailable'>> {
+  const lacking = unavailableImages(input, place, options);
+  const kinds = (
+    await Promise.all(
+      lacking.map(async ({ kind, destination }) => ((await exists(destination)) ? [] : [kind])),
+    )
+  ).flat();
+  return kinds.length > 0 ? { unavailable: kinds } : {};
 }
 
 const blocked = (conflict: Conflict, base: Omit<PlanItem, 'status' | 'conflicts'>): PlanItem => ({
@@ -365,9 +380,10 @@ async function planItem(
       ),
     );
     const operations = missing.filter((operation) => operation !== null);
+    const unavailable = await unavailableKinds(input, place, companionOptions);
     return operations.length > 0
-      ? { ...base, operations, status: 'ready', conflicts: [] }
-      : { ...base, status: 'in-place', conflicts: [] };
+      ? { ...base, ...unavailable, operations, status: 'ready', conflicts: [] }
+      : { ...base, ...unavailable, status: 'in-place', conflicts: [] };
   }
 
   const generated = companionOperations(input, place, companionOptions);
@@ -406,7 +422,13 @@ async function planItem(
   operations.push(
     ...generated.filter((operation) => !taken.has(operation.destination.toLowerCase())),
   );
-  const item: PlanItem = { ...base, operations, status: 'ready', conflicts: [] };
+  const item: PlanItem = {
+    ...base,
+    ...(await unavailableKinds(input, place, companionOptions)),
+    operations,
+    status: 'ready',
+    conflicts: [],
+  };
   if (needsSize) {
     wantingSize.add(item);
   }

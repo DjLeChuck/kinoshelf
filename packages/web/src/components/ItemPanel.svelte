@@ -184,12 +184,17 @@
       {/if}
       <dt class="muted">{t('web.library.metadata')}</dt>
       <dd class="marks">
-        {#each [['NFO', detail.nfo], [t('web.library.col.poster'), detail.poster], [t('web.library.col.fanart'), detail.fanart], [t('web.library.col.logo'), detail.logo]] as const as [label, value] (label)}
+        {#each [['NFO', detail.nfo, false], [t('web.library.col.poster'), detail.poster, detail.unavailable.includes('poster')], [t('web.library.col.fanart'), detail.fanart, detail.unavailable.includes('fanart')], [t('web.library.col.logo'), detail.logo, detail.unavailable.includes('logo')]] as const as [label, value, unavailable] (label)}
           <span>
-            <span aria-hidden="true" class:ok={value === true} class:ko={value === false}
-              >{value === null ? '—' : value ? '✓' : '✗'}</span
+            <span
+              aria-hidden="true"
+              class:ok={!unavailable && value === true}
+              class:ko={!unavailable && value === false}
+              >{unavailable || value === null ? '—' : value ? '✓' : '✗'}</span
             >
-            {label}<span class="sr-only">: {present(value)}</span>
+            {label}<span class="sr-only"
+              >: {unavailable ? t('web.library.unavailable') : present(value)}</span
+            >
           </span>
         {/each}
       </dd>

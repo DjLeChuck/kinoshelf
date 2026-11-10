@@ -305,6 +305,7 @@ const item = (path: string): LibraryItem => ({
   entryId: null,
   scanJobId: null,
   scannedAt: 'now',
+  unavailable: [],
   picture: null,
 });
 

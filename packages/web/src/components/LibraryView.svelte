@@ -436,10 +436,25 @@
                   <td><VersionBadges versions={item.versions} /></td>
                   {#if page.library.writes.nfo}<td><Presence value={item.nfo} /></td>{/if}
                   {#if page.library.writes.artwork}
-                    <td><Presence value={item.poster} /></td>
-                    <td><Presence value={item.fanart} /></td>
+                    <td
+                      ><Presence
+                        value={item.poster}
+                        unavailable={item.unavailable.includes('poster')}
+                      /></td
+                    >
+                    <td
+                      ><Presence
+                        value={item.fanart}
+                        unavailable={item.unavailable.includes('fanart')}
+                      /></td
+                    >
                   {/if}
-                  {#if page.library.writes.logo}<td><Presence value={item.logo} /></td>{/if}
+                  {#if page.library.writes.logo}<td
+                      ><Presence
+                        value={item.logo}
+                        unavailable={item.unavailable.includes('logo')}
+                      /></td
+                    >{/if}
                 </tr>
                 {#if isOpen}
                   {#each item.versions as version (version.id)}

@@ -200,6 +200,7 @@ const presentItem = (item: LibraryItem, release?: ReleaseOf): unknown => ({
   fanart: item.fanart,
   logo: item.logo,
   thumb: item.thumb,
+  unavailable: item.unavailable,
   entryId: item.entryId,
   release: release?.release ?? null,
   cluster: release ? release.cluster : null,
@@ -260,6 +261,8 @@ const presentWork = (
     fanart: allThere(work.map((item) => item.fanart)),
     logo: allThere(work.map((item) => item.logo)),
     thumb: allThere(work.map((item) => item.thumb)),
+    // The versions of a movie are one work: what TMDB lacks for one it lacks for all.
+    unavailable: [...new Set(work.flatMap((item) => item.unavailable))],
     versions: largestFirst(work, resolutionOfItem).map((item) =>
       presentVersion(item, probeOf(item.path)),
     ),

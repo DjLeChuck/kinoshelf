@@ -402,6 +402,7 @@ export const en = {
   'web.library.progress.stalled': 'Still running: TMDB may be answering slowly.',
   'web.library.present': 'present',
   'web.library.missing': 'missing',
+  'web.library.unavailable': 'not available on TMDB',
   'web.library.runtime': '{minutes} min',
   'web.library.no-overview': 'No summary available.',
   'web.library.path': 'Path',

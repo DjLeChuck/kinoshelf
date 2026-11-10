@@ -340,7 +340,9 @@ format follows the Kodi wiki's templates, saved pages are not in the repository)
   details request (`append_to_response`; `include_image_language` is the metadata language, then English,
   then textless), so no extra call. `pickLogo` (`providers/tmdb`) takes the metadata language first, then
   English, then a textless one, the best voted of each (PNG or JPEG only) as `Details.logoPath`. A work
-  with none writes nothing, and a movie written flat gets none (every movie would claim the same file).
+  with none in those languages (a Chinese-only series) costs one more request, `/images` with no
+  language filter (the one the dialog uses, so cached once), and takes a textless logo or, last, one in
+  any language: a foreign logo beats none, and the dialog can replace it. A work with none at all writes nothing, and a movie written flat gets none (every movie would claim the same file).
   TMDB serves logos in widths of its own, with no `w780`: the profile loader refuses any `size` but
   `original`. It is tracked like the poster and fanart (`logo` of the items and of the shows, server
   migration 024, `library.writes.logo` for the column): a work missing only its logo is `incomplete`,
@@ -350,8 +352,8 @@ format follows the Kodi wiki's templates, saved pages are not in the repository)
   `tmdb` (the default) and `imdb`; a test holds the tmdb id of the name, `<id>` and the default `<uniqueid>`.
 - **Changing an image** (`artwork.ts`, `artwork-routes.ts`; the web's `ImagesDialog`): the poster,
   background and logo of a movie, or of a show (its own folder, never a season's; a season's poster is
-  out), and the thumbnail of an episode (below). `GET .../images` lists what TMDB offers (`MetadataProvider.listImages`, in
-  TMDB's order: the web sorts) and what is in place; `POST` writes one to three images as one batch.
+  out), and the thumbnail of an episode (below). `GET .../images` lists what TMDB offers in **every language** (`MetadataProvider.listImages`, no
+  `include_image_language`, in TMDB's order: the web sorts by the library's language and filters by language) and what is in place; `POST` writes one to three images as one batch.
   The page of a work says whether to offer it (`images` of `GET .../items/:itemId` and `.../shows/:tmdbId`:
   which files are on the disk, `null` when the profile writes none or the work has no folder of its own;
   the list's `poster`/`fanart`/`logo` flags mean "nothing planned is missing" and say nothing of the disk).
@@ -395,6 +397,17 @@ format follows the Kodi wiki's templates, saved pages are not in the repository)
     provider's, listed only: the dialog downloads through our own server). The dialog takes `kinds`
     (`EPISODE_KINDS`: one tab, so none is drawn); the panel shows the image in place
     (`.../images/thumb/file`, the first copy found) and "Change the image" / "Add an image".
+- **An image TMDB has none of is "unavailable", not "present" or "missing"** (`PlanItem.unavailable`,
+  `unavailableImages` in `companions.ts`, `library_items.unavailable`, server migration 029): the
+  planner lists the poster, fanart or logo the profile writes that the details give no path for,
+  except one already on the disk (a logo added by hand is simply there). The flag stays as it was
+  (nothing is missing, so the item is not `incomplete`), and the list and the page draw a plain
+  uncoloured dash with "not available on TMDB". **Movies**: the item's flag stays as it was. **Shows**:
+  every episode row carries the show-folder images TMDB lacks (same planner check, the disk first), the
+  show's `unavailable` is their union (`.../shows`), and the list draws a dash where `SeriesFiles` found no
+  file (`lacksOnTmdb`; a file on the disk wins). `missing-show-files` (`?incomplete=true`, the count)
+  leaves such an image out, since no refresh could write it. A season's poster and an episode's thumbnail
+  are not covered. Rows from before the migration have none until the next scan.
 - Not done: no collection overview, no episode `uniqueid`, no `<fileinfo>` (the player reads the file).
 
 ## Libraries and scan

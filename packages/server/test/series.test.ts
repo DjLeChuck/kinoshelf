@@ -317,6 +317,7 @@ describe('comparing the files with the provider', () => {
     entryId: null,
     scanJobId: null,
     scannedAt: '2026-01-01T00:00:00Z',
+    unavailable: [],
     picture: null,
   });
 
@@ -458,7 +459,17 @@ describe('the files of a show and of its seasons', () => {
           },
         ],
       },
-      createProvider: () => provider(),
+      // TMDB has every image of this show: what is not on the disk is missing.
+      createProvider: () => ({
+        ...provider(),
+        getSeriesDetails: () =>
+          Promise.resolve({
+            ...DETAILS,
+            posterPath: '/poster.jpg',
+            backdropPath: '/backdrop.jpg',
+            logoPath: '/logo.png',
+          }),
+      }),
     });
     const scan = async (): Promise<void> => {
       await h.request('POST', '/api/libraries/shows/scan');
@@ -518,6 +529,51 @@ describe('the files of a show and of its seasons', () => {
     ]);
     expect(await incomplete()).toBe(0);
     expect(await counted()).toBe(0);
+  });
+
+  it('are unavailable, not missing, when TMDB has no such image for the show', async () => {
+    const root = await makeDir();
+    const show = join(root, 'Severance (2022)');
+    await put(join(show, 'Season 01', 'Severance (2022) - s01e01.mkv'));
+    await put(join(show, 'tvshow.nfo'), '<tvshow/>');
+    await put(join(show, 'poster.jpg'), 'image');
+    await put(join(show, 'season01-poster.jpg'), 'image');
+    // DETAILS lists no poster, backdrop or logo: the poster is on the disk, the others cannot be had.
+    const h = await harness({
+      config: {
+        libraries: [
+          { id: 'films', name: 'Films', source: await makeDir(), type: 'movie' },
+          {
+            id: 'shows',
+            name: 'Shows',
+            source: root,
+            type: 'series',
+            naming: 'no-id',
+            metadata: 'nfo',
+          },
+        ],
+      },
+      createProvider: () => provider(),
+    });
+    await h.request('POST', '/api/libraries/shows/scan');
+    await h.app.jobs.idle();
+    await h.app.seriesFiles.idle();
+
+    const [row] = (await h.request('GET', '/api/libraries/shows/shows')).json<{
+      items: { fanart: boolean | null; logo: boolean | null; unavailable: string[] }[];
+    }>().items;
+    // Not on the disk, and not to be had: the flag says so and the list draws a dash.
+    expect(row).toMatchObject({ fanart: false, logo: false, unavailable: ['fanart', 'logo'] });
+    // Nothing a refresh could write: the show is complete.
+    const counts = (await h.request('GET', '/api/libraries/shows/items')).json<{
+      counts: Record<string, number>;
+    }>().counts;
+    expect(counts['missing-show-files']).toBe(0);
+    expect(
+      (await h.request('GET', '/api/libraries/shows/shows?incomplete=true')).json<{
+        total: number;
+      }>().total,
+    ).toBe(0);
   });
 
   it('are not claimed for a show whose videos are not in place yet', async () => {

@@ -42,6 +42,8 @@ export type ItemState = 'review' | 'rename' | 'unrecognized' | 'incomplete' | 'o
 /** `null` when the profile writes no such file (or it cannot be told, see `presenceOf`). */
 type Presence = boolean | null;
 
+type UnavailableImage = 'poster' | 'fanart' | 'logo';
+
 /** One video of a library as its last scan saw it. */
 export interface LibraryItem {
   readonly libraryId: string;
@@ -66,6 +68,8 @@ export interface LibraryItem {
   readonly entryId: string | null;
   readonly scanJobId: string | null;
   readonly scannedAt: string;
+  /** Images the profile writes that TMDB has none of (and the disk neither): shown as unavailable. */
+  readonly unavailable: readonly UnavailableImage[];
   /** The picture size the probe read, the fallback when the name says none; `null` until probed. */
   readonly picture: string | null;
 }
@@ -89,11 +93,12 @@ interface Row {
   entry_id: string | null;
   scan_job_id: string | null;
   scanned_at: string;
+  unavailable: string | null;
   picture: string | null;
 }
 
 const ROW_COLUMNS =
-  'library_id, path, kind, tmdb_id, title, year, season, episode, episode_end, state, nfo, poster, fanart, logo, thumb, entry_id, scan_job_id, scanned_at';
+  'library_id, path, kind, tmdb_id, title, year, season, episode, episode_end, state, nfo, poster, fanart, logo, thumb, entry_id, scan_job_id, scanned_at, unavailable';
 
 /** The columns a row is written with: `item_id` is derived from the path, never read back. */
 const WRITTEN_COLUMNS = `${ROW_COLUMNS}, item_id`;
@@ -145,6 +150,7 @@ const valuesOf = (item: LibraryItem): (string | number | null)[] => [
   item.entryId,
   item.scanJobId,
   item.scannedAt,
+  item.unavailable.length > 0 ? JSON.stringify(item.unavailable) : null,
   itemId(item.path),
 ];
 
@@ -167,6 +173,7 @@ const toItem = (row: Row): LibraryItem => ({
   entryId: row.entry_id,
   scanJobId: row.scan_job_id,
   scannedAt: row.scanned_at,
+  unavailable: row.unavailable === null ? [] : (JSON.parse(row.unavailable) as UnavailableImage[]),
   picture: row.picture,
 });
 
@@ -575,6 +582,7 @@ export class LibraryItemStore {
           poster: flag(row.poster),
           fanart: flag(row.fanart),
           logo: flag(row.logo),
+          unavailable: unavailableOf(files),
         };
       }),
     };
@@ -646,7 +654,10 @@ export class LibraryItemStore {
       ...(options.incomplete
         ? [
             `EXISTS (SELECT 1 FROM series_files m WHERE m.library_id = i.library_id
-               AND m.tmdb_id = i.tmdb_id AND (m.nfo = 0 OR m.poster = 0 OR m.fanart = 0 OR m.logo = 0))`,
+               AND m.tmdb_id = i.tmdb_id AND (m.nfo = 0
+                 OR (m.poster = 0 AND ${unavailableSql('poster')})
+                 OR (m.fanart = 0 AND ${unavailableSql('fanart')})
+                 OR (m.logo = 0 AND ${unavailableSql('logo')})))`,
           ]
         : []),
     ].join(' AND ');
@@ -790,7 +801,23 @@ export interface ShowRow {
   readonly poster: Presence;
   readonly fanart: Presence;
   readonly logo: Presence;
+  /** Show images the profile writes that TMDB has none of: not missing, whatever the disk says. */
+  readonly unavailable: readonly UnavailableImage[];
 }
+
+/** What TMDB lacks for a work, as every one of its files was planned (they share the show's folder). */
+const unavailableOf = (files: readonly LibraryItem[]): UnavailableImage[] => [
+  ...new Set(files.flatMap((file) => file.unavailable)),
+];
+
+/**
+ * SQL, inside the sub-query on `series_files m`: true when none of the show's files was planned
+ * knowing TMDB has no such image (the file is then not missing, nobody can write it).
+ */
+const unavailableSql = (kind: UnavailableImage): string =>
+  `NOT EXISTS (SELECT 1 FROM library_items u, json_each(u.unavailable) j
+     WHERE u.library_id = m.library_id AND u.tmdb_id = m.tmdb_id AND u.kind = 'series'
+       AND j.value = '${kind}')`;
 
 interface ShowQuery {
   tmdb_id: number;
@@ -953,6 +980,7 @@ function itemOf(
     episode: episodes.length > 0 ? Math.min(...episodes) : null,
     episodeEnd: episodes.length > 1 ? Math.max(...episodes) : null,
     ...describe(entry, profile, kind),
+    unavailable: entry.item?.unavailable ?? [],
     entryId: entry.id,
     scanJobId: entry.jobId,
     scannedAt,

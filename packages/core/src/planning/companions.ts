@@ -179,6 +179,44 @@ export function companionOperations(
   return operations;
 }
 
+/**
+ * The images of a movie, or of a show's folder, that the profile writes and the provider has none of
+ * (a work TMDB shows no logo for), with where each would go. The planner drops the ones already on
+ * the disk: a file the user added by hand is not missing.
+ */
+export function unavailableImages(
+  input: CompanionInput,
+  place: CompanionPlace,
+  options: CompanionOptions,
+): { kind: 'poster' | 'fanart' | 'logo'; destination: string }[] {
+  const { details } = input;
+  const { profile } = options;
+  // A movie written flat has no folder of its own for fixed names, so it asks for none of them.
+  if (!details || (details.kind === 'movie' && place.workFolders.length === 0)) {
+    return [];
+  }
+  const found = {
+    poster: details.posterPath,
+    fanart: details.backdropPath,
+    logo: details.logoPath,
+  };
+  return profile.artwork.flatMap((image) =>
+    (image.kind === 'poster' || image.kind === 'fanart' || image.kind === 'logo') &&
+    !found[image.kind]
+      ? [
+          {
+            kind: image.kind,
+            destination: join(
+              place.root,
+              ...place.workFolders,
+              companionName(profile, image.name, {}),
+            ),
+          },
+        ]
+      : [],
+  );
+}
+
 /** The name template of a season's poster: season 0 may have a name of its own. */
 function seasonPosterTemplate(spec: ArtworkSpec, season: number): string {
   return season === 0 && spec.specialsName !== undefined ? spec.specialsName : spec.name;

@@ -905,6 +905,7 @@ export const libraryItemSchema = {
     'fanart',
     'logo',
     'thumb',
+    'unavailable',
     'entryId',
     'release',
     'cluster',
@@ -949,6 +950,13 @@ export const libraryItemSchema = {
       type: 'boolean',
       nullable: true,
       description: 'An episode’s own image, `<file>.jpg`; `null` for any other file.',
+    },
+    unavailable: {
+      type: 'array',
+      items: { type: 'string', enum: ['poster', 'fanart', 'logo'] },
+      description:
+        'Movie images the profile writes that TMDB has none of (and the disk neither): their flag ' +
+        'above reads as there, since nothing is missing, but the list shows them as unavailable.',
     },
     entryId: { type: 'string', nullable: true, description: 'To validate or change the match.' },
     release: {
@@ -1072,6 +1080,7 @@ export const showSchema = {
     'poster',
     'fanart',
     'logo',
+    'unavailable',
   ],
   properties: {
     tmdbId: { type: 'integer' },
@@ -1109,6 +1118,13 @@ export const showSchema = {
       type: 'boolean',
       nullable: true,
       description: presenceDescription('The show logo'),
+    },
+    unavailable: {
+      type: 'array',
+      items: { type: 'string', enum: ['poster', 'fanart', 'logo'] },
+      description:
+        'Show images the profile writes that TMDB has none of (and the disk neither): not missing, ' +
+        'the list shows them as unavailable.',
     },
   },
 } as const;
