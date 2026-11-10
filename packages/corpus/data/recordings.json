@@ -1295,6 +1295,10 @@
     "status": 200,
     "body": "{\"results\":[{\"id\":21733,\"title\":\"Dragons Forever\",\"original_title\":\"飛龍猛將\",\"release_date\":\"1988-02-11\",\"poster_path\":\"/dVAAUBgnWsBJ870bOm204wBnc7Z.jpg\",\"popularity\":3.1478},{\"id\":10191,\"title\":\"Dragons\",\"original_title\":\"How to Train Your Dragon\",\"release_date\":\"2010-03-18\",\"poster_path\":\"/a2xXAG8QuFZYt4ElbDrUd0IC3Ge.jpg\",\"popularity\":13.9067},{\"id\":82702,\"title\":\"Dragons 2\",\"original_title\":\"How to Train Your Dragon 2\",\"release_date\":\"2014-06-05\",\"poster_path\":\"/q6UtQBNwyfRa5WDQqQOnvwsPOB2.jpg\",\"popularity\":12.5062}]}"
   },
+  "/3/search/movie?include_adult=false&language=fr&query=Dragons+3&year=2015": {
+    "status": 200,
+    "body": "{\"results\":[{\"id\":82702,\"title\":\"Dragons 2\",\"original_title\":\"How to Train Your Dragon 2\",\"release_date\":\"2014-06-05\",\"poster_path\":\"/q6UtQBNwyfRa5WDQqQOnvwsPOB2.jpg\",\"popularity\":12.5062}]}"
+  },
   "/3/search/movie?include_adult=false&language=fr&query=Dragons+3&year=2019": {
     "status": 200,
     "body": "{\"results\":[{\"id\":166428,\"title\":\"Dragons 3 : Le monde caché\",\"original_title\":\"How to Train Your Dragon: The Hidden World\",\"release_date\":\"2019-01-03\",\"poster_path\":\"/oki89nNxoecoOTyqdPe9MS8zbiX.jpg\",\"popularity\":10.7299},{\"id\":586839,\"title\":\"大三元\",\"original_title\":\"大三元\",\"release_date\":\"2019-02-01\",\"poster_path\":\"/h1n4rQQwCkolwCdra2ZqflGZ8UF.jpg\",\"popularity\":0.6036},{\"id\":82702,\"title\":\"Dragons 2\",\"original_title\":\"How to Train Your Dragon 2\",\"release_date\":\"2014-06-05\",\"poster_path\":\"/q6UtQBNwyfRa5WDQqQOnvwsPOB2.jpg\",\"popularity\":12.5062}]}"

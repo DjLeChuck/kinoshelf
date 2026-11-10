@@ -3038,14 +3038,6 @@
     }
   },
   {
-    "path": "Dragons 3 (2014)/Dragons 3 (2014).mkv",
-    "language": "fr",
-    "note": "reconstructed from a description, not a real path: the number says the third film and the year the second",
-    "expect": {
-      "status": "review"
-    }
-  },
-  {
     "path": "Dragons 3 (2019)/Dragons 3 (2019).mkv",
     "language": "fr",
     "note": "the number and the year agree",
@@ -3056,9 +3048,17 @@
     }
   },
   {
-    "path": "Dragons 2 (2014)/Dragons 2 (2014).mkv",
+    "path": "Dragons 3  - Le monde caché (2015) - 1080p.mkv",
     "language": "fr",
-    "note": "the number and the year agree",
+    "note": "from a real library. the year is wrong (2015, the film is from 2019): a title that fits and a year that does not is for a human, and the second film (2014) must not win on the year",
+    "expect": {
+      "status": "review"
+    }
+  },
+  {
+    "path": "Dragons 2 (2014) - 1080p.mkv",
+    "language": "fr",
+    "note": "from a real library",
     "expect": {
       "status": "matched",
       "tmdb": 82702,

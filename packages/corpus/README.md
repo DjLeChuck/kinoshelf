@@ -112,5 +112,6 @@ harder entries and nothing regressed; write the reason here.
   TMDB's season numbering differs from the one in many libraries.
 - 1 to 1: aliases were removed (a release is validated as a whole), so the entry that needed one
   went with them: 285 of 285.
-- 1 to 1: a number closing a movie's title (`Dragons 3 (2014)`, the year of the second film) went to
-  review instead of matching the second film (95 before), with two guard entries: 294 of 294.
+- 1 to 1: a number closing a movie's title (`Dragons 3 - Le monde caché (2015)`, a year that is
+  wrong and near the second film's) went to review instead of matching the second film (89 before),
+  with two guard entries: 294 of 294.
