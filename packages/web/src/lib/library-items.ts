@@ -301,7 +301,9 @@ export interface SettleGroup {
 }
 
 /** Only episodes are validated as a release (the server leaves movies alone). */
-export const settleKey = (item: LibraryItem): string =>
+export const settleKey = (
+  item: Pick<LibraryItem, 'release' | 'kind' | 'path'> & { readonly cluster: number | null },
+): string =>
   item.release !== null && item.cluster !== null && item.kind === 'series'
     ? `${item.release}|${item.cluster}`
     : item.path;

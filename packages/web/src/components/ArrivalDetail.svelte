@@ -18,7 +18,7 @@
     type ConflictBody,
     type Preview,
   } from '../lib/arrivals.js';
-  import { PICTURE_SIZES } from '../lib/library-items.js';
+  import { PICTURE_SIZES, settleKey } from '../lib/library-items.js';
   import type { MessageKey } from '@kinoshelf/i18n';
   import CandidateList from './CandidateList.svelte';
 
@@ -34,10 +34,11 @@
     /** Those files themselves, this one included: what "Transfer" starts when it is ready. */
     mates?: readonly Arrival[];
     /**
-     * The file left the list (transferred or set aside): what to tell the user, and the id of the
-     * entry it is about, read when the click happened (the panel may show another row by then).
+     * The file left the list (transferred or set aside): what to tell the user, and which file it
+     * was (its id and the key of its group), read when the click happened. The panel may show
+     * another row by then, and the list may no longer hold this one: validating changes its state.
      */
-    ondone: (message: string, entryId: string) => void;
+    ondone: (message: string, settled: { readonly id: string; readonly key: string }) => void;
   } = $props();
 
   // The parent keys this component on the file, so what is read here once is right for its life.
@@ -167,7 +168,8 @@
       return;
     }
     // Read now: the await below outlives a change of row, and these must stay this file's.
-    const id = entry.id;
+    const settled = { id: entry.id, key: settleKey(entry) };
+    const id = settled.id;
     const label = name;
     busy = true;
     failure = undefined;
@@ -181,7 +183,7 @@
           files.length > 1
             ? t('web.queue.validated.followed', { name: label, count: files.length - 1 })
             : t('web.queue.validated', { name: label }),
-          id,
+          settled,
         );
         return;
       }
@@ -209,7 +211,7 @@
           outcome.followed > 0
             ? t('web.queue.validated.followed', { name: label, count: outcome.followed })
             : t('web.queue.validated', { name: label }),
-          id,
+          settled,
         );
       }
     } catch (error) {
@@ -221,13 +223,14 @@
   }
 
   async function ignore(): Promise<void> {
-    const id = entry.id;
+    const settled = { id: entry.id, key: settleKey(entry) };
+    const id = settled.id;
     const label = name;
     busy = true;
     failure = undefined;
     try {
       await api.post(`/api/entries/${id}/ignore`);
-      ondone(t('web.queue.ignored', { name: label }), id);
+      ondone(t('web.queue.ignored', { name: label }), settled);
     } catch (error) {
       failure = error;
     } finally {

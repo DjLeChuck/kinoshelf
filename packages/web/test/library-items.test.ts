@@ -7,6 +7,7 @@ import {
   canRun,
   episodeLabel,
   groupSettling,
+  settleKey,
   type LibraryItem,
   isSettling,
   isStalled,
@@ -245,5 +246,23 @@ describe('showStatusKey', () => {
     expect(showStatusKey('Ended')).toBe('web.library.show.status.ended');
     expect(showStatusKey('Cancelled')).toBeUndefined();
     expect(showStatusKey('toString')).toBeUndefined();
+  });
+});
+
+describe('settleKey', () => {
+  it('is the same for an arrival read at the click as for the row of the list it came from', () => {
+    // What a validation locks is read from the file validated, not looked up in a list that the
+    // validation itself empties of it.
+    const row = { release: '/d/Pack', cluster: 0, kind: 'series', path: '/d/Pack/a.mkv' } as const;
+    const arrival = {
+      release: '/d/Pack',
+      cluster: 0,
+      kind: 'series',
+      path: '/d/Pack/b.mkv',
+    } as const;
+    expect(settleKey(arrival)).toBe(settleKey(row));
+    expect(settleKey({ ...arrival, cluster: 1 })).not.toBe(settleKey(row));
+    // A movie is validated alone.
+    expect(settleKey({ ...row, kind: 'movie' })).toBe('/d/Pack/a.mkv');
   });
 });

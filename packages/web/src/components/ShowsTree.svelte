@@ -667,13 +667,18 @@
             item={chosenItem}
             {busy}
             siblings={settleGroups.find((group) => group.key === settleKey(chosenItem))?.files ?? 1}
-            ondone={(message: string, entryId?: string) => {
+            ondone={(message: string, settled?: { readonly id: string; readonly key: string }) => {
               // A validation lets the whole group go: lock it until the transfer empties the list.
-              // The group is the one validated (`entryId`, read at the click), not the row open now.
-              const done = settling.find((item) => item.entryId === entryId) ?? chosenItem;
-              startedKeys = [...startedKeys, settleKey(done)];
-              // Close the panel only if it still shows what was validated: another row may be open.
-              if (selection?.kind === 'item' && settleKey(selection.item) === settleKey(done)) {
+              // The group is the one validated, as read at the click: by now the list may have
+              // dropped it, and the row open is another one.
+              if (settled) {
+                startedKeys = [...startedKeys, settled.key];
+              }
+              // Close the panel only if it still shows what was validated.
+              if (
+                selection?.kind === 'item' &&
+                (settled === undefined || settleKey(selection.item) === settled.key)
+              ) {
                 selection = undefined;
               }
               onsettled(message);

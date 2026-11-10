@@ -494,10 +494,13 @@
                 source={library.source}
                 item={open}
                 {busy}
-                ondone={(message: string, entryId?: string) => {
+                ondone={(
+                  message: string,
+                  settled?: { readonly id: string; readonly key: string },
+                ) => {
                   notice = message;
                   // Another row may be open by now: close the panel only if it is the one validated.
-                  if (entryId === undefined || openEntryId() === entryId) {
+                  if (settled === undefined || openEntryId() === settled.id) {
                     chosen = undefined;
                   }
                   void load();
