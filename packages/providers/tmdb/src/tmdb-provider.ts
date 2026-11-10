@@ -119,8 +119,9 @@ const logoLanguages = (language: string | undefined): string =>
   [...new Set([primaryLanguage(language), 'en', 'null'])].filter(Boolean).join(',');
 
 /**
- * The logo to write: the metadata language first, then English, then a textless one, and within a
- * language the best voted (the widest breaks a tie). A file that is not a PNG or JPEG is dropped.
+ * The logo to write: the metadata language first, then English, then a textless one, then any other
+ * language (only seen when the first three gave none), and within a language the best voted (the
+ * widest breaks a tie). A file that is not a PNG or JPEG is dropped.
  */
 function pickLogo(
   logos: readonly Logo[] | null | undefined,
@@ -128,7 +129,7 @@ function pickLogo(
 ): string | undefined {
   const wanted = primaryLanguage(language);
   const rank = (logo: Logo): number =>
-    logo.iso_639_1 === wanted ? 0 : logo.iso_639_1 === 'en' ? 1 : 2;
+    logo.iso_639_1 === wanted ? 0 : logo.iso_639_1 === 'en' ? 1 : logo.iso_639_1 === null ? 2 : 3;
   return [...(logos ?? [])]
     .filter((logo) => IMAGE_PATH.test(logo.file_path))
     .sort(
@@ -138,6 +139,10 @@ function pickLogo(
         (b.width ?? 0) - (a.width ?? 0),
     )[0]?.file_path;
 }
+
+/** Whether the languages asked for gave a logo that can be written. */
+const hasLogo = (logos: readonly Logo[] | null | undefined): boolean =>
+  (logos ?? []).some((logo) => IMAGE_PATH.test(logo.file_path));
 
 const names = (items: readonly { name: string }[] | null | undefined): string[] => [
   ...new Set((items ?? []).map((i) => i.name.trim()).filter((n) => n !== '')),
@@ -217,6 +222,8 @@ export class TmdbProvider implements MetadataProvider {
       title: r.title,
       originalTitle: r.original_title,
       ...this.commonDetails(r, language ?? this.language),
+      ...(!hasLogo(r.images?.logos) &&
+        (await this.anyLogo(id, 'movie', language ?? this.language))),
       tags: names(r.keywords?.keywords),
       ...(certification && { certification }),
       ...(r.imdb_id && { imdbId: r.imdb_id }),
@@ -257,6 +264,8 @@ export class TmdbProvider implements MetadataProvider {
       title: r.name,
       originalTitle: r.original_name,
       ...this.commonDetails(r, language ?? this.language),
+      ...(!hasLogo(r.images?.logos) &&
+        (await this.anyLogo(id, 'series', language ?? this.language))),
       tags: names(r.keywords?.results),
       ...(certification && { certification }),
       ...(imdbId && { imdbId }),
@@ -272,18 +281,32 @@ export class TmdbProvider implements MetadataProvider {
     };
   }
 
-  async listImages(
-    id: ExternalId,
-    kind: 'movie' | 'series',
-    language?: string,
-  ): Promise<WorkImages | null> {
-    this.requireOwn(id);
-    const r = await this.client.get(
+  /**
+   * Every image of a work, in every language: with no `include_image_language` TMDB answers them
+   * all, which the dialog sorts and filters by language. The automatic logo falls back on it too,
+   * so both share one cached request.
+   */
+  private allImages(id: ExternalId, kind: 'movie' | 'series') {
+    return this.client.get(
       `/3/${kind === 'movie' ? 'movie' : 'tv'}/${id.id}/images`,
-      { include_image_language: logoLanguages(language ?? this.language) },
+      {},
       imagesSchema,
       { ttlMs: DETAIL_TTL_MS, nullOn404: true },
     );
+  }
+
+  /**
+   * The logo of a work that has none in the languages asked for (a Chinese series, say): the best
+   * of any language, as a last resort. A logo in a foreign language beats none, and the dialog can
+   * still replace it.
+   */
+  private async anyLogo(id: ExternalId, kind: 'movie' | 'series', language: string | undefined) {
+    return imageField('logoPath', pickLogo((await this.allImages(id, kind))?.logos, language));
+  }
+
+  async listImages(id: ExternalId, kind: 'movie' | 'series'): Promise<WorkImages | null> {
+    this.requireOwn(id);
+    const r = await this.allImages(id, kind);
     if (!r) {
       return null;
     }

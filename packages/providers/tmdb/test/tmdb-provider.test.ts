@@ -318,13 +318,17 @@ describe('getMovieDetails and getSeriesDetails', () => {
   const detailRoutes = [
     at('/3/movie/438631', () => json(fixture('details-movie-438631.json'))),
     at('/3/tv/136315', () => json(fixture('details-tv-136315.json'))),
+    // The fixtures list no logo, so the details ask for the images of every language: none there.
+    at('/3/movie/438631/images', () => json('{"posters":[],"backdrops":[],"logos":[]}')),
+    at('/3/tv/136315/images', () => json('{"posters":[],"backdrops":[],"logos":[]}')),
     at('/3/movie/404', () => json('{"success":false,"status_code":34}', 404)),
     at('/3/tv/404', () => json('{"success":false,"status_code":34}', 404)),
   ];
 
   it('maps a movie from a single request', async () => {
-    const { provider, requests } = make(detailRoutes);
+    const { provider, requests: all } = make(detailRoutes);
     const movie = await provider.getMovieDetails(movieId, 'fr');
+    const requests = all.filter((request) => request.url.pathname === '/3/movie/438631');
 
     expect(requests).toHaveLength(1);
     expect(Object.fromEntries(requests[0]?.url.searchParams ?? [])).toEqual({
@@ -426,7 +430,10 @@ describe('getMovieDetails and getSeriesDetails', () => {
       external_ids: { imdb_id: string };
     };
     body.external_ids.imdb_id = 'tt14452776';
-    const { provider } = make([at('/3/tv/136315', () => json(JSON.stringify(body)))]);
+    const { provider } = make([
+      at('/3/tv/136315', () => json(JSON.stringify(body))),
+      ...detailRoutes,
+    ]);
     expect((await provider.getSeriesDetails(tvId))?.imdbId).toBe('tt14452776');
   });
 
@@ -434,16 +441,25 @@ describe('getMovieDetails and getSeriesDetails', () => {
     const body = JSON.parse(fixture('details-tv-136315.json')) as {
       external_ids: { tvdb_id: number | null };
     };
-    const { provider } = make([at('/3/tv/136315', () => json(JSON.stringify(body)))]);
+    const { provider } = make([
+      at('/3/tv/136315', () => json(JSON.stringify(body))),
+      ...detailRoutes,
+    ]);
     expect((await provider.getSeriesDetails(tvId))?.tvdbId).toBe(403539);
     body.external_ids.tvdb_id = null;
-    const { provider: none } = make([at('/3/tv/136315', () => json(JSON.stringify(body)))]);
+    const { provider: none } = make([
+      at('/3/tv/136315', () => json(JSON.stringify(body))),
+      ...detailRoutes,
+    ]);
     expect(await none.getSeriesDetails(tvId)).not.toHaveProperty('tvdbId');
   });
 
   it('ignores an empty imdb id on a movie', async () => {
     const body = { ...(fixtureJson('details-movie-438631.json') as object), imdb_id: '' };
-    const { provider } = make([at('/3/movie/438631', () => json(JSON.stringify(body)))]);
+    const { provider } = make([
+      at('/3/movie/438631', () => json(JSON.stringify(body))),
+      ...detailRoutes,
+    ]);
     expect(await provider.getMovieDetails(movieId)).not.toHaveProperty('imdbId');
   });
 
@@ -456,7 +472,10 @@ describe('getMovieDetails and getSeriesDetails', () => {
     });
     const movieWith = async (logos: readonly object[], language?: string) => {
       const body = { ...(fixtureJson('details-movie-438631.json') as object), images: { logos } };
-      const { provider } = make([at('/3/movie/438631', () => json(JSON.stringify(body)))]);
+      const { provider } = make([
+        at('/3/movie/438631/images', () => json('{"posters":[],"backdrops":[],"logos":[]}')),
+        at('/3/movie/438631', () => json(JSON.stringify(body))),
+      ]);
       return provider.getMovieDetails(movieId, language);
     };
 
@@ -479,12 +498,59 @@ describe('getMovieDetails and getSeriesDetails', () => {
       expect(await movieWith([])).not.toHaveProperty('logoPath');
     });
 
+    describe('when none is in the languages asked for', () => {
+      const withEverything = async (logos: readonly object[], elsewhere: readonly object[]) => {
+        const body = {
+          ...(fixtureJson('details-movie-438631.json') as object),
+          images: { logos },
+        };
+        const { provider, requests } = make([
+          at('/3/movie/438631/images', () =>
+            json(
+              JSON.stringify({
+                posters: [],
+                backdrops: [],
+                logos: elsewhere.map((one) => ({ ...one, height: 200 })),
+              }),
+            ),
+          ),
+          at('/3/movie/438631', () => json(JSON.stringify(body))),
+        ]);
+        return { details: await provider.getMovieDetails(movieId, 'fr'), requests };
+      };
+
+      it('takes one in another language, textless first, so a Chinese-only work has a logo', async () => {
+        const { details, requests } = await withEverything(
+          [],
+          [logo('zh', 'zh', 9), logo('ja', 'ja', 1), logo('none', null, 0)],
+        );
+        expect(details?.logoPath).toBe('/none.png');
+        expect(requests.map((request) => request.url.pathname)).toEqual([
+          '/3/movie/438631',
+          '/3/movie/438631/images',
+        ]);
+        expect(
+          (await withEverything([], [logo('zh', 'zh', 9), logo('ja', 'ja', 1)])).details?.logoPath,
+        ).toBe('/zh.png');
+      });
+
+      it('asks nothing more when a logo was found, and none when no language has one', async () => {
+        const found = await withEverything([logo('fr', 'fr', 1)], [logo('zh', 'zh', 9)]);
+        expect(found.details?.logoPath).toBe('/fr.png');
+        expect(found.requests).toHaveLength(1);
+        expect((await withEverything([], [])).details).not.toHaveProperty('logoPath');
+      });
+    });
+
     it('reads the logo of a series too', async () => {
       const body = {
         ...(fixtureJson('details-tv-136315.json') as object),
         images: { logos: [logo('bear', 'en', 2)] },
       };
-      const { provider } = make([at('/3/tv/136315', () => json(JSON.stringify(body)))]);
+      const { provider } = make([
+        at('/3/tv/136315', () => json(JSON.stringify(body))),
+        ...detailRoutes,
+      ]);
       expect((await provider.getSeriesDetails(tvId, 'en'))?.logoPath).toBe('/bear.png');
     });
   });
@@ -869,11 +935,12 @@ describe('listImages', () => {
     ],
   });
 
-  it('asks for the library language, textless and English, and keeps what can be written', async () => {
+  it('asks for every language and keeps what can be written', async () => {
     const { provider, requests } = make([at('/3/movie/438631/images', () => json(images))]);
-    const result = await provider.listImages({ provider: 'tmdb', id: 438631 }, 'movie', 'fr-FR');
+    const result = await provider.listImages({ provider: 'tmdb', id: 438631 }, 'movie');
 
-    expect(requests[0]?.url.searchParams.get('include_image_language')).toBe('fr,en,null');
+    expect(requests[0]?.url.searchParams.has('include_image_language')).toBe(false);
+    expect(requests[0]?.url.searchParams.has('language')).toBe(false);
     expect(result?.poster).toEqual([
       {
         path: '/aaa.jpg',
