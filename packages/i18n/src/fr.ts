@@ -345,6 +345,7 @@ export const fr: Record<keyof typeof en, string> = {
   'web.library.run.skipped':
     '{count, plural, one {# élément n’a} other {# éléments n’ont}} rien à faire et {count, plural, one {est écarté} other {sont écartés}}.',
   'web.library.run.confirm': 'Lancer',
+  'web.library.run.running': 'Lancement…',
   'web.library.run.cancel': 'Annuler',
   'web.library.run.started': 'Lancé : le lot est dans l’historique.',
   'web.library.transfer.running': 'Transfert en cours : {done} fichiers sur {total} traités',
@@ -659,6 +660,7 @@ export const fr: Record<keyof typeof en, string> = {
   'web.queue.transfer': 'Transférer',
   'web.queue.validate': 'Valider',
   'web.queue.validating': 'Validation…',
+  'web.queue.validating.progress': 'Validation… {done}/{total}',
   'web.queue.ignore': 'Ignorer',
   'web.queue.library': 'Bibliothèque de destination',
   'web.queue.validated': 'Transfert lancé pour {name}.',

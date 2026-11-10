@@ -24,6 +24,17 @@ describe('Validations', () => {
     expect(v.running('a')).toBe(false);
   });
 
+  it('keeps how far a validation is, only while it runs', () => {
+    const v = new Validations();
+    v.start('a');
+    expect(v.progressOf('a')).toBeUndefined();
+    v.progress('a', 2, 5);
+    expect(v.progressOf('a')).toEqual({ done: 2, total: 5 });
+    v.fail('a', 'x');
+    v.progress('a', 3, 5);
+    expect(v.progressOf('a')).toBeUndefined();
+  });
+
   it('looks over the entries of a group', () => {
     const v = new Validations();
     v.start('b');

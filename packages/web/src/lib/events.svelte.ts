@@ -37,6 +37,24 @@ export function disconnectEvents(): void {
 }
 
 /**
+ * Calls `listener` whenever one of `topics` fires, until the returned function is called. Unlike
+ * `refetchOn`, it belongs to no component: a validation outlives the panel that started it.
+ */
+export function onTopics(topics: readonly Topic[], listener: () => void): () => void {
+  const sets = topics.map((topic) => {
+    const set = listeners.get(topic) ?? new Set<() => void>();
+    set.add(listener);
+    listeners.set(topic, set);
+    return set;
+  });
+  return () => {
+    for (const set of sets) {
+      set.delete(listener);
+    }
+  };
+}
+
+/**
  * Runs `refetch` now and whenever one of `topics` fires (a burst counts once), until the
  * component is destroyed. A view calls it once, from its script.
  */

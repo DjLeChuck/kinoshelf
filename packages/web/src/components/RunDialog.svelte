@@ -3,6 +3,7 @@
   import { describeError } from '@kinoshelf/i18n';
   import { messageOf } from '../lib/errors.js';
   import { t } from '../lib/i18n.svelte.js';
+  import { libraryKey, runs } from '../lib/validations.svelte.js';
   import {
     libraryItems,
     PICTURE_SIZES,
@@ -74,12 +75,21 @@
 
   async function run(): Promise<void> {
     running = true;
+    // Marked from the click, in the list too: the server's `transfer` only shows after a reload.
+    const keys = [libraryKey(libraryId), ...ids];
+    for (const key of keys) {
+      runs.start(key);
+    }
     try {
       await libraryItems.run(libraryId, ids, version);
       ondone(t('web.library.run.started'));
     } catch (error) {
       failure = error;
       running = false;
+    } finally {
+      for (const key of keys) {
+        runs.clear(key);
+      }
     }
   }
 
@@ -143,6 +153,12 @@
   class:compact={mode === 'version'}
   aria-labelledby="run-title"
   {onclose}
+  oncancel={(event) => {
+    // Esc must not close what is being sent: the answer would go to nobody.
+    if (running) {
+      event.preventDefault();
+    }
+  }}
 >
   <h2 id="run-title">{t(`web.library.run.title.${mode}`)}</h2>
 
@@ -207,7 +223,7 @@
   {/if}
 
   <div class="actions">
-    <button type="button" class="btn" onclick={() => dialog?.close()}>
+    <button type="button" class="btn" disabled={running} onclick={() => dialog?.close()}>
       {t('web.library.run.cancel')}
     </button>
     <button
@@ -216,7 +232,7 @@
       disabled={running || report === undefined || failure !== undefined || totals?.failed !== 0}
       onclick={() => void run()}
     >
-      {t('web.library.run.confirm')}
+      {running ? t('web.library.run.running') : t('web.library.run.confirm')}
     </button>
   </div>
 </dialog>

@@ -1,4 +1,5 @@
 import type { MessageKey } from '@kinoshelf/i18n';
+import { ApiError } from './api.js';
 import { baseName } from './paths.js';
 
 /** What a candidate looks like, in an arrival and in `GET /api/search`. */
@@ -241,29 +242,87 @@ export type ValidateOutcome =
   /** The plan refused the choice (target taken, name not buildable): the file stays to be settled. */
   | { readonly status: 'conflict'; readonly conflicts: readonly ConflictBody[] };
 
+/** What `GET /api/entries/{id}/match` says: where the validation is, or how it ended. */
+interface MatchState {
+  readonly status: 'running' | 'done' | 'failed';
+  readonly done?: number;
+  readonly total?: number;
+  readonly followers?: readonly string[];
+  readonly entry?: { readonly classification: string; readonly conflicts: readonly ConflictBody[] };
+  readonly error?: { readonly code?: string; readonly params?: Record<string, string | number> };
+}
+
+type Get = <T>(url: string) => Promise<T>;
+
+/** How the client follows a validation: it reads its state each time the server says it moved. */
+export interface Watch {
+  readonly get: Get;
+  /** Calls the listener whenever the server announces progress; returns how to stop listening. */
+  readonly changes: (listener: () => void) => () => void;
+  /** Called with the files whose metadata is loaded, out of those the choice covers. */
+  readonly onprogress?: (done: number, total: number) => void;
+}
+
+/**
+ * Reads the match until it is no longer running. The listener is set before the first read, and an
+ * event that comes while a read is under way is remembered: none can slip between a read and the
+ * wait for the next. A dropped stream announces itself again (`ready`) when it reconnects.
+ */
+async function untilEnded(id: string, watch: Watch): Promise<MatchState> {
+  let wake: (() => void) | undefined;
+  let moved = false;
+  // A function, so the compiler does not take the flag for always false: the listener sets it.
+  const hasMoved = (): boolean => moved;
+  const stop = watch.changes(() => {
+    moved = true;
+    wake?.();
+  });
+  try {
+    for (;;) {
+      moved = false;
+      const state = await watch.get<MatchState>(`/api/entries/${id}/match`);
+      if (state.status !== 'running') {
+        return state;
+      }
+      watch.onprogress?.(state.done ?? 0, state.total ?? 0);
+      if (!hasMoved()) {
+        await new Promise<void>((resolve) => {
+          wake = resolve;
+        });
+        wake = undefined;
+      }
+    }
+  } finally {
+    stop();
+  }
+}
+
 /**
  * The two steps of "Validate": match the file with the chosen candidate, then queue the transfer
- * of that file alone. The server queues it behind any transfer of the same job, so a matched file
- * is never left without one.
+ * of that file alone. The server plans the release on its own and answers at once, so the match
+ * is followed until it ends (a release takes as long as it is long, and the server says how far it is). The
+ * server queues the transfer behind any other of the same job, so a matched file is never left
+ * without one.
  */
 export async function validate(
   arrival: Pick<Arrival, 'id' | 'jobId'>,
   choice: Choice,
   post: Post,
+  watch: Watch,
 ): Promise<ValidateOutcome> {
-  const matched = await post<{
-    classification: string;
-    conflicts: readonly ConflictBody[];
-    followers?: readonly string[];
-  }>(`/api/entries/${arrival.id}/match`, {
+  await post(`/api/entries/${arrival.id}/match`, {
     ...toMatchBody(choice.candidate),
     ...(choice.libraryId !== undefined && { libraryId: choice.libraryId }),
     ...(choice.screenSize !== undefined && { screenSize: choice.screenSize }),
   });
-  if (matched.classification !== 'to-rename') {
-    return { status: 'conflict', conflicts: matched.conflicts };
+  const state = await untilEnded(arrival.id, watch);
+  if (state.status === 'failed') {
+    throw new ApiError(500, state.error?.code ?? 'internal.unexpected', state.error?.params);
   }
-  const followers = matched.followers ?? [];
+  if (state.entry?.classification !== 'to-rename') {
+    return { status: 'conflict', conflicts: state.entry?.conflicts ?? [] };
+  }
+  const followers = state.followers ?? [];
   await post(`/api/plans/${arrival.jobId}/execute`, { entries: [arrival.id, ...followers] });
   return { status: 'started', followed: followers.length };
 }

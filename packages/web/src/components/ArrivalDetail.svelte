@@ -1,6 +1,7 @@
 <script lang="ts">
   import { api, ApiError } from '../lib/api.js';
   import { messageOf } from '../lib/errors.js';
+  import { onTopics } from '../lib/events.svelte.js';
   import { validations } from '../lib/validations.svelte.js';
   import { t } from '../lib/i18n.svelte.js';
   import {
@@ -62,6 +63,7 @@
   /** Several panels of one entry share it: a validation in flight survives the panel. */
   const validating = $derived(validations.running(entry.id));
   const locked = $derived(busy || validating);
+  const progress = $derived(validations.progressOf(entry.id));
   const shownFailure = $derived(failure ?? validations.failure(entry.id)?.error);
   const status = $derived(statusOf(entry));
   const name = $derived(label(entry, siblings));
@@ -191,6 +193,13 @@
           screenSize: chosenSize,
         },
         api.post,
+        {
+          get: api.get,
+          changes: (listener) => onTopics(['progress', 'ready'], listener),
+          onprogress: (done, total) => {
+            validations.progress(id, done, total);
+          },
+        },
       );
       validations.clear(id);
       if (outcome.status === 'conflict') {
@@ -407,7 +416,9 @@
       onclick={() => void confirm()}
     >
       {locked
-        ? t('web.queue.validating')
+        ? progress && progress.total > 1
+          ? t('web.queue.validating.progress', progress)
+          : t('web.queue.validating')
         : asPlanned
           ? t('web.queue.transfer')
           : t('web.queue.validate')}

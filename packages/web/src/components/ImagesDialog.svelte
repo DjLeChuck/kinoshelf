@@ -227,9 +227,15 @@
   bind:this={dialog}
   aria-labelledby="images-title"
   {onclose}
+  oncancel={(event) => {
+    // Esc must not close what is being applied: the answer would go to nobody.
+    if (applying) {
+      event.preventDefault();
+    }
+  }}
   onclick={(event) => {
     // Only the backdrop is the dialog itself: the box fills the rest.
-    if (event.target === dialog) {
+    if (event.target === dialog && !applying) {
       dialog.close();
     }
   }}
@@ -475,7 +481,7 @@
         <span class="muted">{summary}</span>
       {/if}
       <div class="actions">
-        <button type="button" class="btn" onclick={() => dialog?.close()}
+        <button type="button" class="btn" disabled={applying} onclick={() => dialog?.close()}
           >{t('web.images.cancel')}</button
         >
         <button

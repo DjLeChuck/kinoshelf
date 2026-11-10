@@ -104,62 +104,158 @@ describe('candidates', () => {
 });
 
 describe('validate', () => {
-  const recorder = (answers: (url: string) => unknown) => {
+  /**
+   * `states` is what each read of the match says, in turn (the last one repeats). The server
+   * announces a change after every read that found the match still running, as it would.
+   */
+  const recorder = (states: readonly object[], failure?: Error) => {
     const calls: { url: string; body: unknown }[] = [];
+    const listeners = new Set<() => void>();
+    let read = 0;
     const post = <T>(url: string, body?: unknown): Promise<T> => {
       calls.push({ url, body });
-      const answer = answers(url);
-      return answer instanceof Error ? Promise.reject(answer) : Promise.resolve(answer as T);
+      return failure && url.includes('/execute')
+        ? Promise.reject(failure)
+        : Promise.resolve({} as T);
     };
-    return { calls, post };
+    const get = <T>(url: string): Promise<T> => {
+      calls.push({ url, body: undefined });
+      const state = states[Math.min(read++, states.length - 1)] as { status: string };
+      if (state.status === 'running') {
+        setTimeout(() => {
+          for (const listener of [...listeners]) {
+            listener();
+          }
+        }, 0);
+      }
+      return Promise.resolve(state as T);
+    };
+    const progress: [number, number][] = [];
+    return {
+      calls,
+      post,
+      progress,
+      listeners,
+      watch: {
+        get,
+        changes: (listener: () => void) => {
+          listeners.add(listener);
+          return () => listeners.delete(listener);
+        },
+        onprogress: (done: number, total: number) => progress.push([done, total]),
+      },
+    };
   };
-  const renamed = { classification: 'to-rename', conflicts: [] };
+  const done = (over: object = {}) => ({
+    status: 'done',
+    entry: { classification: 'to-rename', conflicts: [] },
+    followers: [],
+    ...over,
+  });
 
-  it('matches, then queues the transfer of the file', async () => {
-    const { calls, post } = recorder((url) => (url.includes('/match') ? renamed : {}));
-    expect(await validate(arrival(), { candidate: dune }, post)).toEqual({
+  it('matches, waits for the plan, then queues the transfer of the file', async () => {
+    const { calls, post, watch } = recorder([done()]);
+    expect(await validate(arrival(), { candidate: dune }, post, watch)).toEqual({
       status: 'started',
       followed: 0,
     });
-    expect(calls.map((c) => c.url)).toEqual(['/api/entries/e1/match', '/api/plans/j1/execute']);
+    expect(calls.map((c) => c.url)).toEqual([
+      '/api/entries/e1/match',
+      '/api/entries/e1/match',
+      '/api/plans/j1/execute',
+    ]);
     expect(calls[0]?.body).not.toHaveProperty('score');
-    expect(calls[1]?.body).toEqual({ entries: ['e1'] });
+    expect(calls[2]?.body).toEqual({ entries: ['e1'] });
+  });
+
+  it('reports how far the server is until it ends', async () => {
+    const { post, watch, progress } = recorder([
+      { status: 'running', done: 0, total: 3 },
+      { status: 'running', done: 2, total: 3 },
+      done(),
+    ]);
+    await validate(arrival(), { candidate: dune }, post, watch);
+    expect(progress).toEqual([
+      [0, 3],
+      [2, 3],
+    ]);
+  });
+
+  it('stops listening once the match ended, whatever the way it ended', async () => {
+    const ok = recorder([{ status: 'running', done: 1, total: 2 }, done()]);
+    await validate(arrival(), { candidate: dune }, ok.post, ok.watch);
+    expect(ok.listeners.size).toBe(0);
+    const failed = recorder([{ status: 'failed', error: { code: 'internal.unexpected' } }]);
+    await expect(
+      validate(arrival(), { candidate: dune }, failed.post, failed.watch),
+    ).rejects.toBeDefined();
+    expect(failed.listeners.size).toBe(0);
+  });
+
+  it('does not wait for an event that came while it was reading', async () => {
+    const { post, watch, listeners } = recorder([{ status: 'running', done: 0, total: 2 }, done()]);
+    // The announcement lands during the first read, before the wait begins.
+    const get = watch.get;
+    const racing = {
+      ...watch,
+      get: <T>(url: string): Promise<T> => {
+        const answer = get<T>(url);
+        for (const listener of [...listeners]) {
+          listener();
+        }
+        return answer;
+      },
+    };
+    await expect(validate(arrival(), { candidate: dune }, post, racing)).resolves.toMatchObject({
+      status: 'started',
+    });
   });
 
   it('does not transfer a file the plan put in conflict, and says why', async () => {
     const conflicts = [{ reason: 'destination-exists', path: '/x', detail: null }];
-    const { calls, post } = recorder(() => ({ classification: 'conflict', conflicts }));
-    expect(await validate(arrival(), { candidate: dune }, post)).toEqual({
+    const { calls, post, watch } = recorder([
+      done({ entry: { classification: 'conflict', conflicts } }),
+    ]);
+    expect(await validate(arrival(), { candidate: dune }, post, watch)).toEqual({
       status: 'conflict',
       conflicts,
     });
-    expect(calls).toHaveLength(1);
+    expect(calls.some((c) => c.url.includes('/execute'))).toBe(false);
   });
 
   it('transfers the rest of the release along, and says how many went', async () => {
-    const { calls, post } = recorder((url) =>
-      url.includes('/match') ? { ...renamed, followers: ['e2', 'e3'] } : {},
-    );
-    expect(await validate(arrival(), { candidate: dune }, post)).toEqual({
+    const { calls, post, watch } = recorder([done({ followers: ['e2', 'e3'] })]);
+    expect(await validate(arrival(), { candidate: dune }, post, watch)).toEqual({
       status: 'started',
       followed: 2,
     });
-    expect(calls[1]?.body).toEqual({ entries: ['e1', 'e2', 'e3'] });
+    expect(calls.at(-1)?.body).toEqual({ entries: ['e1', 'e2', 'e3'] });
   });
 
   it('sends only the choices that differ from the defaults', async () => {
-    const { calls, post } = recorder(() => renamed);
-    await validate(arrival(), { candidate: dune }, post);
-    await validate(arrival(), { candidate: dune, libraryId: 'uhd' }, post);
-    const bodies = calls.filter((c) => c.url.includes('/match')).map((c) => c.body);
+    const { calls, post, watch } = recorder([done()]);
+    await validate(arrival(), { candidate: dune }, post, watch);
+    await validate(arrival(), { candidate: dune, libraryId: 'uhd' }, post, watch);
+    const bodies = calls
+      .filter((c) => c.url.includes('/match') && c.body !== undefined)
+      .map((c) => c.body);
     expect(bodies[0]).not.toHaveProperty('libraryId');
     expect(bodies[1]).toMatchObject({ libraryId: 'uhd' });
   });
 
+  it('throws the cause of a validation that failed on the server', async () => {
+    const { post, watch } = recorder([
+      { status: 'failed', error: { code: 'internal.unexpected' } },
+    ]);
+    await expect(validate(arrival(), { candidate: dune }, post, watch)).rejects.toMatchObject({
+      code: 'internal.unexpected',
+    });
+  });
+
   it('gives the error back when the transfer cannot be queued', async () => {
     const failure = new Error('down');
-    const { post } = recorder((url) => (url.includes('/match') ? renamed : failure));
-    await expect(validate(arrival(), { candidate: dune }, post)).rejects.toBe(failure);
+    const { post, watch } = recorder([done()], failure);
+    await expect(validate(arrival(), { candidate: dune }, post, watch)).rejects.toBe(failure);
   });
 });
 

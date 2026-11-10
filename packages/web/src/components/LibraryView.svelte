@@ -7,7 +7,7 @@
   import { libraryApi, type Library } from '../lib/libraries.js';
   import { baseName } from '../lib/paths.js';
   import { router } from '../lib/router.svelte.js';
-  import { validations } from '../lib/validations.svelte.js';
+  import { libraryKey, runs, validations } from '../lib/validations.svelte.js';
   import { oneOf } from '../lib/routes.js';
   import {
     ITEM_FILTERS,
@@ -109,7 +109,7 @@
   });
 
   const open = $derived(page?.items.find(({ id }) => id === chosen));
-  const busy = $derived(page?.transfer != null);
+  const busy = $derived(page?.transfer != null || runs.running(libraryKey(library.id)));
   /** Read when a validation ends, not when its panel was drawn: the open row may have changed. */
   const openEntryId = (): string | null | undefined =>
     page?.items.find(({ id }) => id === chosen)?.entryId;
@@ -420,7 +420,9 @@
                       {item.title ?? baseName(item.path)}
                       {episodeLabel(item.season, item.episode, item.episodeEnd)}
                     </button>
-                    {#if validations.running(item.entryId)}<span class="chip chip-neutral"
+                    {#if runs.running(item.id) || item.versions.some( (version) => runs.running(version.id) )}<span
+                        class="chip chip-neutral">{t('web.library.run.running')}</span
+                      >{:else if validations.running(item.entryId)}<span class="chip chip-neutral"
                         >{t('web.queue.validating')}</span
                       >{:else if validations.failure(item.entryId)}<span
                         class="chip chip-danger"

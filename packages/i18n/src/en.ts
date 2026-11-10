@@ -327,6 +327,7 @@ export const en = {
   'web.library.run.skipped':
     '{count, plural, one {# item has} other {# items have}} nothing to do and {count, plural, one {is} other {are}} left out.',
   'web.library.run.confirm': 'Run',
+  'web.library.run.running': 'Running…',
   'web.library.run.cancel': 'Cancel',
   'web.library.run.started': 'Started: the batch is in the history.',
   'web.library.transfer.running': 'Transfer in progress: {done} of {total} files done',
@@ -633,6 +634,7 @@ export const en = {
   'web.queue.transfer': 'Transfer',
   'web.queue.validate': 'Validate',
   'web.queue.validating': 'Validating…',
+  'web.queue.validating.progress': 'Validating… {done}/{total}',
   'web.queue.ignore': 'Ignore',
   'web.queue.library': 'Destination library',
   'web.queue.validated': 'Transfer started for {name}.',
