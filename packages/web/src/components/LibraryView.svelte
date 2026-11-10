@@ -7,6 +7,7 @@
   import { libraryApi, type Library } from '../lib/libraries.js';
   import { baseName } from '../lib/paths.js';
   import { router } from '../lib/router.svelte.js';
+  import { validations } from '../lib/validations.svelte.js';
   import { oneOf } from '../lib/routes.js';
   import {
     ITEM_FILTERS,
@@ -109,6 +110,9 @@
 
   const open = $derived(page?.items.find(({ id }) => id === chosen));
   const busy = $derived(page?.transfer != null);
+  /** Read when a validation ends, not when its panel was drawn: the open row may have changed. */
+  const openEntryId = (): string | null | undefined =>
+    page?.items.find(({ id }) => id === chosen)?.entryId;
   const scanning = $derived(page?.scan != null || library.scanning);
   const percent = $derived(scanPercent(page?.scan?.progress ?? null));
 
@@ -416,7 +420,12 @@
                       {item.title ?? baseName(item.path)}
                       {episodeLabel(item.season, item.episode, item.episodeEnd)}
                     </button>
-                    {#if item.state !== 'ok'}<span class="chip {STATE_CHIP[item.state]}"
+                    {#if validations.running(item.entryId)}<span class="chip chip-neutral"
+                        >{t('web.queue.validating')}</span
+                      >{:else if validations.failure(item.entryId)}<span
+                        class="chip chip-danger"
+                        role="alert">{messageOf(t, validations.failure(item.entryId)?.error)}</span
+                      >{:else if item.state !== 'ok'}<span class="chip {STATE_CHIP[item.state]}"
                         >{t(`web.library.state.${item.state}`)}</span
                       >{/if}
                   </td>
@@ -483,9 +492,12 @@
                 source={library.source}
                 item={open}
                 {busy}
-                ondone={(message: string) => {
+                ondone={(message: string, entryId?: string) => {
                   notice = message;
-                  chosen = undefined;
+                  // Another row may be open by now: close the panel only if it is the one validated.
+                  if (entryId === undefined || openEntryId() === entryId) {
+                    chosen = undefined;
+                  }
                   void load();
                 }}
               />

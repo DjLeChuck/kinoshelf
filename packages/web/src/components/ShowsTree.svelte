@@ -6,6 +6,7 @@
   import { refetchOn } from '../lib/events.svelte.js';
   import { t } from '../lib/i18n.svelte.js';
   import { router } from '../lib/router.svelte.js';
+  import { validations } from '../lib/validations.svelte.js';
   import { listOf, listParam } from '../lib/routes.js';
   import {
     PAGE_SIZE,
@@ -359,6 +360,9 @@
               {#each settleGroups as group (group.key)}
                 {@const lead = group.items[0]}
                 {@const started = startedKeys.includes(group.key)}
+                {@const ids = group.items.map((item) => item.entryId)}
+                {@const validating = validations.anyRunning(ids)}
+                {@const failed = validations.firstFailure(ids)}
                 {#if lead}
                   <tr
                     class="child"
@@ -384,6 +388,11 @@
                               : 'web.library.state.unrecognized',
                           )}</span
                         >
+                        {#if validating}<span class="chip chip-neutral"
+                            >{t('web.queue.validating')}</span
+                          >{:else if failed}<span class="chip chip-danger" role="alert"
+                            >{messageOf(t, failed.error)}</span
+                          >{/if}
                         {#if group.detached}<span class="chip chip-neutral"
                             >{t('web.arrivals.detached')}</span
                           >{/if}
@@ -658,10 +667,15 @@
             item={chosenItem}
             {busy}
             siblings={settleGroups.find((group) => group.key === settleKey(chosenItem))?.files ?? 1}
-            ondone={(message: string) => {
+            ondone={(message: string, entryId?: string) => {
               // A validation lets the whole group go: lock it until the transfer empties the list.
-              startedKeys = [...startedKeys, settleKey(chosenItem)];
-              selection = undefined;
+              // The group is the one validated (`entryId`, read at the click), not the row open now.
+              const done = settling.find((item) => item.entryId === entryId) ?? chosenItem;
+              startedKeys = [...startedKeys, settleKey(done)];
+              // Close the panel only if it still shows what was validated: another row may be open.
+              if (selection?.kind === 'item' && settleKey(selection.item) === settleKey(done)) {
+                selection = undefined;
+              }
               onsettled(message);
               void load();
             }}

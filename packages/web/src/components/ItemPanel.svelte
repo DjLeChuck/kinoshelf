@@ -41,7 +41,7 @@
     /** A transfer is going on: renaming again what it may hold would stack the same work. */
     busy?: boolean;
     /** The file was settled (transferred or set aside): what to tell the user. */
-    ondone: (message: string) => void;
+    ondone: (message: string, entryId?: string) => void;
   } = $props();
 
   // The parent keys this panel on the item, so what is read here once is right for its life.

@@ -6,6 +6,7 @@
   import { refetchOn } from '../lib/events.svelte.js';
   import { t } from '../lib/i18n.svelte.js';
   import { router } from '../lib/router.svelte.js';
+  import { validations } from '../lib/validations.svelte.js';
   import { oneOf } from '../lib/routes.js';
   import {
     QUEUE_CHIP,
@@ -204,7 +205,17 @@
               >
                 <span class="mono release">{group.name}</span>
                 <span class="meta">
-                  <span class="chip {QUEUE_CHIP[status]}">{t(STATUS_LABEL[status])}</span>
+                  {#if validations.anyRunning(group.files.map((f) => f.id))}<span
+                      class="chip chip-neutral">{t('web.queue.validating')}</span
+                    >{:else if validations.firstFailure(group.files.map((f) => f.id))}<span
+                      class="chip chip-danger"
+                      role="alert"
+                      >{messageOf(
+                        t,
+                        validations.firstFailure(group.files.map((f) => f.id))?.error,
+                      )}</span
+                    >{:else}<span class="chip {QUEUE_CHIP[status]}">{t(STATUS_LABEL[status])}</span
+                    >{/if}
                   {#if group.files.length > 1}<span class="muted"
                       >{t('web.arrivals.files', { count: group.files.length })}</span
                     >{/if}
@@ -274,6 +285,7 @@
               {siblings}
               {mates}
               ondone={(message: string) => {
+                // The list reloads whichever row is open; nothing here closes the panel.
                 notice = message;
                 void load();
               }}

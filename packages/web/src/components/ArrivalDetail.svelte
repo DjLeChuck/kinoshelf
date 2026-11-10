@@ -1,6 +1,7 @@
 <script lang="ts">
   import { api, ApiError } from '../lib/api.js';
   import { messageOf } from '../lib/errors.js';
+  import { validations } from '../lib/validations.svelte.js';
   import { t } from '../lib/i18n.svelte.js';
   import {
     folderOf,
@@ -31,8 +32,11 @@
     siblings?: number;
     /** Those files themselves, this one included: what "Transfer" starts when it is ready. */
     mates?: readonly Arrival[];
-    /** The file left the list (transferred or set aside): what to tell the user. */
-    ondone: (message: string) => void;
+    /**
+     * The file left the list (transferred or set aside): what to tell the user, and the id of the
+     * entry it is about, read when the click happened (the panel may show another row by then).
+     */
+    ondone: (message: string, entryId: string) => void;
   } = $props();
 
   // The parent keys this component on the file, so what is read here once is right for its life.
@@ -55,6 +59,10 @@
   let failure = $state<unknown>(undefined);
   let refused = $state<readonly ConflictBody[]>([]);
 
+  /** Several panels of one entry share it: a validation in flight survives the panel. */
+  const validating = $derived(validations.running(entry.id));
+  const locked = $derived(busy || validating);
+  const shownFailure = $derived(failure ?? validations.failure(entry.id)?.error);
   const status = $derived(statusOf(entry));
   const name = $derived(label(entry, siblings));
   /** Only a library other than the default one is a choice; the server knows the default. */
@@ -75,7 +83,7 @@
   );
   const canValidate = $derived(
     selected !== undefined &&
-      !busy &&
+      !locked &&
       !previewing &&
       preview !== undefined &&
       library !== '' &&
@@ -156,16 +164,22 @@
     if (!selected) {
       return;
     }
+    // Read now: the await below outlives a change of row, and these must stay this file's.
+    const id = entry.id;
+    const label = name;
     busy = true;
     failure = undefined;
+    validations.start(id);
     try {
       if (asPlanned) {
         const files = mates.length > 0 ? mates : [entry];
         await startPlanned(files, api.post);
+        validations.clear(id);
         ondone(
           files.length > 1
-            ? t('web.queue.validated.followed', { name, count: files.length - 1 })
-            : t('web.queue.validated', { name }),
+            ? t('web.queue.validated.followed', { name: label, count: files.length - 1 })
+            : t('web.queue.validated', { name: label }),
+          id,
         );
         return;
       }
@@ -178,28 +192,33 @@
         },
         api.post,
       );
+      validations.clear(id);
       if (outcome.status === 'conflict') {
         refused = outcome.conflicts;
       } else {
         ondone(
           outcome.followed > 0
-            ? t('web.queue.validated.followed', { name, count: outcome.followed })
-            : t('web.queue.validated', { name }),
+            ? t('web.queue.validated.followed', { name: label, count: outcome.followed })
+            : t('web.queue.validated', { name: label }),
+          id,
         );
       }
     } catch (error) {
       failure = error;
+      validations.fail(id, error);
     } finally {
       busy = false;
     }
   }
 
   async function ignore(): Promise<void> {
+    const id = entry.id;
+    const label = name;
     busy = true;
     failure = undefined;
     try {
-      await api.post(`/api/entries/${entry.id}/ignore`);
-      ondone(t('web.queue.ignored', { name }));
+      await api.post(`/api/entries/${id}/ignore`);
+      ondone(t('web.queue.ignored', { name: label }), id);
     } catch (error) {
       failure = error;
     } finally {
@@ -347,8 +366,8 @@
     {/if}
   </section>
 
-  {#if failure}
-    <p class="alert alert-danger" role="alert">{messageOf(t, failure)}</p>
+  {#if shownFailure}
+    <p class="alert alert-danger" role="alert">{messageOf(t, shownFailure)}</p>
   {/if}
 
   {#if entry.destinationOptions.length > 0}
@@ -387,13 +406,13 @@
       disabled={!canValidate}
       onclick={() => void confirm()}
     >
-      {busy
+      {locked
         ? t('web.queue.validating')
         : asPlanned
           ? t('web.queue.transfer')
           : t('web.queue.validate')}
     </button>
-    <button type="button" class="btn" disabled={busy} onclick={() => void ignore()}>
+    <button type="button" class="btn" disabled={locked} onclick={() => void ignore()}>
       {t('web.queue.ignore')}
     </button>
   </footer>
