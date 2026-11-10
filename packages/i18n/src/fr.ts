@@ -739,6 +739,23 @@ export const fr: Record<keyof typeof en, string> = {
   'web.history.origin.cli': 'Ligne de commande',
   'web.history.select': 'Choisissez une ligne pour voir son détail.',
   'web.history.submitted': 'Soumis',
+  'web.changes.scope.label': 'Afficher',
+  'web.changes.scope.problems': 'À vérifier',
+  'web.changes.scope.all': 'Tout',
+  'web.changes.search': 'Rechercher par nom',
+  'web.changes.none': 'Aucun résultat.',
+  'web.changes.more': 'Afficher {count} de plus',
+  'web.changes.clean':
+    '{count, plural, one {# autre est sans problème.} other {# autres sont sans problème.}}',
+  'web.changes.show-all': 'Tout afficher',
+  'web.changes.problems': '{count, plural, one {# à vérifier} other {# à vérifier}}',
+  'web.changes.companions': '{count, plural, one {+# autre fichier} other {+# autres fichiers}}',
+  'web.history.done-files': '{count, plural, one {# réussi} other {# réussis}}',
+  'web.history.extras.count.generated': '{count, plural, one {# NFO généré} other {# NFO générés}}',
+  'web.history.extras.count.downloaded':
+    '{count, plural, one {# image téléchargée} other {# images téléchargées}}',
+  'web.history.extras.count.replaced':
+    '{count, plural, one {# image remplacée} other {# images remplacées}}',
   'web.history.items': 'Fichiers',
   'web.history.extras': 'Métadonnées écrites',
   'web.history.extras.hint':

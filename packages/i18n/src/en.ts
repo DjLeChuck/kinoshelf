@@ -711,6 +711,24 @@ export const en = {
   'web.history.origin.cli': 'Command line',
   'web.history.select': 'Select a line to see its detail.',
   'web.history.submitted': 'Submitted',
+  'web.changes.scope.label': 'Show',
+  'web.changes.scope.problems': 'To check',
+  'web.changes.scope.all': 'Everything',
+  'web.changes.search': 'Search by name',
+  'web.changes.none': 'Nothing matches.',
+  'web.changes.more': 'Show {count} more',
+  'web.changes.clean':
+    '{count, plural, one {# other has no problem.} other {# others have no problem.}}',
+  'web.changes.show-all': 'Show everything',
+  'web.changes.problems': '{count, plural, one {# to check} other {# to check}}',
+  'web.changes.companions': '{count, plural, one {+# other file} other {+# other files}}',
+  'web.history.done-files': '{count} done',
+  'web.history.extras.count.generated':
+    '{count, plural, one {# NFO generated} other {# NFOs generated}}',
+  'web.history.extras.count.downloaded':
+    '{count, plural, one {# image downloaded} other {# images downloaded}}',
+  'web.history.extras.count.replaced':
+    '{count, plural, one {# image replaced} other {# images replaced}}',
   'web.history.items': 'Files',
   'web.history.extras': 'Metadata written',
   'web.history.extras.hint':
