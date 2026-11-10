@@ -82,7 +82,11 @@
   async function transferAll(): Promise<void> {
     starting = true;
     try {
-      const count = await startPlanned(ready, api.post);
+      // A file being validated is held by that validation: asking for it too would be refused.
+      const count = await startPlanned(
+        ready.filter(({ id }) => !validations.running(id)),
+        api.post,
+      );
       notice = t('web.arrivals.transfer-all.done', { count });
       loaded.failure = undefined;
     } catch (error) {

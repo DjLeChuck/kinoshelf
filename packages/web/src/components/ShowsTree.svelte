@@ -116,6 +116,9 @@
 
   /** The episodes of the ticked shows that the action takes, read from the library's list. */
   async function start(mode: 'rename' | 'refresh'): Promise<void> {
+    // The shows ticked when the button was pressed: the list is read for a while, and a box
+    // ticked meanwhile is not part of what was asked.
+    const wanted = new Set(picked);
     starting = true;
     runFailure = undefined;
     try {
@@ -125,7 +128,6 @@
         state: mode === 'rename' ? 'rename' : undefined,
         limit: 100_000,
       });
-      const wanted = new Set(picked);
       const found = new Map(
         page.items
           .filter(

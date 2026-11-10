@@ -28,11 +28,13 @@
     if (path === undefined) {
       return;
     }
+    // Read now: the panel may show another work by the time the answer comes.
+    const label = name;
     starting = true;
     failure = undefined;
     try {
       await libraryApi.rescan(libraryId, path);
-      ondone(t('web.library.rescan.started', { name }));
+      ondone(t('web.library.rescan.started', { name: label }));
     } catch (error) {
       failure = error;
     } finally {
