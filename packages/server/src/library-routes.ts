@@ -36,6 +36,7 @@ import {
   ITEM_FILTERS,
   itemId,
   profileWrites,
+  isUnsettled,
   resolutionOfItem,
   SHOW_FILTERS,
   type ItemFilter,
@@ -248,8 +249,11 @@ const presentWork = (
     return undefined;
   }
   const state = STATE_ORDER.find((candidate) => work.some((item) => item.state === candidate));
+  // The entry stands for the file that waits for a person when there is one: validating it must
+  // reach that file's entry, not the first version's.
+  const lead = work.find((item) => item.state === 'review') ?? first;
   return {
-    ...(presentItem(first, release) as object),
+    ...(presentItem(lead, release) as object),
     state: state ?? first.state,
     nfo: allThere(work.map((item) => item.nfo)),
     poster: allThere(work.map((item) => item.poster)),
@@ -792,12 +796,15 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
         throw new ApiError(404, 'library.item-not-found');
       }
       // The versions of a movie sit in its folder; an episode's NFO is its own, so it stands alone.
-      const movie = item.kind === 'movie' && item.tmdbId !== null;
+      // A file still to validate is no version of the film its guess names.
+      const movie = item.kind === 'movie' && item.tmdbId !== null && !isUnsettled(item);
       const files = movie
         ? largestFirst(
             items
               .inFolder(library.id, dirname(item.path))
-              .filter((row) => row.kind === 'movie' && row.tmdbId === item.tmdbId),
+              .filter(
+                (row) => row.kind === 'movie' && row.tmdbId === item.tmdbId && !isUnsettled(row),
+              ),
             resolutionOfItem,
           )
         : [item];

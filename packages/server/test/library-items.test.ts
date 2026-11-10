@@ -331,6 +331,49 @@ describe('GET /api/libraries/:id/items', () => {
     expect(after[0]?.versions.map((version) => version.resolution)).toEqual(['1080p', '720p']);
   });
 
+  it('lists a file still to validate on its own, never as a version of the film it was mistaken for', async () => {
+    const { h, store, root } = await scanned();
+    const [base] = store.all('films');
+    if (!base) {
+      throw new Error('the scan stored nothing');
+    }
+    // The matcher took the second film for the first one: same tmdb id, but a human must decide.
+    const placed = {
+      ...base,
+      path: join(root, 'Dragons 2.mkv'),
+      title: 'Dragons 2',
+      tmdbId: 90,
+      state: 'ok' as const,
+      entryId: 'placed',
+    };
+    const guess = {
+      ...base,
+      path: join(root, 'Dragons 3.mkv'),
+      title: 'Dragons 3',
+      tmdbId: 90,
+      state: 'review' as const,
+      entryId: 'guess',
+    };
+    store.replace('films', [placed, guess]);
+
+    const body = await list(h);
+    expect(body.total).toBe(2);
+    expect(body.counts.all).toBe(2);
+    expect(body.counts['multi-version']).toBe(0);
+    const byPath = new Map(body.items.map((item) => [item.path, item]));
+    expect(byPath.get(placed.path)?.versions).toHaveLength(1);
+    const waiting = byPath.get(guess.path) as (typeof body.items)[number] & { entryId: string };
+    expect(waiting.state).toBe('review');
+    expect(waiting.versions).toHaveLength(1);
+    // Validating it from the library reaches its own entry.
+    expect(waiting.entryId).toBe('guess');
+    expect((await list(h, '?state=review')).items.map((i) => i.path)).toEqual([guess.path]);
+
+    // Its page does not list the placed film among its versions either.
+    const page = await h.request('GET', `/api/libraries/films/items/${waiting.id}`);
+    expect(page.json<{ versions: unknown[] }>().versions).toHaveLength(1);
+  });
+
   it('says a library was scanned even when it held nothing, and not before', async () => {
     const root = await makeDir();
     const h = await harness({

@@ -716,11 +716,24 @@ export class LibraryItemStore {
 }
 
 /**
+ * A file the library holds as what it is: not waiting for a person. The tmdb id of a file to
+ * validate is only the matcher's guess (a conflict keeps the candidate it chose, which may be
+ * another film), so it must never make that file a version of the film it was mistaken for.
+ */
+const SETTLED = "state NOT IN ('review', 'unrecognized')";
+
+/** `SETTLED` for the other row of a self-join. */
+const SETTLED_OTHER = "other.state NOT IN ('review', 'unrecognized')";
+
+/** Whether a file waits for a person to decide what it is. */
+export const isUnsettled = (item: Pick<LibraryItem, 'state'>): boolean =>
+  item.state === 'review' || item.state === 'unrecognized';
+
+/**
  * What makes one entry of a list: a movie the library identified is one whatever its versions,
  * anything else (a file nobody identified, an episode) is its own file.
  */
-const WORK_KEY =
-  "(CASE WHEN kind = 'movie' AND tmdb_id IS NOT NULL THEN 'm' || tmdb_id ELSE path END)";
+const WORK_KEY = `(CASE WHEN kind = 'movie' AND tmdb_id IS NOT NULL AND ${SETTLED} THEN 'm' || tmdb_id ELSE path END)`;
 
 /** The views of a library: a state, or a kind of file that is missing. */
 export const ITEM_FILTERS = [
@@ -744,8 +757,8 @@ const FILTER_SQL: Record<ItemFilter, string> = {
   'missing-nfo': 'nfo = 0',
   'missing-artwork': '(poster = 0 OR fanart = 0 OR logo = 0 OR thumb = 0)',
   // Another file holds the same work (and episode): a version of it.
-  'multi-version': `EXISTS (SELECT 1 FROM library_items other
-    WHERE other.library_id = library_items.library_id AND other.path <> library_items.path
+  'multi-version': `${SETTLED} AND EXISTS (SELECT 1 FROM library_items other
+    WHERE ${SETTLED_OTHER} AND other.library_id = library_items.library_id AND other.path <> library_items.path
       AND other.kind = library_items.kind AND other.tmdb_id = library_items.tmdb_id
       AND other.season IS library_items.season AND other.episode IS library_items.episode)`,
 };
