@@ -81,6 +81,33 @@ export function coverageOf(
   }));
 }
 
+/** The rows of each season, a file with no season being left out (it holds no episode). */
+function bySeason(rows: readonly VersionRow[]): VersionRow[][] {
+  const seasons = new Map<number, VersionRow[]>();
+  for (const row of rows) {
+    if (row.season !== null) seasons.set(row.season, [...(seasons.get(row.season) ?? []), row]);
+  }
+  return [...seasons.values()];
+}
+
+/**
+ * A show's coverage, told season by season: a version is judged against the season that has it,
+ * so a show released in 1080p one year and 720p the next lacks nothing. A version's tally is the
+ * sum over the seasons where it is one.
+ */
+export function showCoverageOf(rows: readonly VersionRow[]): VersionCoverage[] {
+  const sums = new Map<string | null, { covered: number; total: number }>();
+  for (const season of bySeason(rows)) {
+    for (const { resolution, covered, total } of coverageOf(season)) {
+      const sum = sums.get(resolution) ?? { covered: 0, total: 0 };
+      sums.set(resolution, { covered: sum.covered + covered, total: sum.total + total });
+    }
+  }
+  return [...sums]
+    .map(([resolution, sum]) => ({ resolution, ...sum }))
+    .sort((a, b) => pixels(b.resolution) - pixels(a.resolution));
+}
+
 /** An episode held by more than one file. */
 export function hasSeveralVersions(rows: readonly VersionRow[]): boolean {
   const seen = new Set<string>();
@@ -95,7 +122,9 @@ export function hasSeveralVersions(rows: readonly VersionRow[]): boolean {
   return false;
 }
 
-/** Some version lacks an episode another one holds. */
+/** Within one season, some version lacks an episode another one holds. */
 export function hasIncompleteVersion(rows: readonly VersionRow[]): boolean {
-  return coverageOf(rows).some(({ covered, total }) => covered < total);
+  return bySeason(rows).some((season) =>
+    coverageOf(season).some(({ covered, total }) => covered < total),
+  );
 }

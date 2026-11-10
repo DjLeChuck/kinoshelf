@@ -20,7 +20,7 @@ import { isInside } from './notify/paths.js';
 import type { Job, JobStore } from './jobs.js';
 import type { Hdr, Probe } from './probe.js';
 import {
-  coverageOf,
+  showCoverageOf,
   distinctEpisodes,
   hasIncompleteVersion,
   hasSeveralVersions,
@@ -573,7 +573,7 @@ export class LibraryItemStore {
           year: row.year,
           seasons: row.seasons,
           episodes: distinctEpisodes(versionRows),
-          versions: coverageOf(versionRows),
+          versions: showCoverageOf(versionRows),
           missing: row.missing,
           rename: row.rename,
           refresh: row.refresh,

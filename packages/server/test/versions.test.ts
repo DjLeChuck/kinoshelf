@@ -3,6 +3,7 @@ import {
   coverageOf,
   distinctEpisodes,
   hasIncompleteVersion,
+  showCoverageOf,
   hasSeveralVersions,
   versionsOf,
   type VersionRow,
@@ -46,13 +47,14 @@ describe('versionsOf and coverageOf', () => {
     ]);
   });
 
-  it('gives a version absent from a season no coverage of it, against the show’s versions', () => {
-    const rows = [...season(), file(2, 1, '1080p'), file(2, 2, '1080p')];
-    const two = rows.filter((row) => row.season === 2);
-    expect(coverageOf(two, versionsOf(rows))).toEqual([
-      { resolution: '2160p', covered: 0, total: 2 },
+  it('judges a version against its own season only, never the whole show', () => {
+    const rows = [file(1, 1, '1080p'), file(1, 2, '1080p'), file(2, 1, '720p'), file(2, 2, '720p')];
+    expect(hasIncompleteVersion(rows)).toBe(false);
+    expect(showCoverageOf(rows)).toEqual([
       { resolution: '1080p', covered: 2, total: 2 },
+      { resolution: '720p', covered: 2, total: 2 },
     ]);
+    expect(hasIncompleteVersion([...rows, file(2, 3, '720p'), file(2, 3, '1080p')])).toBe(true);
   });
 
   it('counts a multi-episode file for each of its episodes', () => {

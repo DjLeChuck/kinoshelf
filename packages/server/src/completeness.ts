@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import type { SeasonInfo, SeriesDetails } from '@kinoshelf/core';
 import type { Database } from 'better-sqlite3';
 import { versionRowOf, type LibraryItem, type LibraryItemStore } from './library-items.js';
-import { coverageOf, versionsOf, type VersionCoverage } from './versions.js';
+import { coverageOf, type VersionCoverage } from './versions.js';
 
 /**
  * - `present`: a file holds it.
@@ -76,7 +76,6 @@ export function compare(
   today: string,
 ): SeasonReport[] {
   const held = episodesOf(items);
-  const showVersions = versionsOf(held.map(versionRowOf));
   const numbers = new Set([...seasons.map((s) => s.season), ...held.map((i) => i.season ?? 0)]);
   return [...numbers]
     .sort((a, b) => a - b)
@@ -129,7 +128,7 @@ export function compare(
           name: summary?.name ?? null,
           posterPath: summary?.posterPath ?? null,
           episodes,
-          versions: coverageOf(files.map(versionRowOf), showVersions),
+          versions: coverageOf(files.map(versionRowOf)),
           nfo: nfoTally(files),
           missing: episodes.filter(({ state }) => state === 'missing').length,
         },
