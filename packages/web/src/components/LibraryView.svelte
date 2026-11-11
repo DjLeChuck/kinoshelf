@@ -627,7 +627,6 @@
     display: flex;
     flex-direction: column;
     gap: 12px;
-    overflow-x: auto;
   }
 
   table {
@@ -646,6 +645,17 @@
     color: var(--muted);
     font-size: 12px;
     font-weight: 600;
+  }
+
+  /* The header stays in view while the page scrolls. The wrapper must not scroll on its own (an
+     overflow makes it the sticky's reference), hence it only does on a narrow screen, below. A
+     shadow draws the line: a border does not follow a sticky cell in a collapsed table. */
+  thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: var(--bg);
+    box-shadow: 0 1px 0 var(--border);
   }
 
   .narrow {
@@ -682,6 +692,10 @@
   }
 
   @media (max-width: 960px) {
+    .table-wrap {
+      overflow-x: auto;
+    }
+
     .layout {
       grid-template-columns: 1fr;
     }
