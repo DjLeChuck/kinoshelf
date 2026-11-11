@@ -373,6 +373,12 @@ export const SERVER_MIGRATIONS: readonly { readonly name: string; readonly sql: 
     name: 'server:029-unavailable-images',
     sql: 'ALTER TABLE library_items ADD COLUMN unavailable TEXT;',
   },
+  {
+    // The work a human chose for a scan of one folder (correcting a match after the fact), as the
+    // JSON of a candidate: the analysis names the folder's files after it instead of searching.
+    name: 'server:030-job-candidate',
+    sql: 'ALTER TABLE jobs ADD COLUMN candidate TEXT;',
+  },
 ];
 
 /** Opens the single SQLite file of the config directory, shared with the CLI and the cache. */

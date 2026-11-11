@@ -1,7 +1,8 @@
 import { basename } from 'node:path';
-import type { Candidate, MovieCandidate, PlanItem, SeriesCandidate } from '@kinoshelf/core';
+import type { PlanItem } from '@kinoshelf/core';
 import type { FastifyInstance } from 'fastify';
 import { ApiError } from './api-error.js';
+import { toCandidate, type CandidateBody } from './candidate-body.js';
 import { isSystemPath } from './system-paths.js';
 import { workKindOf, type Entry, type EntryStore } from './entries.js';
 import { resolutionOf } from './library-items.js';
@@ -45,30 +46,6 @@ export interface RouteContext {
   readonly events: EventBus;
   readonly history: History;
   readonly progress: ProgressTracker;
-}
-
-interface CandidateBody {
-  kind: 'movie' | 'series';
-  id: Candidate['id'];
-  title: string;
-  originalTitle?: string;
-  alternativeTitles?: string[];
-  year?: number;
-  posterPath?: string;
-}
-
-/** The planner reads title, year and id; the rest of a candidate is filled in neutrally. */
-function toCandidate(body: CandidateBody): Candidate {
-  const candidate: MovieCandidate | SeriesCandidate = {
-    kind: body.kind,
-    id: body.id,
-    title: body.title,
-    originalTitle: body.originalTitle ?? body.title,
-    alternativeTitles: body.alternativeTitles ?? [],
-    ...(body.year !== undefined && { year: body.year }),
-    ...(body.posterPath !== undefined && { posterPath: body.posterPath }),
-  };
-  return candidate;
 }
 
 function presentPlan(item: PlanItem | null) {

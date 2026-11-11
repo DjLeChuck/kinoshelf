@@ -471,6 +471,37 @@ describe('scanning a library', () => {
     expect(await titles()).toEqual(['Alien']);
   });
 
+  it('corrects the work of a folder: its files come back to rename, named after the choice', async () => {
+    const h = await served();
+    const root = await makeDir();
+    const alien = join(root, 'Alien (1979) {tmdb-348}');
+    await put(join(alien, 'Alien (1979) {tmdb-348}.mkv'), 'film');
+    await h.request('POST', '/api/libraries', { name: 'Home', source: root, type: 'movie' });
+    await scan(h, 'home');
+    const items = async (): Promise<{ title: string; state: string }[]> =>
+      (await h.request('GET', '/api/libraries/home/items')).json<{
+        items: { title: string; state: string }[];
+      }>().items;
+    expect(await items()).toMatchObject([{ title: 'Alien', state: 'ok' }]);
+
+    const dune = { kind: 'movie', id: { provider: 'tmdb', id: 438631 }, title: 'Dune', year: 2021 };
+    // A series cannot be the work of a movie library.
+    const wrong = await h.request('POST', '/api/libraries/home/rescan', {
+      path: alien,
+      candidate: { ...dune, kind: 'series' },
+    });
+    expect(wrong.statusCode).toBe(422);
+    expect(wrong.json()).toMatchObject({ error: { code: 'library.wrong-type' } });
+
+    const started = await h.request('POST', '/api/libraries/home/rescan', {
+      path: alien,
+      candidate: dune,
+    });
+    expect(started.statusCode).toBe(202);
+    await h.app.jobs.idle();
+    expect(await items()).toMatchObject([{ title: 'Dune', state: 'rename' }]);
+  });
+
   it('refuses to scan again what is not strictly inside the library', async () => {
     const h = await served();
     const root = await makeDir();
@@ -516,6 +547,7 @@ describe('scanning a library', () => {
       status: 'running',
       apply: false,
       rescan: false,
+      candidate: null,
       createdAt: '',
       startedAt: null,
       finishedAt: null,

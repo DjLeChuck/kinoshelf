@@ -122,6 +122,11 @@ const report = (result: OperationResult): OperationReport => ({
 export class Service {
   constructor(private readonly deps: ServiceDeps) {}
 
+  /** Where a file a plan replaces is kept for undo: the same folder as an image the user changed. */
+  private backupDir(): string {
+    return join(this.deps.configDir, 'replaced');
+  }
+
   async search(query: SearchQuery): Promise<Candidate[]> {
     const provider: MetadataProvider = query.language
       ? makeProvider(this.deps, query.language)
@@ -562,7 +567,11 @@ export class Service {
     const items: ExecutionReport['items'][number][] = [];
     let batchId = '';
     for (const { plan, entryOfItem } of groups) {
-      const batch = await executePlan(plan, { journal: this.deps.journal, dryRun: true });
+      const batch = await executePlan(plan, {
+        journal: this.deps.journal,
+        dryRun: true,
+        backupDir: this.backupDir(),
+      });
       batchId ||= batch.batchId;
       items.push(
         ...batch.items.map((result) => ({
@@ -777,6 +786,7 @@ export class Service {
   ): Promise<void> {
     await executePlan(plan, {
       journal: this.deps.journal,
+      backupDir: this.backupDir(),
       batchId,
       onItem: (result) => {
         const entry = entryOfItem.get(result.itemId);

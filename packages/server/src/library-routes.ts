@@ -21,6 +21,7 @@ import {
 } from '@kinoshelf/core';
 import type { FastifyInstance } from 'fastify';
 import { ApiError } from './api-error.js';
+import { toCandidate, type CandidateBody } from './candidate-body.js';
 import { isSystemPath } from './system-paths.js';
 import { largestFirst } from './versions.js';
 import { isInside } from './notify/paths.js';
@@ -54,6 +55,7 @@ import {
   libraryItemSchema,
   workSchema,
   fileSchema,
+  matchBodySchema,
   versionSchema,
   libraryPatchSchema,
   librarySchema,
@@ -512,7 +514,7 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
     },
   );
 
-  api.post<{ Params: { id: string }; Body: { path: string } }>(
+  api.post<{ Params: { id: string }; Body: { path: string; candidate?: CandidateBody } }>(
     '/api/libraries/:id/rescan',
     {
       schema: {
@@ -523,12 +525,17 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
           'replace the library’s; the others stay. The library must hold a type. 422 ' +
           '`library.outside` for a path that is not strictly inside the source, `fs.not-found` for ' +
           'one that is gone; 409 `library.scan-in-progress` while a scan of this library is queued ' +
-          'or running.',
+          'or running. With a `candidate` (the work the folder was wrongly matched to is corrected), ' +
+          'its files are named after that work rather than searched for, so the rows come back ' +
+          'to rename; the candidate must be of the library’s type (422 `library.wrong-type`).',
         params: idParams,
         body: {
           type: 'object',
           required: ['path'],
-          properties: { path: { type: 'string', minLength: 1 } },
+          properties: {
+            path: { type: 'string', minLength: 1 },
+            candidate: matchBodySchema,
+          },
           additionalProperties: false,
         },
         response: {
@@ -555,7 +562,17 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
       if (jobs.scanPending(library.id, library.source)) {
         throw new ApiError(409, 'library.scan-in-progress');
       }
-      const job = jobs.create(path, false, library.id, true);
+      const { candidate } = request.body;
+      if (candidate && candidate.kind !== library.type) {
+        throw new ApiError(422, 'library.wrong-type', { name: library.name });
+      }
+      const job = jobs.create(
+        path,
+        false,
+        library.id,
+        true,
+        candidate ? toCandidate(candidate) : undefined,
+      );
       events.emit('jobs');
       runner.kick();
       return reply.code(202).send(ctx.presentJob(job));

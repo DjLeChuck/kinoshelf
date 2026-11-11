@@ -1,5 +1,11 @@
 import { randomUUID } from 'node:crypto';
-import type { Analysis, DestinationRoots, ProfileChoice, TransferMode } from '@kinoshelf/core';
+import type {
+  Analysis,
+  Candidate,
+  DestinationRoots,
+  ProfileChoice,
+  TransferMode,
+} from '@kinoshelf/core';
 import type { Database } from 'better-sqlite3';
 import type { StoredError, EntryStore } from './entries.js';
 import type { ExecutionStore } from './executions.js';
@@ -32,6 +38,8 @@ export interface Job {
   readonly apply: boolean;
   /** A scan of one folder of the library: it replaces the rows under that folder, not all. */
   readonly rescan: boolean;
+  /** The work a human chose for the files of a rescan, in place of what the analysis would find. */
+  readonly candidate: Candidate | null;
   readonly createdAt: string;
   readonly startedAt: string | null;
   readonly finishedAt: string | null;
@@ -45,6 +53,7 @@ interface JobRow {
   status: JobStatus;
   apply: number;
   rescan: number;
+  candidate: string | null;
   created_at: string;
   started_at: string | null;
   finished_at: string | null;
@@ -52,7 +61,7 @@ interface JobRow {
 }
 
 const COLUMNS =
-  'id, path, library_id, status, apply, rescan, created_at, started_at, finished_at, error';
+  'id, path, library_id, status, apply, rescan, candidate, created_at, started_at, finished_at, error';
 
 function toJob(row: JobRow): Job {
   return {
@@ -62,6 +71,7 @@ function toJob(row: JobRow): Job {
     status: row.status,
     apply: row.apply === 1,
     rescan: row.rescan === 1,
+    candidate: row.candidate === null ? null : (JSON.parse(row.candidate) as Candidate),
     createdAt: row.created_at,
     startedAt: row.started_at,
     finishedAt: row.finished_at,
@@ -77,13 +87,27 @@ export class JobStore {
     private readonly executions: ExecutionStore,
   ) {}
 
-  create(path: string, apply = false, libraryId?: string, rescan = false): Job {
+  create(
+    path: string,
+    apply = false,
+    libraryId?: string,
+    rescan = false,
+    candidate?: Candidate,
+  ): Job {
     const id = randomUUID();
     this.database
       .prepare(
-        "INSERT INTO jobs (id, path, library_id, status, apply, rescan, created_at) VALUES (?, ?, ?, 'queued', ?, ?, ?)",
+        "INSERT INTO jobs (id, path, library_id, status, apply, rescan, candidate, created_at) VALUES (?, ?, ?, 'queued', ?, ?, ?, ?)",
       )
-      .run(id, path, libraryId ?? null, apply ? 1 : 0, rescan ? 1 : 0, new Date().toISOString());
+      .run(
+        id,
+        path,
+        libraryId ?? null,
+        apply ? 1 : 0,
+        rescan ? 1 : 0,
+        candidate ? JSON.stringify(candidate) : null,
+        new Date().toISOString(),
+      );
     return this.require(id);
   }
 

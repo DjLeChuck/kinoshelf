@@ -132,6 +132,7 @@ async function process(deps: ProcessorDeps, job: Job): Promise<ProcessedJob> {
     onPlanning: () => {
       progress?.planning(job.id);
     },
+    ...(job.candidate && { forced: job.candidate }),
     ...(settings.threshold !== undefined && { matching: { threshold: settings.threshold } }),
     ...withSizeReader(deps),
     madeByUs: (path) => madeByUs(journal, path),
