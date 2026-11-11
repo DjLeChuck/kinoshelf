@@ -66,7 +66,11 @@
     list-style: none;
   }
 
+  /* Positioned, so the hidden radio stays inside its card: without it the radio is placed against
+     the nearest positioned ancestor (a dialog), outside the scrolled list, and focusing it scrolls
+     that ancestor. */
   label {
+    position: relative;
     display: flex;
     align-items: center;
     gap: 12px;
