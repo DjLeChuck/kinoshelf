@@ -114,4 +114,3 @@ export {
 export { applyMigrations } from './journal/migrations.js';
 export { renderMovieNfo, renderSeriesNfo, renderEpisodeNfo, type NfoOptions } from './nfo/nfo.js';
 export { Database, Statement, type RunResult, type Transaction } from './sqlite/database.js';
-export { drizzleOf, type DrizzleDatabase } from './sqlite/drizzle.js';

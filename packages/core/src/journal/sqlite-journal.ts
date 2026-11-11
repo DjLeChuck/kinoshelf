@@ -1,85 +1,96 @@
-import { and, asc, desc, eq, inArray, isNotNull, isNull, sql } from 'drizzle-orm';
-import { integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 import type { Database } from '../sqlite/database.js';
-import { drizzleOf, type DrizzleDatabase } from '../sqlite/drizzle.js';
 import type { FileIdentity, Journal, JournalBatch, JournalEntry } from '../types/journal.js';
 import type { TransferMode } from '../types/operation.js';
 import { applyMigrations, CORE_MIGRATIONS } from './migrations.js';
 
-const journalEntries = sqliteTable('journal_entries', {
-  seq: integer('seq').primaryKey({ autoIncrement: true }),
-  id: text('id').notNull().unique(),
-  batchId: text('batch_id').notNull(),
-  source: text('source').notNull(),
-  destination: text('destination').notNull(),
+/** A row of `journal_entries`, as SQLite gives it. */
+interface EntryRow {
+  id: string;
+  batch_id: string;
+  source: string;
+  destination: string;
   // `''` for a file made or downloaded: the column predates them and stays NOT NULL.
-  mode: text('mode').$type<TransferMode | ''>().notNull(),
-  kind: text('kind').$type<JournalEntry['kind']>().notNull().default('transfer'),
-  at: text('at').notNull(),
-  createdDirectories: text('created_directories').notNull(),
-  undoneAt: text('undone_at'),
-  identity: text('identity'),
-  backup: text('backup'),
-});
+  mode: TransferMode | '';
+  kind: JournalEntry['kind'];
+  at: string;
+  created_directories: string;
+  identity: string | null;
+  backup: string | null;
+}
+
+interface BatchRow {
+  batch_id: string;
+  at: string;
+  operations: number;
+  modes: string | null;
+  pending: number;
+}
+
+const BATCH_COLUMNS = `batch_id, min(at) AS at, count(*) AS operations,
+  group_concat(CASE WHEN kind = 'transfer' THEN mode END, ',') AS modes,
+  sum(undone_at IS NULL) AS pending`;
 
 /** Durable journal in the caller's SQLite database (the single file in `/config`). */
 export class SqliteJournal implements Journal {
-  private readonly db: DrizzleDatabase;
-
-  constructor(sqlite: Database) {
-    applyMigrations(sqlite, CORE_MIGRATIONS);
-    this.db = drizzleOf(sqlite);
+  constructor(private readonly db: Database) {
+    applyMigrations(db, CORE_MIGRATIONS);
   }
 
   record(entry: JournalEntry): void {
     this.db
-      .insert(journalEntries)
-      .values({
-        ...entry,
-        mode: entry.kind === 'transfer' ? entry.mode : '',
-        createdDirectories: JSON.stringify(entry.createdDirectories),
-        identity: entry.identity ? JSON.stringify(entry.identity) : null,
-        backup: entry.kind === 'replaced' ? entry.backup : null,
-      })
-      .run();
+      .prepare(
+        `INSERT INTO journal_entries
+           (id, batch_id, source, destination, mode, kind, at, created_directories, identity, backup)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        entry.id,
+        entry.batchId,
+        entry.source,
+        entry.destination,
+        entry.kind === 'transfer' ? entry.mode : '',
+        entry.kind,
+        entry.at,
+        JSON.stringify(entry.createdDirectories),
+        entry.identity ? JSON.stringify(entry.identity) : null,
+        entry.kind === 'replaced' ? entry.backup : null,
+      );
   }
 
   lastBatchId(): string | null {
-    const row = this.db
-      .select({ batchId: journalEntries.batchId })
-      .from(journalEntries)
-      .where(isNull(journalEntries.undoneAt))
-      .orderBy(desc(journalEntries.seq))
-      .limit(1)
-      .get();
-    return row?.batchId ?? null;
+    return (
+      this.db
+        .prepare<[], { batch_id: string }>(
+          'SELECT batch_id FROM journal_entries WHERE undone_at IS NULL ORDER BY seq DESC LIMIT 1',
+        )
+        .get()?.batch_id ?? null
+    );
   }
 
   isUndone(batchId: string): boolean {
-    const row = this.db
-      .select({ undoneAt: journalEntries.undoneAt })
-      .from(journalEntries)
-      .where(eq(journalEntries.batchId, batchId))
-      .orderBy(asc(journalEntries.seq))
-      .all();
-    return row.length > 0 && row.every((entry) => entry.undoneAt !== null);
+    const rows = this.db
+      .prepare<[string], { undone_at: string | null }>(
+        'SELECT undone_at FROM journal_entries WHERE batch_id = ?',
+      )
+      .all(batchId);
+    return rows.length > 0 && rows.every((entry) => entry.undone_at !== null);
   }
 
   entriesOf(batchId: string): readonly JournalEntry[] {
     return this.db
-      .select()
-      .from(journalEntries)
-      .where(eq(journalEntries.batchId, batchId))
-      .orderBy(asc(journalEntries.seq))
-      .all()
+      .prepare<[string], EntryRow>(
+        `SELECT id, batch_id, source, destination, mode, kind, at, created_directories, identity, backup
+         FROM journal_entries WHERE batch_id = ? ORDER BY seq`,
+      )
+      .all(batchId)
       .map((row): JournalEntry => {
         const common = {
           id: row.id,
-          batchId: row.batchId,
+          batchId: row.batch_id,
           source: row.source,
           destination: row.destination,
           at: row.at,
-          createdDirectories: JSON.parse(row.createdDirectories) as string[],
+          createdDirectories: JSON.parse(row.created_directories) as string[],
           ...(row.identity !== null && {
             identity: JSON.parse(row.identity) as FileIdentity,
           }),
@@ -99,116 +110,85 @@ export class SqliteJournal implements Journal {
       return;
     }
     this.db
-      .update(journalEntries)
-      .set({ undoneAt: new Date().toISOString() })
-      .where(
-        and(
-          eq(journalEntries.batchId, batchId),
-          isNull(journalEntries.undoneAt),
-          entryIds ? inArray(journalEntries.id, [...entryIds]) : undefined,
-        ),
+      .prepare(
+        `UPDATE journal_entries SET undone_at = ?
+         WHERE batch_id = ? AND undone_at IS NULL${
+           entryIds ? ' AND id IN (SELECT value FROM json_each(?))' : ''
+         }`,
       )
-      .run();
+      .run(new Date().toISOString(), batchId, ...(entryIds ? [JSON.stringify(entryIds)] : []));
   }
 
   undoneEntryIds(batchId: string): ReadonlySet<string> {
     return new Set(
       this.db
-        .select({ id: journalEntries.id })
-        .from(journalEntries)
-        .where(and(eq(journalEntries.batchId, batchId), isNotNull(journalEntries.undoneAt)))
-        .all()
+        .prepare<[string], { id: string }>(
+          'SELECT id FROM journal_entries WHERE batch_id = ? AND undone_at IS NOT NULL',
+        )
+        .all(batchId)
         .map((row) => row.id),
     );
   }
 
   madeFileIdentity(path: string): FileIdentity | undefined {
     const row = this.db
-      .select({ identity: journalEntries.identity })
-      .from(journalEntries)
-      .where(
-        and(
-          eq(journalEntries.destination, path),
-          inArray(journalEntries.kind, ['generated', 'downloaded', 'replaced']),
-          isNull(journalEntries.undoneAt),
-        ),
+      .prepare<[string], { identity: string | null }>(
+        `SELECT identity FROM journal_entries
+         WHERE destination = ? AND kind IN ('generated', 'downloaded', 'replaced')
+           AND undone_at IS NULL
+         ORDER BY seq DESC LIMIT 1`,
       )
-      .orderBy(desc(journalEntries.seq))
-      .limit(1)
-      .get();
+      .get(path);
     return row?.identity ? (JSON.parse(row.identity) as FileIdentity) : undefined;
   }
 
   madeFileSource(path: string): string | undefined {
     return this.db
-      .select({ source: journalEntries.source })
-      .from(journalEntries)
-      .where(
-        and(
-          eq(journalEntries.destination, path),
-          inArray(journalEntries.kind, ['downloaded', 'replaced']),
-          isNull(journalEntries.undoneAt),
-        ),
+      .prepare<[string], { source: string }>(
+        `SELECT source FROM journal_entries
+         WHERE destination = ? AND kind IN ('downloaded', 'replaced') AND undone_at IS NULL
+         ORDER BY seq DESC LIMIT 1`,
       )
-      .orderBy(desc(journalEntries.seq))
-      .limit(1)
-      .get()?.source;
+      .get(path)?.source;
   }
 
   hasBatches(): boolean {
-    return (
-      this.db.select({ id: journalEntries.id }).from(journalEntries).limit(1).get() !== undefined
-    );
+    return this.db.prepare('SELECT 1 FROM journal_entries LIMIT 1').get() !== undefined;
   }
 
   batches(limit?: number): readonly JournalBatch[] {
-    const query = this.summaries()
-      .groupBy(journalEntries.batchId)
-      .orderBy(desc(sql`min(${journalEntries.at})`), desc(sql`max(${journalEntries.seq})`));
-    return (limit === undefined ? query.all() : query.limit(limit).all()).map(toBatch);
+    return this.db
+      .prepare<[number], BatchRow>(
+        `SELECT ${BATCH_COLUMNS} FROM journal_entries GROUP BY batch_id
+         ORDER BY min(at) DESC, max(seq) DESC LIMIT ?`,
+      )
+      .all(limit ?? -1)
+      .map(toBatch);
   }
 
   countBatches(): number {
     return (
       this.db
-        .select({ total: sql<number>`count(distinct ${journalEntries.batchId})` })
-        .from(journalEntries)
+        .prepare<[], { total: number }>(
+          'SELECT count(DISTINCT batch_id) AS total FROM journal_entries',
+        )
         .get()?.total ?? 0
     );
   }
 
   batch(batchId: string): JournalBatch | undefined {
-    const row = this.summaries()
-      .where(eq(journalEntries.batchId, batchId))
-      .groupBy(journalEntries.batchId)
-      .get();
+    const row = this.db
+      .prepare<[string], BatchRow>(
+        `SELECT ${BATCH_COLUMNS} FROM journal_entries WHERE batch_id = ? GROUP BY batch_id`,
+      )
+      .get(batchId);
     return row && toBatch(row);
-  }
-
-  private summaries() {
-    return this.db
-      .select({
-        batchId: journalEntries.batchId,
-        at: sql<string>`min(${journalEntries.at})`,
-        operations: sql<number>`count(*)`,
-        modes: sql<
-          string | null
-        >`group_concat(case when ${journalEntries.kind} = 'transfer' then ${journalEntries.mode} end, ',')`,
-        pending: sql<number>`sum(${journalEntries.undoneAt} is null)`,
-      })
-      .from(journalEntries);
   }
 }
 
-function toBatch(row: {
-  batchId: string;
-  at: string;
-  operations: number;
-  modes: string | null;
-  pending: number;
-}): JournalBatch {
+function toBatch(row: BatchRow): JournalBatch {
   return {
-    batchId: row.batchId,
+    batchId: row.batch_id,
     at: row.at,
     operations: row.operations,
     modes: row.modes ? ([...new Set(row.modes.split(','))] as TransferMode[]) : [],
