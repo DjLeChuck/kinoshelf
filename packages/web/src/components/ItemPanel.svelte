@@ -21,6 +21,7 @@
   import ArrivalDetail from './ArrivalDetail.svelte';
   import ImagesDialog from './ImagesDialog.svelte';
   import RescanButton from './RescanButton.svelte';
+  import RematchButton from './RematchButton.svelte';
   import RunDialog from './RunDialog.svelte';
   import WorkCard from './WorkCard.svelte';
 
@@ -274,6 +275,14 @@
           {libraryId}
           path={rescanPath([item.path], source)}
           name={item.title ?? baseName(item.path)}
+          {ondone}
+        />
+        <RematchButton
+          {libraryId}
+          path={rescanPath([item.path], source)}
+          name={item.title ?? baseName(item.path)}
+          kind="movie"
+          year={item.year}
           {ondone}
         />
       </div>

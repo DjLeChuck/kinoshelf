@@ -55,8 +55,11 @@ export interface LibraryApi {
   remove(id: string): Promise<void>;
   /** Starts the analysis of the library's source folder; the job id follows it. */
   scan(id: string): Promise<{ readonly id: string }>;
-  /** Reads one folder (a movie, a show, a season) again; the rest of the library is kept. */
-  rescan(id: string, path: string): Promise<{ readonly id: string }>;
+  /**
+   * Reads one folder (a movie, a show, a season) again; the rest of the library is kept. With a
+   * `candidate`, its files are named after that work instead of the one the analysis would find.
+   */
+  rescan(id: string, path: string, candidate?: unknown): Promise<{ readonly id: string }>;
 }
 
 export const libraryApi: LibraryApi = {
@@ -65,7 +68,11 @@ export const libraryApi: LibraryApi = {
   update: (id, body) => api.patch(`/api/libraries/${id}`, body),
   remove: (id) => api.delete(`/api/libraries/${id}`),
   scan: (id) => api.post(`/api/libraries/${id}/scan`),
-  rescan: (id, path) => api.post(`/api/libraries/${id}/rescan`, { path }),
+  rescan: (id, path, candidate) =>
+    api.post(`/api/libraries/${id}/rescan`, {
+      path,
+      ...(candidate !== undefined && { candidate }),
+    }),
 };
 
 // The web does not import the core. `THRESHOLD_DEFAULT` mirrors `DEFAULT_THRESHOLD` (core,

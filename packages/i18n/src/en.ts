@@ -268,6 +268,14 @@ export const en = {
   'web.library.rescan.hint':
     'Reads this folder again, and only it: the rest of the library is kept.',
   'web.library.rescan.started': 'Scan of “{name}” started.',
+  'web.library.rematch': 'Change the match',
+  'web.library.rematch.hint':
+    'Picks another work for this folder, if it was matched to the wrong one.',
+  'web.library.rematch.title': 'Change the match of “{name}”',
+  'web.library.rematch.explain':
+    'Search for the right work and pick it. The folder is read again with that choice, then comes back as “To rename”, named after the new work: nothing moves until you confirm the rename.',
+  'web.library.rematch.confirm': 'Read again with this work',
+  'web.library.rematch.started': 'Scan of “{name}” started with the new match.',
   'web.library.scan': 'Update from source',
   'web.library.scan.running': 'Scan…',
   'web.library.scan.running.percent': 'Scan · {percent}%',

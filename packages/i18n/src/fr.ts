@@ -284,6 +284,14 @@ export const fr: Record<keyof typeof en, string> = {
   'web.library.rescan.hint':
     'Relit ce dossier, et lui seul : le reste de la bibliothèque est conservé.',
   'web.library.rescan.started': 'Analyse de « {name} » lancée.',
+  'web.library.rematch': 'Changer l’association',
+  'web.library.rematch.hint':
+    'Choisit une autre œuvre pour ce dossier, s’il a été associé à la mauvaise.',
+  'web.library.rematch.title': 'Changer l’association de « {name} »',
+  'web.library.rematch.explain':
+    'Recherchez la bonne œuvre et sélectionnez-la. Le dossier est relu avec ce choix, puis revient « À renommer », nommé d’après la nouvelle œuvre : rien ne bouge tant que le renommage n’est pas confirmé.',
+  'web.library.rematch.confirm': 'Relire avec cette œuvre',
+  'web.library.rematch.started': 'Analyse de « {name} » lancée avec la nouvelle association.',
   'web.library.scan': 'Mettre à jour la source',
   'web.library.scan.running': 'Scan…',
   'web.library.scan.running.percent': 'Scan · {percent} %',

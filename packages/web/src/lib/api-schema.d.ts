@@ -2051,7 +2051,7 @@ export interface paths {
         put?: never;
         /**
          * Scan one folder of a library again
-         * @description Queues an analysis of a movie’s folder, a show’s or a season’s (or a file), read as it would be inside a scan of the whole source. When it ends, the rows under that path replace the library’s; the others stay. The library must hold a type. 422 `library.outside` for a path that is not strictly inside the source, `fs.not-found` for one that is gone; 409 `library.scan-in-progress` while a scan of this library is queued or running.
+         * @description Queues an analysis of a movie’s folder, a show’s or a season’s (or a file), read as it would be inside a scan of the whole source. When it ends, the rows under that path replace the library’s; the others stay. The library must hold a type. 422 `library.outside` for a path that is not strictly inside the source, `fs.not-found` for one that is gone; 409 `library.scan-in-progress` while a scan of this library is queued or running. With a `candidate` (the work the folder was wrongly matched to is corrected), its files are named after that work rather than searched for, so the rows come back to rename; the candidate must be of the library’s type (422 `library.wrong-type`).
          */
         post: {
             parameters: {
@@ -2066,6 +2066,23 @@ export interface paths {
                 content: {
                     "application/json": {
                         path: string;
+                        candidate?: {
+                            /** @enum {string} */
+                            kind: "movie" | "series";
+                            id: {
+                                /** @enum {string} */
+                                provider: "tmdb";
+                                id: number;
+                            };
+                            title: string;
+                            originalTitle?: string;
+                            year?: number;
+                            posterPath?: string;
+                            alternativeTitles?: string[];
+                            overview?: string;
+                            popularity?: number;
+                            countries?: string[];
+                        };
                     };
                 };
             };

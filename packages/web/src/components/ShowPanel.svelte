@@ -6,6 +6,7 @@
   import CoverageMatrix from './CoverageMatrix.svelte';
   import ImagesDialog from './ImagesDialog.svelte';
   import RescanButton from './RescanButton.svelte';
+  import RematchButton from './RematchButton.svelte';
   import WorkCard from './WorkCard.svelte';
 
   let {
@@ -113,6 +114,14 @@
     {#if show.versions.length > 1}<CoverageMatrix {detail} />{/if}
     <div>
       <RescanButton {libraryId} path={folder} name={show.title ?? ''} {ondone} />
+      <RematchButton
+        {libraryId}
+        path={folder}
+        name={show.title ?? ''}
+        kind="series"
+        year={show.year}
+        {ondone}
+      />
     </div>
   {/if}
 </WorkCard>
