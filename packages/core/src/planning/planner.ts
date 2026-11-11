@@ -61,6 +61,13 @@ export interface PlannerOptions {
    * NFO beside a video follows it.
    */
   readonly madeByUs?: (path: string) => Promise<boolean>;
+  /**
+   * The work of these files was corrected: in a folder where the video is already in place, the
+   * NFO and images Kinoshelf wrote (`madeByUs`) are planned again as replacements, since they
+   * describe the former work. Anything else already there (a file of the user's) is left alone.
+   * Needs `madeByUs`.
+   */
+  readonly replaces?: boolean;
 }
 
 /** `unavailable` of a plan item, left out when there is none; what is already on the disk is not. */
@@ -375,8 +382,17 @@ async function planItem(
     // Whatever is already there is left out rather than reported as skipped, or every rescan of
     // an organized library would be full of it.
     const missing = await Promise.all(
-      companionOperations(input, place, companionOptions).map(async (operation) =>
-        (await exists(operation.destination)) ? null : operation,
+      companionOperations(input, place, companionOptions).map(
+        async (operation): Promise<Operation | null> => {
+          if (!(await exists(operation.destination))) {
+            return operation;
+          }
+          return options.replaces === true &&
+            operation.type !== 'transfer' &&
+            (await options.madeByUs?.(operation.destination)) === true
+            ? { ...operation, replace: true }
+            : null;
+        },
       ),
     );
     const operations = missing.filter((operation) => operation !== null);

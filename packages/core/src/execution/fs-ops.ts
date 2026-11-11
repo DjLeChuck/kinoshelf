@@ -186,7 +186,7 @@ export async function writeAtomic(destination: string, data: string | Uint8Array
  * that overwrites, so it is not used by the pipeline: only an explicit, journaled replacement
  * (`replaceImage`, and undoing it) calls it. The file is complete or untouched, never half written.
  */
-export async function replaceAtomic(destination: string, data: Uint8Array): Promise<void> {
+export async function replaceAtomic(destination: string, data: Uint8Array | string): Promise<void> {
   const temporary = temporaryPathFor(destination);
   try {
     await writeFile(temporary, data, { flag: 'wx' });

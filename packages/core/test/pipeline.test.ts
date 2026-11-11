@@ -272,6 +272,33 @@ describe('analyze', () => {
     expect(progress.at(-1)).toBe(4);
   });
 
+  it('names a work chosen by hand for the files of its kind, whatever they say', async () => {
+    const lib = await makeDir();
+    const wrong = await put(
+      join(lib, 'Three Body {tmdb-1}', 'Three Body (2020) - s01e01 {tmdb-1}.mkv'),
+    );
+    const film = await put(join(lib, 'Dune (2021)', 'Dune.2021.mkv'));
+    const provider = new FakeProvider(
+      [series(1, 'Three Body', 2020), series(2, '3 Body Problem', 2024), movie(5, 'Dune', 2021)],
+      { '2:1': season(1, [1]) },
+    );
+    const result = await analyze(await discoverVideos(lib), {
+      parser: new GuessitParser(),
+      provider,
+      profile: buildProfile({ naming: 'with-id', metadata: 'none' }),
+      destinationRoot: lib,
+      mode: 'move',
+      forced: series(2, '3 Body Problem', 2024),
+    });
+    const byPath = new Map(result.entries.map((e) => [e.file.path, e]));
+    expect(byPath.get(wrong)?.classification).toBe('to-rename');
+    expect(byPath.get(wrong)?.item?.operations[0]?.destination).toContain(
+      join(lib, '3 Body Problem (2024) {tmdb-2}', 'Season 01'),
+    );
+    // A movie is not a series: it is matched as it would have been.
+    expect(byPath.get(film)?.item?.externalId).toMatchObject({ id: 5 });
+  });
+
   it('reports a file already in the library as compliant', async () => {
     const lib = await makeDir();
     const path = await put(join(lib, 'Dune (2021) {tmdb-438631}', 'Dune (2021) {tmdb-438631}.mkv'));

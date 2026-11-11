@@ -57,6 +57,12 @@ export interface AnalyzeOptions {
   readonly destinationRoot: DestinationRoots;
   readonly mode: TransferMode;
   readonly matching?: Partial<MatchingConfig>;
+  /**
+   * A work a human chose for these files (correcting a match after the fact): it is the match of
+   * every file of its kind, with no search. A file of the other kind (an episode for a movie) is
+   * matched as usual.
+   */
+  readonly forced?: Candidate;
   readonly sidecarExtensions?: readonly string[];
   /** Reads a picture size from a file, for a name that says none (see `PlannerOptions.sizeOf`). */
   readonly sizeOf?: (path: string) => Promise<string | undefined>;
@@ -145,6 +151,30 @@ function matchingUnits(
   return { units, clusterOf };
 }
 
+/** A series is chosen for episodes, a movie for movies. */
+const fits = (candidate: Candidate, parsed: ParsedMedia): boolean =>
+  parsed.kind === (candidate.kind === 'series' ? 'episode' : 'movie');
+
+/** The outcome of a choice made by hand: as sure as a match can be. */
+const chosen = (candidate: Candidate): MatchOutcome => ({
+  status: 'matched',
+  best: {
+    candidate,
+    score: 100,
+    breakdown: {
+      title: 0,
+      year: 0,
+      kind: 0,
+      episodeExists: 0,
+      margin: 0,
+      country: 0,
+      volume: 0,
+      knownId: 0,
+    },
+  },
+  others: [],
+});
+
 /**
  * parse → match → plan, for a set of files. Reads the disk and the provider, writes nothing.
  * Provider failures (bad key, network) abort the analysis; what was fetched stays cached by
@@ -182,10 +212,13 @@ export async function analyze(
   options.onMatching?.();
   const outcomes = new Array<MatchOutcome>(files.length);
   await mapLimited(units, concurrency, async (unit) => {
+    const { forced } = options;
     const flat =
-      unit.length === 1
-        ? [await matcher.match(parsedFiles[unit[0] as number] as ParsedMedia)]
-        : await matcher.matchRelease(unit.map((index) => parsedFiles[index] as ParsedMedia));
+      forced && unit.every((index) => fits(forced, parsedFiles[index] as ParsedMedia))
+        ? unit.map((): MatchOutcome => chosen(forced))
+        : unit.length === 1
+          ? [await matcher.match(parsedFiles[unit[0] as number] as ParsedMedia)]
+          : await matcher.matchRelease(unit.map((index) => parsedFiles[index] as ParsedMedia));
     unit.forEach((index, position) => {
       outcomes[index] = flat[position] as MatchOutcome;
       options.onProgress?.(++done, files.length, files[index] as DiscoveredFile);
@@ -219,6 +252,8 @@ export async function analyze(
     ...(options.sidecarExtensions && { sidecarExtensions: options.sidecarExtensions }),
     ...(options.sizeOf && { sizeOf: options.sizeOf }),
     ...(options.madeByUs && { madeByUs: options.madeByUs }),
+    // A work corrected by hand: what Kinoshelf wrote for the former one is written again.
+    ...(options.forced && { replaces: true }),
   });
 
   // Plan items follow the order of `inputs`, i.e. of the matched entries.

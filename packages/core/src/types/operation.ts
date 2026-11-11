@@ -20,6 +20,8 @@ export interface WriteFileOperation {
   readonly content: string;
   /** A file of the show or of a season, not of this video (see `selectItems`). */
   readonly shared?: true;
+  /** Takes the place of a file Kinoshelf wrote earlier (see `replaces` of `PlannerOptions`). */
+  readonly replace?: true;
 }
 
 /** Downloads an image (artwork). */
@@ -29,6 +31,8 @@ export interface DownloadOperation {
   readonly destination: string;
   /** A file of the show or of a season, not of this video (see `selectItems`). */
   readonly shared?: true;
+  /** Takes the place of a file Kinoshelf wrote earlier (see `replaces` of `PlannerOptions`). */
+  readonly replace?: true;
 }
 
 /** A disk operation. Nothing runs without a validated plan. */

@@ -8,6 +8,7 @@ import {
   executePlan,
   buildProfile,
   MemoryJournal,
+  undoBatch,
   type BatchResult,
   type Plan,
   type TransferMode,
@@ -617,5 +618,105 @@ describe('executePlan: generated and downloaded files', () => {
     const batch = await run(plan, journal);
     const entries = journal.entriesOf(batch.batchId);
     expect(entries[1]?.createdDirectories).toEqual([join(root, FOLDER, 'extras')]);
+  });
+});
+
+describe('executePlan: replacing what Kinoshelf wrote', () => {
+  const nfoAt = (root: string) => join(root, FOLDER, 'movie.nfo');
+
+  /** A movie written by a first run, its NFO journaled, then a plan that only replaces the NFO. */
+  async function written() {
+    const lib = await makeDir();
+    const src = await makeDir();
+    const source = await put(join(src, 'Dune.2021.mkv'), 'video');
+    const planned = await createPlan([{ parsed: parsedMovie(source), candidate: dune }], {
+      profile: plex,
+      destinationRoot: lib,
+      mode: 'copy',
+      newId: counter(),
+    });
+    const item = planned.items[0];
+    if (!item) {
+      throw new Error('no item');
+    }
+    const journal = new MemoryJournal();
+    await executePlan(
+      {
+        ...planned,
+        items: [
+          {
+            ...item,
+            operations: [
+              ...item.operations,
+              { type: 'write-file', destination: nfoAt(lib), content: 'old' },
+            ],
+          },
+        ],
+      },
+      { journal, newId: counter('a') },
+    );
+    const again = (replace: boolean, content = 'new'): Plan => ({
+      ...planned,
+      items: [
+        {
+          ...item,
+          status: 'ready',
+          operations: [
+            {
+              type: 'write-file',
+              destination: nfoAt(lib),
+              content,
+              ...(replace && { replace: true as const }),
+            },
+          ],
+        },
+      ],
+    });
+    return { lib, journal, again, backupDir: join(await makeDir(), 'replaced') };
+  }
+
+  it('replaces a file it wrote and nobody touched, keeping the old one for undo', async () => {
+    const { lib, journal, again, backupDir } = await written();
+
+    const batch = await executePlan(again(true), { journal, backupDir, newId: counter('b') });
+
+    expect(statuses(batch)).toEqual(['done']);
+    expect(await readFile(nfoAt(lib), 'utf8')).toBe('new');
+    const [entry] = journal.entriesOf(batch.batchId);
+    expect(entry).toMatchObject({ kind: 'replaced', destination: nfoAt(lib) });
+    expect(entry?.kind === 'replaced' && (await readFile(entry.backup, 'utf8'))).toBe('old');
+
+    await undoBatch(journal, batch.batchId);
+    expect(await readFile(nfoAt(lib), 'utf8')).toBe('old');
+  });
+
+  it('leaves a file somebody edited since, as it never overwrites', async () => {
+    const { lib, journal, again, backupDir } = await written();
+    await put(nfoAt(lib), 'edited by hand');
+
+    const batch = await executePlan(again(true), { journal, backupDir, newId: counter('b') });
+
+    expect(statuses(batch)).toEqual(['skipped']);
+    expect(await readFile(nfoAt(lib), 'utf8')).toBe('edited by hand');
+  });
+
+  it('does not replace without somewhere to keep the old file, or when the plan does not say so', async () => {
+    const { lib, journal, again, backupDir } = await written();
+
+    const unsaved = await executePlan(again(true), { journal, newId: counter('b') });
+    const plain = await executePlan(again(false), { journal, backupDir, newId: counter('c') });
+
+    expect(statuses(unsaved)).toEqual(['skipped']);
+    expect(statuses(plain)).toEqual(['skipped']);
+    expect(await readFile(nfoAt(lib), 'utf8')).toBe('old');
+  });
+
+  it('reports a dry run as it would run, and writes nothing', async () => {
+    const { lib, journal, again, backupDir } = await written();
+
+    const batch = await executePlan(again(true), { journal, backupDir, dryRun: true });
+
+    expect(statuses(batch)).toEqual(['done']);
+    expect(await readFile(nfoAt(lib), 'utf8')).toBe('old');
   });
 });

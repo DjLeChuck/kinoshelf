@@ -12,7 +12,8 @@ import type {
   WriteFileOperation,
 } from '../types/operation.js';
 import type { BatchResult, ItemResult, Plan, PlanItem } from '../types/plan.js';
-import { pruneVacated } from './prune.js';
+import { madeByUs, pruneVacated } from './prune.js';
+import { backupAndReplace } from './replace.js';
 import { fetchImage as defaultFetchImage, MAX_IMAGE_BYTES, type ImageFetcher } from './download.js';
 import {
   copyAtomic,
@@ -43,12 +44,22 @@ export interface ExecuteOptions {
   readonly onItem?: (result: ItemResult) => void;
   /** Fetches the bytes of a `download` operation; defaults to the global `fetch` with guards. */
   readonly fetchImage?: ImageFetcher;
+  /**
+   * Where a file a plan replaces (`replace` of a `write-file` or a `download`) is kept, so undo can
+   * bring it back. Without it, such a file is never touched: the operation is skipped as taken.
+   */
+  readonly backupDir?: string;
   readonly newId?: () => string;
   readonly now?: () => Date;
 }
 
 type Outcome =
-  | { readonly status: 'done'; readonly createdDirectories?: readonly string[] }
+  | {
+      readonly status: 'done';
+      readonly createdDirectories?: readonly string[];
+      /** The file this one took the place of, in `backupDir`. */
+      readonly backup?: string;
+    }
   | { readonly status: 'skipped' | 'failed'; readonly error: ErrorInfo };
 
 /**
@@ -130,7 +141,14 @@ async function createFile(
     status: 'skipped',
     error: { code: 'destination.exists', params: { path: destination } },
   };
-  if (await exists(destination)) {
+  // A file Kinoshelf wrote earlier and nobody touched since may be replaced when the plan says so
+  // (a work matched again): checked here too, right before writing, as the plan may be old.
+  const replacing =
+    operation.replace === true &&
+    options.backupDir !== undefined &&
+    (await exists(destination)) &&
+    (await madeByUs(options.journal, destination));
+  if (!replacing && (await exists(destination))) {
     return taken;
   }
   if (options.dryRun) {
@@ -166,6 +184,17 @@ async function createFile(
     }
   }
 
+  if (replacing) {
+    try {
+      return {
+        status: 'done',
+        backup: await backupAndReplace(destination, data, options.backupDir),
+      };
+    } catch (error) {
+      return { status: 'failed', error: describeFsError(error, destination).info };
+    }
+  }
+
   let createdDirectories: string[] = [];
   try {
     createdDirectories = await ensureDirectory(dirname(destination));
@@ -193,7 +222,17 @@ async function identityOf(path: string): Promise<FileIdentity | undefined> {
 function journalEntry(
   operation: Operation,
   base: { id: string; batchId: string; at: string; createdDirectories: readonly string[] },
+  backup?: string,
 ): JournalEntry {
+  if (backup !== undefined && operation.type !== 'transfer') {
+    return {
+      ...base,
+      kind: 'replaced',
+      source: operation.type === 'download' ? operation.url : '',
+      destination: operation.destination,
+      backup,
+    };
+  }
   switch (operation.type) {
     case 'transfer':
       return {
@@ -248,12 +287,16 @@ async function runItem(
       if (!dryRun) {
         const identity = await identityOf(operation.destination);
         options.journal.record({
-          ...journalEntry(operation, {
-            id: newId(),
-            batchId,
-            at: now().toISOString(),
-            createdDirectories: outcome.createdDirectories ?? [],
-          }),
+          ...journalEntry(
+            operation,
+            {
+              id: newId(),
+              batchId,
+              at: now().toISOString(),
+              createdDirectories: outcome.createdDirectories ?? [],
+            },
+            outcome.backup,
+          ),
           ...(identity && { identity }),
         });
       }

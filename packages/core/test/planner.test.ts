@@ -827,13 +827,14 @@ filesystem: { forbidden: posix, replacement: '', maxSegmentBytes: 255 }
 });
 
 describe('createPlan: an organized library that lacks its NFO and images', () => {
-  const planIn = (inputs: PlanInput[], lib: string) =>
+  const planIn = (inputs: PlanInput[], lib: string, extra: Partial<PlannerOptions> = {}) =>
     createPlan(inputs, {
       profile: kodi(),
       destinationRoot: lib,
       mode: 'move',
       imageUrl,
       newId: counter(),
+      ...extra,
     });
 
   const organizedDune = async (lib: string) => {
@@ -867,6 +868,36 @@ describe('createPlan: an organized library that lacks its NFO and images', () =>
 
     expect(items[0]?.status).toBe('in-place');
     expect(items[0]?.operations).toEqual([]);
+  });
+
+  it('plans again, as replacements, the files Kinoshelf wrote when the work was corrected', async () => {
+    const lib = await makeDir();
+    const input = await organizedDune(lib);
+    const nfo = await put(join(lib, 'Dune (2021)', 'movie.nfo'), 'the wrong work');
+    const poster = await put(join(lib, 'Dune (2021)', 'poster.jpg'), 'the wrong poster');
+    // The fanart is the user's own: never replaced.
+    await put(join(lib, 'Dune (2021)', 'fanart.jpg'), 'mine');
+
+    const { items } = await planIn([input], lib, {
+      replaces: true,
+      madeByUs: (path) => Promise.resolve(path === nfo || path === poster),
+    });
+
+    expect(items[0]?.status).toBe('ready');
+    expect(items[0]?.operations.map((op) => [op.type, op.destination, 'replace' in op])).toEqual([
+      ['write-file', nfo, true],
+      ['download', poster, true],
+    ]);
+  });
+
+  it('leaves what is there alone unless the work was corrected', async () => {
+    const lib = await makeDir();
+    const input = await organizedDune(lib);
+    const nfo = await put(join(lib, 'Dune (2021)', 'movie.nfo'), 'x');
+
+    const { items } = await planIn([input], lib, { madeByUs: () => Promise.resolve(true) });
+
+    expect(items[0]?.operations.map((op) => op.destination)).not.toContain(nfo);
   });
 
   it('stays in place when nothing is known about the work', async () => {

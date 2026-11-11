@@ -28,6 +28,30 @@ const identityOf = async (path: string): Promise<FileIdentity> => {
 };
 
 /**
+ * Keeps the file at `destination` in `backupDir` (with its date, so a restored file is the one an
+ * earlier journal entry knew) and replaces it atomically; the backup's path is what undo needs.
+ * A failed replacement leaves the file as it was and no backup behind.
+ */
+export async function backupAndReplace(
+  destination: string,
+  data: Uint8Array | string,
+  backupDir: string,
+): Promise<string> {
+  await mkdir(backupDir, { recursive: true });
+  const backup = join(backupDir, `${randomUUID()}${extname(destination)}`);
+  const before = await stat(destination);
+  await copyFile(destination, backup);
+  await utimes(backup, before.atimeMs / 1000, before.mtimeMs / 1000);
+  try {
+    await replaceAtomic(destination, data);
+  } catch (error) {
+    await unlink(backup).catch(() => undefined);
+    throw error;
+  }
+  return backup;
+}
+
+/**
  * Puts an image at `destination` on the user's explicit request, and journals it. A file that is
  * there is copied to `backupDir` first and replaced atomically; the entry (`replaced`) knows the
  * backup, so undoing the batch restores it. With nothing there it is an ordinary new image
@@ -56,18 +80,7 @@ export async function replaceImage(options: ReplaceImageOptions): Promise<Journa
     return entry;
   }
 
-  await mkdir(backupDir, { recursive: true });
-  const backup = join(backupDir, `${randomUUID()}${extname(destination)}`);
-  const before = await stat(destination);
-  await copyFile(destination, backup);
-  // The copy keeps the date of the file: restored, it is the file an earlier entry journaled.
-  await utimes(backup, before.atimeMs / 1000, before.mtimeMs / 1000);
-  try {
-    await replaceAtomic(destination, data);
-  } catch (error) {
-    await unlink(backup).catch(() => undefined);
-    throw error;
-  }
+  const backup = await backupAndReplace(destination, data, backupDir);
   const entry: JournalEntry = {
     ...base,
     kind: 'replaced',
