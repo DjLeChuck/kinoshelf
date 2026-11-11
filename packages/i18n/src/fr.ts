@@ -387,8 +387,6 @@ export const fr: Record<keyof typeof en, string> = {
   'web.library.coverage.legend.label': 'Légende',
   'web.library.episode.versions': 'Versions',
   'web.library.episode.no-file': 'Aucun fichier ne tient cette version de l’épisode.',
-  'web.library.version.show': 'Afficher les versions de {title}',
-  'web.library.version.hide': 'Masquer les versions de {title}',
   'web.library.version.unknown': 'résolution inconnue',
   'web.library.version.subtitles': 'ST {languages}',
   'web.library.versions.summary': '{count, plural, one {# version} other {# versions}} · {size}',

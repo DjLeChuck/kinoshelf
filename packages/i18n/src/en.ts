@@ -369,8 +369,6 @@ export const en = {
   'web.library.coverage.legend.label': 'Legend',
   'web.library.episode.versions': 'Versions',
   'web.library.episode.no-file': 'No file holds this version of the episode.',
-  'web.library.version.show': 'Show the versions of {title}',
-  'web.library.version.hide': 'Hide the versions of {title}',
   'web.library.version.unknown': 'unknown resolution',
   'web.library.version.subtitles': 'Subs {languages}',
   'web.library.versions.summary': '{count, plural, one {# version} other {# versions}} · {size}',

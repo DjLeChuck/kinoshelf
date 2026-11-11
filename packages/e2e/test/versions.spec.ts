@@ -5,7 +5,7 @@ import { signIn } from './helpers.js';
 
 const FOLDER = library('films', 'Dune (1984) {tmdb-841}');
 
-test('lists a movie held in two versions once, and unfolds them', async ({ page, request }) => {
+test('lists a movie held in two versions once', async ({ page, request }) => {
   // What a spec before this one left in the folder would be a third version.
   await rm(FOLDER, { recursive: true, force: true });
   await mkdir(FOLDER, { recursive: true });
@@ -23,21 +23,14 @@ test('lists a movie held in two versions once, and unfolds them', async ({ page,
   await signIn(page);
   await page.goto('/libraries/films');
 
-  // One line, a badge per version; the versions are folded away.
+  // One line, a badge per version.
   const row = page.getByRole('row').filter({ hasText: '1984' });
   await expect(row).toHaveCount(1);
   await expect(row.getByText('1080p')).toBeVisible();
   await expect(row.getByText('2160p')).toBeVisible();
 
-  const toggle = row.getByRole('button', { name: 'Show the versions of Dune' });
-  await expect(toggle).toHaveAttribute('aria-expanded', 'false');
-  await toggle.click();
-  await expect(row.getByRole('button', { name: 'Hide the versions of Dune' })).toHaveAttribute(
-    'aria-expanded',
-    'true',
-  );
-  // A sub-row per version.
-  await expect(page.locator('tr.version')).toHaveCount(2);
+  // The versions are told apart on the movie's page, not by folding the list.
+  await expect(page.getByRole('button', { name: /versions of/ })).toHaveCount(0);
 
   // The filter counts the movie, once.
   await page.getByRole('button', { name: /Several versions/ }).click();
