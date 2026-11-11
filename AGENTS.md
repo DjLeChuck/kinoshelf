@@ -358,8 +358,9 @@ format follows the Kodi wiki's templates, saved pages are not in the repository)
   which files are on the disk, `null` when the profile writes none or the work has no folder of its own;
   the list's `poster`/`fanart`/`logo` flags mean "nothing planned is missing" and say nothing of the disk).
   - **A replacement is an explicit, journaled operation, apart from the pipeline.** `replaceAtomic`
-    (`fs-ops.ts`) is the only primitive that overwrites, called by `replaceImage` and by undo alone;
-    the planner, the executor and `writeAtomic` still refuse to. The old file goes to
+    (`fs-ops.ts`) is the only primitive that overwrites, called by `replaceImage`, by undo and by
+    `backupAndReplace` (the executor, for the files of a corrected work, see "Libraries and scan": only
+    ones Kinoshelf wrote and nobody touched); the planner and `writeAtomic` still refuse to. The old file goes to
     `<config>/replaced/` (journal entry `replaced`, migration `core:005-journal-backup`), and undo restores
     it unless the file changed since (`undo.destination-changed`). Backup and restore keep the file's
     date, or the journal's identity check would fail on the second undo. The NFO is not rewritten: it
@@ -523,6 +524,21 @@ refuses to delete a library an arrival folder points at (`library.in-use`). Ther
   TMDB is asked as for any scan (one search per release, seasons cached), nothing more. The web builds
   the path from the files it knows (`rescanPath`): a show whose files lie loose in the source has none,
   and no button. "Send again" of a failed one goes through the same route (`resendRequest`).
+- **Correcting the work of a folder** (`candidate` in the body of `POST /api/libraries/:id/rescan`, server
+  migration 030 `jobs.candidate`; the web's `RematchButton`, on a movie's page and a show's): the
+  same scan of one folder, but `analyze` takes the chosen work as the match of every file of its kind
+  (`AnalyzeOptions.forced`: no search; an episode is never forced to a movie) and the candidate must be of
+  the library's type (422 `library.wrong-type`). Nothing moves: the rows come back `rename`, named after the
+  new work, and the usual "Rename" (preview, batch, undo) does the rest. That rename relies on what exists
+  already: a sidecar NFO Kinoshelf wrote does not follow the video (`madeByUs`), and the old folder is pruned
+  when only files Kinoshelf made remain. When the video is already where the new work wants it (`no-id`
+  naming and the same title, so the folder keeps its name), the NFO and images Kinoshelf wrote for the former
+  work are **replaced** (`PlannerOptions.replaces`, set by `analyze` with `forced`; `replace: true` on the
+  `write-file`/`download` operation): the old file goes to `<config>/replaced/` (`backupAndReplace`, journal
+  entry `replaced`) and undo puts it back, and the executor re-checks `madeByUs` right before writing (a file
+  edited since, or one that was never ours, is skipped as taken; so is any without `backupDir`). Such a plan
+  leaves the item `incomplete`, so it shows under "Refresh". "Send again" of a failed correction scans
+  without the choice (the job's candidate is not in the API).
 - **Rename and refresh** (`POST /api/libraries/:id/execute`, body `{ items, dryRun? }`): the items are
   the `id`s of the library's list. The server finds each one's entry and scan job (`entryId`,
   `scan_job_id` of its row), keeps what is still executable, and runs one plan per job under one batch
