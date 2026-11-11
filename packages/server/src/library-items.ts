@@ -101,7 +101,7 @@ const ROW_COLUMNS =
   'library_id, path, kind, tmdb_id, title, year, season, episode, episode_end, state, nfo, poster, fanart, logo, thumb, entry_id, scan_job_id, scanned_at, unavailable';
 
 /** The columns a row is written with: `item_id` is derived from the path, never read back. */
-const WRITTEN_COLUMNS = `${ROW_COLUMNS}, item_id`;
+const WRITTEN_COLUMNS = `${ROW_COLUMNS}, item_id, sort, work_key`;
 
 /** Read with the picture size, which only the probe writes: a patch of a row never touches it. */
 const COLUMNS = `${ROW_COLUMNS}, picture`;
@@ -152,6 +152,8 @@ const valuesOf = (item: LibraryItem): (string | number | null)[] => [
   item.scannedAt,
   item.unavailable.length > 0 ? JSON.stringify(item.unavailable) : null,
   itemId(item.path),
+  sortOf(item),
+  workKeyOf(item),
 ];
 
 const toItem = (row: Row): LibraryItem => ({
@@ -196,6 +198,62 @@ export class LibraryItemStore {
     database.function('sort_key', { deterministic: true }, (value: unknown) =>
       typeof value === 'string' ? sortKey(value) : null,
     );
+    this.fillSortKeys();
+  }
+
+  /** Rows saved before `sort` and `work_key` existed get theirs, once (migration 031). */
+  private fillSortKeys(): void {
+    const missing = this.database
+      .prepare<[], KeyRow & { library_id: string }>(
+        `SELECT library_id, path, kind, tmdb_id, title, state FROM library_items WHERE work_key IS NULL`,
+      )
+      .all();
+    if (missing.length === 0) {
+      return;
+    }
+    const set = this.database.prepare(
+      'UPDATE library_items SET sort = ?, work_key = ? WHERE library_id = ? AND path = ?',
+    );
+    this.database.transaction(() => {
+      for (const row of missing) {
+        set.run(sortOf(keyedItem(row)), workKeyOf(keyedItem(row)), row.library_id, row.path);
+      }
+      for (const libraryId of new Set(missing.map((row) => row.library_id))) {
+        this.regroup(libraryId);
+      }
+    })();
+  }
+
+  /**
+   * Marks the first file of each work (`lead`, in the order of a list) again, for the works named
+   * or for the whole library. A work's lead depends on its other files, so every write that adds,
+   * removes or changes one calls this, in its own transaction.
+   */
+  private regroup(libraryId: string, keys?: ReadonlySet<string>): void {
+    const scope = keys === undefined ? '' : ' AND work_key IN (SELECT value FROM json_each(?))';
+    const args = keys === undefined ? [] : [JSON.stringify([...keys])];
+    this.database
+      .prepare(
+        `UPDATE library_items SET lead = CASE WHEN path IN (
+           SELECT path FROM (
+             SELECT path, ROW_NUMBER() OVER (PARTITION BY work_key ORDER BY sort, path) AS rank
+             FROM library_items WHERE library_id = ?${scope}
+           ) WHERE rank = 1) THEN 1 ELSE 0 END
+         WHERE library_id = ?${scope}`,
+      )
+      .run(libraryId, ...args, libraryId, ...args);
+  }
+
+  /** The works the rows at these paths belong to (their stored key). */
+  private workKeysAt(libraryId: string, where: string, args: readonly string[]): Set<string> {
+    return new Set(
+      this.database
+        .prepare<string[], { work_key: string | null }>(
+          `SELECT DISTINCT work_key FROM library_items WHERE library_id = ?${where}`,
+        )
+        .all(libraryId, ...args)
+        .flatMap(({ work_key }) => (work_key === null ? [] : [work_key])),
+    );
   }
 
   /**
@@ -212,6 +270,7 @@ export class LibraryItemStore {
             args: [folder, `${folder}/`, `${folder}0`],
           };
     this.database.transaction(() => {
+      const touched = this.workKeysAt(libraryId, scope.where, scope.args);
       // A file that is still there keeps what was probed of it: its size and date say if it changed.
       const kept = new Map(
         this.database
@@ -249,18 +308,38 @@ export class LibraryItemStore {
           );
         }
       }
+      if (folder === undefined) {
+        this.regroup(libraryId);
+      } else {
+        for (const item of items) {
+          touched.add(workKeyOf(item));
+        }
+        this.regroup(libraryId, touched);
+      }
     })();
   }
 
   /** Moves a row to another path, probe included: it is the same file, and its date will tell. */
   rename(libraryId: string, from: string, to: string): void {
     this.database.transaction(() => {
+      const touched = this.workKeysAt(libraryId, ' AND path IN (?, ?)', [from, to]);
       this.database
         .prepare('DELETE FROM library_items WHERE library_id = ? AND path = ?')
         .run(libraryId, to);
       this.database
         .prepare('UPDATE library_items SET path = ?, item_id = ? WHERE library_id = ? AND path = ?')
         .run(to, itemId(to), libraryId, from);
+      // A file nobody identified is its own work, named by its path, and sorts by it.
+      const moved = this.get(libraryId, to);
+      if (moved) {
+        touched.add(workKeyOf(moved));
+        this.database
+          .prepare(
+            'UPDATE library_items SET sort = ?, work_key = ? WHERE library_id = ? AND path = ?',
+          )
+          .run(sortOf(moved), workKeyOf(moved), libraryId, to);
+      }
+      this.regroup(libraryId, touched);
     })();
   }
 
@@ -353,7 +432,13 @@ export class LibraryItemStore {
   }
 
   put(item: LibraryItem): void {
-    this.putStatement().run(...valuesOf(item));
+    this.database.transaction(() => {
+      // The row may change work (a movie matched to another film, a file settled): both are regrouped.
+      const touched = this.workKeysAt(item.libraryId, ' AND path = ?', [item.path]);
+      this.putStatement().run(...valuesOf(item));
+      touched.add(workKeyOf(item));
+      this.regroup(item.libraryId, touched);
+    })();
   }
 
   get(libraryId: string, path: string): LibraryItem | undefined {
@@ -378,9 +463,13 @@ export class LibraryItemStore {
   }
 
   remove(libraryId: string, path: string): void {
-    this.database
-      .prepare('DELETE FROM library_items WHERE library_id = ? AND path = ?')
-      .run(libraryId, path);
+    this.database.transaction(() => {
+      const touched = this.workKeysAt(libraryId, ' AND path = ?', [path]);
+      this.database
+        .prepare('DELETE FROM library_items WHERE library_id = ? AND path = ?')
+        .run(libraryId, path);
+      this.regroup(libraryId, touched);
+    })();
   }
 
   /** The videos of a library, in path order. */
@@ -454,33 +543,46 @@ export class LibraryItemStore {
         ? ["(sort_key(title) LIKE ? ESCAPE '\\' OR sort_key(path) LIKE ? ESCAPE '\\')"]
         : []),
     ].join(' AND ');
-    const params: (string | number)[] = [
-      libraryId,
-      ...(options.query
-        ? [contains(sortKey(options.query)), contains(sortKey(options.query))]
-        : []),
-    ];
+    const queryParams = options.query
+      ? [contains(sortKey(options.query)), contains(sortKey(options.query))]
+      : [];
+    const params: (string | number)[] = [libraryId, ...queryParams];
+    // `where` over the files, for the groups of a validation; the list itself reads one row per work.
+    const leads = leadWhere(
+      [
+        ...(options.filter ? [FILTER_SQL[options.filter]] : []),
+        ...(options.query
+          ? ["(sort_key(title) LIKE ? ESCAPE '\\' OR sort_key(path) LIKE ? ESCAPE '\\')"]
+          : []),
+      ].join(' AND '),
+    );
     const total =
       this.database
         .prepare<unknown[], { total: number }>(
-          `SELECT COUNT(DISTINCT ${WORK_KEY}) AS total FROM library_items WHERE ${where}`,
+          `SELECT COUNT(*) AS total FROM library_items AS lead_row WHERE ${leads}`,
         )
         .get(...params)?.total ?? 0;
     const groups = this.groupsWhere(where, params);
     const keys = this.database
       .prepare<unknown[], { key: string }>(
-        `SELECT ${WORK_KEY} AS key FROM library_items WHERE ${where}
-         GROUP BY key ORDER BY MIN(sort_key(COALESCE(title, path))), MIN(path) LIMIT ? OFFSET ?`,
+        `SELECT work_key AS key FROM library_items AS lead_row WHERE ${leads}
+         ORDER BY sort, path LIMIT ? OFFSET ?`,
       )
       .all(...params, options.limit, options.offset)
       .map(({ key }) => key);
     const rows = this.database
-      .prepare<[string, string], Row & { key: string }>(
-        `SELECT ${COLUMNS}, ${WORK_KEY} AS key FROM library_items
-         WHERE library_id = ? AND ${WORK_KEY} IN (SELECT value FROM json_each(?))
-         ORDER BY sort_key(COALESCE(title, path)), path`,
+      .prepare<[string, string], Row & { key: string; lead: number; sort: string }>(
+        `SELECT ${COLUMNS}, work_key AS key, lead, sort FROM library_items
+         WHERE library_id = ? AND work_key IN (SELECT value FROM json_each(?))`,
       )
-      .all(libraryId, JSON.stringify(keys));
+      .all(libraryId, JSON.stringify(keys))
+      // The work's lead first (it is what the list shows), then its files as the list orders them:
+      // sorted here, a few rows, rather than by SQLite with a temporary tree.
+      .sort(
+        (a, b) =>
+          b.lead - a.lead ||
+          (a.sort < b.sort ? -1 : a.sort > b.sort ? 1 : a.path < b.path ? -1 : 1),
+      );
     const byKey = new Map<string, LibraryItem[]>();
     for (const row of rows) {
       byKey.set(row.key, [...(byKey.get(row.key) ?? []), toItem(row)]);
@@ -512,12 +614,12 @@ export class LibraryItemStore {
     const count = (extra: string): number =>
       this.database
         .prepare<[string], { total: number }>(
-          `SELECT COUNT(DISTINCT ${WORK_KEY}) AS total FROM library_items WHERE library_id = ?${extra}`,
+          `SELECT COUNT(*) AS total FROM library_items AS lead_row WHERE ${leadWhere(extra)}`,
         )
         .get(libraryId)?.total ?? 0;
     counts.all = count('');
     for (const filter of ITEM_FILTERS) {
-      counts[filter] = count(` AND ${FILTER_SQL[filter]}`);
+      counts[filter] = count(FILTER_SQL[filter]);
     }
     if (series) {
       // A series library reads as a tree of shows, so its tabs count shows. The files that wait
@@ -552,9 +654,7 @@ export class LibraryItemStore {
     const { grouped, params } = this.groupedShows(libraryId, options);
     const total = this.countShows(libraryId, options);
     const rows = this.database
-      .prepare<unknown[], ShowQuery>(
-        `${grouped} ORDER BY sort_key(title), tmdb_id LIMIT ? OFFSET ?`,
-      )
+      .prepare<unknown[], ShowQuery>(`${grouped} ORDER BY sort, tmdb_id LIMIT ? OFFSET ?`)
       .all(...params, options.limit, options.offset);
     // The episodes and versions are read from the files, once for the page: a range holds several
     // episodes and two versions hold one, which a count in SQL cannot tell.
@@ -676,7 +776,7 @@ export class LibraryItemStore {
         : []),
     ];
     const grouped = `
-      SELECT i.tmdb_id AS tmdb_id, MIN(i.title) AS title, MIN(i.year) AS year,
+      SELECT i.tmdb_id AS tmdb_id, MIN(i.title) AS title, MIN(i.year) AS year, MIN(i.sort) AS sort,
         COUNT(DISTINCT i.season) AS seasons,
         MAX(c.missing) AS missing,
         SUM(i.state = 'rename') AS rename, SUM(i.state = 'incomplete') AS refresh,
@@ -740,11 +840,51 @@ const SETTLED_OTHER = "other.state NOT IN ('review', 'unrecognized')";
 export const isUnsettled = (item: Pick<LibraryItem, 'state'>): boolean =>
   item.state === 'review' || item.state === 'unrecognized';
 
+interface KeyRow {
+  path: string;
+  kind: 'movie' | 'series' | null;
+  tmdb_id: number | null;
+  title: string | null;
+  state: ItemState;
+}
+
+const keyedItem = (
+  row: KeyRow,
+): Pick<LibraryItem, 'path' | 'kind' | 'tmdbId' | 'title' | 'state'> => ({
+  path: row.path,
+  kind: row.kind,
+  tmdbId: row.tmdb_id,
+  title: row.title,
+  state: row.state,
+});
+
 /**
  * What makes one entry of a list: a movie the library identified is one whatever its versions,
- * anything else (a file nobody identified, an episode) is its own file.
+ * anything else (a file nobody identified, an episode) is its own file. Stored in `work_key`,
+ * written with the row (the same rule as `SETTLED`).
  */
-const WORK_KEY = `(CASE WHEN kind = 'movie' AND tmdb_id IS NOT NULL AND ${SETTLED} THEN 'm' || tmdb_id ELSE path END)`;
+const workKeyOf = (item: Pick<LibraryItem, 'path' | 'kind' | 'tmdbId' | 'state'>): string =>
+  item.kind === 'movie' && item.tmdbId !== null && !isUnsettled(item)
+    ? `m${String(item.tmdbId)}`
+    : item.path;
+
+/** What a list orders by: the title, or the path of a file nobody identified. */
+const sortOf = (item: Pick<LibraryItem, 'path' | 'title'>): string =>
+  sortKey(item.title ?? item.path);
+
+/**
+ * The condition of a list read on the first file of each work (`lead_row`). A filter keeps the
+ * work when **any** of its files matches it, hence the `EXISTS` over the work: the inner table is
+ * not aliased, since `FILTER_SQL` names `library_items`.
+ */
+const leadWhere = (rowFilter: string): string =>
+  `library_id = ? AND lead = 1${
+    rowFilter
+      ? ` AND EXISTS (SELECT 1 FROM library_items
+           WHERE library_items.library_id = lead_row.library_id
+             AND library_items.work_key = lead_row.work_key AND ${rowFilter})`
+      : ''
+  }`;
 
 /** The views of a library: a state, or a kind of file that is missing. */
 export const ITEM_FILTERS = [

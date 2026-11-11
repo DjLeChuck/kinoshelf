@@ -787,18 +787,120 @@ describe('the lookups of the item store', () => {
     ]);
   });
 
-  it('reads a page of a library in order without sorting the whole of it', () => {
-    const database = migrated(new Database(':memory:'));
-    const plan = database
-      .prepare(
-        `EXPLAIN QUERY PLAN SELECT path FROM library_items WHERE library_id = ?
-         ORDER BY lower(COALESCE(title, path)), path LIMIT 50 OFFSET 0`,
+  /** The movies of the work tests: `title` and `path` decide the order, `tmdbId` the work. */
+  const film = (path: string, title: string, tmdbId: number, extra: Partial<LibraryItem> = {}) =>
+    row(path, {
+      libraryId: 'films',
+      kind: 'movie',
+      tmdbId,
+      title,
+      season: null,
+      episode: null,
+      ...extra,
+    });
+
+  const leadsOf = (database: Database.Database): string[] =>
+    database
+      .prepare<[], { path: string }>(
+        "SELECT path FROM library_items WHERE library_id = 'films' AND lead = 1 ORDER BY sort, path",
       )
-      .all('shows')
-      .map((step) => (step as { detail: string }).detail)
-      .join('\n');
-    expect(plan).toContain('library_items_order');
-    expect(plan).not.toContain('TEMP B-TREE');
+      .all()
+      .map(({ path }) => path);
+
+  /** EXPLAIN needs a value for each `?`; the plan does not depend on them. */
+  const placeholders = (text: string): null[] => (text.match(/\?/g) ?? []).map(() => null);
+
+  it('reads a page, a total and the tabs without sorting the library', () => {
+    const database = migrated(new Database(':memory:'));
+    const store = new LibraryItemStore(database);
+    store.put(film('/a.mkv', 'Alien', 1, { nfo: false }));
+    const sql: string[] = [];
+    const prepare = database.prepare.bind(database) as (text: string) => unknown;
+    (database as unknown as { prepare: (text: string) => unknown }).prepare = (text) => {
+      sql.push(text);
+      return prepare(text);
+    };
+    store.page('films', { limit: 50, offset: 100 });
+    store.page('films', { filter: 'missing-nfo', limit: 50, offset: 0 });
+    store.page('films', { filter: 'multi-version', limit: 50, offset: 0 });
+    store.page('films', { query: 'ali', limit: 50, offset: 0 });
+    store.counts('films');
+    (database as unknown as { prepare: unknown }).prepare = prepare;
+
+    const lists = sql.filter((text) => text.includes('lead_row'));
+    expect(lists).toHaveLength(2 * 4 + 7);
+    for (const text of lists) {
+      const plan = database
+        .prepare(`EXPLAIN QUERY PLAN ${text}`)
+        .all(...placeholders(text))
+        .map((step) => (step as { detail: string }).detail)
+        .join('\n');
+      expect(plan, text).not.toContain('USE TEMP B-TREE FOR ORDER BY');
+    }
+    const unfiltered = sql.find((text) => text.includes('ORDER BY sort, path LIMIT'));
+    expect(
+      database
+        .prepare(`EXPLAIN QUERY PLAN ${unfiltered ?? ''}`)
+        .all(...placeholders(unfiltered ?? ''))
+        .map((step) => (step as { detail: string }).detail)
+        .join('\n'),
+    ).toContain('library_items_lead');
+  });
+
+  it('marks the first file of each work, in the order of a list', () => {
+    const database = migrated(new Database(':memory:'));
+    const store = new LibraryItemStore(database);
+    store.put(film('/b/Zulu.mkv', 'Zulu', 1));
+    store.put(film('/c/Zulu - 2160p.mkv', 'Zulu', 1));
+    expect(leadsOf(database)).toEqual(['/b/Zulu.mkv']);
+
+    // A second version that sorts before the first takes the lead.
+    store.put(film('/a/Zulu - 1080p.mkv', 'Zulu', 1));
+    expect(leadsOf(database)).toEqual(['/a/Zulu - 1080p.mkv']);
+
+    // Removing the lead hands it to the next version.
+    store.remove('films', '/a/Zulu - 1080p.mkv');
+    expect(leadsOf(database)).toEqual(['/b/Zulu.mkv']);
+
+    // A file that is moved keeps one lead per work.
+    store.rename('films', '/b/Zulu.mkv', '/d/Zulu.mkv');
+    expect(leadsOf(database)).toEqual(['/c/Zulu - 2160p.mkv']);
+
+    // A file settled elsewhere leaves its work, and is a work of its own.
+    store.put(film('/c/Zulu - 2160p.mkv', 'Alien', 2));
+    expect(leadsOf(database)).toEqual(['/c/Zulu - 2160p.mkv', '/d/Zulu.mkv']);
+    expect(store.page('films', { limit: 10, offset: 0 })).toMatchObject({
+      total: 2,
+      items: [{ title: 'Alien' }, { title: 'Zulu' }],
+    });
+  });
+
+  it('keeps the leads right when a folder is scanned again', () => {
+    const database = migrated(new Database(':memory:'));
+    const store = new LibraryItemStore(database);
+    store.put(film('/x/Dune.mkv', 'Dune', 3));
+    store.put(film('/y/Dune - 2160p.mkv', 'Dune', 3));
+    store.put(film('/y/Other.mkv', 'Other', 4));
+
+    // Only /y was scanned: Dune's version there is gone, the one in /x leads again.
+    store.replace('films', [film('/y/Other.mkv', 'Other', 4)], '/y');
+    expect(leadsOf(database)).toEqual(['/x/Dune.mkv', '/y/Other.mkv']);
+
+    store.replace('films', [film('/z/Dune.mkv', 'Dune', 3)]);
+    expect(leadsOf(database)).toEqual(['/z/Dune.mkv']);
+  });
+
+  it('fills the keys of rows saved before they existed', () => {
+    const database = migrated(new Database(':memory:'));
+    new LibraryItemStore(database).put(film('/a/Élan.mkv', 'Élan', 5));
+    database.prepare('UPDATE library_items SET sort = NULL, work_key = NULL, lead = 0').run();
+
+    new LibraryItemStore(database);
+    expect(database.prepare('SELECT sort, work_key, lead FROM library_items').get()).toEqual({
+      sort: 'elan',
+      work_key: 'm5',
+      lead: 1,
+    });
   });
 
   it('finds rows by the id the web uses, also those saved before it was stored', () => {

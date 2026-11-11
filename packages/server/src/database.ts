@@ -379,6 +379,22 @@ export const SERVER_MIGRATIONS: readonly { readonly name: string; readonly sql: 
     name: 'server:030-job-candidate',
     sql: 'ALTER TABLE jobs ADD COLUMN candidate TEXT;',
   },
+  {
+    // What a list orders and groups by, computed when a row is written instead of on every query:
+    // `sort` is the title without accents or case (the path for a file nobody identified), `work_key`
+    // the entry the file belongs to (a movie's versions share one), `lead` is 1 on the first file of
+    // each work in the order of `sort`. A page then reads `lead = 1` straight off the index, where
+    // the expressions before sorted the whole library for each one. Existing rows get their values
+    // from `LibraryItemStore` at startup (the accent folding is not SQL's); `lead` stays 0 until then.
+    name: 'server:031-items-sort-keys',
+    sql: `
+      DROP INDEX library_items_order;
+      ALTER TABLE library_items ADD COLUMN sort TEXT;
+      ALTER TABLE library_items ADD COLUMN work_key TEXT;
+      ALTER TABLE library_items ADD COLUMN lead INTEGER NOT NULL DEFAULT 0;
+      CREATE INDEX library_items_lead ON library_items (library_id, lead, sort, path);
+      CREATE INDEX library_items_work ON library_items (library_id, work_key);`,
+  },
 ];
 
 /** Opens the single SQLite file of the config directory, shared with the CLI and the cache. */
