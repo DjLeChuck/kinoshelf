@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import type { SeasonInfo, SeriesDetails } from '@kinoshelf/core';
-import type { Database } from 'better-sqlite3';
+import type { Database } from '@kinoshelf/core';
 import { versionRowOf, type LibraryItem, type LibraryItemStore } from './library-items.js';
 import { coverageOf, type VersionCoverage } from './versions.js';
 

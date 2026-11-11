@@ -1,7 +1,7 @@
 import { readdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import Database from 'better-sqlite3';
+import { Database } from '@kinoshelf/core';
 import { migrated } from '../src/database.js';
 import { EntryStore } from '../src/entries.js';
 import { ExecutionStore } from '../src/executions.js';

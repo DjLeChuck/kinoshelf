@@ -14,7 +14,7 @@ import {
   type OperationResult,
   type Profile,
 } from '@kinoshelf/core';
-import type { Database, Statement } from 'better-sqlite3';
+import type { Database, Statement } from '@kinoshelf/core';
 import { workKindOf as kindOf, type Entry, type EntryStore } from './entries.js';
 import { isInside } from './notify/paths.js';
 import type { Job, JobStore } from './jobs.js';

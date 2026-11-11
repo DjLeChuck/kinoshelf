@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import Database from 'better-sqlite3';
+import { Database } from '@kinoshelf/core';
 import { join } from 'node:path';
 import { SqliteJournal } from '@kinoshelf/core';
 import { SqliteHttpCache } from '@kinoshelf/provider-tmdb';
@@ -265,15 +265,15 @@ describe('replaced scans', () => {
 });
 
 describe('the purge of a running server', () => {
-  const oldJob = (database: Database.Database) =>
+  const oldJob = (database: Database) =>
     database
       .prepare(
         "INSERT INTO jobs (id, path, status, created_at, finished_at) VALUES ('old', '/old', 'done', '2020-01-01T00:00:00.000Z', '2020-01-01T00:00:00.000Z')",
       )
       .run();
-  const jobCount = (database: Database.Database) =>
+  const jobCount = (database: Database) =>
     (database.prepare('SELECT COUNT(*) AS n FROM jobs').get() as { n: number }).n;
-  const options = (database: Database.Database) => ({
+  const options = (database: Database) => ({
     version: '1',
     config: {},
     configDir: '/nonexistent',

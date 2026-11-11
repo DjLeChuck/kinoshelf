@@ -14,10 +14,7 @@
     "@kinoshelf/core": "workspace:*",
     "@kinoshelf/i18n": "workspace:*",
     "@kinoshelf/provider-tmdb": "workspace:*",
-    "better-sqlite3": "^13.0.3",
     "commander": "^15.0.0"
   },
-  "devDependencies": {
-    "@types/better-sqlite3": "^9.6.0"
-  }
+  "devDependencies": {}
 }

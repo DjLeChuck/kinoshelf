@@ -1,6 +1,6 @@
 import { readFile, rename, rm, utimes, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import Database from 'better-sqlite3';
+import { Database } from '@kinoshelf/core';
 import { EntryStore } from '../src/entries.js';
 import { ExecutionStore } from '../src/executions.js';
 import { JobStore } from '../src/jobs.js';

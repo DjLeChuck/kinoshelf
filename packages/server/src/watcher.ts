@@ -8,7 +8,7 @@ import {
   type Config,
   type WatchConfig,
 } from '@kinoshelf/core';
-import type { Database } from 'better-sqlite3';
+import type { Database } from '@kinoshelf/core';
 import { READY_ENTRY, REVIEW_ENTRY, UNRECOGNIZED_ENTRY } from './entry-sql.js';
 
 /** What download clients append to a file while it is not complete. */

@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { Database } from 'better-sqlite3';
+import type { Database } from '@kinoshelf/core';
 import type { StoredError } from './entries.js';
 
 export type ExecutionStatus = 'queued' | 'running' | 'done' | 'failed';

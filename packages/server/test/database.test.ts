@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import Database from 'better-sqlite3';
+import { Database } from '@kinoshelf/core';
 import { applyMigrations } from '@kinoshelf/core';
 import { migrated, SERVER_MIGRATIONS } from '../src/database.js';
 

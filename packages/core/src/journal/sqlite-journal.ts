@@ -1,7 +1,7 @@
 import { and, asc, desc, eq, inArray, isNotNull, isNull, sql } from 'drizzle-orm';
-import { drizzle, type BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import { integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
-import type { Database } from 'better-sqlite3';
+import type { Database } from '../sqlite/database.js';
+import { drizzleOf, type DrizzleDatabase } from '../sqlite/drizzle.js';
 import type { FileIdentity, Journal, JournalBatch, JournalEntry } from '../types/journal.js';
 import type { TransferMode } from '../types/operation.js';
 import { applyMigrations, CORE_MIGRATIONS } from './migrations.js';
@@ -24,11 +24,11 @@ const journalEntries = sqliteTable('journal_entries', {
 
 /** Durable journal in the caller's SQLite database (the single file in `/config`). */
 export class SqliteJournal implements Journal {
-  private readonly db: BetterSQLite3Database;
+  private readonly db: DrizzleDatabase;
 
   constructor(sqlite: Database) {
     applyMigrations(sqlite, CORE_MIGRATIONS);
-    this.db = drizzle(sqlite);
+    this.db = drizzleOf(sqlite);
   }
 
   record(entry: JournalEntry): void {

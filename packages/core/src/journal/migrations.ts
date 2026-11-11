@@ -1,4 +1,4 @@
-import type { Database } from 'better-sqlite3';
+import type { Database } from '../sqlite/database.js';
 
 /**
  * Ordered schema changes, applied once each. Never edit an entry that has shipped: add a new

@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import swagger from '@fastify/swagger';
 import { KinoshelfError, SqliteJournal, type ImageFetcher, type Journal } from '@kinoshelf/core';
-import type { Database } from 'better-sqlite3';
+import type { Database } from '@kinoshelf/core';
 import Fastify, { type FastifyInstance } from 'fastify';
 import { SqliteHttpCache } from '@kinoshelf/provider-tmdb';
 import { ApiError } from './api-error.js';

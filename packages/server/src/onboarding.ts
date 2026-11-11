@@ -1,6 +1,6 @@
 import { destinationRoots, type Config } from '@kinoshelf/core';
 import { tmdbApiKey } from '@kinoshelf/provider-tmdb';
-import type { Database } from 'better-sqlite3';
+import type { Database } from '@kinoshelf/core';
 
 const ONBOARDING_STEPS = ['tmdb', 'server', 'destination', 'source'] as const;
 export type OnboardingStepId = (typeof ONBOARDING_STEPS)[number];

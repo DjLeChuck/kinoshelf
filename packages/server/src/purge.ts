@@ -1,4 +1,4 @@
-import type { Database } from 'better-sqlite3';
+import type { Database } from '@kinoshelf/core';
 import { unsettledEntry } from './entry-sql.js';
 
 const DAY_MS = 86_400_000;

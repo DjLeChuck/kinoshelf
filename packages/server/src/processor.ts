@@ -1,7 +1,7 @@
 import { detectLocale } from '@kinoshelf/i18n';
 import { stat } from 'node:fs/promises';
 import { resolve } from 'node:path';
-import type { Database } from 'better-sqlite3';
+import type { Database } from '@kinoshelf/core';
 import {
   metadataLanguageFor,
   libraryProfile,

@@ -1,7 +1,6 @@
 import { eq, lt } from 'drizzle-orm';
-import { drizzle, type BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import { integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
-import type { Database } from 'better-sqlite3';
+import { drizzleOf, type Database, type DrizzleDatabase } from '@kinoshelf/core';
 import type { CacheEntry, HttpCache } from './cache.js';
 
 export const httpCache = sqliteTable('tmdb_http_cache', {
@@ -16,7 +15,7 @@ export const httpCache = sqliteTable('tmdb_http_cache', {
  * The table is created on demand: it is disposable data, so it needs no migration history.
  */
 export class SqliteHttpCache implements HttpCache {
-  private readonly db: BetterSQLite3Database;
+  private readonly db: DrizzleDatabase;
 
   constructor(sqlite: Database) {
     sqlite.exec(`CREATE TABLE IF NOT EXISTS tmdb_http_cache (
@@ -26,7 +25,7 @@ export class SqliteHttpCache implements HttpCache {
       expires_at INTEGER NOT NULL
     );
     CREATE INDEX IF NOT EXISTS tmdb_http_cache_expires ON tmdb_http_cache (expires_at)`);
-    this.db = drizzle(sqlite);
+    this.db = drizzleOf(sqlite);
   }
 
   get(key: string, now: number): CacheEntry | undefined {

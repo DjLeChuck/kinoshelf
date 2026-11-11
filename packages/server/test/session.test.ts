@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import Database from 'better-sqlite3';
+import { Database } from '@kinoshelf/core';
 import { generateApiKey, hasApiKey, setApiKey } from '../src/auth.js';
 import { migrated } from '../src/database.js';
 import { createSession, endSession, isValidSession, readCookie } from '../src/sessions.js';

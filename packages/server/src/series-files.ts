@@ -7,7 +7,7 @@ import {
   type Config,
   type Profile,
 } from '@kinoshelf/core';
-import type { Database } from 'better-sqlite3';
+import type { Database } from '@kinoshelf/core';
 import type { LibraryItem, LibraryItemStore } from './library-items.js';
 
 /** The season number a row carries for the show's own files (a real season is 0 or more). */

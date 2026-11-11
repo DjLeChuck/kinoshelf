@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { readFileSync } from 'node:fs';
-import type Database from 'better-sqlite3';
+import type { Database } from '@kinoshelf/core';
 import {
   configDirectory,
   ensureConfigDirectory,
@@ -91,7 +91,7 @@ const { version } = JSON.parse(
 ) as { version: string };
 
 let config: Config;
-let database: Database.Database;
+let database: Database;
 try {
   await ensureConfigDirectory(configDir);
   config = await loadConfig(configDir);

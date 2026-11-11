@@ -7,7 +7,7 @@ import type {
   PlanItem,
   ScoredCandidate,
 } from '@kinoshelf/core';
-import type { Database } from 'better-sqlite3';
+import type { Database } from '@kinoshelf/core';
 import { openEntry, READY_ENTRY, REVIEW_ENTRY, UNRECOGNIZED_ENTRY } from './entry-sql.js';
 
 /** How a file left the queue: transferred, failed (needs a human again) or set aside. */

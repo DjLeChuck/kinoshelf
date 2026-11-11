@@ -1,7 +1,7 @@
 import { execFile } from 'node:child_process';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
-import Database from 'better-sqlite3';
+import { Database } from '@kinoshelf/core';
 import { afterEach, describe, expect, it } from 'vitest';
 import { migrated } from '../src/database.js';
 import { LibraryItemStore, type LibraryItem } from '../src/library-items.js';

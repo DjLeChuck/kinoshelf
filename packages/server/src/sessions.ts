@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from 'node:crypto';
-import type { Database } from 'better-sqlite3';
+import type { Database } from '@kinoshelf/core';
 
 export const SESSION_COOKIE = 'kinoshelf_session';
 

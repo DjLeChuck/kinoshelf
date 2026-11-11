@@ -1,4 +1,4 @@
-import Database from 'better-sqlite3';
+import { Database } from '../src/index.js';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import {

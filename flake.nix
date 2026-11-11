@@ -20,7 +20,6 @@
           packages = [
             pkgs.nodejs_26
             pkgs.pnpm
-            pkgs.python3 # native build of better-sqlite3 when no prebuilt binary exists
             pkgs.gnumake
             pkgs.gcc
             pkgs.ffmpeg-headless # `ffprobe`: codec, audio and size of a video, and a file to probe in tests

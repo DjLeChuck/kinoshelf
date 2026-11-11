@@ -1,5 +1,5 @@
 import { rm } from 'node:fs/promises';
-import Database from 'better-sqlite3';
+import { Database } from '@kinoshelf/core';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { migrated } from '../src/database.js';
@@ -799,7 +799,7 @@ describe('the lookups of the item store', () => {
       ...extra,
     });
 
-  const leadsOf = (database: Database.Database): string[] =>
+  const leadsOf = (database: Database): string[] =>
     database
       .prepare<[], { path: string }>(
         "SELECT path FROM library_items WHERE library_id = 'films' AND lead = 1 ORDER BY sort, path",

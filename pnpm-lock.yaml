@@ -53,25 +53,15 @@ importers:
       '@kinoshelf/provider-tmdb':
         specifier: workspace:*
         version: link:../providers/tmdb
-      better-sqlite3:
-        specifier: ^13.0.3
-        version: 13.0.3
       commander:
         specifier: ^15.0.0
         version: 15.0.0
-    devDependencies:
-      '@types/better-sqlite3':
-        specifier: ^9.6.0
-        version: 9.6.0
 
   packages/core:
     dependencies:
-      better-sqlite3:
-        specifier: ^13.0.3
-        version: 13.0.3
       drizzle-orm:
         specifier: ^0.45.4
-        version: 0.45.4(@types/better-sqlite3@9.6.0)(better-sqlite3@13.0.3)
+        version: 0.45.4
       guessit-js:
         specifier: ^4.8.0
         version: 4.8.0
@@ -82,9 +72,6 @@ importers:
         specifier: ^4.6.7
         version: 4.6.7
     devDependencies:
-      '@types/better-sqlite3':
-        specifier: ^9.6.0
-        version: 9.6.0
       fast-xml-parser:
         specifier: 5.11.2
         version: 5.11.2
@@ -97,9 +84,6 @@ importers:
       '@kinoshelf/provider-tmdb':
         specifier: workspace:*
         version: link:../providers/tmdb
-      better-sqlite3:
-        specifier: ^13.0.3
-        version: 13.0.3
       zod:
         specifier: ^4.6.7
         version: 4.6.7
@@ -140,19 +124,12 @@ importers:
       '@kinoshelf/core':
         specifier: workspace:*
         version: link:../../core
-      better-sqlite3:
-        specifier: ^13.0.3
-        version: 13.0.3
       drizzle-orm:
         specifier: ^0.45.4
-        version: 0.45.4(@types/better-sqlite3@9.6.0)(better-sqlite3@13.0.3)
+        version: 0.45.4
       zod:
         specifier: ^4.6.7
         version: 4.6.7
-    devDependencies:
-      '@types/better-sqlite3':
-        specifier: ^9.6.0
-        version: 9.6.0
 
   packages/server:
     dependencies:
@@ -171,9 +148,6 @@ importers:
       '@kinoshelf/provider-tmdb':
         specifier: workspace:*
         version: link:../providers/tmdb
-      better-sqlite3:
-        specifier: ^13.0.3
-        version: 13.0.3
       fast-xml-parser:
         specifier: ^5.11.2
         version: 5.11.2
@@ -181,9 +155,6 @@ importers:
         specifier: ^5.12.7
         version: 5.12.7
     devDependencies:
-      '@types/better-sqlite3':
-        specifier: ^9.6.0
-        version: 9.6.0
       openapi-typescript:
         specifier: ^7.13.0
         version: 7.13.0(typescript@6.0.3)
@@ -498,9 +469,6 @@ packages:
       svelte: ^5.46.4
       vite: ^8.0.0-beta.7 || ^8.0.0
 
-  '@types/better-sqlite3@9.6.0':
-    resolution: {integrity: sha512-ZEEwBSgMu7GYJOynoagg5X9JbxfL6dTJDsgViJIqh67jV44kyOr9RXfmFjLK5rzC4MWssP06t9hu/JwGDnUbCg==}
-
   '@types/chai@5.2.3':
     resolution: {integrity: sha512-Mw558oeA9fFbv65/y4mHtXDs9bPnFMZAL/jxdPFUpOHHIXX91mcgEHbS5Lahr+pwZFR8A7GQleRWeI6cGFC2UA==}
 
@@ -658,10 +626,6 @@ packages:
   balanced-match@4.0.4:
     resolution: {integrity: sha512-BLrgEcRTwX2o6gGxGOCNyMvGSp35YofuYzw9h1IMTRmKqttAZZVU67bdb9Pr2vUHA8+j3i2tJfjO6C6+4myGTA==}
     engines: {node: 18 || 20 || >=22}
-
-  better-sqlite3@13.0.3:
-    resolution: {integrity: sha512-RbOBxmLBG8uvFUc15X9+9SFemKcQ0WBuISBVkpuiaUB2qblC8UWlHEjdWVoZ8AdhSwmoEgsiXKfopX0CQxaACQ==}
-    engines: {node: '>=22'}
 
   brace-expansion@2.1.7:
     resolution: {integrity: sha512-uZbew1NqdmPDTMJ8ah1y+b+9QEJrfkXFk3RcTQw3X0jW/xRUvFKsg1CfQdSYGdTbXZWExtU3J3ccxtnfw1Fi0g==}
@@ -1242,10 +1206,6 @@ packages:
 
   natural-compare@1.4.0:
     resolution: {integrity: sha512-OWND8ei3VtNC9h7V60qff3SVobHr996CTwgxubgyQYEpg290h9J0buyECNNJexkFm5sOajh5G116RYA1c8ZMSw==}
-
-  node-addon-api@8.9.2:
-    resolution: {integrity: sha512-VijLXbi3UACN69I0JVXJsX4tjACjNoQDgv2gTF6sx2wWEi8tkSg2eX8p5gSIFi8z2+DL3oHmY6OyKce38SDolg==}
-    engines: {node: ^18 || ^20 || >= 21}
 
   obug@2.2.1:
     resolution: {integrity: sha512-XrsrhT5sybtKI6wakr2SPOlGZWWYbUXZ7a0jT8/QOeAPau+1X/bSegNe5YR75oJmEZQbKningirmGOEJCIk61Q==}
@@ -1953,10 +1913,6 @@ snapshots:
       vite: 8.3.5(@types/node@26.6.5)(yaml@2.9.1)
       vitefu: 1.1.3(vite@8.3.5(@types/node@26.6.5)(yaml@2.9.1))
 
-  '@types/better-sqlite3@9.6.0':
-    dependencies:
-      '@types/node': 26.6.5
-
   '@types/chai@5.2.3':
     dependencies:
       '@types/deep-eql': 4.0.2
@@ -2127,10 +2083,6 @@ snapshots:
 
   balanced-match@4.0.4: {}
 
-  better-sqlite3@13.0.3:
-    dependencies:
-      node-addon-api: 8.9.2
-
   brace-expansion@2.1.7:
     dependencies:
       balanced-match: 1.0.2
@@ -2191,10 +2143,8 @@ snapshots:
 
   devalue@5.9.4: {}
 
-  drizzle-orm@0.45.4(@types/better-sqlite3@9.6.0)(better-sqlite3@13.0.3):
+  drizzle-orm@0.45.4:
     optionalDependencies:
-      '@types/better-sqlite3': 9.6.0
-      better-sqlite3: 13.0.3
 
   es-module-lexer@2.3.2: {}
 
@@ -2597,8 +2547,6 @@ snapshots:
   nanoid@3.3.20: {}
 
   natural-compare@1.4.0: {}
-
-  node-addon-api@8.9.2: {}
 
   obug@2.2.1: {}
 

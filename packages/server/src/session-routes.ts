@@ -1,4 +1,4 @@
-import type { Database } from 'better-sqlite3';
+import type { Database } from '@kinoshelf/core';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { AttemptLimiter } from './attempts.js';
 import { generateApiKey, hasApiKey, isValidApiKey, setApiKey } from './auth.js';

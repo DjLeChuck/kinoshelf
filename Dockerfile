@@ -5,17 +5,14 @@
 
 # The build runs on the builder's own architecture: esbuild and rollup are native binaries that
 # crash (SIGILL, exit 132) under QEMU. Only JavaScript comes out of it, so it is the same for every
-# target; the one thing that depends on the target (better-sqlite3's prebuild) is picked by
-# TARGETARCH below.
+# target: SQLite is Node's own (`node:sqlite`), no native module depends on the architecture.
 FROM --platform=$BUILDPLATFORM node:26-alpine@sha256:c6ad9e9c1d80f6eb607c26b4b0a132ff7a2344fad1c78ea3baa2a7d4c8de6d94 AS build
-ARG TARGETARCH
 # Node 25 dropped corepack, so pnpm is installed with npm, at the version `packageManager` pins.
 WORKDIR /app
 COPY package.json ./
 RUN npm install -g "pnpm@$(node -p "require('./package.json').packageManager.split('@')[1]")"
 COPY . .
-# Install scripts are skipped (here and in `deploy`): better-sqlite3 would compile itself with
-# node-gyp, but it ships a prebuilt binary for musl (x64 and arm64) that it loads instead.
+# Install scripts are skipped (here and in `deploy`): nothing the runtime needs is built by one.
 RUN pnpm install --frozen-lockfile --ignore-scripts && pnpm build && pnpm build:web
 
 # One self-contained dependency tree for the server, the CLI and the web UI, without dev tooling.
@@ -23,11 +20,6 @@ RUN pnpm --filter @kinoshelf/image deploy --prod --legacy --ignore-scripts /out
 
 # Trim what the runtime never reads. Licenses stay: the dependencies' terms require them.
 RUN set -eu; \
-    arch="$(echo "$TARGETARCH" | sed 's/amd64/x64/')"; \
-    sqlite="$(ls -d /out/node_modules/.pnpm/better-sqlite3@*/node_modules/better-sqlite3)"; \
-    # better-sqlite3 ships a binary per platform and the SQLite sources: only ours is loaded.
-    find "$sqlite/prebuilds" -type f ! -name "linuxmusl-$arch.node" -delete; \
-    rm -rf "$sqlite/deps" "$sqlite/src" "$sqlite/build"; \
     # Type declarations, source maps and docs are for development. Docs are matched by their exact
     # names: a looser glob such as `HISTORY*` also deletes our own `history.js`.
     find /out/node_modules \( -name '*.d.ts' -o -name '*.d.cts' -o -name '*.d.mts' -o -name '*.map' \

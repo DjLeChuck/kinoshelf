@@ -7,7 +7,7 @@ import {
   type TemplateVariables,
 } from '@kinoshelf/core';
 import { tmdbKeyFromEnv } from '@kinoshelf/provider-tmdb';
-import type { Database } from 'better-sqlite3';
+import type { Database } from '@kinoshelf/core';
 import type { FastifyInstance } from 'fastify';
 import { ApiError } from './api-error.js';
 import { generateApiKey, hasApiKey, setApiKey } from './auth.js';

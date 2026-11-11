@@ -7,7 +7,7 @@
 // (.env). TMDB answers are cached on disk in .work/, so a rerun after a code change is free.
 import { readFileSync, writeFileSync } from 'node:fs';
 import { extname } from 'node:path';
-import Database from 'better-sqlite3';
+import { Database } from '@kinoshelf/core';
 import { GuessitParser, Matcher, VIDEO_EXTENSIONS, isSample } from '@kinoshelf/core';
 import { SqliteHttpCache, TmdbProvider } from '@kinoshelf/provider-tmdb';
 import { absolute, parseArgs, workPath } from './lib.mjs';

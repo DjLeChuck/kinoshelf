@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import Database from 'better-sqlite3';
+import { Database } from '@kinoshelf/core';
 import { createPublicKey, verify } from 'node:crypto';
 import { PlexClient } from '../src/notify/plex.js';
 import { deviceJwt, expiryOf, newIdentity, PlexTv, PlexTvError } from '../src/notify/plex-auth.js';

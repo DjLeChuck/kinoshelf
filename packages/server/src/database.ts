@@ -1,4 +1,4 @@
-import type Database from 'better-sqlite3';
+import type { Database } from '@kinoshelf/core';
 import { applyMigrations, openConfigDatabase } from '@kinoshelf/core';
 
 /** Same rules as the core's migrations: append, never edit a shipped entry. */
@@ -398,11 +398,11 @@ export const SERVER_MIGRATIONS: readonly { readonly name: string; readonly sql: 
 ];
 
 /** Opens the single SQLite file of the config directory, shared with the CLI and the cache. */
-export async function openDatabase(configDir: string): Promise<Database.Database> {
+export async function openDatabase(configDir: string): Promise<Database> {
   return migrated(await openConfigDatabase(configDir));
 }
 
-export function migrated(database: Database.Database): Database.Database {
+export function migrated(database: Database): Database {
   applyMigrations(database, SERVER_MIGRATIONS);
   return database;
 }

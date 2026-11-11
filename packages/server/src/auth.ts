@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from 'node:crypto';
-import type { Database } from 'better-sqlite3';
+import type { Database } from '@kinoshelf/core';
 
 /** Short enough to guess is not a key: a value given through the environment must be long. */
 export const MIN_API_KEY_LENGTH = 32;

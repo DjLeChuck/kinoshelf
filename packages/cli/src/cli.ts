@@ -1,6 +1,6 @@
 import { stat } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
-import type Database from 'better-sqlite3';
+import type { Database } from '@kinoshelf/core';
 import { Command, CommanderError } from 'commander';
 import {
   analyze,
@@ -85,7 +85,7 @@ interface Context {
   readonly deps: CliDeps;
 }
 
-async function openDatabase(context: Context): Promise<Database.Database> {
+async function openDatabase(context: Context): Promise<Database> {
   return openConfigDatabase(context.configDir);
 }
 

@@ -1,5 +1,5 @@
 import { stat } from 'node:fs/promises';
-import Database from 'better-sqlite3';
+import { Database } from '@kinoshelf/core';
 import type { FastifyInstance, LightMyRequestResponse } from 'fastify';
 import type { Config, MetadataProvider } from '@kinoshelf/core';
 import {
@@ -71,7 +71,7 @@ export const fakeProber: Prober = async (path) => {
 
 export interface Harness {
   readonly app: FastifyInstance;
-  readonly database: Database.Database;
+  readonly database: Database;
   readonly apiKey: string;
   readonly destination: string;
   /** An authenticated request. */
