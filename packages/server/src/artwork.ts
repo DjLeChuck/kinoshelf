@@ -53,7 +53,7 @@ export interface ImageTarget {
   readonly folder: string;
   /**
    * An episode only: where its image goes for each version, since the picture is one and every
-   * file wants its own copy (`<file>.jpg`). Empty for a movie or a show.
+   * file wants its own copy (`<file>-thumb.jpg`). Empty for a movie or a show.
    */
   readonly thumbs: readonly string[];
   readonly episode?: { readonly season: number; readonly episode: number };

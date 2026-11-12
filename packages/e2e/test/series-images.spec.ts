@@ -53,13 +53,13 @@ test('changes the poster and adds a logo of a show from its panel', async ({ pag
   await grid.getByRole('button').first().click();
   await dialog.getByRole('tab', { name: /Poster/ }).click();
   await grid.getByRole('button').first().click();
-  await expect(dialog.getByText('2 changes pending: poster.jpg, logo.png')).toBeVisible();
+  await expect(dialog.getByText('2 changes pending: poster.jpg, clearlogo.png')).toBeVisible();
   await dialog.getByRole('button', { name: 'Apply' }).click();
   await expect(dialog).toBeHidden();
   await expect(page.getByText(/Images updated/)).toBeVisible();
 
   // The files sit beside the show's others; the old poster was replaced.
-  expect((await readFile(`${show}/logo.png`)).subarray(1, 4).toString()).toBe('PNG');
+  expect((await readFile(`${show}/clearlogo.png`)).subarray(1, 4).toString()).toBe('PNG');
   expect((await readFile(`${show}/poster.jpg`)).equals(OLD_POSTER)).toBe(false);
   // The panel read its page again: the logo is a trigger of its own now.
   await expect(page.getByRole('button', { name: 'Change the logo' })).toBeVisible();

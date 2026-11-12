@@ -17,7 +17,7 @@ test('changes the one image of an episode held in two versions, for both', async
     await writeFile(`${season}/Severance (2022) - s01e01 - ${name}.mkv`, 'video');
   }
   // Only the 1080p copy has its image, and its NFO: the 2160p one gets the new picture too.
-  await writeFile(`${season}/Severance (2022) - s01e01 - 1080p.jpg`, OLD);
+  await writeFile(`${season}/Severance (2022) - s01e01 - 1080p-thumb.jpg`, OLD);
   const created = await request.post('/api/libraries', {
     headers: AUTH_HEADERS,
     data: {
@@ -104,8 +104,8 @@ test('changes the one image of an episode held in two versions, for both', async
 
   // Both versions hold the same new picture; the old one was replaced.
   const [hd, uhd] = await Promise.all([
-    readFile(`${season}/Severance (2022) - s01e01 - 1080p.jpg`),
-    readFile(`${season}/Severance (2022) - s01e01 - 2160p.jpg`),
+    readFile(`${season}/Severance (2022) - s01e01 - 1080p-thumb.jpg`),
+    readFile(`${season}/Severance (2022) - s01e01 - 2160p-thumb.jpg`),
   ]);
   expect(hd.equals(OLD)).toBe(false);
   expect(hd.equals(uhd)).toBe(true);

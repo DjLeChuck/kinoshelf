@@ -514,13 +514,13 @@ describe('the files of a show and of its seasons', () => {
     ]);
 
     // The logo alone keeps the show incomplete.
-    await put(join(show, 'background.jpg'), 'image');
+    await put(join(show, 'fanart.jpg'), 'image');
     await put(join(show, 'season02-poster.jpg'), 'image');
     await scan();
     expect(await listed()).toMatchObject({ fanart: true, logo: false });
     expect(await incomplete()).toBe(1);
 
-    await put(join(show, 'logo.png'), 'image');
+    await put(join(show, 'clearlogo.png'), 'image');
     await scan();
     expect(await listed()).toMatchObject({ logo: true });
     expect(await seasonPosters()).toEqual([
@@ -711,7 +711,7 @@ describe('the thumbnail of an episode', () => {
     const season = join(root, 'Severance (2022)', 'Season 01');
     const withThumb = await put(join(season, 'Severance (2022) - s01e01.mkv'));
     await put(join(season, 'Severance (2022) - s01e01.nfo'), '<episodedetails/>');
-    await put(join(season, 'Severance (2022) - s01e01.jpg'), 'image');
+    await put(join(season, 'Severance (2022) - s01e01-thumb.jpg'), 'image');
     const without = await put(join(season, 'Severance (2022) - s01e02.mkv'));
     await put(join(season, 'Severance (2022) - s01e02.nfo'), '<episodedetails/>');
     const base = provider();

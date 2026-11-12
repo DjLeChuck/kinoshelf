@@ -77,8 +77,8 @@ describe('companionsWritten', () => {
 
   it('tells an episode thumbnail from the show files and a season poster', () => {
     const nfo = buildProfile({ naming: 'with-id', metadata: 'nfo' });
-    expect(companionKindOf(nfo, 'The Bear (2022) - s01e01.jpg')).toBe('thumb');
-    expect(companionKindOf(nfo, 'The Bear (2022) - s01e01 - 2160p.jpg')).toBe('thumb');
+    expect(companionKindOf(nfo, 'The Bear (2022) - s01e01-thumb.jpg')).toBe('thumb');
+    expect(companionKindOf(nfo, 'The Bear (2022) - s01e01 - 2160p-thumb.jpg')).toBe('thumb');
     expect(companionKindOf(nfo, 'poster.jpg')).toBe('poster');
     expect(companionKindOf(nfo, 'season01-poster.jpg')).toBeUndefined();
     expect(companionKindOf(nfo, 'season-specials-poster.jpg')).toBeUndefined();
@@ -96,7 +96,7 @@ describe('companionKindOf', () => {
     expect(companionKindOf(jellyfin, 'movie.nfo')).toBe('nfo');
     expect(companionKindOf(jellyfin, 'tvshow.nfo')).toBeUndefined();
     expect(companionKindOf(jellyfin, 'poster.jpg')).toBe('poster');
-    expect(companionKindOf(jellyfin, 'background.jpg')).toBe('fanart');
+    expect(companionKindOf(jellyfin, 'fanart.jpg')).toBe('fanart');
     expect(companionKindOf(jellyfin, 'Show s01e01.mkv')).toBeUndefined();
   });
 

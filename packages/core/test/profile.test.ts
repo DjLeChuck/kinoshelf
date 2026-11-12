@@ -103,7 +103,7 @@ describe('buildProfile metadata', () => {
     }
   });
 
-  it('nfo writes Kodi NFO and the images both players read', () => {
+  it('nfo writes Kodi NFO and the images all the players read', () => {
     for (const naming of ['with-id', 'no-id'] as const) {
       const profile = profileOf(naming, 'nfo');
       expect(profile.nfo).toEqual({
@@ -114,10 +114,10 @@ describe('buildProfile metadata', () => {
       });
       expect(profile.artwork.map(({ kind, name, size }) => [kind, name, size])).toEqual([
         ['poster', 'poster.jpg', 'standard'],
-        ['fanart', 'background.jpg', 'original'],
-        ['logo', 'logo.png', 'original'],
+        ['fanart', 'fanart.jpg', 'original'],
+        ['logo', 'clearlogo.png', 'original'],
         ['season-poster', 'season{season:02}-poster.jpg', 'standard'],
-        ['episode-thumb', '{file}.jpg', 'original'],
+        ['episode-thumb', '{file}-thumb.jpg', 'original'],
       ]);
       expect(profile.artwork[3]?.specialsName).toBe('season-specials-poster.jpg');
     }

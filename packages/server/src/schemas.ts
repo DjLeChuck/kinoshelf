@@ -949,7 +949,7 @@ export const libraryItemSchema = {
     thumb: {
       type: 'boolean',
       nullable: true,
-      description: 'An episode’s own image, `<file>.jpg`; `null` for any other file.',
+      description: 'An episode’s own image, `<file>-thumb.jpg`; `null` for any other file.',
     },
     unavailable: {
       type: 'array',

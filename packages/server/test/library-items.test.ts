@@ -424,9 +424,9 @@ describe('the logo of a library item', () => {
     const alien = await put(join(alienDir, 'Alien (1979).mkv'), 'alien');
     await put(join(alienDir, 'movie.nfo'), '<movie/>');
     await put(join(alienDir, 'poster.jpg'), 'image');
-    await put(join(alienDir, 'background.jpg'), 'image');
+    await put(join(alienDir, 'fanart.jpg'), 'image');
     const dune = await put(join(root, 'Dune (2021)', 'Dune (2021).mkv'), 'dune');
-    for (const name of ['movie.nfo', 'poster.jpg', 'background.jpg', 'logo.png']) {
+    for (const name of ['movie.nfo', 'poster.jpg', 'fanart.jpg', 'clearlogo.png']) {
       await put(join(root, 'Dune (2021)', name), name);
     }
     const h = await harness({
@@ -463,7 +463,7 @@ describe('the logo of a library item', () => {
   it('says a film TMDB has no logo for is unavailable, not present, unless one is on the disk', async () => {
     const root = await makeDir();
     const alien = await put(join(root, 'Alien (1979)', 'Alien (1979).mkv'), 'alien');
-    await put(join(root, 'Alien (1979)', 'logo.png'), 'by hand');
+    await put(join(root, 'Alien (1979)', 'clearlogo.png'), 'by hand');
     const dune = await put(join(root, 'Dune.2021.mkv'), 'dune');
     const h = await harness({
       config: {

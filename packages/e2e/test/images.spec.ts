@@ -77,11 +77,11 @@ test.describe('the images of a movie', () => {
     // A choice is kept on its tab while another one is looked at.
     await dialog.getByRole('tab', { name: /Poster/ }).click();
     await dialog.getByRole('list', { name: 'TMDB images' }).getByRole('button').nth(1).click();
-    await expect(dialog.getByText('2 changes pending: poster.jpg, logo.png')).toBeVisible();
+    await expect(dialog.getByText('2 changes pending: poster.jpg, clearlogo.png')).toBeVisible();
 
     // Clicking a chosen image again takes the choice back.
     await dialog.getByRole('list', { name: 'TMDB images' }).getByRole('button').nth(1).click();
-    await expect(dialog.getByText('1 change pending: logo.png')).toBeVisible();
+    await expect(dialog.getByText('1 change pending: clearlogo.png')).toBeVisible();
     await dialog.getByRole('list', { name: 'TMDB images' }).getByRole('button').first().click();
 
     await dialog.getByRole('button', { name: 'Apply' }).click();
@@ -89,7 +89,7 @@ test.describe('the images of a movie', () => {
     await expect(page.getByText(/Images updated/)).toBeVisible();
 
     // Both files are on the disk, the poster no longer the old one.
-    const logo = await readFile(`${FOLDER}/logo.png`);
+    const logo = await readFile(`${FOLDER}/clearlogo.png`);
     expect(logo.subarray(1, 4).toString()).toBe('PNG');
     expect((await readFile(`${FOLDER}/poster.jpg`)).equals(OLD_POSTER)).toBe(false);
 

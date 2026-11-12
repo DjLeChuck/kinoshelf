@@ -106,8 +106,8 @@ describe('the images of a movie', () => {
 
     expect(listing.files).toEqual({
       poster: 'poster.jpg',
-      fanart: 'background.jpg',
-      logo: 'logo.png',
+      fanart: 'fanart.jpg',
+      logo: 'clearlogo.png',
       thumb: null,
     });
     expect(listing.current.poster).toMatchObject({ width: 1000, height: 1500, path: null });
@@ -140,7 +140,7 @@ describe('the images of a movie', () => {
     expect(
       (await readFile(join(dir, 'poster.jpg'), 'utf8')).includes('/standard/poster2.jpg'),
     ).toBe(true);
-    expect((await readFile(join(dir, 'logo.png'))).equals(PNG)).toBe(true);
+    expect((await readFile(join(dir, 'clearlogo.png'))).equals(PNG)).toBe(true);
 
     const listing = (await h.request('GET', base)).json<Listing>();
     expect(listing.current.poster?.path).toBe('/poster2.jpg');
@@ -170,7 +170,7 @@ describe('the images of a movie', () => {
     const undo = await h.request('POST', `/api/batches/${batchId}/undo`, {});
     expect(undo.statusCode).toBe(200);
     expect((await readFile(join(dir, 'poster.jpg'))).equals(OLD_POSTER)).toBe(true);
-    await expect(readFile(join(dir, 'logo.png'))).rejects.toThrow();
+    await expect(readFile(join(dir, 'clearlogo.png'))).rejects.toThrow();
     const page = (await h.request('GET', '/api/libraries/films/items')).json<{
       items: { logo: boolean | null; poster: boolean | null }[];
     }>();
@@ -196,7 +196,7 @@ describe('the images of a movie', () => {
     ]);
     expect(response.statusCode).toBe(422);
     expect(codeOf(response)).toBe('image.not-offered');
-    await expect(readFile(join(dir, 'logo.png'))).rejects.toThrow();
+    await expect(readFile(join(dir, 'clearlogo.png'))).rejects.toThrow();
     expect((await readFile(join(dir, 'poster.jpg'))).equals(OLD_POSTER)).toBe(true);
   });
 
@@ -217,7 +217,7 @@ describe('the images of a movie', () => {
     ]);
     expect(response.statusCode).toBe(502);
     expect(codeOf(response)).toBe('image.unavailable');
-    await expect(readFile(join(dir, 'logo.png'))).rejects.toThrow();
+    await expect(readFile(join(dir, 'clearlogo.png'))).rejects.toThrow();
     expect((await readFile(join(dir, 'poster.jpg'))).equals(OLD_POSTER)).toBe(true);
   });
 
@@ -264,7 +264,7 @@ describe('an image given by address', () => {
       { type: 'logo', source: 'url', value: `${origin}/mine.png` },
     ]);
     expect(response.statusCode).toBe(200);
-    expect((await readFile(join(dir, 'logo.png'))).equals(PNG)).toBe(true);
+    expect((await readFile(join(dir, 'clearlogo.png'))).equals(PNG)).toBe(true);
     const listing = (await h.request('GET', base)).json<Listing>();
     expect(listing.current.logo).toMatchObject({ width: 800, height: 300, path: null });
   });
@@ -279,7 +279,7 @@ describe('an image given by address', () => {
     expect(response.statusCode).toBe(200);
     expect(response.json()).toMatchObject({ format: 'png', width: 800, height: 300 });
     expect(response.json<{ data: string }>().data).toMatch(/^data:image\/png;base64,/);
-    await expect(readFile(join(dir, 'logo.png'))).rejects.toThrow();
+    await expect(readFile(join(dir, 'clearlogo.png'))).rejects.toThrow();
   });
 
   it('is not previewed when its format is not the file’s, nor on the local network', async () => {
@@ -307,7 +307,7 @@ describe('an image given by address', () => {
     ]);
     expect(response.statusCode).toBe(422);
     expect(codeOf(response)).toBe('image.url-blocked');
-    await expect(readFile(join(dir, 'logo.png'))).rejects.toThrow();
+    await expect(readFile(join(dir, 'clearlogo.png'))).rejects.toThrow();
   });
 
   it.each([
@@ -343,7 +343,7 @@ describe('an image given by address', () => {
       error: { code: 'image.format-mismatch', params: { found: 'PNG', expected: 'JPEG' } },
     });
 
-    await expect(readFile(join(dir, 'logo.png'))).rejects.toThrow();
+    await expect(readFile(join(dir, 'clearlogo.png'))).rejects.toThrow();
     expect((await readFile(join(dir, 'poster.jpg'))).equals(OLD_POSTER)).toBe(true);
   });
 
@@ -355,7 +355,7 @@ describe('an image given by address', () => {
       { type: 'fanart', source: 'url', value: 'nope' },
     ]);
     expect(response.statusCode).toBe(422);
-    await expect(readFile(join(dir, 'logo.png'))).rejects.toThrow();
+    await expect(readFile(join(dir, 'clearlogo.png'))).rejects.toThrow();
   });
 });
 
@@ -423,7 +423,7 @@ describe('the images of a show', () => {
     const { h, dir, base } = await show();
     const listing = (await h.request('GET', base)).json<Listing & { folder: string }>();
     expect(listing.folder).toBe(dir);
-    expect(listing.files.logo).toBe('logo.png');
+    expect(listing.files.logo).toBe('clearlogo.png');
     expect(listing.current.poster).toMatchObject({ width: 1000, height: 1500 });
   });
 
@@ -431,7 +431,7 @@ describe('the images of a show', () => {
     const { h, dir, base } = await show();
     const response = await apply(h, base, [{ type: 'logo', source: 'tmdb', value: '/logo.png' }]);
     expect(response.statusCode).toBe(200);
-    expect((await readFile(join(dir, 'logo.png'))).equals(PNG)).toBe(true);
+    expect((await readFile(join(dir, 'clearlogo.png'))).equals(PNG)).toBe(true);
     await h.app.seriesFiles.idle();
     const shows = (await h.request('GET', '/api/libraries/shows/shows')).json<{
       items: { logo: boolean | null }[];
@@ -499,7 +499,7 @@ describe('the image of an episode', () => {
     const hd = await put(join(season, 'Severance (2022) - s01e01 - 1080p.mkv'), 'hd');
     await put(join(season, 'Severance (2022) - s01e01 - 2160p.mkv'), 'uhd');
     // Only the 1080p copy has its image: the other gets it with the change.
-    await writeFile(join(season, 'Severance (2022) - s01e01 - 1080p.jpg'), OLD_POSTER);
+    await writeFile(join(season, 'Severance (2022) - s01e01 - 1080p-thumb.jpg'), OLD_POSTER);
     const h = await harness({
       configDir: await makeDir(),
       fetchImage,
@@ -535,7 +535,7 @@ describe('the image of an episode', () => {
       poster: null,
       fanart: null,
       logo: null,
-      thumb: 'Severance (2022) - s01e01 - 1080p.jpg',
+      thumb: 'Severance (2022) - s01e01 - 1080p-thumb.jpg',
     });
     expect(listing.current.thumb).toMatchObject({ width: 1000, height: 1500 });
     expect(listing.candidates.thumb?.map(({ path }) => path)).toEqual([
@@ -547,8 +547,8 @@ describe('the image of an episode', () => {
 
   it('writes the one picture chosen for every version, and undoes it as one batch', async () => {
     const { h, season, base } = await twoVersions();
-    const hdImage = join(season, 'Severance (2022) - s01e01 - 1080p.jpg');
-    const uhdImage = join(season, 'Severance (2022) - s01e01 - 2160p.jpg');
+    const hdImage = join(season, 'Severance (2022) - s01e01 - 1080p-thumb.jpg');
+    const uhdImage = join(season, 'Severance (2022) - s01e01 - 2160p-thumb.jpg');
 
     const response = await apply(h, base, [
       { type: 'thumb', source: 'tmdb', value: '/still2.jpg' },

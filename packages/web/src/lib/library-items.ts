@@ -48,7 +48,7 @@ export interface LibraryItem {
   readonly poster: boolean | null;
   readonly fanart: boolean | null;
   readonly logo: boolean | null;
-  /** An episode's own image (`<file>.jpg`); `null` for any other file. */
+  /** An episode's own image (`<file>-thumb.jpg`); `null` for any other file. */
   readonly thumb: boolean | null;
   /** Movie images the profile writes that TMDB has none of: their flag reads as there, but nothing is. */
   readonly unavailable: readonly ('poster' | 'fanart' | 'logo')[];

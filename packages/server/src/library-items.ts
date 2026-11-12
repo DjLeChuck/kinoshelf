@@ -62,7 +62,7 @@ export interface LibraryItem {
   readonly poster: Presence;
   readonly fanart: Presence;
   readonly logo: Presence;
-  /** An episode's own image, `<file>.jpg`. */
+  /** An episode's own image, `<file>-thumb.jpg`. */
   readonly thumb: Presence;
   /** The entry of the scan that saw it: what to validate or re-match. */
   readonly entryId: string | null;

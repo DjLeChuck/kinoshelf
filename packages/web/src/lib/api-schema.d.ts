@@ -2364,7 +2364,7 @@ export interface paths {
                                 poster: boolean | null;
                                 fanart: boolean | null;
                                 logo: boolean | null;
-                                /** @description An episode’s own image, `<file>.jpg`; `null` for any other file. */
+                                /** @description An episode’s own image, `<file>-thumb.jpg`; `null` for any other file. */
                                 thumb: boolean | null;
                                 /** @description Movie images the profile writes that TMDB has none of (and the disk neither): their flag above reads as there, since nothing is missing, but the list shows them as unavailable. */
                                 unavailable: ("poster" | "fanart" | "logo")[];
@@ -2531,7 +2531,7 @@ export interface paths {
                             poster: boolean | null;
                             fanart: boolean | null;
                             logo: boolean | null;
-                            /** @description An episode’s own image, `<file>.jpg`; `null` for any other file. */
+                            /** @description An episode’s own image, `<file>-thumb.jpg`; `null` for any other file. */
                             thumb: boolean | null;
                             /** @description Movie images the profile writes that TMDB has none of (and the disk neither): their flag above reads as there, since nothing is missing, but the list shows them as unavailable. */
                             unavailable: ("poster" | "fanart" | "logo")[];
@@ -2869,7 +2869,7 @@ export interface paths {
                                         poster: boolean | null;
                                         fanart: boolean | null;
                                         logo: boolean | null;
-                                        /** @description An episode’s own image, `<file>.jpg`; `null` for any other file. */
+                                        /** @description An episode’s own image, `<file>-thumb.jpg`; `null` for any other file. */
                                         thumb: boolean | null;
                                         /** @description Movie images the profile writes that TMDB has none of (and the disk neither): their flag above reads as there, since nothing is missing, but the list shows them as unavailable. */
                                         unavailable: ("poster" | "fanart" | "logo")[];
