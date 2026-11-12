@@ -56,13 +56,15 @@ Docker image is built from the same bundle (`make docker-build`).
 | `e2e`            | Playwright tests                                        |
 | `sea`            | the standalone binary (Node single executable)          |
 
-## Trying Plex and Jellyfin locally
+## Trying Plex, Jellyfin and Kodi locally
 
-`dev/players` is a small flake of its own that runs both players in Docker (`make players-up`,
-`make players-down`; or `nix run ./dev/players -- up|down|logs|status [jellyfin|plex]`). Their state
-lives in `.work/players` and their media folder is `.work/media` (`movies/`, `series/`), mounted
-read-only at `/media`. Point two libraries of Kinoshelf at `.work/media/movies` and
-`.work/media/series`, then add `/media/movies` and `/media/series` as libraries in the players.
+`dev/players` is a small flake of its own that runs the players: Jellyfin and Plex in Docker, Kodi
+from Nix (`make players-up`, `make players-down`; or
+`nix run ./dev/players -- up|down|logs|status [jellyfin|plex|kodi]`, no player named means all
+three). Their state lives in `.work/players` and their media folder is `.work/media` (`movies/`,
+`series/`), mounted read-only at `/media` for the Docker ones. Point two libraries of Kinoshelf at
+`.work/media/movies` and `.work/media/series`, then add `/media/movies` and `/media/series` as
+libraries in Jellyfin and Plex.
 
 - `make players-seed` fills `.work/media/arrivals` with two-second clips named like real releases
   (movies, two qualities of one, a bilingual title, series, one in two qualities, a few the matcher
@@ -71,6 +73,14 @@ read-only at `/media`. Point two libraries of Kinoshelf at `.work/media/movies` 
   missing.
 - Jellyfin: <http://localhost:8096>. Plex: <http://localhost:32400/web> (host network; set
   `PLEX_CLAIM` from <https://plex.tv/claim> to claim the server at the first start).
+- Kodi: <http://localhost:6080/vnc.html?autoconnect=true&resize=scale>. It has no maintained Docker
+  image, so it runs from nixpkgs (21.3) on a virtual screen that noVNC shows in the browser; its
+  JSON-RPC is on <http://localhost:8080/jsonrpc> (`kodi` / `kodi`), for scripts. Its two sources
+  are `.work/media/movies` (one movie per folder) and `.work/media/series`, both read from the NFO
+  only, and it scans them at each start (`nix run ./dev/players -- up kodi` again, or "Update
+  library" in Kodi, after Kinoshelf has moved files). Its logs: `… -- logs kodi`. That setup is
+  written once: delete `.work/players/kodi` to start over. The screen is 1920x1080; set
+  `KODI_RESOLUTION=2560x1440` (after a `down`) for another size.
 - For the notifications, Kinoshelf's "Path in Kinoshelf" is `.work/media/…` as the server sees it,
   and the player's side is `/media/…`.
 

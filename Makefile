@@ -97,7 +97,7 @@ hooks: ## Use the versioned git hooks (.githooks): pre-push runs every test
 docker-build: ## Build the Docker image (IMAGE=kinoshelf:dev)
 	docker build -t $(IMAGE) .
 
-players-up: ## Start Jellyfin (:8096) and Plex (:32400) in Docker, media in .work/media (see dev/players)
+players-up: ## Start Jellyfin (:8096) and Plex (:32400) in Docker and Kodi (:6080), media in .work/media (see dev/players)
 	nix run ./dev/players -- up
 
 players-down: ## Stop them (their state in .work/players is kept)

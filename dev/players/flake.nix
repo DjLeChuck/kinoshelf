@@ -1,5 +1,5 @@
 {
-  description = "Kinoshelf dev: Jellyfin and Plex in Docker, to try the profiles and notifications";
+  description = "Kinoshelf dev: Jellyfin and Plex in Docker, Kodi from Nix, to try the profiles and notifications";
 
   inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
 
@@ -27,7 +27,26 @@
           text = builtins.readFile ./seed.sh;
         };
 
-      # `players <up|down|logs|status|seed> [jellyfin|plex]`: no player named means both.
+      # Kodi has no maintained Docker image: it runs from nixpkgs on a virtual screen, served to a
+      # browser by noVNC (see kodi.sh).
+      kodi =
+        pkgs:
+        pkgs.writeShellApplication {
+          name = "kodi-dev";
+          runtimeInputs = [
+            pkgs.kodi
+            pkgs.xorg-server
+            pkgs.x11vnc
+            pkgs.novnc
+            pkgs.pulseaudio # pactl, to create Kodi's silent sink
+            pkgs.sqlite
+            pkgs.findutils
+            pkgs.coreutils
+          ];
+          text = builtins.readFile ./kodi.sh;
+        };
+
+      # `players <up|down|logs|status|seed> [jellyfin|plex|kodi]`: no player named means all three.
       players =
         pkgs:
         pkgs.writeShellApplication {
@@ -49,26 +68,37 @@
             shift || true
             if [ "$cmd" = seed ]; then exec ${seed pkgs}/bin/seed; fi
             case "''${1:-all}" in
-              jellyfin | plex | all) profile=''${1:-all} ;;
-              *) echo "unknown player: $1 (jellyfin, plex or nothing for both)" >&2; exit 2 ;;
+              jellyfin | plex | kodi | all) player=''${1:-all} ;;
+              *) echo "unknown player: $1 (jellyfin, plex, kodi or nothing for all)" >&2; exit 2 ;;
             esac
-            compose+=(--profile "$profile")
-
             case "$cmd" in
-              up)
-                mkdir -p "$WORK/media/movies" "$WORK/media/series" \
-                  "$WORK/players/jellyfin/config" "$WORK/players/jellyfin/cache" "$WORK/players/plex/config"
-                "''${compose[@]}" up -d
-                echo
-                echo "Jellyfin  http://localhost:8096      (libraries: /media/movies, /media/series)"
-                echo "Plex      http://localhost:32400/web (libraries: /media/movies, /media/series)"
-                echo "Media     $WORK/media"
-                ;;
-              down) "''${compose[@]}" down ;;
-              logs) "''${compose[@]}" logs -f ;;
-              status) "''${compose[@]}" ps ;;
-              *) echo "usage: players <up|down|logs|status|seed> [jellyfin|plex]" >&2; exit 2 ;;
+              up | down | logs | status) ;;
+              *) echo "usage: players <up|down|logs|status|seed> [jellyfin|plex|kodi]" >&2; exit 2 ;;
             esac
+
+            # Jellyfin and Plex are Docker services; Kodi is a set of processes, started on its own.
+            if [ "$player" != kodi ]; then
+              case "$player" in all) profile=all ;; *) profile=$player ;; esac
+              compose+=(--profile "$profile")
+              case "$cmd" in
+                up)
+                  mkdir -p "$WORK/media/movies" "$WORK/media/series" \
+                    "$WORK/players/jellyfin/config" "$WORK/players/jellyfin/cache" "$WORK/players/plex/config"
+                  "''${compose[@]}" up -d
+                  echo
+                  echo "Jellyfin  http://localhost:8096      (libraries: /media/movies, /media/series)"
+                  echo "Plex      http://localhost:32400/web (libraries: /media/movies, /media/series)"
+                  echo "Media     $WORK/media"
+                  ;;
+                down) "''${compose[@]}" down ;;
+                logs) "''${compose[@]}" logs -f ;;
+                status) "''${compose[@]}" ps ;;
+              esac
+            fi
+            if [ "$player" = kodi ] || [ "$player" = all ]; then
+              # `logs` follows one stream: with no player named it is the Docker ones, Kodi's is `logs kodi`.
+              if [ "$cmd" != logs ] || [ "$player" = kodi ]; then ${kodi pkgs}/bin/kodi-dev "$cmd"; fi
+            fi
           '';
         };
     in
