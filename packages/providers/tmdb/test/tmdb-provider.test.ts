@@ -350,7 +350,7 @@ describe('getMovieDetails and getSeriesDetails', () => {
       countries: ['Canada', 'United States of America'],
       rating: { value: 7.8, votes: 12000 },
       posterPath: '/d5NXSklXo0qyIYkgV94XAgMIckC.jpg',
-      collection: { name: 'Dune Collection' },
+      collection: { id: { provider: 'tmdb', id: 726871 }, name: 'Dune Collection' },
     });
     expect(movie?.directors).toEqual(['Denis Villeneuve']);
     // A person credited twice appears once; a novelist or a composer is no writer.
@@ -358,6 +358,39 @@ describe('getMovieDetails and getSeriesDetails', () => {
     expect(movie?.collection).not.toHaveProperty('overview');
     // Keywords come as given by TMDB: blanks and repeats are dropped, nothing is translated.
     expect(movie?.tags).toEqual(['desert', 'based on novel or book']);
+  });
+
+  it('lists the movies of a collection, with their year, in the language asked', async () => {
+    const { provider, requests } = make([
+      at('/3/collection/726871', () =>
+        json(
+          JSON.stringify({
+            id: 726871,
+            name: 'Dune - Saga',
+            overview: '  Spice.  ',
+            parts: [
+              { id: 438631, title: 'Dune', release_date: '2021-09-15' },
+              { id: 693134, title: 'Dune : Deuxième partie', release_date: '2024-02-27' },
+              { id: 1, title: 'Not yet dated', release_date: '' },
+            ],
+          }),
+        ),
+      ),
+      at('/3/collection/404', () => json('{"success":false,"status_code":34}', 404)),
+    ]);
+    const collection = await provider.getCollection({ provider: 'tmdb', id: 726871 }, 'fr');
+    expect(collection).toEqual({
+      id: { provider: 'tmdb', id: 726871 },
+      name: 'Dune - Saga',
+      overview: 'Spice.',
+      parts: [
+        { id: { provider: 'tmdb', id: 438631 }, title: 'Dune', year: 2021 },
+        { id: { provider: 'tmdb', id: 693134 }, title: 'Dune : Deuxième partie', year: 2024 },
+        { id: { provider: 'tmdb', id: 1 }, title: 'Not yet dated' },
+      ],
+    });
+    expect(requests[0]?.url.searchParams.get('language')).toBe('fr');
+    expect(await provider.getCollection({ provider: 'tmdb', id: 404 })).toBeNull();
   });
 
   it("rates a movie for the request's language, then for the United States", async () => {

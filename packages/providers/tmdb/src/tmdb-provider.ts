@@ -1,5 +1,6 @@
 import {
   KinoshelfError,
+  type CollectionInfo,
   type ExternalId,
   type ImageSize,
   type MovieDetails,
@@ -17,6 +18,7 @@ import {
 import { movieRating, pickCertification } from './certification.js';
 import { TmdbClient, type TmdbClientOptions } from './client.js';
 import {
+  collectionSchema,
   movieAlternativeTitlesSchema,
   movieFullDetailsSchema,
   episodeImagesSchema,
@@ -232,7 +234,38 @@ export class TmdbProvider implements MetadataProvider {
       ...(r.runtime != null && r.runtime > 0 && { runtime: r.runtime }),
       directors: crewNames(r.credits?.crew, new Set(['Director'])),
       writers: crewNames(r.credits?.crew, WRITER_JOBS),
-      ...(r.belongs_to_collection && { collection: { name: r.belongs_to_collection.name } }),
+      ...(r.belongs_to_collection && {
+        collection: {
+          id: { provider: this.name, id: r.belongs_to_collection.id },
+          name: r.belongs_to_collection.name,
+        },
+      }),
+    };
+  }
+
+  async getCollection(id: ExternalId, language?: string): Promise<CollectionInfo | null> {
+    this.requireOwn(id);
+    const r = await this.client.get(
+      `/3/collection/${String(id.id)}`,
+      { language: language ?? this.language },
+      collectionSchema,
+      { ttlMs: DETAIL_TTL_MS, nullOn404: true },
+    );
+    if (!r) {
+      return null;
+    }
+    return {
+      id: { provider: this.name, id: r.id },
+      name: r.name,
+      ...(r.overview?.trim() && { overview: r.overview.trim() }),
+      parts: (r.parts ?? []).map((part) => {
+        const year = /^\d{4}/.exec(part.release_date ?? '')?.[0];
+        return {
+          id: { provider: this.name, id: part.id },
+          title: part.title,
+          ...(year && { year: Number(year) }),
+        };
+      }),
     };
   }
 

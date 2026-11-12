@@ -117,7 +117,7 @@ export const movieFullDetailsSchema = z.object({
   release_date: date,
   runtime: z.number().nullish(),
   imdb_id: z.string().nullish(),
-  belongs_to_collection: named.nullish(),
+  belongs_to_collection: z.object({ id: z.number().int(), name: z.string() }).nullish(),
   // `append_to_response=keywords`: the movie endpoint answers with `keywords`, the TV one with `results`.
   keywords: z.object({ keywords: z.array(named).nullish() }).nullish(),
   // `append_to_response=release_dates`: one entry per country, each with its releases.
@@ -192,4 +192,13 @@ export const imagesSchema = z.object({
   posters: imageList,
   backdrops: imageList,
   logos: imageList,
+});
+
+export const collectionSchema = z.object({
+  id: z.number().int(),
+  name: z.string(),
+  overview: z.string().nullish(),
+  parts: z
+    .array(z.object({ id: z.number().int(), title: z.string(), release_date: date }))
+    .nullish(),
 });
