@@ -5,7 +5,8 @@ import { ApiError } from './api-error.js';
  * What changed, not how: a client refetches the view it shows. Payloads would duplicate the REST
  * shapes and drift from them, and a missed event costs one refetch.
  */
-export type EventTopic = 'jobs' | 'progress' | 'arrivals' | 'history' | 'settings' | 'logs';
+export type EventTopic =
+  'jobs' | 'progress' | 'arrivals' | 'history' | 'settings' | 'logs' | 'tmdb';
 
 export type EventListener = (topic: EventTopic) => void;
 
@@ -54,9 +55,9 @@ export function registerEventRoutes(
       schema: {
         summary: 'Stream of changes (Server-Sent Events)',
         description:
-          'Each event is named after what changed (`jobs`, `progress`, `arrivals`, `history`, `settings`, `logs`) ' +
+          'Each event is named after what changed (`jobs`, `progress`, `arrivals`, `history`, `settings`, `logs`, `tmdb`) ' +
           'and carries no data: refetch the matching list. `progress` is only where a running analysis ' +
-          'is (`GET /api/jobs/{id}`), at most twice a second; `jobs` is a job queued, started or ended; `logs` is lines written, at most twice a second. ' +
+          'is (`GET /api/jobs/{id}`), at most twice a second; `jobs` is a job queued, started or ended; `logs` is lines written, at most twice a second; `tmdb` is TMDB counts written, every few seconds at most. ' +
           'A `ready` event opens the stream.',
         response: {
           200: { type: 'string', description: 'text/event-stream' },

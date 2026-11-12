@@ -18,6 +18,8 @@ import { History } from './history.js';
 import { registerImageRoutes } from './images.js';
 import { JobStore } from './jobs.js';
 import { registerLogRoutes } from './log-routes.js';
+import { registerTmdbRoutes } from './tmdb-routes.js';
+import { tmdbUsageOf } from './tmdb-usage.js';
 import { LOG_LEVELS, LogStore, type LogLevel } from './logs.js';
 import { createTranslator, detectLocale } from '@kinoshelf/i18n';
 import type { DeliveryOptions } from './notify/delivery.js';
@@ -176,7 +178,13 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     events.emit('logs');
   });
   // Each part of the server logs under its own name, which the System page filters on.
-  const noted = (component: 'notify' | 'scan' | 'watcher') => app.log.child({ component });
+  const noted = (component: 'notify' | 'scan' | 'tmdb' | 'watcher') => app.log.child({ component });
+  // What was sent to TMDB: counted by the provider, logged (429, abandoned calls) under `tmdb`.
+  const tmdbUsage = tmdbUsageOf(options.database);
+  tmdbUsage.log = noted('tmdb');
+  tmdbUsage.onChange = () => {
+    events.emit('tmdb');
+  };
   // Where each analysis is, told to the clients at most twice a second (see `ProgressTracker`).
   // A topic of its own: `jobs` makes every list reload, which a scan must not do twice a second.
   const progress = new ProgressTracker(() => {
@@ -376,6 +384,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
       app.log.info(purged, 'Forgot the history of finished jobs');
     }
     // Disposable, unlike the history: expired answers go whatever the retention.
+    tmdbUsage.prune();
     const expired = new SqliteHttpCache(options.database).prune(Date.now());
     if (expired > 0) {
       app.log.info({ expired }, 'Forgot the expired TMDB answers');
@@ -402,6 +411,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
   });
   app.addHook('onClose', async () => {
     clearInterval(purgeTimer);
+    tmdbUsage.close();
     progress.close();
     watcher.stop();
     await watcher.idle();
@@ -604,6 +614,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
       events,
     });
     registerWatchRoutes(api, watcher);
+    registerTmdbRoutes(api, tmdbUsage);
     registerLogRoutes(api, {
       logs,
       level: {

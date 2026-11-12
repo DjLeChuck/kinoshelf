@@ -16,6 +16,7 @@ import {
   type Config,
   type MetadataProvider,
 } from '@kinoshelf/core';
+import { tmdbUsageOf } from './tmdb-usage.js';
 import { RequestPool, SqliteHttpCache, tmdbFromEnv } from '@kinoshelf/provider-tmdb';
 import { CollectionStore } from './collections.js';
 import type { Job, ProcessedJob } from './jobs.js';
@@ -184,5 +185,6 @@ export function makeProvider(deps: ProcessorDeps, language: string): MetadataPro
     language,
     cache: common.cache,
     pool: common.pool,
+    usage: tmdbUsageOf(deps.database),
   });
 }

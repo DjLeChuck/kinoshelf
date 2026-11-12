@@ -291,7 +291,7 @@ export interface paths {
         };
         /**
          * Stream of changes (Server-Sent Events)
-         * @description Each event is named after what changed (`jobs`, `progress`, `arrivals`, `history`, `settings`, `logs`) and carries no data: refetch the matching list. `progress` is only where a running analysis is (`GET /api/jobs/{id}`), at most twice a second; `jobs` is a job queued, started or ended; `logs` is lines written, at most twice a second. A `ready` event opens the stream.
+         * @description Each event is named after what changed (`jobs`, `progress`, `arrivals`, `history`, `settings`, `logs`, `tmdb`) and carries no data: refetch the matching list. `progress` is only where a running analysis is (`GET /api/jobs/{id}`), at most twice a second; `jobs` is a job queued, started or ended; `logs` is lines written, at most twice a second; `tmdb` is TMDB counts written, every few seconds at most. A `ready` event opens the stream.
          */
         get: {
             parameters: {
@@ -5052,6 +5052,201 @@ export interface paths {
             };
         };
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/tmdb/usage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * What Kinoshelf sent to TMDB
+         * @description Counted by Kinoshelf itself (TMDB reports no quota): requests sent, calls answered by the cache, and failures, per kind of call, over 24 hours, 7 days or 30 days.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    period?: "24h" | "7d" | "30d";
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {unknown} */
+                            period: "24h" | "7d" | "30d";
+                            totals: {
+                                /** @description Requests sent to TMDB that came back (a 404 too). */
+                                network: number;
+                                /** @description Calls answered by the cache: nothing was sent. */
+                                cache: number;
+                                /** @description Requests TMDB answered with a 429. */
+                                rateLimited: number;
+                                /** @description Requests TMDB answered with a 5xx. */
+                                serverError: number;
+                                /** @description Requests that never got an answer. */
+                                unreachable: number;
+                                /** @description Requests refused otherwise (a wrong key, a 4xx). */
+                                refused: number;
+                                /** @description Median time of the requests that came back, to within 12 %. */
+                                latencyMs: number | null;
+                            };
+                            /** @description One per hour (24 h) or per UTC day (7 d, 30 d), oldest first, empty ones too. */
+                            slots: {
+                                /** Format: date-time */
+                                start: string;
+                                network: number;
+                                cache: number;
+                                errors: number;
+                            }[];
+                            kinds: {
+                                /** @enum {unknown} */
+                                kind: "search" | "movie" | "series" | "collection" | "season" | "images" | "titles";
+                                /** @description Requests sent to TMDB that came back (a 404 too). */
+                                network: number;
+                                /** @description Calls answered by the cache: nothing was sent. */
+                                cache: number;
+                                /** @description Requests TMDB answered with a 429. */
+                                rateLimited: number;
+                                /** @description Requests TMDB answered with a 5xx. */
+                                serverError: number;
+                                /** @description Requests that never got an answer. */
+                                unreachable: number;
+                                /** @description Requests refused otherwise (a wrong key, a 4xx). */
+                                refused: number;
+                                /** @description Median time of the requests that came back, to within 12 %. */
+                                latencyMs: number | null;
+                            }[];
+                            /** @description Since the server started, newest first. */
+                            recentErrors: {
+                                /** Format: date-time */
+                                at: string;
+                                /** @enum {unknown} */
+                                kind: "search" | "movie" | "series" | "collection" | "season" | "images" | "titles";
+                                /** @enum {unknown} */
+                                outcome: "rate-limited" | "server-error" | "unreachable" | "refused";
+                                status: number | null;
+                                path: string;
+                            }[];
+                            /**
+                             * Format: date-time
+                             * @description When the server started.
+                             */
+                            since: string;
+                            cache: {
+                                entries: number;
+                                bytes: number;
+                            };
+                        };
+                    };
+                };
+                /** @description Default Response */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Default Response */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/tmdb/cache": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Forget the cached TMDB answers
+         * @description The next analyses ask TMDB again. Nothing else is touched.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            removed: number;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
         options?: never;
         head?: never;
         patch?: never;
