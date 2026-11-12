@@ -240,7 +240,7 @@ nowhere: a custom profile file is to be discussed again.
 ## System
 
 The System page (`/system`) is where the server is **observed**; the Settings stay where it is configured.
-Only its Logs section exists so far; the rest (health, TMDB usage, diagnostic archive) is planned in the
+Its tabs are Logs and TMDB (`?tab=tmdb`); the rest (health, diagnostic archive) is planned in the
 private notes and must not show as an empty tab or a "soon" badge before it is built.
 
 - **The log** (`logs.ts`, `log-routes.ts`; `SystemLogs.svelte`): the destination of Fastify's pino logger. `LogStore`
@@ -260,6 +260,15 @@ private notes and must not show as an empty tab or a "soon" badge before it is b
   is the last 500 matching lines, newest first). Opening a line pauses the follow (it would be pushed down);
   while paused, `GET /api/logs?after=<seq>&limit=1` only counts `newer`. The filters (`level`, `component`, `q`,
   `period` as minutes) are in the URL, so a link opens the page already filtered.
+- **TMDB usage** (`tmdb-usage.ts`, `tmdb-routes.ts`; `SystemTmdb.svelte`): TMDB reports no quota, so `TmdbClient` tells an
+  injected `UsageSink` (`providers/tmdb/src/usage.ts`) of each call answered by the cache and each request sent
+  (retries included, so one abandoned call is 4), by kind of call (`callKindOf`, from the path) and outcome.
+  `TmdbUsage` keeps it in `tmdb_usage` (disposable, created on demand, per hour, kind, outcome and latency bucket,
+  forgotten after 30 days in `purge`), written from memory every 5 s, then emits the payload-less `tmdb` event; the
+  median is read from the latency buckets (±12 %). A 429, a 5xx, a network failure or a refusal is logged under
+  `tmdb` (warn while retried, error when given up) and kept in memory for "Latest errors" (since the start).
+  `GET /api/tmdb/usage?period=24h|7d|30d` (chart slots per hour, or per UTC day) and `DELETE /api/tmdb/cache`.
+  The tab's period is `?range=` (the logs' `period` is another filter in the same URL).
 - Not done: the "connection lost" banner (the event stream does not tell the page it is down).
 
 ## History
