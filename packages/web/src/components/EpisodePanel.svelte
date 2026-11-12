@@ -76,6 +76,9 @@
   const imagesBase = $derived(
     `/api/libraries/${libraryId}/shows/${String(tmdbId)}/seasons/${String(episode.season)}/episodes/${String(episode.episode)}`,
   );
+  const canEdit = $derived(
+    files.some((file) => file.state === 'ok' || file.state === 'incomplete'),
+  );
   const hasImage = $derived(imageChanged || files.some((file) => file.thumb === true));
   let stamp = $state(Date.now());
   let editing = $state(false);
@@ -122,22 +125,42 @@
     <section aria-labelledby="thumb">
       <h3 id="thumb">{t('web.library.episode.thumb')}</h3>
       {#if hasImage && !imageFailed}
-        <img
-          class="still"
-          src={workImageUrl(imagesBase, 'thumb', stamp)}
-          alt=""
-          onerror={() => {
-            imageFailed = true;
-          }}
-        />
+        {#if canEdit}
+          <button
+            type="button"
+            class="zone still-button"
+            disabled={busy}
+            aria-label={t('web.images.change-thumb')}
+            onclick={() => (editing = true)}
+          >
+            <img
+              class="still"
+              src={workImageUrl(imagesBase, 'thumb', stamp)}
+              alt=""
+              onerror={() => {
+                imageFailed = true;
+              }}
+            />
+            <span class="veil" aria-hidden="true">{t('web.images.change-thumb')}</span>
+          </button>
+        {:else}
+          <img
+            class="still"
+            src={workImageUrl(imagesBase, 'thumb', stamp)}
+            alt=""
+            onerror={() => {
+              imageFailed = true;
+            }}
+          />
+        {/if}
       {/if}
       <p class="state">
         <span class={thumb ? 'ok' : 'missing'} aria-hidden="true">{thumb ? '✓' : '✗'}</span>
         {t(thumb ? 'web.library.present' : 'web.library.missing')}
       </p>
-      {#if files.some((file) => file.state === 'ok' || file.state === 'incomplete')}
+      {#if canEdit && !(hasImage && !imageFailed)}
         <button type="button" class="btn" disabled={busy} onclick={() => (editing = true)}>
-          {t(hasImage ? 'web.images.change-thumb' : 'web.images.add-thumb')}
+          {t('web.images.add-thumb')}
         </button>
       {/if}
     </section>
@@ -262,6 +285,42 @@
 
   .state {
     margin: 0 0 10px;
+  }
+
+  .still-button {
+    position: relative;
+    display: block;
+    width: 100%;
+    max-width: 360px;
+    margin: 0 0 8px;
+    padding: 0;
+    border: 0;
+    border-radius: 6px;
+    background: none;
+    color: #fff;
+    cursor: pointer;
+    overflow: hidden;
+  }
+
+  .still-button .still {
+    margin: 0;
+  }
+
+  .veil {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgb(10 12 16 / 0.6);
+    font-size: 13px;
+    font-weight: 600;
+    opacity: 0;
+  }
+
+  .still-button:hover .veil,
+  .still-button:focus-visible .veil {
+    opacity: 1;
   }
 
   .still {
