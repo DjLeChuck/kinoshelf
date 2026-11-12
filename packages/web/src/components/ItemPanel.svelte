@@ -133,7 +133,7 @@
         [v.file?.audio, names(v.file?.audioLanguages ?? [])].filter(Boolean).join(' · ') || dash,
     },
     { key: 'subtitles', read: (v) => names(v.file?.subtitleLanguages ?? []) || dash },
-    { key: 'size', read: (v) => (v.file ? formatBytes(v.file.size) : dash) },
+    { key: 'size', read: (v) => (v.file ? formatBytes(v.file.size, locale.value) : dash) },
     { key: 'file', read: (v) => baseName(v.path) },
   ];
   const present = (value: boolean | null): string =>
@@ -154,7 +154,7 @@
         ? undefined
         : t('web.library.versions.summary', {
             count: detail.versions.length,
-            size: formatBytes(size),
+            size: formatBytes(size, locale.value),
           }),
     ]
       .filter(Boolean)
@@ -178,7 +178,12 @@
       {#if detail.file}
         <dt class="muted">{t('web.library.file')}</dt>
         <dd>
-          {[detail.resolution, detail.file.video, detail.file.audio, formatBytes(detail.file.size)]
+          {[
+            detail.resolution,
+            detail.file.video,
+            detail.file.audio,
+            formatBytes(detail.file.size, locale.value),
+          ]
             .filter(Boolean)
             .join(' · ')}
         </dd>

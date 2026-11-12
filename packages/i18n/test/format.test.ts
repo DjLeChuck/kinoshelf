@@ -88,4 +88,10 @@ describe('formatBytes', () => {
   ])('%d is %s', (bytes, expected) => {
     expect(formatBytes(bytes)).toBe(expected);
   });
+
+  it('speaks French with a decimal comma and octets', () => {
+    expect(formatBytes(30_500_000_000, 'fr')).toBe('28,4 Gio');
+    expect(formatBytes(512, 'fr')).toBe('512 o');
+    expect(formatBytes(30_500_000_000, 'en')).toBe('28.4 GiB');
+  });
 });

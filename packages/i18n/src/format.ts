@@ -144,14 +144,26 @@ function collect(text: string, names: Set<string>): void {
   }
 }
 
-/** A size in binary units, which read the same in French and English (KiB, not KB or Ko). */
-export function formatBytes(bytes: number): string {
-  const units = ['B', 'KiB', 'MiB', 'GiB', 'TiB'];
+/**
+ * A size in binary units, in the language's own spelling: `28.4 GiB`, `28,4 Gio` (the French
+ * octet). The unit is binary in both (1024), so the number is the same, only its separator and
+ * its name change.
+ */
+export function formatBytes(bytes: number, locale: string = 'en'): string {
+  const french = locale.toLowerCase().startsWith('fr');
+  const units = french ? ['o', 'Kio', 'Mio', 'Gio', 'Tio'] : ['B', 'KiB', 'MiB', 'GiB', 'TiB'];
   let value = bytes;
   let unit = 0;
   while (value >= 1024 && unit < units.length - 1) {
     value /= 1024;
     unit++;
   }
-  return `${unit === 0 ? String(value) : value.toFixed(1)} ${units[unit] ?? ''}`;
+  const number =
+    unit === 0
+      ? String(value)
+      : new Intl.NumberFormat(locale, {
+          minimumFractionDigits: 1,
+          maximumFractionDigits: 1,
+        }).format(value);
+  return `${number} ${units[unit] ?? ''}`;
 }

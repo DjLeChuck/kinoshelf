@@ -2,7 +2,7 @@
   import { formatBytes } from '@kinoshelf/i18n';
   import { workImageUrl } from '../lib/arrivals.js';
   import { messageOf } from '../lib/errors.js';
-  import { t } from '../lib/i18n.svelte.js';
+  import { locale, t } from '../lib/i18n.svelte.js';
   import {
     canNameVersion,
     canRun,
@@ -99,7 +99,7 @@
             languages: file.subtitleLanguages.map(languageShort).join(' '),
           })
         : '',
-      formatBytes(file.size),
+      formatBytes(file.size, locale.value),
     ]
       .filter(Boolean)
       .join(' · ');
