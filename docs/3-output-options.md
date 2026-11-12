@@ -52,8 +52,11 @@ Kodi reads the layout with `metadata: nfo`, if its sources are set up for it:
   non-recursive scan finds no movie at all.
 - Several versions of one movie, or of one episode, show up as **separate entries**: Kodi 21 does not
   attach them to each other, and the names cannot change that. They can be merged by hand in Kodi
-  (the "Add version" / "Manage versions" menu); Kodi 22 may attach them from a `<hasvideoversions>`
-  tag in the NFO, which Kinoshelf does not write.
+  (the "Add version" / "Manage versions" menu). Kodi 22 (tried on 22.0rc2) attaches **movies only**,
+  and only a file whose NFO carries `<hasvideoversions>true</hasvideoversions>`; episodes stay separate
+  entries. Kinoshelf does not write that tag, on purpose: it would help one player, for movies, from a
+  version that is still a release candidate, and Kinoshelf never rewrites an existing NFO, so the
+  libraries already written would not get it. Plex, Jellyfin and Kodi 21 ignore the tag.
 - Seasons' posters, `s01e04-e05` files and the `{tmdb-<id>}` tag (read as a hint by Kodi's TMDB
   scraper) need nothing more.
 

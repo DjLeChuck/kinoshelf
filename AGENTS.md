@@ -85,8 +85,10 @@ nowhere: a custom profile file is to be discussed again.
   and `clearlogo.png`, read by Jellyfin and Plex's NFO agent as well (same bytes served as the files);
   `<file>.jpg` is not read, `<file>-thumb.jpg` is by all three. A Kodi movies source must be set to
   "one movie per folder", local information only. **Kodi 21 does not attach versions**: two files of a
-  movie, or of an episode, are two entries there (Kodi 22 might, from `<hasvideoversions>` in the NFO:
-  untested, not written), and no name changes that.
+  movie, or of an episode, are two entries there, and no name changes that. Kodi 22 attaches movies only
+  (never episodes), from `<hasvideoversions>true</hasvideoversions>` in the NFO (tried on 22.0rc2: the shared
+  `movie.nfo` is enough, and the other players ignore the tag). **Decided not to write it**: one player, movies
+  only, a release candidate, and an existing NFO is never rewritten.
 
 - The parser is [guessit-js](https://github.com/opensubtitles/guessit-js) (LGPL-3.0) behind the
   `Parser` interface. Never modify or vendor it (LGPL/MIT compatibility).
