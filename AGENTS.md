@@ -67,19 +67,26 @@ bundled YAML, and the core contains no player-specific rule. `naming: with-id | 
 `metadata: none | nfo` (default `none`) writes Kodi NFO and artwork, or nothing. They are set globally
 (`naming`/`metadata` in `config.yaml`), per typed library, or by `--naming`/`--metadata` in the CLI.
 No combination belongs to a player: Plex's default agents read `none` (`with-id` or `no-id`), and
-Plex's NFO agent and Jellyfin both read `nfo`, whose `<uniqueid type="tmdb">` makes the id in the name
+Plex's NFO agent, Jellyfin and Kodi all read `nfo`, whose `<uniqueid type="tmdb">` makes the id in the name
 a safety net (Jellyfin's documentation recommends it, but `no-id`/`nfo` was checked on a Jellyfin
 instance and works, as on Plex's NFO agent). `loadProfileFile`/`parseProfile` (custom YAML) stay in the core but are wired
 nowhere: a custom profile file is to be discussed again.
 
-- **One layout for both players**, as close as they allow, so one library reads the same under either and
-  switching costs next to no renaming: the same id tag (`{tmdb-<id>}`), NFO files (`movie.nfo`,
-  `tvshow.nfo`, `<file>.nfo`), image names (`poster.jpg`, `background.jpg`, `logo.png`, a season's
+- **One layout for every player** (Plex, Jellyfin, Kodi), as close as they allow, so one library reads the
+  same under any and switching costs next to no renaming: the same id tag (`{tmdb-<id>}`), NFO files
+  (`movie.nfo`, `tvshow.nfo`, `<file>.nfo`), image names (`poster.jpg`, `fanart.jpg`, `clearlogo.png`, a season's
   `season01-poster.jpg` in the show's folder, `season-specials-poster.jpg` for season 0), `Season 01`
   folders and episode names (`Show (2022) - s01e01`, ranges joined with `-e`: a `s01e04-e05` file gave
-  two episodes in each player). Before adding a rule, look for a name both players read and use it;
-  make it specific only when there is none, after checking both documentations (and Jellyfin's code,
-  which reads more than it documents), and say why in `build.ts`.
+  two episodes in each player), the episode thumbnail `<file>-thumb.jpg`. Before adding a rule, look for a
+  name every player reads and use it; make it specific only when there is none, after checking their
+  documentations (and Jellyfin's and Kodi's code, which read more than they document), and say why in
+  `build.ts`. Kodi's names were checked on a real Kodi 21.3 (JSON-RPC, `dev/players`): `background.jpg` and
+  `logo.png` are stored under the types `background` and `logo`, which no skin shows, hence `fanart.jpg`
+  and `clearlogo.png`, read by Jellyfin and Plex's NFO agent as well (same bytes served as the files);
+  `<file>.jpg` is not read, `<file>-thumb.jpg` is by all three. A Kodi movies source must be set to
+  "one movie per folder", local information only. **Kodi 21 does not attach versions**: two files of a
+  movie, or of an episode, are two entries there (Kodi 22 might, from `<hasvideoversions>` in the NFO:
+  untested, not written), and no name changes that.
 
 - The parser is [guessit-js](https://github.com/opensubtitles/guessit-js) (LGPL-3.0) behind the
   `Parser` interface. Never modify or vendor it (LGPL/MIT compatibility).
@@ -92,7 +99,7 @@ nowhere: a custom profile file is to be discussed again.
   both; the id is optional for Plex, hence an axis rather than a template syntax for optional parts.
 - Plex has two modes: the default agents ignore NFO (`metadata: none`), the optional "Plex NFO"
   agent (PMS 1.43.1+) reads Kodi-format NFO, `movie.nfo`, `tvshow.nfo`, per-episode `<file>.nfo`
-  (as Jellyfin; no season NFO, Plex ignores it), `poster.jpg`, `background.jpg`, `logo.png` and a season
+  (as Jellyfin; no season NFO, Plex ignores it), `poster.jpg`, `fanart.jpg`, `clearlogo.png` and a season
   poster `season01-poster.jpg` in the show's folder, or `season-specials-poster.jpg` for season 0 (the
   artwork's `specialsName`). A season's poster is a show-level file, written with `tvshow.nfo` (so a
   partial selection hands it, like the other show files, to any chosen episode of the show).
@@ -101,7 +108,7 @@ nowhere: a custom profile file is to be discussed again.
   `<uniqueid type="tmdb">`).
 - Jellyfin (`with-id`/`nfo`): `{tmdb-<id>}` (the same as Plex's; Jellyfin's documentation gives `[tmdbid-<id>]`, its code reads `tmdb` as an alias and any of brackets, parentheses or braces) in the movie and series folders and in the movie file (the file
   must start with its folder's name), `SxxExx` episodes, `movie.nfo`, `tvshow.nfo`, `<file>.nfo`,
-  `poster.jpg`, `background.jpg` and `logo.png`. A season's poster is Kodi's `seasonNN-poster.jpg` in the show
+  `poster.jpg`, `fanart.jpg` and `clearlogo.png`. A season's poster is Kodi's `seasonNN-poster.jpg` in the show
   folder (`season-specials-poster.jpg` for season 0), the file the Plex NFO agent reads too: Jellyfin's
   documentation only says a season folder may hold the show's names (a plain `poster.jpg`), but its code
   reads the Kodi name and never Plex's `SeasonNN.jpg` (checked on Jellyfin 12.4: the season took it).
@@ -299,7 +306,7 @@ format follows the Kodi wiki's templates, saved pages are not in the repository)
   wins over the generated one, unless Kinoshelf wrote it and nobody touched it since
   (`madeByUs`, from the journal's size and date) and the plan writes the NFO of the video's new place:
   an episode matched again to another show would otherwise carry the old show's text along. A movie written flat (no folder) gets no fixed-name file
-  (`movie.nfo`, `poster.jpg`, `logo.png`), which every movie would share.
+  (`movie.nfo`, `poster.jpg`, `clearlogo.png`), which every movie would share.
 - **Show-level files** (`tvshow.nfo`, the show's poster, fanart and logo, a season's poster) come with
   every episode, marked `shared`; the planner keeps the first one of the batch (`shareCompanions`).
   Running only some items (`selectItems`, the server's `prepare`) hands them from an episode left out
@@ -336,7 +343,7 @@ format follows the Kodi wiki's templates, saved pages are not in the repository)
   a colon because TMDB sometimes sends `-18`. The format of the prefix is our choice, neither player
   documents one. Left out on purpose: TMM's `<crew>`, `<producer>` and the actor `<profile>` /
   `<tmdbid>`, which neither player's documentation lists.
-- **The logo** (`kind: logo`, `logo.png` with `metadata: nfo`): TMDB's `images` come with the
+- **The logo** (`kind: logo`, `clearlogo.png` with `metadata: nfo`): TMDB's `images` come with the
   details request (`append_to_response`; `include_image_language` is the metadata language, then English,
   then textless), so no extra call. `pickLogo` (`providers/tmdb`) takes the metadata language first, then
   English, then a textless one, the best voted of each (PNG or JPEG only) as `Details.logoPath`. A work
@@ -366,7 +373,7 @@ format follows the Kodi wiki's templates, saved pages are not in the repository)
     date, or the journal's identity check would fail on the second undo. The NFO is not rewritten: it
     names no image.
   - **No image library**: JPEG and PNG only, read from the bytes, dimensions from the headers, WebP
-    refused. The format must be the one the profile writes (`poster.jpg` JPEG, `logo.png` PNG), else 422
+    refused. The format must be the one the profile writes (`poster.jpg` JPEG, `clearlogo.png` PNG), else 422
     `image.format-mismatch`; the list offers only compatible candidates.
   - **An address (`source: "url"`) is fetched by the server** (`custom-image.ts`): http(s), three
     redirections, 15 s, 20 MB. Addresses on the local network are refused by default
@@ -375,11 +382,12 @@ format follows the Kodi wiki's templates, saved pages are not in the repository)
     redirection. `POST .../images/preview` downloads the same way, for the dialog, and keeps nothing;
     it answers with the image as a `data:` address, the only foreign thing the page's policy allows.
     Every image is downloaded before any is written: one failure changes nothing.
-- **An episode's thumbnail** (`kind: episode-thumb`, `<video>.jpg` beside the video, one per version): TMDB's
+- **An episode's thumbnail** (`kind: episode-thumb`, `<video>-thumb.jpg` beside the video, one per version): TMDB's
   `still_path` (`EpisodeInfo.stillPath`, already in the season request, so no extra call) downloaded at its
-  `original` size, TMDB having no `w780` for stills. Plex's NFO agent and Jellyfin both read the bare
-  `<file>.jpg` (checked by hand on both; Jellyfin's documentation only gives `<file>-thumb.jpg`, Plex's
-  could not be read). Without it Plex showed a black square and Jellyfin the season's image. An
+  `original` size, TMDB having no `w780` for stills. Plex's NFO agent, Jellyfin and Kodi all read
+  `<file>-thumb.jpg` (checked on all three; Kodi does not read the bare `<file>.jpg`, Jellyfin's
+  documentation only gives the `-thumb` name, Plex's could not be read). Without it Plex showed a black
+  square and Jellyfin the season's image. An
   episode with no still on TMDB gets none. **Tracked per file** like the NFO (`thumb` of `library_items`,
   server migration 027, `CompanionKind` `thumb`): an episode whose planned plan still holds the
   download is `incomplete` (so "Refresh" writes it) and under `missing-artwork`. An episode TMDB has
@@ -387,7 +395,7 @@ format follows the Kodi wiki's templates, saved pages are not in the repository)
   the thumbnail from a season poster by the profile's names (`isEpisodeThumb`), not by a stem. The
   web shows it in the tree's "Thumbnail" column (`writes.thumb`, an episode's versions together) and
   in the episode panel, as **one image for the episode**, never per version; a show or a season
-  carries no total. Players pick the version's own `<file>.jpg` (Jellyfin changes it with the
+  carries no total. Players pick the version's own `<file>-thumb.jpg` (Jellyfin changes it with the
   quality being played), so every version gets a copy, and a **single choice** writes them all.
   - **Changing it** (`.../shows/:tmdbId/seasons/:season/episodes/:episode/images`, the same routes as a
     work's, with the type `thumb`, the only one an episode has; its poster, background and logo are

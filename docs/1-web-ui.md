@@ -73,7 +73,7 @@ The lists show a movie or an episode **once**, whatever its number of files:
   version only when it shares an episode with another file;
 - the poster, fanart and logo are shared. A movie has one `movie.nfo`; each version of an episode
   has its own `<file>.nfo`, which no player reads from a shared one, and its own copy of the
-  episode's thumbnail (`<file>.jpg`), since a player picks the one of the version being played.
+  episode's thumbnail (`<file>-thumb.jpg`), since a player picks the one of the version being played.
   The page of an episode nonetheless shows **one** NFO status and **one** thumbnail for the episode:
   **Generate the missing NFO** writes the absent ones for every version and never touches one that
   exists, and **Change the image** picks one thumbnail (from TMDB or an address) and writes it for
