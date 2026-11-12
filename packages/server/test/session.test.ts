@@ -162,11 +162,19 @@ describe('GET /api/session', () => {
   it('reports whether the browser is signed in, without needing to be', async () => {
     const h = await harness();
     const anonymous = await h.app.inject({ url: '/api/session' });
-    expect(anonymous.json()).toEqual({ authenticated: false, setup: false });
+    expect(anonymous.json()).toEqual({
+      authenticated: false,
+      setup: false,
+      command: 'kinoshelf-server',
+    });
 
     const { cookie } = await signIn(h);
     const signed = await h.app.inject({ url: '/api/session', headers: { cookie } });
-    expect(signed.json()).toEqual({ authenticated: true, setup: false });
+    expect(signed.json()).toEqual({
+      authenticated: true,
+      setup: false,
+      command: 'kinoshelf-server',
+    });
   });
 });
 
@@ -190,7 +198,9 @@ describe('first-launch API key', () => {
 
     const again = await h.app.inject({ method: 'POST', url: '/api/setup/api-key' });
     expect(again.statusCode).toBe(409);
-    expect(again.json()).toEqual({ error: { code: 'setup.already-done' } });
+    expect(again.json()).toEqual({
+      error: { code: 'setup.already-done', params: { command: 'kinoshelf-server' } },
+    });
     expect((await h.app.inject('/api/session')).json<{ setup: boolean }>().setup).toBe(false);
   });
 

@@ -60,7 +60,7 @@
       <p class="muted hint">
         {failure instanceof ApiError && failure.code === 'auth.not-configured'
           ? ''
-          : t('web.login.hint')}
+          : t('web.login.hint', { command: session.command })}
       </p>
     </form>
   {/if}

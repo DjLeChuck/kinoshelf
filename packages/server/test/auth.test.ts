@@ -63,7 +63,9 @@ describe('API key', () => {
     database.prepare('DELETE FROM api_keys').run();
     const response = await request('GET', '/api/history');
     expect(response.statusCode).toBe(503);
-    expect(response.json()).toEqual({ error: { code: 'auth.not-configured' } });
+    expect(response.json()).toEqual({
+      error: { code: 'auth.not-configured', params: { command: 'kinoshelf-server' } },
+    });
     expect((await app.inject('/health')).statusCode).toBe(200);
 
     const key = generateApiKey();

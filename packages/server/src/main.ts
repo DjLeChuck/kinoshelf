@@ -5,10 +5,12 @@ import {
   ensureConfigDirectory,
   KinoshelfError,
   loadConfig,
+  packageVersion,
   type Config,
 } from '@kinoshelf/core';
 import { createTranslator, describeError, detectLocale } from '@kinoshelf/i18n';
 import { buildApp } from './app.js';
+import { serverCommand, serverUsage } from './command.js';
 import {
   envApiKeyProblem,
   generateApiKey,
@@ -24,7 +26,6 @@ import { PlexSession } from './plex-session.js';
 import { createShutdown } from './shutdown.js';
 import { findWebRoot } from './web.js';
 import { describeListenError, parseServerCommand } from './startup.js';
-import { serverVersion } from './version.js';
 
 const DEFAULT_RETENTION_DAYS = 90;
 
@@ -44,11 +45,11 @@ function failStartup(error: unknown): never {
 
 const command = parseServerCommand(process.argv.slice(2));
 if (command.kind === 'help') {
-  process.stdout.write(`${t('server.help')}\n`);
+  process.stdout.write(`${t('server.help', { usage: serverUsage() })}\n`);
   process.exit(0);
 }
 if (command.kind === 'usage-error') {
-  process.stderr.write(`${t('server.help')}\n`);
+  process.stderr.write(`${t('server.help', { usage: serverUsage() })}\n`);
   process.exit(2);
 }
 
@@ -80,12 +81,12 @@ if (command.kind === 'notify') {
       env: process.env,
       out: (line) => process.stdout.write(`${line}\n`),
       err: (line) => process.stderr.write(`${line}\n`),
-      usage: t('server.help'),
+      usage: t('server.help', { usage: serverUsage() }),
     }),
   );
 }
 
-const version = serverVersion();
+const version = packageVersion(new URL('../package.json', import.meta.url));
 
 let config: Config;
 let database: Database;
@@ -108,7 +109,7 @@ if (fromEnv !== undefined && fromEnv !== '') {
       break;
     case 'placeholder':
       process.stderr.write(
-        'KINOSHELF_API_KEY is still the placeholder of the example: choose your own, or run `kinoshelf-server api-key create`.\n',
+        `KINOSHELF_API_KEY is still the placeholder of the example: choose your own, or run \`${serverCommand()} api-key create\`.\n`,
       );
       process.exit(1);
       break;
@@ -143,7 +144,7 @@ if (!webRoot) {
 
 if (!hasApiKey(database)) {
   app.log.warn(
-    'No API key: /api answers 503 until one exists. Set KINOSHELF_API_KEY, or run `kinoshelf-server api-key create`.',
+    `No API key: /api answers 503 until one exists. Set KINOSHELF_API_KEY, or run \`${serverCommand()} api-key create\`.`,
   );
 }
 

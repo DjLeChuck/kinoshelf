@@ -66,6 +66,8 @@ export interface paths {
                             authenticated: boolean;
                             /** @description No API key exists yet: the first launch can create one (`POST /api/setup/api-key`). */
                             setup?: boolean;
+                            /** @description What to type to run the server's commands, such as `api-key create`. */
+                            command: string;
                         };
                     };
                 };

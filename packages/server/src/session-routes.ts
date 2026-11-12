@@ -1,6 +1,7 @@
 import type { Database } from '@kinoshelf/core';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { AttemptLimiter } from './attempts.js';
+import { serverCommand } from './command.js';
 import { generateApiKey, hasApiKey, isValidApiKey, setApiKey } from './auth.js';
 import { isLocalHost } from './local-host.js';
 import { errorSchema } from './schemas.js';
@@ -23,6 +24,18 @@ const sessionSchema = {
       type: 'boolean',
       description:
         'No API key exists yet: the first launch can create one (`POST /api/setup/api-key`).',
+    },
+  },
+} as const;
+
+const sessionStateSchema = {
+  ...sessionSchema,
+  required: ['authenticated', 'command'],
+  properties: {
+    ...sessionSchema.properties,
+    command: {
+      type: 'string',
+      description: "What to type to run the server's commands, such as `api-key create`.",
     },
   },
 } as const;
@@ -64,7 +77,7 @@ export function registerSessionRoutes(
       schema: {
         summary: 'Tell whether the browser has a valid session',
         security: [],
-        response: { 200: sessionSchema },
+        response: { 200: sessionStateSchema },
       },
     },
     (request) => {
@@ -72,6 +85,7 @@ export function registerSessionRoutes(
       return {
         authenticated: token !== undefined && isValidSession(database, token),
         setup: !hasApiKey(database),
+        command: serverCommand(),
       };
     },
   );
@@ -112,7 +126,9 @@ export function registerSessionRoutes(
         });
       }
       if (hasApiKey(database)) {
-        return reply.code(409).send({ error: { code: 'setup.already-done' } });
+        return reply
+          .code(409)
+          .send({ error: { code: 'setup.already-done', params: { command: serverCommand() } } });
       }
       const apiKey = generateApiKey();
       setApiKey(database, apiKey);
@@ -137,7 +153,9 @@ export function registerSessionRoutes(
     },
     (request, reply) => {
       if (!hasApiKey(database)) {
-        return reply.code(503).send({ error: { code: 'auth.not-configured' } });
+        return reply
+          .code(503)
+          .send({ error: { code: 'auth.not-configured', params: { command: serverCommand() } } });
       }
       if (!sameOrigin(request)) {
         return reply.code(401).send({ error: { code: 'auth.unauthorized' } });

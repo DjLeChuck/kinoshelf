@@ -10,6 +10,7 @@ export type * from './types/journal.js';
 export type * from './types/errors.js';
 export { ERROR_CODES, type ErrorCode } from './error-codes.js';
 export { errnoCode, KinoshelfError } from './errors.js';
+export { packageVersion } from './version.js';
 export { loadProfileFile, parseProfile } from './profiles/loader.js';
 export {
   buildProfile,

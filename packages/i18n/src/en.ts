@@ -139,7 +139,7 @@ export const en = {
   'error.server.port-denied':
     'Not allowed to listen on port {port} on {host}. Ports below 1024 need extra privileges: choose a higher one with KINOSHELF_PORT.',
   'server.help':
-    'Usage: kinoshelf-server [command]\n\nWithout a command, starts the server (KINOSHELF_HOST, KINOSHELF_PORT, KINOSHELF_CONFIG_DIR).\n\nCommands:\n  api-key create                 create the API key and print it (it replaces the previous one)\n  notify test                    check the webhooks, Plex and Jellyfin set in config.yaml\n  notify refresh <path> [--kind movie|series] [--dry-run]\n                                 ask Plex and Jellyfin to look at a folder, as Kinoshelf sees it\n  --help                         show this help',
+    'Usage: {usage} [command]\n\nWithout a command, starts the server (KINOSHELF_HOST, KINOSHELF_PORT, KINOSHELF_CONFIG_DIR).\n\nCommands:\n  api-key create                 create the API key and print it (it replaces the previous one)\n  notify test                    check the webhooks, Plex and Jellyfin set in config.yaml\n  notify refresh <path> [--kind movie|series] [--dry-run]\n                                 ask Plex and Jellyfin to look at a folder, as Kinoshelf sees it\n  --help                         show this help',
   'help.description': 'Identify, rename and enrich video files already on disk.',
   'help.scan': 'Analyze a library and report what would change (never writes).',
   'help.process': 'Identify a file or folder and organize it (dry run unless --apply).',
@@ -184,13 +184,17 @@ export const en = {
   'help.opt.threshold': 'minimum score (0-100) for automatic processing',
   'help.opt.metadata-language': 'language of the titles fetched from TMDB, e.g. fr or en-US',
   'help.opt.lang': 'language of this tool: fr or en',
+  'help.opt.version': 'print the version',
+  'help.serve': 'Start the server and the web interface.',
+  'help.api-key': 'create the API key: api-key create (prints it, replaces the previous one).',
+  'help.notify': 'Check or trigger the notifications: notify test, notify refresh <path>.',
   'help.opt.json': 'print machine-readable JSON instead of text',
   'help.opt.apply': 'actually write to disk',
   'help.opt.config-dir': 'folder holding config.yaml and the database',
   'error.auth.not-configured':
-    'No API key exists yet. Run “kinoshelf-server api-key create”, or set KINOSHELF_API_KEY.',
+    'No API key exists yet. Run “{command} api-key create”, or set KINOSHELF_API_KEY.',
   'error.setup.already-done':
-    'An API key already exists. Sign in with it, or create a new one with “kinoshelf-server api-key create”.',
+    'An API key already exists. Sign in with it, or create a new one with “{command} api-key create”.',
   'error.setup.host-not-allowed':
     'The first key can only be created through a local address (an IP address, localhost, or a name such as nas.local). To use {host}, add it to KINOSHELF_ALLOWED_HOSTS.',
   'error.auth.unauthorized': 'Wrong API key, or your session has expired.',
@@ -569,14 +573,14 @@ export const en = {
   'web.login.setup.copy': 'Copy',
   'web.login.setup.copied': 'Copied',
   'web.login.setup.warning':
-    'It is shown only once and cannot be read back. Keep it in your password manager. If you lose it, create a new one with “kinoshelf-server api-key create”.',
+    'It is shown only once and cannot be read back. Keep it in your password manager. If you lose it, create a new one with “{command} api-key create”.',
   'web.login.setup.noted': 'I have noted my key',
   'web.login.setup.continue': 'Continue to sign in',
   'web.login.title': 'Sign in',
   'web.login.intro': 'Enter the API key of this Kinoshelf instance.',
   'web.login.key': 'API key',
   'web.login.submit': 'Sign in',
-  'web.login.hint': 'Create one with “kinoshelf-server api-key create”.',
+  'web.login.hint': 'Create one with “{command} api-key create”.',
   'web.signout': 'Sign out',
   'web.theme.label': 'Theme',
   'web.theme.dark': 'Dark',

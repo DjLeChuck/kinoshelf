@@ -70,7 +70,9 @@
         </button>
       </div>
     </div>
-    <p class="alert warning" role="status">{t('web.login.setup.warning')}</p>
+    <p class="alert warning" role="status">
+      {t('web.login.setup.warning', { command: session.command })}
+    </p>
     <label class="check">
       <input type="checkbox" bind:checked={noted} />
       {t('web.login.setup.noted')}

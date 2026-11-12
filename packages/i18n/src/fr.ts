@@ -143,7 +143,7 @@ export const fr: Record<keyof typeof en, string> = {
   'error.server.port-denied':
     'Écoute sur le port {port} de {host} refusée. Les ports inférieurs à 1024 demandent des privilèges : choisissez-en un plus élevé avec KINOSHELF_PORT.',
   'server.help':
-    'Usage : kinoshelf-server [commande]\n\nSans commande, démarre le serveur (KINOSHELF_HOST, KINOSHELF_PORT, KINOSHELF_CONFIG_DIR).\n\nCommandes :\n  api-key create                 crée la clé API et l’affiche (elle remplace la précédente)\n  notify test                    vérifie les webhooks, Plex et Jellyfin de config.yaml\n  notify refresh <chemin> [--kind movie|series] [--dry-run]\n                                 demande à Plex et Jellyfin de regarder un dossier, tel que Kinoshelf le voit\n  --help                         affiche cette aide',
+    'Usage : {usage} [commande]\n\nSans commande, démarre le serveur (KINOSHELF_HOST, KINOSHELF_PORT, KINOSHELF_CONFIG_DIR).\n\nCommandes :\n  api-key create                 crée la clé API et l’affiche (elle remplace la précédente)\n  notify test                    vérifie les webhooks, Plex et Jellyfin de config.yaml\n  notify refresh <chemin> [--kind movie|series] [--dry-run]\n                                 demande à Plex et Jellyfin de regarder un dossier, tel que Kinoshelf le voit\n  --help                         affiche cette aide',
   'help.description': 'Identifie, renomme et enrichit des fichiers vidéo déjà sur disque.',
   'help.scan': 'Analyse une bibliothèque et indique ce qui changerait (n’écrit jamais).',
   'help.process': 'Identifie un fichier ou un dossier et le range (simulation sans --apply).',
@@ -191,13 +191,17 @@ export const fr: Record<keyof typeof en, string> = {
   'help.opt.threshold': 'score minimal (0-100) pour un traitement automatique',
   'help.opt.metadata-language': 'langue des titres récupérés sur TMDB, ex. fr ou en-US',
   'help.opt.lang': 'langue de cet outil : fr ou en',
+  'help.opt.version': 'affiche la version',
+  'help.serve': 'Démarre le serveur et l’interface web.',
+  'help.api-key': 'Crée la clé API : api-key create (l’affiche, remplace la précédente).',
+  'help.notify': 'Vérifie ou déclenche les notifications : notify test, notify refresh <chemin>.',
   'help.opt.json': 'affiche du JSON exploitable par un script plutôt que du texte',
   'help.opt.apply': 'écrit réellement sur le disque',
   'help.opt.config-dir': 'dossier contenant config.yaml et la base de données',
   'error.auth.not-configured':
-    'Aucune clé d’API n’existe encore. Lancez « kinoshelf-server api-key create » ou définissez KINOSHELF_API_KEY.',
+    'Aucune clé d’API n’existe encore. Lancez « {command} api-key create » ou définissez KINOSHELF_API_KEY.',
   'error.setup.already-done':
-    'Une clé API existe déjà. Connectez-vous avec elle, ou créez-en une nouvelle avec « kinoshelf-server api-key create ».',
+    'Une clé API existe déjà. Connectez-vous avec elle, ou créez-en une nouvelle avec « {command} api-key create ».',
   'error.setup.host-not-allowed':
     'La première clé ne peut être créée que par une adresse locale (une adresse IP, localhost ou un nom comme nas.local). Pour utiliser {host}, ajoutez-le à KINOSHELF_ALLOWED_HOSTS.',
   'error.auth.unauthorized': 'Clé d’API incorrecte, ou session expirée.',
@@ -593,14 +597,14 @@ export const fr: Record<keyof typeof en, string> = {
   'web.login.setup.copy': 'Copier',
   'web.login.setup.copied': 'Copiée',
   'web.login.setup.warning':
-    'Elle n’est affichée qu’une seule fois et ne peut pas être relue. Gardez-la dans votre gestionnaire de mots de passe. Si vous la perdez, créez-en une nouvelle avec « kinoshelf-server api-key create ».',
+    'Elle n’est affichée qu’une seule fois et ne peut pas être relue. Gardez-la dans votre gestionnaire de mots de passe. Si vous la perdez, créez-en une nouvelle avec « {command} api-key create ».',
   'web.login.setup.noted': 'J’ai noté ma clé',
   'web.login.setup.continue': 'Continuer vers la connexion',
   'web.login.title': 'Connexion',
   'web.login.intro': 'Saisissez la clé d’API de cette instance de Kinoshelf.',
   'web.login.key': 'Clé d’API',
   'web.login.submit': 'Se connecter',
-  'web.login.hint': 'Créez-en une avec « kinoshelf-server api-key create ».',
+  'web.login.hint': 'Créez-en une avec « {command} api-key create ».',
   'web.signout': 'Se déconnecter',
   'web.theme.label': 'Thème',
   'web.theme.dark': 'Sombre',

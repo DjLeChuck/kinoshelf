@@ -7,6 +7,7 @@ import Fastify, { type FastifyInstance } from 'fastify';
 import { SqliteHttpCache } from '@kinoshelf/provider-tmdb';
 import { ApiError } from './api-error.js';
 import { hasApiKey, isValidApiKey } from './auth.js';
+import { serverCommand } from './command.js';
 import { MatchTracker } from './matches.js';
 import { ProgressTracker } from './progress.js';
 import { sharesFolder } from './system-paths.js';
@@ -439,7 +440,9 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     api.addHook('onRequest', (request, reply, done) => {
       // Checked per request so `api-key create` takes effect without a restart.
       if (!hasApiKey(options.database)) {
-        void reply.code(503).send({ error: { code: 'auth.not-configured' } });
+        void reply
+          .code(503)
+          .send({ error: { code: 'auth.not-configured', params: { command: serverCommand() } } });
         return;
       }
       const match = /^Bearer (.+)$/.exec(request.headers.authorization ?? '');
