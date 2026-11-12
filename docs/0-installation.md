@@ -1,7 +1,8 @@
 # Installation
 
 Docker is the recommended way to run Kinoshelf. The image holds the server, the web UI and the
-command line.
+command line. Without Docker, a [standalone binary](#standalone-binary) does the same on Linux and
+macOS, with no Node to install.
 
 ## Docker Compose
 
@@ -68,6 +69,98 @@ an explicit error: it never copies instead.
 A copy can last minutes and a stop waits for it, while Docker kills the container after 10 s by
 default. Set `stop_grace_period` (the example uses 5 minutes). A task cut short is resumed at the
 next start.
+
+## Standalone binary
+
+Each release has one archive per platform on the
+[releases page](https://github.com/DjLeChuck/kinoshelf/releases): `linux-x64`, `linux-arm64` and
+`macos-arm64`, with a `SHA256SUMS` file.
+
+```
+kinoshelf-<version>-linux-x64/
+├── kinoshelf     # the server, the command line and the web UI, in one file
+├── ffprobe       # a small build of FFmpeg's, read by Kinoshelf next to its own file
+└── LICENSES/
+```
+
+```sh
+sha256sum -c --ignore-missing SHA256SUMS      # shasum -a 256 -c on macOS
+tar -xJf kinoshelf-<version>-linux-x64.tar.xz
+cd kinoshelf-<version>-linux-x64
+./kinoshelf serve                             # then open http://localhost:8484
+```
+
+`kinoshelf serve` starts the server, `kinoshelf scan`, `process`, `undo` and `submit` are the
+[command line](5-cli.md), and `kinoshelf api-key create` and `kinoshelf notify test` are the
+server's commands. Settings, the environment variables and the first key work as with Docker (see
+[Configuration](4-configuration.md) and [First key](#first-key)); the config directory is
+`~/.config/kinoshelf` unless `KINOSHELF_CONFIG_DIR` says otherwise. Put the two files wherever you
+like (for example `/usr/local/lib/kinoshelf/`, and a link to `kinoshelf` in `/usr/local/bin`), but
+keep them together: without `ffprobe` beside it, the binary falls back to the one on the `PATH`
+(or `KINOSHELF_FFPROBE`), and without any, Kinoshelf still works but reads no codec or picture size.
+
+**Requirements (Linux)**: glibc 2.28 or later (Debian 10, Ubuntu 18.10, RHEL 8 and newer),
+`libstdc++` and **`libatomic`**, which a minimal install may lack (`apt install libatomic1`,
+`dnf install libatomic`, `apk add libatomic`). Alpine and other musl systems have no archive: use
+the Docker image.
+
+**macOS**: the binary is not notarized, so Gatekeeper blocks the first launch of a downloaded
+file. Allow it once with `xattr -d com.apple.quarantine kinoshelf ffprobe`.
+
+### As a service (systemd)
+
+Kinoshelf runs as one user, who must be able to read and write the media folders (see
+[Hardlinks](#hardlinks): downloads and libraries on one file system). Creating a user of its own is
+the cleanest, but any existing one that owns the media does as well: put it in `User=` and skip
+the `useradd`.
+
+```sh
+sudo useradd --system --home-dir /var/lib/kinoshelf --create-home --shell /usr/sbin/nologin kinoshelf
+sudo install -d /usr/local/lib/kinoshelf
+sudo install kinoshelf ffprobe /usr/local/lib/kinoshelf/
+sudo ln -s /usr/local/lib/kinoshelf/kinoshelf /usr/local/bin/kinoshelf
+```
+
+`/etc/systemd/system/kinoshelf.service`:
+
+```ini
+[Unit]
+Description=Kinoshelf
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=kinoshelf
+Group=kinoshelf
+Environment=KINOSHELF_CONFIG_DIR=/var/lib/kinoshelf
+# Environment=KINOSHELF_HOST=127.0.0.1
+# Environment=KINOSHELF_PORT=8484
+# EnvironmentFile=/etc/kinoshelf.env     # TMDB_API_KEY=..., KINOSHELF_API_KEY=...
+ExecStart=/usr/local/bin/kinoshelf serve
+Restart=on-failure
+# A copy can last minutes and a stop waits for it (see Stopping); the task is resumed at the next start.
+TimeoutStopSec=5min
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```sh
+sudo systemctl enable --now kinoshelf
+journalctl -u kinoshelf -f                # the logs
+```
+
+Open `http://<your-server>:8484`. **The permissions are what goes wrong most often**: with the
+`kinoshelf` user, a scan works (it only reads) and the renames then fail with `EACCES` until that
+user owns the media folders or belongs to their group (`usermod -aG <group> kinoshelf`, and the
+group needs write access). The commands that use the same database run as the same user:
+
+```sh
+sudo -u kinoshelf env KINOSHELF_CONFIG_DIR=/var/lib/kinoshelf kinoshelf api-key create
+```
+
+To update, replace the two files with the new archive's and `systemctl restart kinoshelf`: the
+database migrates itself at start.
 
 ## First key
 

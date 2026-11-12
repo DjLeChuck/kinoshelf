@@ -6,7 +6,8 @@
 docker compose exec kinoshelf kinoshelf …
 ```
 
-Outside Docker, build it from source (see [Development](7-development.md)).
+and in the [standalone binary](0-installation.md#standalone-binary), which is the same `kinoshelf` file
+as the server (`kinoshelf serve`). To build it from source, see [Development](7-development.md).
 
 ## Commands
 
@@ -49,3 +50,6 @@ kinoshelf-server                  # start the server
 kinoshelf-server api-key create   # print a new API key once (replaces the previous one)
 kinoshelf-server notify test      # check the Plex, Jellyfin and webhook setup
 ```
+
+The standalone binary has no `kinoshelf-server`: the same three are `kinoshelf serve`,
+`kinoshelf api-key create` and `kinoshelf notify test` (the Docker image answers to both names).

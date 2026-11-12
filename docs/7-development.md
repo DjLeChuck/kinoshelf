@@ -33,6 +33,15 @@ node packages/server/dist/main.js
 
 `make help` lists the targets, `make check` runs the whole pre-merge suite.
 
+## Standalone binary
+
+`make sea` builds `packages/sea/dist/kinoshelf` and its `ffprobe` (`scripts/build-ffprobe.sh`, a
+static build of FFmpeg's, which needs a compiler: the Nix shell `ffprobe` brings one). `make sea-run`
+starts it on a throwaway config, `make test-sea` runs the e2e suite against it, and
+`make sea-archive VERSION=…` and `make smoke-sea VERSION=…` pack the release archive and start it in
+clean Debian and Ubuntu containers. The release workflow does the same per platform on a tag. The
+Docker image is built from the same bundle (`make docker-build`).
+
 ## Packages
 
 | Package          | Role                                                    |
@@ -45,7 +54,7 @@ node packages/server/dist/main.js
 | `i18n`           | French and English catalogs                             |
 | `corpus`         | real release names replayed offline against the matcher |
 | `e2e`            | Playwright tests                                        |
-| `image`          | what the Docker image ships (server, CLI, web UI)       |
+| `sea`            | the standalone binary (Node single executable)          |
 
 ## Trying Plex and Jellyfin locally
 
