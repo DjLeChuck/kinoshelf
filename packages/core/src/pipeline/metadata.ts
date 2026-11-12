@@ -18,9 +18,11 @@ export interface LoadedMetadata {
   readonly details?: Details;
   /**
    * The provider's collection of a movie, with the movies it lists. It is the provider's even when
-   * the owner overrode it: the library still needs it to count what is missing.
+   * the owner overrode it: the library still needs it to count what is missing. `null` says the
+   * movie was read and belongs to none (so a collection it left is forgotten); absent, nothing was
+   * read (a series, or a profile that loads no details).
    */
-  readonly collection?: CollectionInfo;
+  readonly collection?: CollectionInfo | null;
   readonly episodes?: readonly EpisodeInfo[];
 }
 
@@ -69,7 +71,7 @@ export class MetadataLoader {
       return {};
     }
     if (candidate.kind !== 'series' || parsed.season === undefined) {
-      return details ? { details, ...(collection && { collection }) } : {};
+      return details ? { details, ...(collection !== undefined && { collection }) } : {};
     }
     const season = await this.seasonOf(candidate, parsed.season);
     const episodes = (season?.episodes ?? []).filter((info) =>
@@ -80,7 +82,7 @@ export class MetadataLoader {
 
   private async detailsOf(
     candidate: Candidate,
-  ): Promise<{ details: Details; collection?: CollectionInfo } | null> {
+  ): Promise<{ details: Details; collection?: CollectionInfo | null } | null> {
     const { provider, language } = this.options;
     const key = `${candidateKey(candidate)}:${language ?? ''}`;
     const details = await this.shared(this.details, key, () =>
@@ -88,14 +90,20 @@ export class MetadataLoader {
         ? provider.getMovieDetails(candidate.id, language)
         : provider.getSeriesDetails(candidate.id, language),
     );
-    if (details?.kind !== 'movie' || !details.collection?.id) {
+    if (details?.kind !== 'movie') {
       return details && { details };
+    }
+    if (!details.collection?.id) {
+      return { details, collection: null };
     }
     // The movie names its collection but not its overview, nor the movies it lists: one request
     // per collection, shared by the movies of the saga.
     const collection = await this.collectionOf(details.collection.id);
     if (!collection) {
-      return { details };
+      // The movie names it, the provider does not know it (any more): the library still files the
+      // movie under it, with nothing to count.
+      const { id, name } = details.collection;
+      return { details, collection: { id, name, parts: [] } };
     }
     const named: MovieDetails = {
       ...details,

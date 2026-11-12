@@ -46,7 +46,7 @@ export interface AnalysisEntry {
   /** The plan item, for matched files. */
   readonly item?: PlanItem;
   /** A matched movie's collection at the provider (see `LoadedMetadata.collection`). */
-  readonly collection?: CollectionInfo;
+  readonly collection?: CollectionInfo | null;
 }
 
 export interface Analysis {
@@ -249,7 +249,7 @@ export async function analyze(
       picks.push({ parsed: entry.parsed, candidate: entry.outcome.best.candidate });
     }
   }
-  const collections: (CollectionInfo | undefined)[] = [];
+  const collections: (CollectionInfo | null | undefined)[] = [];
   const inputs = await mapLimited(picks, concurrency, async (pick, index): Promise<PlanInput> => {
     const { collection, ...loaded } = await loader.forCandidate(pick.candidate, pick.parsed);
     collections[index] = collection;

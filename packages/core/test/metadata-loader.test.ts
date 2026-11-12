@@ -96,7 +96,8 @@ describe('MetadataLoader', () => {
     const provider = new FakeProvider([movie(1, 'Dune', 2021)]);
     const loader = new MetadataLoader({ provider, profile: parseProfile(WRITING) });
     const loaded = await loader.forCandidate(movie(1, 'Dune', 2021), episode(1, [1]));
-    expect(loaded.collection).toBeUndefined();
+    // Read, and in none: the library forgets a collection the movie may have left.
+    expect(loaded.collection).toBeNull();
     expect(provider.calls.map((c) => c.method)).toEqual(['getMovieDetails']);
   });
 
@@ -105,7 +106,11 @@ describe('MetadataLoader', () => {
     provider.movieCollections.set(1, { id: { provider: 'fake', id: 9 }, name: 'Dune - Saga' });
     const loader = new MetadataLoader({ provider, profile: parseProfile(WRITING) });
     const loaded = await loader.forCandidate(movie(1, 'Dune', 2021), episode(1, [1]));
-    expect(loaded.collection).toBeUndefined();
+    expect(loaded.collection).toEqual({
+      id: { provider: 'fake', id: 9 },
+      name: 'Dune - Saga',
+      parts: [],
+    });
     expect(loaded.details?.kind === 'movie' && loaded.details.collection?.name).toBe('Dune - Saga');
   });
 
