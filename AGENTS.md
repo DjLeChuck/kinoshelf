@@ -6,8 +6,8 @@ renames them for a media player (Plex, Jellyfin) and writes their metadata (NFO,
 ## Where we are
 
 The core, the CLI, the matching corpus, the REST server, the notifications and the multi-arch Docker
-image are done, and so is getting downloads in (see "Getting downloads in" below). The web UI has three
-entries: Libraries, History and Settings. A welcome shows at `/` on the first
+image are done, and so is getting downloads in (see "Getting downloads in" below). The web UI has four
+entries: Libraries, History, Settings and System (see "System" below). A welcome shows at `/` on the first
 launch (`GET`/`PATCH /api/onboarding`, server migration 009) and the app then opens on Libraries. The
 libraries (organized in place, arrival folders) are configured in the Settings, with a server-side
 path picker. The Libraries page has a tab per typed library (list read from the snapshot, filters,
@@ -236,6 +236,31 @@ nowhere: a custom profile file is to be discussed again.
   then lists the analyses in progress and the failed ones with their cause (`GET /api/history`), a
   failure staying until the same path is sent again and does not fail. A job must never fail without
   leaving a trace in the UI.
+
+## System
+
+The System page (`/system`) is where the server is **observed**; the Settings stay where it is configured.
+Only its Logs section exists so far; the rest (health, TMDB usage, diagnostic archive) is planned in the
+private notes and must not show as an empty tab or a "soon" badge before it is built.
+
+- **The log** (`logs.ts`, `log-routes.ts`; `SystemLogs.svelte`): the destination of Fastify's pino logger. `LogStore`
+  keeps the last 5000 lines in memory (what the page lists) and writes `<config>/logs/kinoshelf.log`, rotated at
+  10 MB with 3 files kept, read back at start so a restart does not empty the page; `main.ts` also echoes each
+  line to stdout (`docker logs`). A line carries a `component` (`server` by default, else named by the code that
+  logs it: `http`, `scan`, `transfer`, `watcher`, `tmdb`, `notify`; `app.log.child({ component })`) and optionally a
+  `job`. A request is one `http` line at `debug` (never the reads of `/api/logs` or `/api/events`).
+- **Secrets are wiped when a line is written** (`scrub`): the values the settings and the environment hold (TMDB,
+  API, Plex and Jellyfin keys, webhook addresses and headers, read at each line since the settings change) and the
+  shapes that carry one anyway (`api_key=`, `token=`, `X-Plex-Token=`, `Bearer …`). The list, the file and the
+  download are all wiped: never log a secret and count on the display to hide it.
+- **The level** is `info`, or `KINOSHELF_LOG_LEVEL`, and `PUT /api/logs/level` changes it at once until the next
+  restart: it is a way to find a problem, not a setting, so it is not in `config.yaml` (no 409 to explain).
+  A `debug` line exists only while the level records it; the page's level filter does not create any.
+- **Live view**: the payload-less `logs` event, at most twice a second, makes the page read the list again (a read
+  is the last 500 matching lines, newest first). Opening a line pauses the follow (it would be pushed down);
+  while paused, `GET /api/logs?after=<seq>&limit=1` only counts `newer`. The filters (`level`, `component`, `q`,
+  `period` as minutes) are in the URL, so a link opens the page already filtered.
+- Not done: the "connection lost" banner (the event stream does not tell the page it is down).
 
 ## History
 
