@@ -1,5 +1,7 @@
-// The stack the tests run against: the real `kinoshelf-server` (and the built web UI), with a
-// fake TMDB standing in for the network. Playwright starts this file and waits for /health.
+// The stack the tests run against: the real `kinoshelf-server` and the built web UI (or the
+// standalone binary, see the end), with a fake TMDB standing in for the network. Playwright
+// starts this file and waits for /health.
+import { spawn } from 'node:child_process';
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { join } from 'node:path';
@@ -222,5 +224,21 @@ createServer((request, response) => {
   }
 }).listen(Number(plexPort), '127.0.0.1');
 
-const serverMain = new URL('../server/dist/main.js', import.meta.url);
-await import(serverMain.href);
+// `KINOSHELF_E2E_BINARY`: the standalone binary (an absolute path) instead of the built server, so
+// the same specs prove the executable that gets released. It takes the environment as it is.
+const binary = process.env.KINOSHELF_E2E_BINARY;
+if (binary) {
+  const child = spawn(binary, ['serve'], { stdio: ['ignore', 'ignore', 'inherit'] });
+  for (const signal of ['SIGINT', 'SIGTERM']) {
+    process.on(signal, () => child.kill(signal));
+  }
+  child.on('error', (error) => {
+    console.error(`Cannot run ${binary}: ${error.message}`);
+    process.exit(1);
+  });
+  // The fake TMDB and plex.tv die with this process, which follows the binary.
+  child.on('exit', (code) => process.exit(code ?? 1));
+} else {
+  const serverMain = new URL('../server/dist/main.js', import.meta.url);
+  await import(serverMain.href);
+}
