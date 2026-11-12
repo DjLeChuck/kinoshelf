@@ -8,6 +8,7 @@ import { LibraryItemStore, type LibraryItem } from '../src/library-items.js';
 import {
   ffprobe,
   hasHdr10Plus,
+  locateFfprobe,
   ProbeQueue,
   ProbeUnavailableError,
   probePictureSize,
@@ -208,6 +209,26 @@ describe('probePictureSize', () => {
     const dir = await makeDir();
     expect(await probePictureSize(await put(join(dir, 'notes.mkv'), 'text'))).toBeUndefined();
     expect(await probePictureSize(join(dir, 'missing.mkv'))).toBeUndefined();
+  });
+});
+
+describe('locateFfprobe', () => {
+  const beside = { sea: true, execPath: '/opt/kinoshelf/kinoshelf', exists: () => true };
+
+  it('takes KINOSHELF_FFPROBE first, even in the standalone binary', () => {
+    expect(locateFfprobe({ KINOSHELF_FFPROBE: ' /usr/local/bin/ffprobe ' }, beside)).toBe(
+      '/usr/local/bin/ffprobe',
+    );
+  });
+
+  it('takes the one beside the standalone binary, when there is one', () => {
+    expect(locateFfprobe({}, beside)).toBe('/opt/kinoshelf/ffprobe');
+    expect(locateFfprobe({}, { ...beside, exists: () => false })).toBe('ffprobe');
+  });
+
+  it('never looks beside a plain node, whose folder holds no ffprobe of ours', () => {
+    expect(locateFfprobe({}, { ...beside, sea: false })).toBe('ffprobe');
+    expect(locateFfprobe({ KINOSHELF_FFPROBE: '' }, { ...beside, sea: false })).toBe('ffprobe');
   });
 });
 

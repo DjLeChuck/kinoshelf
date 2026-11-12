@@ -1,7 +1,36 @@
 import { execFile } from 'node:child_process';
+import { existsSync } from 'node:fs';
 import { stat } from 'node:fs/promises';
+import { dirname, join } from 'node:path';
+import { isSea } from 'node:sea';
 import { errnoCode, pictureSize } from '@kinoshelf/core';
 import type { LibraryItemStore } from './library-items.js';
+
+/**
+ * The `ffprobe` to run: `KINOSHELF_FFPROBE`, else the one the standalone binary ships beside
+ * itself, else the one on the `PATH`. A path that does not exist is not checked here: running it
+ * fails with ENOENT, which is how a missing `ffprobe` is told everywhere.
+ */
+export function locateFfprobe(
+  env: Readonly<Record<string, string | undefined>>,
+  { sea = isSea(), execPath = process.execPath, exists = existsSync } = {},
+): string {
+  const chosen = env.KINOSHELF_FFPROBE?.trim();
+  if (chosen) {
+    return chosen;
+  }
+  if (sea) {
+    const beside = join(dirname(execPath), 'ffprobe');
+    if (exists(beside)) {
+      return beside;
+    }
+  }
+  return 'ffprobe';
+}
+
+let located: string | undefined;
+/** Resolved once: the environment and the binary's place do not change while the server runs. */
+const ffprobeCommand = (): string => (located ??= locateFfprobe(process.env));
 
 /** Strongest first: a Dolby Vision file often carries an HDR10 base layer too. */
 export const HDR_FORMATS = ['dolby-vision', 'hdr10-plus', 'hdr10', 'hlg'] as const;
@@ -150,7 +179,7 @@ export type SizeReader = (path: string) => Promise<string | undefined>;
 export const probePictureSize: SizeReader = (path) =>
   new Promise((resolve) => {
     execFile(
-      'ffprobe',
+      ffprobeCommand(),
       [
         '-v',
         'error',
@@ -179,7 +208,7 @@ export const probePictureSize: SizeReader = (path) =>
 const run = (args: readonly string[]): Promise<string> =>
   new Promise<string>((resolve, reject) => {
     execFile(
-      'ffprobe',
+      ffprobeCommand(),
       // A file name is only ever read as a local file, never as a URL or a playlist to follow.
       ['-v', 'error', '-protocol_whitelist', 'file', '-print_format', 'json', ...args],
       { timeout: TIMEOUT_MS, maxBuffer: 4_000_000 },
