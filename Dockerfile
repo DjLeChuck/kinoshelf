@@ -3,47 +3,62 @@
 # Base images are pinned by the digest of their multi-arch index (a tag can be moved to other
 # content); the tag stays for the reader and for Dependabot, which bumps both every week.
 
+# The node binary of the target platform, without the debug symbols it never uses, and its licence
+# (the image drops it, the official tarball has it): the standalone binary is this node with the
+# application injected, so the licence must travel with it. Laid out as `bin/node` + `LICENSE`, which
+# is where `bundle.mjs` looks for it.
+FROM node:26-alpine@sha256:c6ad9e9c1d80f6eb607c26b4b0a132ff7a2344fad1c78ea3baa2a7d4c8de6d94 AS node
+RUN set -eu; \
+    apk add --no-cache binutils; \
+    mkdir -p /out/bin; \
+    strip --strip-unneeded -o /out/bin/node /usr/local/bin/node; \
+    wget -q -O /out/LICENSE "https://raw.githubusercontent.com/nodejs/node/$(node -p process.version)/LICENSE"; \
+    [ -s /out/LICENSE ]
+
+# The minimal ffprobe, built for musl on the target platform (a static glibc one would not mind, but
+# this one is built where it runs, with the script the archives use). The layer only changes with
+# the script, so the build cache keeps it.
+FROM alpine:3.24@sha256:be2656061b536c1883c4034790e21d0a09c5aaaf51968b89368a3c0371ea2c9a AS ffprobe
+RUN apk add --no-cache build-base curl xz binutils
+COPY scripts/build-ffprobe.sh /src/build-ffprobe.sh
+RUN /src/build-ffprobe.sh /out /work
+
 # The build runs on the builder's own architecture: esbuild and rollup are native binaries that
-# crash (SIGILL, exit 132) under QEMU. Only JavaScript comes out of it, so it is the same for every
-# target: SQLite is Node's own (`node:sqlite`), no native module depends on the architecture.
+# crash (SIGILL, exit 132) under QEMU. What comes out of it is JavaScript, so it is the same for every
+# target: SQLite is Node's own (`node:sqlite`), no native module depends on the architecture. The
+# standalone binary is made by injecting that JavaScript into the target's node (`KINOSHELF_SEA_NODE`),
+# which Node does from any platform.
 FROM --platform=$BUILDPLATFORM node:26-alpine@sha256:c6ad9e9c1d80f6eb607c26b4b0a132ff7a2344fad1c78ea3baa2a7d4c8de6d94 AS build
 # Node 25 dropped corepack, so pnpm is installed with npm, at the version `packageManager` pins.
 WORKDIR /app
 COPY package.json ./
 RUN npm install -g "pnpm@$(node -p "require('./package.json').packageManager.split('@')[1]")"
 COPY . .
-# Install scripts are skipped (here and in `deploy`): nothing the runtime needs is built by one.
+# Install scripts are skipped: nothing the runtime needs is built by one.
 RUN pnpm install --frozen-lockfile --ignore-scripts && pnpm build && pnpm build:web
+COPY --from=node /out /node
+RUN KINOSHELF_SEA_NODE=/node/bin/node pnpm --filter @kinoshelf/sea build
 
-# One self-contained dependency tree for the server, the CLI and the web UI, without dev tooling.
-RUN pnpm --filter @kinoshelf/image deploy --prod --legacy --ignore-scripts /out
-
-# Trim what the runtime never reads. Licenses stay: the dependencies' terms require them.
-RUN set -eu; \
-    # Type declarations, source maps and docs are for development. Docs are matched by their exact
-    # names: a looser glob such as `HISTORY*` also deletes our own `history.js`.
-    find /out/node_modules \( -name '*.d.ts' -o -name '*.d.cts' -o -name '*.d.mts' -o -name '*.map' \
-         -o -iname 'README' -o -iname 'README.md' -o -iname 'CHANGELOG' -o -iname 'CHANGELOG.md' \
-         -o -iname 'HISTORY' -o -iname 'HISTORY.md' \) -type f -delete
-
-# The node binary of the target platform, without the debug symbols it never uses.
-FROM node:26-alpine@sha256:c6ad9e9c1d80f6eb607c26b4b0a132ff7a2344fad1c78ea3baa2a7d4c8de6d94 AS node
-RUN apk add --no-cache binutils && strip --strip-unneeded -o /out-node /usr/local/bin/node
-
-# Alpine alone: the node:alpine image adds npm and yarn, which the runtime does not use.
+# Alpine alone: the node:alpine image adds npm and yarn, which the runtime does not use. The binary
+# is dynamic: it needs the C++ runtime, and `libatomic`, which is not in Alpine's base.
 FROM alpine:3.24@sha256:be2656061b536c1883c4034790e21d0a09c5aaaf51968b89368a3c0371ea2c9a
-# `ffmpeg` is there for its `ffprobe` (a video's codec and audio tracks); Kinoshelf never encodes.
-# `libatomic` is needed by the node binary (it is not in ffmpeg's dependencies).
-RUN apk add --no-cache libstdc++ libatomic su-exec ffmpeg
+RUN apk add --no-cache libstdc++ libatomic su-exec
 COPY docker/entrypoint.sh /usr/local/bin/docker-entrypoint
-COPY --from=node /out-node /usr/local/bin/node
-COPY --from=build /out /app
-# Both commands are on the PATH: `kinoshelf-server api-key create`, `kinoshelf cleanup --apply`…
+# `ffprobe` (a video's codec and audio tracks) goes beside the binary, where it looks for it;
+# Kinoshelf never encodes.
+COPY --from=build /app/packages/sea/dist/kinoshelf /opt/kinoshelf/kinoshelf
+COPY --from=ffprobe /out/ffprobe /opt/kinoshelf/ffprobe
+# The licences of what is shipped: Kinoshelf, Node, the npm packages bundled in, FFmpeg.
+COPY LICENSE /licenses/kinoshelf/LICENSE
+COPY --from=build /app/packages/sea/dist/LICENSES /licenses
+COPY --from=ffprobe /out/LICENSES/ffmpeg /licenses/ffmpeg
+# Both commands are on the PATH: `kinoshelf api-key create`, `kinoshelf cleanup --apply`…
 # They go through the entrypoint, so a `docker exec` (root) does not leave root-owned files in /config.
-RUN printf '#!/bin/sh\nexec docker-entrypoint node /app/node_modules/@kinoshelf/server/dist/main.js "$@"\n' > /usr/local/bin/kinoshelf-server \
- && printf '#!/bin/sh\nexec docker-entrypoint node /app/node_modules/@kinoshelf/cli/dist/main.js "$@"\n' > /usr/local/bin/kinoshelf \
- && chmod +x /usr/local/bin/kinoshelf-server /usr/local/bin/kinoshelf
-WORKDIR /app
+# `kinoshelf-server` is the name the image always had: alone it starts the server, with arguments
+# (`api-key create`, `notify test`) it is the binary's own command.
+RUN printf '#!/bin/sh\nexec docker-entrypoint /opt/kinoshelf/kinoshelf "$@"\n' > /usr/local/bin/kinoshelf \
+ && printf '#!/bin/sh\n[ $# -gt 0 ] || set -- serve\nexec docker-entrypoint /opt/kinoshelf/kinoshelf "$@"\n' > /usr/local/bin/kinoshelf-server \
+ && chmod +x /usr/local/bin/kinoshelf /usr/local/bin/kinoshelf-server
 ENV NODE_ENV=production \
     KINOSHELF_CONFIG_DIR=/config
 VOLUME /config

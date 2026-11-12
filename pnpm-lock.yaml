@@ -104,18 +104,6 @@ importers:
         specifier: workspace:*
         version: link:../core
 
-  packages/image:
-    dependencies:
-      '@kinoshelf/cli':
-        specifier: workspace:*
-        version: link:../cli
-      '@kinoshelf/server':
-        specifier: workspace:*
-        version: link:../server
-      '@kinoshelf/web':
-        specifier: workspace:*
-        version: link:../web
-
   packages/providers/tmdb:
     dependencies:
       '@kinoshelf/core':

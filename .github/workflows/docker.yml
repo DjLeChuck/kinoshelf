@@ -2,7 +2,13 @@ name: Docker
 
 on:
   pull_request:
-    paths: [Dockerfile, docker/**, .dockerignore, .github/workflows/docker.yml]
+    paths:
+      - Dockerfile
+      - docker/**
+      - .dockerignore
+      - scripts/build-ffprobe.sh
+      - packages/sea/**
+      - .github/workflows/docker.yml
   push:
     branches: [main]
     tags: ['v*']
@@ -19,7 +25,8 @@ jobs:
       packages: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      # QEMU only runs the cheap arm64 steps (apk, strip): the Dockerfile builds on the runner's
+      # QEMU runs the arm64 steps that are not JavaScript tooling (apk, strip, and the C build of
+      # ffprobe, cached until its script changes): the Dockerfile builds the bundle on the runner's
       # own architecture, because esbuild and rollup crash under emulation (exit 132).
       - uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
