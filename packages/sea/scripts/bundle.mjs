@@ -2,21 +2,35 @@
 // `--build` goes on to make the executable for the platform running it (the release workflow does
 // the same per target). Needs `pnpm build` and `pnpm build:web` first.
 import { execFileSync } from 'node:child_process';
-import { copyFileSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { join, relative } from 'node:path';
+import {
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
+import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { build } from 'esbuild';
+import { noticesOf } from './notices.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const webDist = join(root, '../web/dist');
 const out = join(root, 'dist');
 
-const { version } = JSON.parse(readFileSync(join(root, '../server/package.json'), 'utf8'));
+// The release workflow gives the tag's version: the packages all say 0.0.0 until one is cut.
+const version =
+  process.env.KINOSHELF_VERSION ??
+  JSON.parse(readFileSync(join(root, '../server/package.json'), 'utf8')).version;
 
 rmSync(out, { recursive: true, force: true });
 mkdirSync(out, { recursive: true });
 
-await build({
+const { metafile } = await build({
+  absWorkingDir: root,
+  metafile: true,
   entryPoints: [join(root, 'src/main.mjs')],
   outfile: join(out, 'kinoshelf.mjs'),
   bundle: true,
@@ -30,6 +44,14 @@ await build({
   define: { KINOSHELF_VERSION: JSON.stringify(version) },
   logLevel: 'warning',
 });
+
+const notices = noticesOf(metafile, root);
+if (notices.unlicensed.length > 0) {
+  // A package with no licence at all cannot be shipped: found out here, not by a user.
+  throw new Error(`no licence declared by: ${notices.unlicensed.join(', ')}`);
+}
+mkdirSync(join(out, 'LICENSES'), { recursive: true });
+writeFileSync(join(out, 'LICENSES/third-party.txt'), notices.text);
 
 /** Every file of the web build, under `web/` (where `findWebRoot` looks). */
 function assetsOf(dir) {
@@ -66,9 +88,29 @@ if (process.argv.includes('--build')) {
   } else {
     copyFileSync(process.execPath, node);
   }
+  // macOS refuses to modify a signed binary, and to run an unsigned one: the signature goes before
+  // the injection, and an ad hoc one (no certificate) comes back after it.
+  if (process.platform === 'darwin') {
+    execFileSync('codesign', ['--remove-signature', node]);
+  }
   execFileSync(process.execPath, ['--build-sea', join(out, 'sea-config.json')], {
     cwd: out,
     stdio: 'inherit',
   });
+  if (process.platform === 'darwin') {
+    execFileSync('codesign', ['--sign', '-', join(out, 'kinoshelf')]);
+  }
   console.log(`executable: ${join(out, 'kinoshelf')}`);
+
+  // Node's licence (and those of what it bundles) is at the root of its official tarball; the
+  // archive has to carry it. Some distributions (nixpkgs) leave it out: said, not guessed.
+  const licenseOf = join(dirname(dirname(process.execPath)), 'LICENSE');
+  if (existsSync(licenseOf)) {
+    mkdirSync(join(out, 'LICENSES/node'), { recursive: true });
+    copyFileSync(licenseOf, join(out, 'LICENSES/node/LICENSE'));
+  } else {
+    console.warn(
+      `warning: no Node LICENSE at ${licenseOf}; an archive cannot be made from this build`,
+    );
+  }
 }

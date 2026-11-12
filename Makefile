@@ -10,11 +10,12 @@ FFPROBE_DIR := .work/ffprobe-out
 SEA_DIST := packages/sea/dist
 SEA_CONFIG ?= .work/sea-config
 SEA_PORT ?= 18484
+VERSION ?= 0.0.0-dev
 
 .DEFAULT_GOAL := help
 
 .PHONY: help hooks install build build-web dev-server dev-web typecheck lint format format-check test test-corpus \
-        test-e2e test-live corpus-report corpus-record check docker-build ffprobe sea sea-run players-up players-down players-seed flake-check clean
+        test-e2e test-live corpus-report corpus-record check docker-build ffprobe sea sea-run test-sea sea-archive smoke-sea players-up players-down players-seed flake-check clean
 
 help: ## List the targets
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}'
@@ -74,7 +75,17 @@ ffprobe: $(FFPROBE_DIR)/ffprobe ## Build the minimal ffprobe into .work/ffprobe-
 sea: build build-web ffprobe ## Build the standalone binary, with its ffprobe, in packages/sea/dist
 	$(PNPM) --filter @kinoshelf/sea build
 	cp $(FFPROBE_DIR)/ffprobe $(SEA_DIST)/ffprobe
-	cp -r $(FFPROBE_DIR)/LICENSES $(SEA_DIST)/LICENSES
+	mkdir -p $(SEA_DIST)/LICENSES
+	cp -r $(FFPROBE_DIR)/LICENSES/. $(SEA_DIST)/LICENSES/
+
+test-sea: sea ## End-to-end tests against the standalone binary (needs a browser, like test-e2e)
+	KINOSHELF_E2E_BINARY=$(abspath $(SEA_DIST))/kinoshelf $(PNPM) --filter @kinoshelf/e2e test
+
+sea-archive: sea ## Pack the release archive (VERSION=…); needs a Node with its LICENSE file: nodejs.org's, not nixpkgs'
+	scripts/package-sea.sh $(VERSION)
+
+smoke-sea: sea-archive ## Start the archive in debian:12-slim and ubuntu:22.04 (Docker); the Node must be one those images can run
+	scripts/smoke-sea.sh $(SEA_DIST)/kinoshelf-$(VERSION)-*.tar.xz
 
 sea-run: sea ## Run the standalone binary on :SEA_PORT with a throwaway config in SEA_CONFIG (.work/sea-config)
 	@echo "API key: KINOSHELF_CONFIG_DIR=$(SEA_CONFIG) $(SEA_DIST)/kinoshelf api-key create"
