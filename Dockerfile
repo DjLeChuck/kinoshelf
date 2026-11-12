@@ -18,7 +18,7 @@ RUN set -eu; \
 # The minimal ffprobe, built for musl on the target platform (a static glibc one would not mind, but
 # this one is built where it runs, with the script the archives use). The layer only changes with
 # the script, so the build cache keeps it.
-FROM alpine:3.24@sha256:be2656061b536c1883c4034790e21d0a09c5aaaf51968b89368a3c0371ea2c9a AS ffprobe
+FROM alpine:3.24@sha256:f59abe656b692d901e184be3445e084786602108599d2a51d229c0f5a48c71bf AS ffprobe
 RUN apk add --no-cache build-base curl xz binutils
 COPY scripts/build-ffprobe.sh /src/build-ffprobe.sh
 RUN /src/build-ffprobe.sh /out /work
@@ -41,7 +41,7 @@ RUN KINOSHELF_SEA_NODE=/node/bin/node pnpm --filter @kinoshelf/sea build
 
 # Alpine alone: the node:alpine image adds npm and yarn, which the runtime does not use. The binary
 # is dynamic: it needs the C++ runtime, and `libatomic`, which is not in Alpine's base.
-FROM alpine:3.24@sha256:be2656061b536c1883c4034790e21d0a09c5aaaf51968b89368a3c0371ea2c9a
+FROM alpine:3.24@sha256:f59abe656b692d901e184be3445e084786602108599d2a51d229c0f5a48c71bf
 RUN apk add --no-cache libstdc++ libatomic su-exec
 COPY docker/entrypoint.sh /usr/local/bin/docker-entrypoint
 # `ffprobe` (a video's codec and audio tracks) goes beside the binary, where it looks for it;
