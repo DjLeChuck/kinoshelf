@@ -11,6 +11,7 @@
   import Login from './pages/Login.svelte';
   import NotFound from './pages/NotFound.svelte';
   import Settings from './pages/Settings.svelte';
+  import System from './pages/System.svelte';
 
   let failure = $state<unknown>(undefined);
 
@@ -48,6 +49,8 @@
         <History />
       {:else if router.route?.id === 'settings'}
         <Settings />
+      {:else if router.route?.id === 'system'}
+        <System />
       {:else}
         <NotFound />
       {/if}

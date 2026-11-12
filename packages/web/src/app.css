@@ -293,6 +293,11 @@ input[type='radio']:disabled {
   background: var(--danger-bg);
 }
 
+.chip-info {
+  color: var(--info);
+  background: var(--info-bg);
+}
+
 .chip-neutral {
   color: var(--muted);
   background: var(--neutral-bg);

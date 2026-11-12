@@ -9,6 +9,7 @@ import type { AddressPreview, ImageListing } from './images.js';
 import type { PlexPin, PlexServer } from './plex.js';
 import type { Settings } from './settings.js';
 import type { Library } from './libraries.js';
+import type { LogPage } from './logs.js';
 import type { ItemDetail, ItemsPage, RunReport, Show, ShowDetail } from './library-items.js';
 
 type Json<R> = R extends { content: { 'application/json': infer B } } ? B : never;
@@ -47,6 +48,7 @@ export type Contract = [
   Expect<Fits<Got<'/api/libraries/{id}/shows/{tmdbId}/images'>, ImageListing>>,
   Expect<Fits<Posted<'/api/libraries/{id}/items/{itemId}/images/preview', 200>, AddressPreview>>,
   Expect<Fits<Posted<'/api/libraries/{id}/shows/{tmdbId}/images/preview', 200>, AddressPreview>>,
+  Expect<Fits<Got<'/api/logs'>, LogPage>>,
   Expect<Fits<Got<'/api/batches/{id}'>, BatchDetail>>,
   Expect<Fits<Posted<'/api/libraries/{id}/execute', 200>, RunReport>>,
   Expect<Fits<Posted<'/api/entries/{id}/preview', 200>, Preview>>,

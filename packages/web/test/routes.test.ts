@@ -22,6 +22,8 @@ describe('matchRoute', () => {
     ['/history/', 'history'],
     ['/history/3f2a', 'history'],
     ['/settings', 'settings'],
+    ['/system', 'system'],
+    ['/system/', 'system'],
   ])('%s is %s', (path, id) => {
     expect(matchRoute(path)?.id).toBe(id);
   });
@@ -33,9 +35,9 @@ describe('matchRoute', () => {
     },
   );
 
-  it('has three entries, and keeps only the settings while the welcome page is not left', () => {
-    expect(ROUTES.map((r) => r.id)).toEqual(['libraries', 'history', 'settings']);
-    expect(ROUTES.filter((r) => r.firstRun).map((r) => r.id)).toEqual(['settings']);
+  it('has four entries, and keeps only the settings and the system while the welcome page is not left', () => {
+    expect(ROUTES.map((r) => r.id)).toEqual(['libraries', 'history', 'settings', 'system']);
+    expect(ROUTES.filter((r) => r.firstRun).map((r) => r.id)).toEqual(['settings', 'system']);
   });
 
   it('names every page in both languages', () => {

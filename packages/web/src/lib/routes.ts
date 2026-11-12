@@ -1,6 +1,6 @@
 import type { MessageKey } from '@kinoshelf/i18n';
 
-export type RouteId = 'libraries' | 'history' | 'settings';
+export type RouteId = 'libraries' | 'history' | 'settings' | 'system';
 
 export interface RouteDefinition {
   readonly id: RouteId;
@@ -15,6 +15,8 @@ export const ROUTES: readonly RouteDefinition[] = [
   { id: 'libraries', path: '/libraries', label: 'web.nav.libraries', firstRun: false },
   { id: 'history', path: '/history', label: 'web.nav.history', firstRun: false },
   { id: 'settings', path: '/settings', label: 'web.nav.settings', firstRun: true },
+  // Kept during the welcome: a setup that fails (a TMDB key, a folder) is what its log explains.
+  { id: 'system', path: '/system', label: 'web.nav.system', firstRun: true },
 ];
 
 /** `/history/<id>`: a link to one line of the history (a batch or a job), which no menu entry points at. */

@@ -9,7 +9,7 @@ test('breaks no rule of its own content security policy', async ({ page }) => {
     }
   });
   await signIn(page);
-  for (const path of ['/history', '/settings', '/arrivals', '/libraries']) {
+  for (const path of ['/history', '/settings', '/arrivals', '/libraries', '/system']) {
     await page.goto(path);
     await expect(page.getByRole('heading', { level: 1 }).first()).toBeVisible();
   }
