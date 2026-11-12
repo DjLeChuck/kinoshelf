@@ -32,6 +32,18 @@
             PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS = "true";
           };
         };
+
+        # `nix develop .#ffprobe -c scripts/build-ffprobe.sh <dir>`: what building the small
+        # static ffprobe takes (a compiler, and libc.a on Linux), kept out of the default shell.
+        ffprobe = pkgs.mkShell {
+          packages = [
+            pkgs.gnumake
+            pkgs.gcc
+            pkgs.curl
+            pkgs.xz
+          ]
+          ++ nixpkgs.lib.optional pkgs.stdenv.hostPlatform.isLinux pkgs.glibc.static;
+        };
       });
     };
 }
