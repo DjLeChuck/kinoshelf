@@ -63,6 +63,7 @@
             }}
           >
             <img src={logo} alt="" />
+            <span class="tag" aria-hidden="true">{t('web.images.change-logo')}</span>
           </button>
         {:else}
           <button
@@ -181,6 +182,27 @@
     opacity: 0;
   }
 
+  /* Beside the logo rather than over it, which would hide what is being changed. */
+  .tag {
+    position: absolute;
+    left: 100%;
+    top: 50%;
+    transform: translateY(-50%);
+    margin-left: 8px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    padding: 0 14px;
+    border-radius: 22px;
+    background: rgb(20 22 27 / 0.88);
+    font-weight: 600;
+    font-size: 14px;
+    white-space: nowrap;
+    opacity: 0;
+  }
+
+  .zone:hover .tag,
+  .zone:focus-visible .tag,
   .zone:hover .veil,
   .zone:focus-visible .veil,
   .zone:hover .pill,
