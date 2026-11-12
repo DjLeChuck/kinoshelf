@@ -549,3 +549,23 @@ describe('options and configuration', () => {
     expect(lines.at(-1)).not.toMatch(/^progress:\d/);
   });
 });
+
+describe('--version and the help of the standalone binary', () => {
+  it('prints the version it was given', async () => {
+    const h = await harness({}, { version: '1.2.3' });
+    expect(await h.cli('--version')).toBe(0);
+    expect(h.out.join('\n')).toBe('1.2.3');
+  });
+
+  it('lists the server commands only when the binary also starts the server', async () => {
+    const standalone = await harness({}, { standalone: true });
+    await standalone.cli('--help');
+    for (const command of ['serve', 'api-key', 'notify']) {
+      expect(standalone.out.join('\n')).toContain(command);
+    }
+
+    const plain = await harness();
+    await plain.cli('--help');
+    expect(plain.out.join('\n')).not.toMatch(/\bserve\b|api-key|notify/);
+  });
+});

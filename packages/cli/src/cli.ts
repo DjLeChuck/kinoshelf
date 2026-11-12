@@ -57,6 +57,13 @@ export interface CliDeps {
   readonly fetch?: typeof fetch;
   /** Replaces the clock, so a test can age files without waiting. */
   readonly now?: () => number;
+  /** What `--version` prints. */
+  readonly version?: string;
+  /**
+   * Running as the standalone binary, which also starts the server: its commands are listed in the
+   * help (they are answered before the CLI is reached, see `packages/sea`).
+   */
+  readonly standalone?: boolean;
 }
 
 interface RunOptions extends CommonOptions {
@@ -275,6 +282,7 @@ function buildProgram(context: Context, exit: { code: number }): Command {
   const { t } = context;
   const program = new Command('kinoshelf')
     .description(t('help.description'))
+    .version(context.deps.version ?? '0.0.0', '-V, --version', t('help.opt.version'))
     .option('--lang <fr|en>', t('help.opt.lang'))
     .option('--config-dir <dir>', t('help.opt.config-dir'))
     .exitOverride()
@@ -354,6 +362,12 @@ function buildProgram(context: Context, exit: { code: number }): Command {
     .action((folders: string[], options: { olderThan?: string; apply?: boolean; json?: boolean }) =>
       act(() => runCleanup(folders, options, context))(),
     );
+
+  if (context.deps.standalone) {
+    program.command('serve').description(t('help.serve'));
+    program.command('api-key').description(t('help.api-key'));
+    program.command('notify').description(t('help.notify'));
+  }
 
   return program;
 }
