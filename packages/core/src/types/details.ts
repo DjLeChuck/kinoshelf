@@ -60,8 +60,36 @@ export interface MovieDetails extends DetailsBase {
   readonly runtime?: number;
   readonly directors: readonly string[];
   readonly writers: readonly string[];
-  /** The collection the movie belongs to (`Kingsman Collection`). */
-  readonly collection?: { readonly name: string; readonly overview?: string };
+  /**
+   * The collection the movie is filed under (`Kingsman Collection`): the provider's, unless the
+   * owner overrode it (`withCollection`). It is what the NFO's `<set>` says.
+   */
+  readonly collection?: MovieCollection;
+}
+
+/**
+ * A collection as a movie's metadata names it. `id` is the provider's: a collection the owner
+ * made up (`Univers Marvel`) has none, and the NFO then carries the name alone.
+ */
+export interface MovieCollection {
+  readonly id?: ExternalId;
+  readonly name: string;
+  readonly overview?: string;
+}
+
+/** A movie of a provider's collection. */
+export interface CollectionPart {
+  readonly id: ExternalId;
+  readonly title: string;
+  readonly year?: number;
+}
+
+/** A provider's collection with the movies it lists, so a library can tell how complete it is. */
+export interface CollectionInfo {
+  readonly id: ExternalId;
+  readonly name: string;
+  readonly overview?: string;
+  readonly parts: readonly CollectionPart[];
 }
 
 export interface SeasonSummary {

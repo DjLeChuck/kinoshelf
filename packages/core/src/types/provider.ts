@@ -2,6 +2,7 @@ import type {
   ImageCandidate,
   ImageSize,
   Rating,
+  CollectionInfo,
   MovieDetails,
   SeriesDetails,
   WorkImages,
@@ -80,6 +81,11 @@ export interface MetadataProvider {
   /** Full record for a metadata file; `null` if unknown (any other failure throws). */
   getMovieDetails(id: ExternalId, language?: string): Promise<MovieDetails | null>;
   getSeriesDetails(id: ExternalId, language?: string): Promise<SeriesDetails | null>;
+  /**
+   * A collection with the movies it lists; `null` if unknown. `id` is the one a movie's
+   * `collection` carries, not a movie's.
+   */
+  getCollection(id: ExternalId, language?: string): Promise<CollectionInfo | null>;
   /**
    * The images offered for a work in `language` (ISO 639-1), textless and English, in the
    * provider's order; `null` if the work is unknown. Only lists: nothing is downloaded.

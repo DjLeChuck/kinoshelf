@@ -9,6 +9,7 @@ import {
   renderProfileTemplate,
   type TemplateVariables,
 } from '../profiles/template.js';
+import type { CollectionOverride } from '../collections.js';
 import type { Details, ImageSize } from '../types/details.js';
 import type { ErrorInfo } from '../types/errors.js';
 import type { ParsedMedia } from '../types/media.js';
@@ -29,6 +30,8 @@ export interface PlanInput {
    * the file is still renamed, just with nothing beside it.
    */
   readonly details?: Details;
+  /** The owner's choice of collection for a movie, over the one the details name. */
+  readonly collectionOverride?: CollectionOverride;
   /** The provider's record of the file's episodes (also where `{episodeTitle}` comes from). */
   readonly episodes?: readonly EpisodeInfo[];
   /**

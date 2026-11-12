@@ -1,6 +1,8 @@
 import { Matcher } from '../matching/matcher.js';
 import type { MatchingConfig } from '../matching/config.js';
 import { createPlan, type PlanInput } from '../planning/planner.js';
+import type { CollectionOverride } from '../collections.js';
+import type { CollectionInfo } from '../types/details.js';
 import type { MatchOutcome } from '../types/matching.js';
 import type { ParsedMedia } from '../types/media.js';
 import type { TransferMode } from '../types/operation.js';
@@ -43,6 +45,8 @@ export interface AnalysisEntry {
   readonly classification: Classification;
   /** The plan item, for matched files. */
   readonly item?: PlanItem;
+  /** A matched movie's collection at the provider (see `LoadedMetadata.collection`). */
+  readonly collection?: CollectionInfo;
 }
 
 export interface Analysis {
@@ -64,6 +68,11 @@ export interface AnalyzeOptions {
    */
   readonly forced?: Candidate;
   readonly sidecarExtensions?: readonly string[];
+  /**
+   * What the owner decided about the collection of a matched movie, if anything. Read when the
+   * NFO is written, so a refresh of the provider's record never overwrites it.
+   */
+  readonly collectionOverride?: (candidate: Candidate) => CollectionOverride | undefined;
   /** Reads a picture size from a file, for a name that says none (see `PlannerOptions.sizeOf`). */
   readonly sizeOf?: (path: string) => Promise<string | undefined>;
   /** Whether a file is one Kinoshelf wrote and left alone (see `PlannerOptions.madeByUs`). */
@@ -89,14 +98,14 @@ const yieldToEventLoop = (): Promise<void> => new Promise((resolve) => setImmedi
 async function mapLimited<T, R>(
   items: readonly T[],
   limit: number,
-  task: (item: T) => Promise<R>,
+  task: (item: T, index: number) => Promise<R>,
 ): Promise<R[]> {
   const results = new Array<R>(items.length);
   let next = 0;
   const worker = async (): Promise<void> => {
     while (next < items.length) {
       const index = next++;
-      results[index] = await task(items[index] as T);
+      results[index] = await task(items[index] as T, index);
     }
   };
   await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
@@ -240,10 +249,13 @@ export async function analyze(
       picks.push({ parsed: entry.parsed, candidate: entry.outcome.best.candidate });
     }
   }
-  const inputs = await mapLimited(picks, concurrency, async (pick): Promise<PlanInput> => ({
-    ...pick,
-    ...(await loader.forCandidate(pick.candidate, pick.parsed)),
-  }));
+  const collections: (CollectionInfo | undefined)[] = [];
+  const inputs = await mapLimited(picks, concurrency, async (pick, index): Promise<PlanInput> => {
+    const { collection, ...loaded } = await loader.forCandidate(pick.candidate, pick.parsed);
+    collections[index] = collection;
+    const override = options.collectionOverride?.(pick.candidate);
+    return { ...pick, ...loaded, ...(override && { collectionOverride: override }) };
+  });
   const plan = await createPlan(inputs, {
     profile: options.profile,
     destinationRoot: options.destinationRoot,
@@ -265,11 +277,17 @@ export async function analyze(
         classification: entry.outcome.status === 'ambiguous' ? 'ambiguous' : 'unrecognized',
       };
     }
+    const collection = collections[cursor];
     const item = plan.items[cursor++];
     if (!item) {
       throw new Error('plan items out of step with matched files');
     }
-    return { ...entry, classification: classifyItem(item), item };
+    return {
+      ...entry,
+      classification: classifyItem(item),
+      item,
+      ...(collection && { collection }),
+    };
   });
 
   return { entries, plan };

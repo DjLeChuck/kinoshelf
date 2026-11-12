@@ -7,6 +7,7 @@ import {
   buildProfile,
   MetadataLoader,
   parseProfile,
+  type CollectionOverride,
   type ExternalId,
   type ParsedMedia,
   type Profile,
@@ -60,6 +61,52 @@ describe('MetadataLoader', () => {
     expect(loaded.details?.kind).toBe('movie');
     expect(loaded.episodes).toBeUndefined();
     expect(provider.calls.map((c) => c.method)).toEqual(['getMovieDetails']);
+  });
+
+  it('loads the collection of a movie once for the whole saga and gives the NFO its overview', async () => {
+    const a = movie(1, 'Dune', 2021);
+    const b = movie(2, 'Dune 2', 2024);
+    const provider = new FakeProvider([a, b]);
+    const ref = { id: { provider: 'fake', id: 9 }, name: 'Dune - Saga' };
+    provider.movieCollections.set(1, ref);
+    provider.movieCollections.set(2, ref);
+    provider.collectionInfos.set(9, {
+      id: ref.id,
+      name: 'Dune - Saga',
+      overview: 'Spice.',
+      parts: [
+        { id: a.id, title: 'Dune', year: 2021 },
+        { id: b.id, title: 'Dune 2', year: 2024 },
+      ],
+    });
+    const loader = new MetadataLoader({ provider, profile: parseProfile(WRITING) });
+    const [first, second] = await Promise.all([
+      loader.forCandidate(a, episode(1, [1])),
+      loader.forCandidate(b, episode(1, [1])),
+    ]);
+    expect(provider.calls.filter((c) => c.method === 'getCollection')).toHaveLength(1);
+    expect(first.collection?.parts).toHaveLength(2);
+    expect(second.details?.kind === 'movie' && second.details.collection).toEqual({
+      ...ref,
+      overview: 'Spice.',
+    });
+  });
+
+  it('asks for no collection for a movie that has none', async () => {
+    const provider = new FakeProvider([movie(1, 'Dune', 2021)]);
+    const loader = new MetadataLoader({ provider, profile: parseProfile(WRITING) });
+    const loaded = await loader.forCandidate(movie(1, 'Dune', 2021), episode(1, [1]));
+    expect(loaded.collection).toBeUndefined();
+    expect(provider.calls.map((c) => c.method)).toEqual(['getMovieDetails']);
+  });
+
+  it('keeps the movie when the provider does not know its collection', async () => {
+    const provider = new FakeProvider([movie(1, 'Dune', 2021)]);
+    provider.movieCollections.set(1, { id: { provider: 'fake', id: 9 }, name: 'Dune - Saga' });
+    const loader = new MetadataLoader({ provider, profile: parseProfile(WRITING) });
+    const loaded = await loader.forCandidate(movie(1, 'Dune', 2021), episode(1, [1]));
+    expect(loaded.collection).toBeUndefined();
+    expect(loaded.details?.kind === 'movie' && loaded.details.collection?.name).toBe('Dune - Saga');
   });
 
   it('costs one details request and one season request for many episodes', async () => {
@@ -165,6 +212,36 @@ describe('analyze with a profile that writes NFO and artwork', () => {
     expect(written).toContainEqual(['write-file', join(lib, 'Dune (2021)', 'movie.nfo')]);
     expect(written).toContainEqual(['download', join(lib, 'Dune (2021)', 'poster.jpg')]);
     expect(written).toContainEqual(['download', join(lib, 'Dune (2021)', 'fanart.jpg')]);
+  });
+
+  it("writes the collection the owner chose instead of the provider's", async () => {
+    const src = await makeDir();
+    const lib = await makeDir();
+    await put(join(src, 'Dune.2021.2160p.mkv'));
+    const provider = new FakeProvider([movie(438631, 'Dune', 2021)]);
+    provider.movieCollections.set(438631, {
+      id: { provider: 'fake', id: 9 },
+      name: 'Dune - Saga',
+    });
+    const nfoOf = async (override?: CollectionOverride) => {
+      const result = await analyze(await discoverVideos(src), {
+        parser: new GuessitParser(),
+        provider,
+        profile: parseProfile(WRITING),
+        destinationRoot: lib,
+        mode: 'copy',
+        ...(override && { collectionOverride: () => override }),
+      });
+      const write = result.plan.items[0]?.operations.find(
+        (op) => op.type === 'write-file' && op.destination.endsWith('movie.nfo'),
+      );
+      return write?.type === 'write-file' ? write.content : '';
+    };
+    expect(await nfoOf()).toContain('<set tmdbcolid="9">');
+    expect(await nfoOf({ mode: 'custom', name: 'Univers' })).toContain(
+      '<set>\n        <name>Univers</name>',
+    );
+    expect(await nfoOf({ mode: 'none' })).not.toContain('<set');
   });
 
   it('plans one show NFO and one show poster for a batch of episodes', async () => {

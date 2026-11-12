@@ -1,6 +1,7 @@
 import { candidateKey } from '../matching/score.js';
 import { parseTemplate, templateVariables } from '../profiles/template.js';
-import type { Details } from '../types/details.js';
+import type { CollectionInfo, Details, MovieDetails } from '../types/details.js';
+import type { ExternalId } from '../types/media.js';
 import type { ParsedMedia } from '../types/media.js';
 import type { Profile } from '../types/profile.js';
 import type { Candidate, EpisodeInfo, MetadataProvider, SeasonInfo } from '../types/provider.js';
@@ -15,6 +16,11 @@ export interface MetadataLoaderOptions {
 /** What the planner needs to write a file's companions (see `PlanInput`). */
 export interface LoadedMetadata {
   readonly details?: Details;
+  /**
+   * The provider's collection of a movie, with the movies it lists. It is the provider's even when
+   * the owner overrode it: the library still needs it to count what is missing.
+   */
+  readonly collection?: CollectionInfo;
   readonly episodes?: readonly EpisodeInfo[];
 }
 
@@ -29,6 +35,7 @@ export interface LoadedMetadata {
 export class MetadataLoader {
   private readonly details = new Map<string, Promise<Details | null>>();
   private readonly seasons = new Map<string, Promise<SeasonInfo | null>>();
+  private readonly collections = new Map<string, Promise<CollectionInfo | null>>();
 
   constructor(private readonly options: MetadataLoaderOptions) {}
 
@@ -56,12 +63,13 @@ export class MetadataLoader {
     if (!this.needsMetadata) {
       return {};
     }
-    const details = this.writesCompanions ? await this.detailsOf(candidate) : null;
+    const loaded = this.writesCompanions ? await this.detailsOf(candidate) : null;
+    const { details = null, collection } = loaded ?? {};
     if (details === null && !this.namesEpisodes) {
       return {};
     }
     if (candidate.kind !== 'series' || parsed.season === undefined) {
-      return details ? { details } : {};
+      return details ? { details, ...(collection && { collection }) } : {};
     }
     const season = await this.seasonOf(candidate, parsed.season);
     const episodes = (season?.episodes ?? []).filter((info) =>
@@ -70,13 +78,39 @@ export class MetadataLoader {
     return { ...(details && { details }), episodes };
   }
 
-  private detailsOf(candidate: Candidate): Promise<Details | null> {
+  private async detailsOf(
+    candidate: Candidate,
+  ): Promise<{ details: Details; collection?: CollectionInfo } | null> {
     const { provider, language } = this.options;
     const key = `${candidateKey(candidate)}:${language ?? ''}`;
-    return this.shared(this.details, key, () =>
+    const details = await this.shared(this.details, key, () =>
       candidate.kind === 'movie'
         ? provider.getMovieDetails(candidate.id, language)
         : provider.getSeriesDetails(candidate.id, language),
+    );
+    if (details?.kind !== 'movie' || !details.collection?.id) {
+      return details && { details };
+    }
+    // The movie names its collection but not its overview, nor the movies it lists: one request
+    // per collection, shared by the movies of the saga.
+    const collection = await this.collectionOf(details.collection.id);
+    if (!collection) {
+      return { details };
+    }
+    const named: MovieDetails = {
+      ...details,
+      collection: {
+        ...details.collection,
+        ...(collection.overview !== undefined && { overview: collection.overview }),
+      },
+    };
+    return { details: named, collection };
+  }
+
+  private collectionOf(id: ExternalId): Promise<CollectionInfo | null> {
+    const { provider, language } = this.options;
+    return this.shared(this.collections, `${id.provider}:${String(id.id)}:${language ?? ''}`, () =>
+      provider.getCollection(id, language),
     );
   }
 

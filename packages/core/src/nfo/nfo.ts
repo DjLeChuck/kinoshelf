@@ -175,6 +175,10 @@ export function renderMovieNfo(details: MovieDetails, options: NfoOptions = {}):
           ? [
               {
                 tag: 'set',
+                // Kodi's own attribute, which Plex's NFO agent and Jellyfin read to tell two
+                // collections of one name apart. The short form (`<set>Name</set>`) is left
+                // out: Plex's agent does not read it.
+                ...(collection.id && { attributes: { tmdbcolid: String(collection.id.id) } }),
                 children: [
                   ...leaf('name', collection.name),
                   ...leaf('overview', collection.overview),

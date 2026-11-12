@@ -1,4 +1,6 @@
 import { join } from 'node:path';
+import { withCollection } from '../collections.js';
+import type { CollectionOverride } from '../collections.js';
 import { renderEpisodeNfo, renderMovieNfo, renderSeriesNfo } from '../nfo/nfo.js';
 import { parseTemplate, renderProfileTemplate, templateVariables } from '../profiles/template.js';
 import type { Details, ImageSize } from '../types/details.js';
@@ -11,6 +13,8 @@ export interface CompanionInput {
   readonly parsed: ParsedMedia;
   /** What the provider knows of the work; without it nothing can be written. */
   readonly details?: Details;
+  /** The owner's choice of collection for a movie, over the one the details name. */
+  readonly collectionOverride?: CollectionOverride;
   /** The episodes of the file, as the provider lists them. */
   readonly episodes?: readonly EpisodeInfo[];
 }
@@ -91,7 +95,7 @@ export function companionOperations(
         write(
           place.workFolders,
           render(nfo.movie, { file: place.stem }),
-          renderMovieNfo(details, nfoOptions),
+          renderMovieNfo(withCollection(details, input.collectionOverride), nfoOptions),
           templateVariables(parseTemplate(nfo.movie)).includes('file'),
         );
       }

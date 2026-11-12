@@ -47,6 +47,7 @@ export const fakeProvider: MetadataProvider = {
   getSeason: (id, season) => base.getSeason(id, season),
   getMovieDetails: (id) => base.getMovieDetails(id),
   getSeriesDetails: (id) => base.getSeriesDetails(id),
+  getCollection: (id) => base.getCollection(id),
   listImages: (id) => base.listImages(id),
   listEpisodeImages: (id, season) => base.listEpisodeImages(id, season),
   imageUrl: (path, size) => base.imageUrl(path, size),

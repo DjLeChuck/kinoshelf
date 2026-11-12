@@ -6,6 +6,7 @@ import {
   renderMovieNfo,
   renderProfileTemplate,
   renderSeriesNfo,
+  withCollection,
 } from '../src/index.js';
 import type { EpisodeInfo, MovieDetails, SeriesDetails } from '../src/index.js';
 
@@ -33,7 +34,7 @@ const movie: MovieDetails = {
   certification: { country: 'FR', value: '12' },
   directors: ['Denis Villeneuve'],
   writers: ['Jon Spaihts', 'Eric Roth'],
-  collection: { name: 'Dune Collection', overview: 'Spice.' },
+  collection: { id: { provider: 'tmdb', id: 726871 }, name: 'Dune Collection', overview: 'Spice.' },
 };
 
 const series: SeriesDetails = {
@@ -79,6 +80,30 @@ function at(node: unknown, ...path: (string | number)[]): unknown {
   return current;
 }
 
+describe('the collection of a movie', () => {
+  const setOf = (details: MovieDetails) => {
+    const xml = renderMovieNfo(details);
+    return { xml, set: /<set[\s\S]*?<\/set>/.exec(xml)?.[0] };
+  };
+
+  it("writes a provider's collection with its id, in the long form", () => {
+    const { set } = setOf(movie);
+    expect(set).toContain('<set tmdbcolid="726871">');
+    expect(set).toContain('<name>Dune Collection</name>');
+    expect(set).toContain('<overview>Spice.</overview>');
+  });
+
+  it("writes the owner's own collection with no id", () => {
+    const { set } = setOf({ ...movie, collection: { name: 'Univers Marvel' } });
+    expect(set).toBe('<set>\n        <name>Univers Marvel</name>\n    </set>');
+  });
+
+  it('writes no <set> without a collection, and never the short form', () => {
+    expect(renderMovieNfo(withCollection(movie, { mode: 'none' }))).not.toContain('<set');
+    expect(renderMovieNfo(movie)).not.toMatch(/<set>[^<]+<\/set>/);
+  });
+});
+
 describe('NFO writer', () => {
   it('writes a movie', () => {
     expect(renderMovieNfo(movie)).toBe(
@@ -102,7 +127,7 @@ describe('NFO writer', () => {
     <genre>Science Fiction</genre>
     <genre>Adventure</genre>
     <country>United States of America</country>
-    <set>
+    <set tmdbcolid="726871">
         <name>Dune Collection</name>
         <overview>Spice.</overview>
     </set>

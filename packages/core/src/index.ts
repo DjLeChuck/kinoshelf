@@ -11,6 +11,7 @@ export type * from './types/errors.js';
 export { ERROR_CODES, type ErrorCode } from './error-codes.js';
 export { errnoCode, KinoshelfError } from './errors.js';
 export { packageVersion } from './version.js';
+export { effectiveCollection, withCollection, type CollectionOverride } from './collections.js';
 export { loadProfileFile, parseProfile } from './profiles/loader.js';
 export {
   buildProfile,
@@ -57,6 +58,11 @@ export { executePlan, type ExecuteOptions } from './execution/executor.js';
 export { madeByUs } from './execution/prune.js';
 export { fetchImage, type ImageFetcher } from './execution/download.js';
 export { replaceImage, type ReplaceImageOptions } from './execution/replace.js';
+export {
+  rewriteNfo,
+  type RewriteNfoOptions,
+  type RewriteNfoResult,
+} from './execution/rewrite-nfo.js';
 export { MemoryJournal } from './journal/memory-journal.js';
 export { SqliteJournal } from './journal/sqlite-journal.js';
 export { undoBatch, undoLastBatch, type UndoEntryResult, type UndoResult } from './journal/undo.js';

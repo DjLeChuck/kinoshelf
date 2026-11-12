@@ -3,6 +3,8 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import type {
   Candidate,
+  CollectionInfo,
+  MovieCollection,
   ExternalId,
   ImageCandidate,
   ImageSize,
@@ -58,6 +60,9 @@ export const season = (number: number, episodes: number[]): SeasonInfo => ({
 /** Provider double: a search answers with `catalog` entries of the right kind, filtered by `answer`. */
 export class FakeProvider implements MetadataProvider {
   readonly name = 'fake';
+  /** Collections by movie id and by collection id, for the tests that need them. */
+  readonly movieCollections = new Map<number, MovieCollection>();
+  readonly collectionInfos = new Map<number, CollectionInfo>();
   readonly calls: { method: string; query?: SearchQuery; id?: ExternalId; season?: number }[] = [];
 
   constructor(
@@ -111,9 +116,17 @@ export class FakeProvider implements MetadataProvider {
             directors: [],
             writers: [],
             ...(found.year !== undefined && { releaseDate: `${found.year}-01-01` }),
+            ...(this.movieCollections.has(id.id) && {
+              collection: this.movieCollections.get(id.id) as MovieCollection,
+            }),
           }
         : null,
     );
+  }
+
+  getCollection(id: ExternalId): Promise<CollectionInfo | null> {
+    this.calls.push({ method: 'getCollection', id });
+    return Promise.resolve(this.collectionInfos.get(id.id) ?? null);
   }
 
   getSeriesDetails(id: ExternalId): Promise<SeriesDetails | null> {
