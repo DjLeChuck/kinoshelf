@@ -419,7 +419,38 @@ format follows the Kodi wiki's templates, saved pages are not in the repository)
   file (`lacksOnTmdb`; a file on the disk wins). `missing-show-files` (`?incomplete=true`, the count)
   leaves such an image out, since no refresh could write it. A season's poster and an episode's thumbnail
   are not covered. Rows from before the migration have none until the next scan.
-- Not done: no collection overview, no episode `uniqueid`, no `<fileinfo>` (the player reads the file).
+- Not done: no episode `uniqueid`, no `<fileinfo>` (the player reads the file). A movie's collection is written (see "Collections" below).
+
+## Collections
+
+A movie's **collection** (a saga) exists for a player only through the NFO's `<set>`, so only a movie
+library that writes NFO (`metadata: nfo`) has them: with `none` there is no column, filter, sort, panel
+section or bulk action (`hasCollections`, `library.collections` of `GET .../items`).
+
+- **Where it comes from, at no extra call.** `/movie/{id}` (already read for the NFO) carries
+  `belongs_to_collection`; `MetadataLoader` adds one `/collection/{id}` per saga (overview and `parts`, shared
+  by its movies, cached by the provider) and reports it as `LoadedMetadata.collection` (`null`: read, in none, so
+  a collection the movie left is forgotten; absent: not read). `analyze`, `Service.planGroup` and `Service.plan`
+  record it (`CollectionStore.record`: `collections`, `movie_collections`, server migration 032). Nothing is
+  fetched on a listing.
+- **The owner's choice is kept apart** (`collection_overrides`, per library and movie): absent is TMDB's, `none`
+  is no collection, `custom` is a name with no TMDB id. A scan rewrites TMDB's record and never this table;
+  `analyze` takes it through `collectionOverride`, so an NFO written later follows it. `effectiveCollection`
+  (core) is the one rule: one `<set>` per movie, since Kodi and Plex's NFO agent read only one.
+- **`<set>`**: `<set tmdbcolid="645"><name>…</name><overview>…</overview></set>` for TMDB's, `<set><name>…</name></set>`
+  for the owner's, nothing for none. Never the short form `<set>Name</set>`: Plex's agent does not read it.
+- **The rows carry it** (`library_items.collection_key|name|total`, refreshed by `regroup`, so every write path
+  keeps them right): `t:<id>` or `c:<name>`. What the library holds of a collection is counted when read
+  (`HELD`, a movie once whatever its versions), so a film arriving updates the `2/3` with no TMDB call.
+- **Changing it rewrites NFO, which is the one exception to "never overwritten"** (`CollectionEditor`,
+  `PUT /api/libraries/{id}/collection`, `rewriteNfo`): the NFO is generated whole again, and only if Kinoshelf
+  wrote it and nobody touched it since (`madeByUs`), else it is `kept` and the answer says so. The old one goes
+  to `<config>/replaced/` and the batch (`replaced` entries) can be undone. Nothing moves. TMDB is read before
+  anything changes, so a failure leaves the choice as it was.
+- **The web** (`CollectionBar`, `CollectionPanel`, `CollectionBulk`, `lib/collections.ts`): the column and the
+  filters show once a library has a collection (`?collection=in|out|incomplete|<key>`, `?sort=collection|year`
+  in the URL), filing stays offered in the bar before that. Every settled movie can be ticked, not only the ones
+  to rename. Collection images are out of scope: no convention is shared by the players.
 
 ## Libraries and scan
 
