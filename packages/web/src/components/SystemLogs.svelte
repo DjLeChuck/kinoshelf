@@ -326,6 +326,9 @@
                     {#if copyFailed === entry.seq}
                       <span class="muted" role="status">{t('web.logs.copy-failed')}</span>
                     {/if}
+                    {#if entry.component === 'tmdb'}
+                      <Link href="/system?tab=tmdb">{t('web.logs.tmdb')} →</Link>
+                    {/if}
                     {#if entry.job}
                       <Link href={`/history/${entry.job}`}>{t('web.logs.history')} →</Link>
                     {/if}

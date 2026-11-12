@@ -72,6 +72,12 @@ describe('catalogs', () => {
       'web.logs.chip.info',
       'web.logs.recorded.debug',
       'web.logs.recorded.info',
+      'web.system.tab.tmdb',
+      'web.tmdb.tile.latency.value',
+      'web.tmdb.tile.latency.none',
+      'web.tmdb.legend.cache',
+      'web.tmdb.kinds.cache',
+      'web.tmdb.kind.images',
     ];
     const identical = (Object.keys(en) as (keyof typeof en)[]).filter(
       (key) => fr[key] === en[key] && !key.startsWith('entry.') && !SAME_IN_BOTH.includes(key),

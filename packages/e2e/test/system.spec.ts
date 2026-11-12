@@ -62,3 +62,29 @@ test('downloads the log as a file', async ({ page }) => {
   const path = await file.path();
   expect(await readFile(path, 'utf8')).toContain('Server listening');
 });
+
+test('shows what was sent to TMDB, by period, and the key and cache', async ({ page }) => {
+  await signIn(page);
+  await page.getByRole('navigation').getByRole('link', { name: 'System' }).click();
+  await page
+    .getByRole('navigation', { name: 'Sections of the System page' })
+    .getByRole('link', { name: 'TMDB' })
+    .click();
+  await expect(page).toHaveURL(/tab=tmdb/);
+
+  await expect(page.getByText('Requests sent')).toBeVisible();
+  await expect(page.getByText('From the cache')).toBeVisible();
+
+  // The period is in the URL, like the log's filters.
+  await page.getByRole('button', { name: '7 days' }).click();
+  await expect(page).toHaveURL(/range=7d/);
+  await expect(page.getByRole('button', { name: '7 days' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+
+  // The key and the cache have their block; clearing asks first.
+  await expect(page.getByRole('heading', { name: 'TMDB key' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Test the key' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'TMDB cache' })).toBeVisible();
+});

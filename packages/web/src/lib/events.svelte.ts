@@ -3,7 +3,8 @@ import { session } from './session.svelte.js';
 import { Stream } from './stream.js';
 
 /** What the server says changed; `ready` fires on each (re)connection, when anything may have. */
-export type Topic = 'jobs' | 'progress' | 'arrivals' | 'history' | 'settings' | 'logs' | 'ready';
+export type Topic =
+  'jobs' | 'progress' | 'arrivals' | 'history' | 'settings' | 'logs' | 'tmdb' | 'ready';
 
 const TOPICS: readonly Topic[] = [
   'jobs',
@@ -12,6 +13,7 @@ const TOPICS: readonly Topic[] = [
   'history',
   'settings',
   'logs',
+  'tmdb',
   'ready',
 ];
 const listeners = new Map<Topic, Set<() => void>>();
