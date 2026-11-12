@@ -94,6 +94,9 @@ export type MatchAnswer = Pick<LightMyRequestResponse, 'statusCode' | 'json'>;
  * The two libraries organized in place that give every kind of work a destination. Both read the
  * same folder, which is all a test needs to find what was written in one place.
  */
+/** The names and metadata most tests expect; the defaults are no-id and nfo. */
+export const PINNED = { naming: 'with-id', metadata: 'none' } as const;
+
 export const librariesAt = (root: string) =>
   [
     { id: 'films', name: 'Films', source: root, type: 'movie' },
@@ -102,6 +105,7 @@ export const librariesAt = (root: string) =>
 
 /** The same two libraries, as the text of a `config.yaml`. */
 export const librariesYaml = (root: string): string =>
+  `naming: with-id\nmetadata: none\n` +
   `libraries:\n  - {id: films, name: Films, source: ${root}, type: movie}\n` +
   `  - {id: shows, name: Shows, source: ${root}, type: series}\n`;
 
@@ -116,7 +120,6 @@ export async function harness(
   const destination = await makeDir();
   const app = await buildApp({
     version: '1.2.3',
-    config: { libraries: [...librariesAt(destination)] },
     configDir: '/nonexistent',
     database,
     env: {},
@@ -126,6 +129,8 @@ export async function harness(
     // Nothing is probed for a size either, unless a test gives the sizes it wants.
     sizeReader: () => Promise.resolve(undefined),
     ...options,
+    // A test's own config still gets the profile most tests expect, unless it sets one.
+    config: { ...PINNED, ...(options.config ?? { libraries: [...librariesAt(destination)] }) },
   });
   apps.push(app);
   const request: Harness['request'] = (method, url, payload) =>

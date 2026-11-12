@@ -1,3 +1,4 @@
+import { join } from 'node:path';
 import type { Candidate, SeasonInfo } from '@kinoshelf/core';
 import {
   FakeProvider as CoreFakeProvider,
@@ -44,6 +45,9 @@ export interface Harness {
   cli(...args: string[]): Promise<number>;
 }
 
+/** The profile most tests expect, written to a config file that does not set one. */
+export const PINNED = 'naming: with-id\nmetadata: none\n';
+
 /** Runs the CLI in-process against a fake TMDB, with its own empty config directory. */
 export async function harness(
   env: Record<string, string> = {},
@@ -51,6 +55,8 @@ export async function harness(
   catalog: Candidate[] = CATALOG,
 ): Promise<Harness> {
   const configDir = await makeDir();
+  // The tests read names with the id and no metadata files; the defaults are no-id and nfo.
+  await put(join(configDir, 'config.yaml'), PINNED);
   const out: string[] = [];
   const err: string[] = [];
   const provider = new FakeProvider(catalog, SEASONS);

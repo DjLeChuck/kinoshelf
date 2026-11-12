@@ -55,7 +55,13 @@ const entriesOf = async (h: Harness, jobId: string, classification: string): Pro
 /** A server with a real config.yaml, since libraries live there. */
 async function served(yaml = '') {
   const configDir = await makeDir();
-  await put(join(configDir, 'config.yaml'), yaml);
+  // Most tests read names with the id and no metadata files; the defaults are no-id and nfo.
+  await put(
+    join(configDir, 'config.yaml'),
+    ['naming: with-id\n', 'metadata: none\n']
+      .filter((line) => !new RegExp(`^${line.split(':')[0]}:`, 'm').test(yaml))
+      .join('') + yaml,
+  );
   const h = await harness({ configDir, config: await loadConfig(configDir) });
   const file = (): Promise<string> => readFile(join(configDir, 'config.yaml'), 'utf8');
   return { ...h, configDir, file };
@@ -145,7 +151,8 @@ describe('libraries', () => {
       naming: null,
       threshold: 90,
     });
-    expect(await h.file()).not.toContain('naming:');
+    // The library sets none of its own (the global pair at the top is the test's).
+    expect(await h.file()).not.toMatch(/^ +naming:/m);
     expect(await h.file()).toContain('metadata: nfo');
 
     // A second library of the same name gets its own id.
@@ -553,6 +560,6 @@ describe('scanning a library', () => {
       finishedAt: null,
       error: null,
     });
-    expect(processed.settings.profile).toEqual({ naming: 'with-id', metadata: 'none' });
+    expect(processed.settings.profile).toEqual({ naming: 'no-id', metadata: 'nfo' });
   });
 });

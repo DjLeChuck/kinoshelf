@@ -63,8 +63,8 @@ packages/corpus            (private) matching corpus and the scripts that grow i
 
 A profile is two axes, built by `buildProfile({ naming, metadata })` (`core/src/profiles/build.ts`): no
 bundled YAML, and the core contains no player-specific rule. `naming: with-id | no-id` (default
-`with-id`) puts `{tmdb-<id>}` in the movie and series folders and the movie file, or nothing;
-`metadata: none | nfo` (default `none`) writes Kodi NFO and artwork, or nothing. They are set globally
+`no-id`) puts `{tmdb-<id>}` in the movie and series folders and the movie file, or nothing;
+`metadata: none | nfo` (default `nfo`) writes Kodi NFO and artwork, or nothing. They are set globally
 (`naming`/`metadata` in `config.yaml`), per typed library, or by `--naming`/`--metadata` in the CLI.
 No combination belongs to a player: Plex's default agents read `none` (`with-id` or `no-id`), and
 Plex's NFO agent, Jellyfin and Kodi all read `nfo`, whose `<uniqueid type="tmdb">` makes the id in the name

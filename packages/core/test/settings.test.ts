@@ -20,7 +20,7 @@ describe('resolveSettings', () => {
       threshold: 95,
       destinations: '/media',
       metadataLanguage: 'fr',
-      profile: { id: 'with-id.none' },
+      profile: { id: 'no-id.nfo' },
     });
   });
 
@@ -30,7 +30,7 @@ describe('resolveSettings', () => {
         ? [O, C]
         : never
     ) => resolveSettings(args[0], args[1], context).profile.id;
-    expect(idOf({ dest: '/m' }, {})).toBe('with-id.none');
+    expect(idOf({ dest: '/m' }, {})).toBe('no-id.nfo');
     expect(idOf({ dest: '/m' }, { naming: 'no-id', metadata: 'nfo' })).toBe('no-id.nfo');
     expect(idOf({ dest: '/m', metadata: 'none' }, { naming: 'no-id', metadata: 'nfo' })).toBe(
       'no-id.none',

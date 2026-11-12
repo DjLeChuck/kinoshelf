@@ -20,6 +20,9 @@ for (const folder of ['config', 'incoming', 'library/films', 'library/series']) 
 writeFileSync(
   join(dir, 'config', 'config.yaml'),
   [
+    // The specs read names with the id and no metadata files; the defaults are no-id and nfo.
+    'naming: with-id',
+    'metadata: none',
     'libraries:',
     '  - id: films',
     '    name: Films',

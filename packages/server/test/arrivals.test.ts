@@ -34,7 +34,7 @@ interface Arrivals {
  */
 async function setup() {
   const configDir = await makeDir();
-  await put(join(configDir, 'config.yaml'), '');
+  await put(join(configDir, 'config.yaml'), 'naming: with-id\nmetadata: none\n');
   const h = await harness({ configDir, config: await loadConfig(configDir) });
   const roots = { films: await makeDir(), uhd: await makeDir(), series: await makeDir() };
   const create = (body: object): Promise<unknown> => h.request('POST', '/api/libraries', body);

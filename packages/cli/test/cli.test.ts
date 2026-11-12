@@ -2,7 +2,16 @@ import { readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { run } from '../src/cli.js';
-import { CATALOG, cleanup, FakeProvider, harness, makeDir, put, SEASONS } from './helpers.js';
+import {
+  CATALOG,
+  cleanup,
+  FakeProvider,
+  harness,
+  makeDir,
+  PINNED,
+  put,
+  SEASONS,
+} from './helpers.js';
 
 afterEach(cleanup);
 
@@ -348,7 +357,7 @@ describe('language', () => {
     expect(fromEnv.out.join('\n')).toContain('Bilan :');
 
     const fromConfig = await harness();
-    await put(join(fromConfig.configDir, 'config.yaml'), 'locale: fr\n');
+    await put(join(fromConfig.configDir, 'config.yaml'), `${PINNED}locale: fr\n`);
     await fromConfig.cli('scan', src, '--dest', dest);
     expect(fromConfig.out.join('\n')).toContain('Bilan :');
   });
@@ -418,7 +427,7 @@ describe('options and configuration', () => {
   it('uses the config file for defaults, flags winning over it', async () => {
     const { src, dest } = await library();
     const h = await harness();
-    await put(join(h.configDir, 'config.yaml'), `mode: hardlink\nthreshold: 100\n`);
+    await put(join(h.configDir, 'config.yaml'), `${PINNED}mode: hardlink\nthreshold: 100\n`);
 
     await h.cli('scan', src, '--dest', dest);
     expect(h.out.join('\n')).toContain('mode hardlink');
@@ -437,6 +446,7 @@ describe('options and configuration', () => {
       await put(
         join(h.configDir, 'config.yaml'),
         [
+          PINNED.trim(),
           'libraries:',
           `  - {id: films, name: Films, source: ${dest}, type: movie}`,
           `  - {id: shows, name: Shows, source: ${shows}, type: series}`,

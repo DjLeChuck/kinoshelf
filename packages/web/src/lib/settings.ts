@@ -58,8 +58,8 @@ export type Metadata = 'none' | 'nfo';
 export const NAMINGS: readonly Naming[] = ['with-id', 'no-id'];
 export const METADATAS: readonly Metadata[] = ['none', 'nfo'];
 /** What a library or the settings write by default. */
-export const DEFAULT_NAMING: Naming = 'with-id';
-export const DEFAULT_METADATA: Metadata = 'none';
+export const DEFAULT_NAMING: Naming = 'no-id';
+export const DEFAULT_METADATA: Metadata = 'nfo';
 
 export interface NamingExample {
   readonly movie: string;

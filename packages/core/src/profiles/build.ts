@@ -15,7 +15,7 @@ export interface ProfileChoice {
   readonly metadata: Metadata;
 }
 
-export const DEFAULT_PROFILE_CHOICE: ProfileChoice = { naming: 'with-id', metadata: 'none' };
+export const DEFAULT_PROFILE_CHOICE: ProfileChoice = { naming: 'no-id', metadata: 'nfo' };
 
 /**
  * Plex, Jellyfin and Kodi read these names, so one library reads the same under any of them (the

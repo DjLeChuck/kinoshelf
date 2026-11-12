@@ -4,12 +4,12 @@ Two options decide how files are named and which metadata files are written next
 globally (`naming` and `metadata` in `config.yaml`, or the Settings) or per library (CLI:
 `--naming` and `--metadata`).
 
-| Option     | Value     | Effect                                                                                           |
-| ---------- | --------- | ------------------------------------------------------------------------------------------------ |
-| `naming`   | `with-id` | The TMDB id is in the movie and series names, as `{tmdb-<id>}` (default)                         |
-|            | `no-id`   | No id: cleaner names, but a player then matches on title and year alone                          |
-| `metadata` | `none`    | No metadata file: the player fetches its own (default)                                           |
-|            | `nfo`     | Kodi-format NFO and artwork: `poster.jpg`, `fanart.jpg`, `clearlogo.png`, seasons' and episodes' |
+| Option     | Value     | Effect                                                                                                     |
+| ---------- | --------- | ---------------------------------------------------------------------------------------------------------- |
+| `naming`   | `with-id` | The TMDB id is in the movie and series names, as `{tmdb-<id>}`                                             |
+|            | `no-id`   | No id: cleaner names, but a player then matches on title and year alone (default)                          |
+| `metadata` | `none`    | No metadata file: the player fetches its own                                                               |
+|            | `nfo`     | Kodi-format NFO and artwork: `poster.jpg`, `fanart.jpg`, `clearlogo.png`, seasons' and episodes' (default) |
 
 - With `no-id`, two works sharing both title and year are ambiguous for the player. With `nfo`, the
   NFO already says which work it is (`<uniqueid type="tmdb">`), so the id in the name is optional.
