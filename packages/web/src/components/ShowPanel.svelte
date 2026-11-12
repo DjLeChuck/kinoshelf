@@ -1,10 +1,13 @@
 <script lang="ts">
   import { imageUrl, workImageUrl, type ImageKind } from '../lib/arrivals.js';
   import { t } from '../lib/i18n.svelte.js';
+  import { missingOfKnown, showMeta } from '../lib/fiche.js';
   import { libraryItems, showStatusKey, type Show, type ShowDetail } from '../lib/library-items.js';
   import { rescanPath } from '../lib/paths.js';
   import CoverageMatrix from './CoverageMatrix.svelte';
   import ImagesDialog from './ImagesDialog.svelte';
+  import MetadataMarks from './MetadataMarks.svelte';
+  import VersionsSection from './VersionsSection.svelte';
   import RescanButton from './RescanButton.svelte';
   import RematchButton from './RematchButton.svelte';
   import WorkCard from './WorkCard.svelte';
@@ -73,20 +76,30 @@
   }
   const statusKey = $derived(detail?.status ? showStatusKey(detail.status) : undefined);
   const missing = $derived(detail?.missing ?? show.missing);
+  // The show's own files, as the list reads them from the disk; a dash for what TMDB has none of.
+  const marks = $derived([
+    { label: 'NFO', value: show.nfo },
+    {
+      label: t('web.library.col.poster'),
+      value: show.poster,
+      unavailable: show.unavailable.includes('poster'),
+    },
+    {
+      label: t('web.library.col.fanart'),
+      value: show.fanart,
+      unavailable: show.unavailable.includes('fanart'),
+    },
+    {
+      label: t('web.library.col.logo'),
+      value: show.logo,
+      unavailable: show.unavailable.includes('logo'),
+    },
+  ]);
 </script>
 
 <WorkCard
   title={`${show.title ?? ''}${show.year ? ` (${show.year})` : ''}`}
-  meta={[
-    `${t('web.library.col.seasons')}: ${show.seasons}`,
-    `${t('web.library.col.episodes')}: ${show.episodes}`,
-    show.versions.length > 1
-      ? t('web.library.versions.count', { count: show.versions.length })
-      : undefined,
-    detail?.genres.join(', ') || undefined,
-  ]
-    .filter(Boolean)
-    .join(' · ')}
+  meta={showMeta(show.seasons, show.episodes, detail?.genres ?? [], t)}
   tmdbUrl={`https://www.themoviedb.org/tv/${show.tmdbId}`}
   {poster}
   {backdrop}
@@ -106,12 +119,24 @@
         <dd>{statusKey ? t(statusKey) : detail.status}</dd>
       {/if}
       <dt class="muted">{t('web.library.show.missing')}</dt>
-      <dd>{missing === null || missing === 0 ? t('web.library.show.none-missing') : missing}</dd>
+      <dd>
+        {missing === null || missing === 0
+          ? t('web.library.show.none-missing')
+          : missingOfKnown(missing, detail.known, t)}
+      </dd>
+      {#if folder}
+        <dt class="muted">{t('web.library.path')}</dt>
+        <dd class="mono">{folder}</dd>
+      {/if}
+      <dt class="muted">{t('web.library.metadata')}</dt>
+      <dd><MetadataMarks {marks} /></dd>
     </dl>
     {#if !detail.determined}
       <p class="alert" role="status">{t('web.library.shows.undetermined')}</p>
     {/if}
-    {#if show.versions.length > 1}<CoverageMatrix {detail} />{/if}
+    <VersionsSection summary={[String(show.versions.length)]}>
+      <CoverageMatrix {detail} />
+    </VersionsSection>
     <div>
       <RescanButton {libraryId} path={folder} name={show.title ?? ''} {ondone} />
       <RematchButton
@@ -138,17 +163,6 @@
 
 <style>
   p {
-    margin: 0;
-  }
-
-  .facts {
-    display: grid;
-    grid-template-columns: max-content 1fr;
-    gap: 6px 16px;
-    margin: 0;
-  }
-
-  .facts dd {
     margin: 0;
   }
 </style>

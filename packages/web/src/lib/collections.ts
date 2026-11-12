@@ -114,6 +114,25 @@ export function isChanged(draft: CollectionDraft, current: CollectionDraft): boo
   );
 }
 
+/**
+ * Whether the dialog's Apply is live. For one movie `current` is where it stands and the choice
+ * must differ from it; for a selection there is no current (`undefined`) and nothing is chosen
+ * until the owner picks, so any valid pick applies. `draft` is `undefined` until they pick.
+ */
+export function canApply(
+  draft: CollectionDraft | undefined,
+  current: CollectionDraft | undefined,
+): boolean {
+  if (draft === undefined || !isValid(draft)) {
+    return false;
+  }
+  return current === undefined || isChanged(draft, current);
+}
+
+/** NFO a selection concerns: one per version of each movie (`movie.nfo` is shared, `<file>.nfo` is not). */
+export const nfoCount = (items: readonly { readonly versions: readonly unknown[] }[]): number =>
+  items.reduce((sum, item) => sum + Math.max(item.versions.length, 1), 0);
+
 const ESCAPES: Readonly<Record<string, string>> = {
   '&': '&amp;',
   '<': '&lt;',

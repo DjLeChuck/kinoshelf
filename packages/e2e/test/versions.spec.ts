@@ -37,12 +37,16 @@ test('lists a movie held in two versions once', async ({ page, request }) => {
   await expect(page).toHaveURL(/state=multi-version/);
   await expect(page.getByRole('row').filter({ hasText: '1984' })).toHaveCount(1);
 
-  // The panel compares the versions and lists the one NFO the profile expects, without a tally.
+  // The panel compares the versions, each with the state of its NFO, without a tally.
   await row.locator('button.link').click();
-  const panel = page.getByRole('region', { name: 'Compare the versions' });
+  const panel = page.getByRole('region', { name: /^Versions/ });
+  await expect(panel.getByRole('heading')).toContainText('· 2');
   await expect(panel.getByRole('columnheader', { name: '2160p' })).toBeVisible();
   await expect(panel.getByRole('row', { name: /File/ })).toContainText('- 1080p.mkv');
-  await expect(page.getByText('movie.nfo')).toBeVisible();
+  // Each version says whether its own NFO is there.
+  await expect(panel.getByRole('row', { name: /Status/ }).getByText('Complete')).toHaveCount(2);
+  // The file lines are gone from the facts: the path is the folder's, the files are in the table.
+  await expect(page.getByRole('term').filter({ hasText: /^File$/ })).toHaveCount(0);
   await expect(page.getByText(/expected/)).toHaveCount(0);
   await patch(null);
 });

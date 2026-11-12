@@ -234,6 +234,9 @@ export interface ShowEpisode {
   readonly episode: number;
   readonly title: string | null;
   readonly airDate: string | null;
+  /** TMDB's synopsis and length in minutes. */
+  readonly overview: string | null;
+  readonly runtime: number | null;
   readonly state: EpisodeState;
   /** The files that hold it, one per version. */
   readonly versions: readonly LibraryItem[];
@@ -268,6 +271,8 @@ export interface ShowDetail {
   /** `false` when TMDB could not be asked: only the files are listed, nothing is missing. */
   readonly determined: boolean;
   readonly missing: number | null;
+  /** Episodes TMDB lists (specials left out): the total `missing` is read against; `null` as it. */
+  readonly known: number | null;
   readonly seasons: readonly ShowSeason[];
 }
 

@@ -28,13 +28,14 @@
     ITEM_SORTS,
     canFile,
     nameOfKey,
+    nfoCount,
     pillOf,
     startsGroup,
     type CollectionFilter,
     type ItemSort,
   } from '../lib/collections.js';
   import CollectionBar from './CollectionBar.svelte';
-  import CollectionBulk from './CollectionBulk.svelte';
+  import CollectionDialog from './CollectionDialog.svelte';
   import ItemPanel from './ItemPanel.svelte';
   import RunDialog from './RunDialog.svelte';
   import Link from './Link.svelte';
@@ -88,7 +89,8 @@
   const pickedIds = $derived(new Set(picked));
   const pickedItems = $derived((page?.items ?? []).filter(({ id }) => pickedIds.has(id)));
   const split = $derived(partition(pickedItems));
-  const toFile = $derived(pickedItems.filter(canFile).map(({ id }) => id));
+  const filable = $derived(pickedItems.filter(canFile));
+  const toFile = $derived(filable.map(({ id }) => id));
   const toRun = $derived.by(() => {
     const mode = running;
     if (mode === undefined) {
@@ -387,10 +389,10 @@
               <button
                 type="button"
                 class="btn"
-                aria-expanded={filing}
+                aria-haspopup="dialog"
                 disabled={toFile.length === 0}
                 onclick={() => {
-                  filing = !filing;
+                  filing = true;
                 }}
               >
                 {t('web.collection.bulk')}
@@ -399,9 +401,11 @@
           {/if}
         </div>
         {#if filing && toFile.length > 0}
-          <CollectionBulk
+          <CollectionDialog
             libraryId={library.id}
             items={toFile}
+            films={filable.length}
+            nfo={nfoCount(filable)}
             onclose={() => {
               filing = false;
             }}

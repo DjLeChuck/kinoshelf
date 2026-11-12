@@ -1,6 +1,6 @@
 <script lang="ts">
   import { t } from '../lib/i18n.svelte.js';
-  import { episodeLabel, type ShowDetail } from '../lib/library-items.js';
+  import type { ShowDetail } from '../lib/library-items.js';
   import { slotsOf, type SlotStatus } from '../lib/versions.js';
 
   // Per season, a line per version and a square per episode: which version holds which episode,
@@ -20,8 +20,7 @@
   );
 </script>
 
-<section aria-labelledby="coverage">
-  <h3 id="coverage">{t('web.library.coverage.title')}</h3>
+<div>
   {#each seasons as season (season.season)}
     <div class="season">
       <p class="muted">
@@ -38,7 +37,7 @@
               {@const status =
                 slotsOf(season.versions, episode.versions)[index]?.status ?? 'absent'}
               {@const words = t('web.library.coverage.cell', {
-                episode: episodeLabel(episode.season, episode.episode),
+                episode: episode.episode,
                 version: name,
                 status: t(`web.library.version.status.${status}`),
               })}
@@ -59,14 +58,9 @@
       </li>
     {/each}
   </ul>
-</section>
+</div>
 
 <style>
-  h3 {
-    margin: 0 0 6px;
-    font-size: 14px;
-  }
-
   p {
     margin: 0;
   }

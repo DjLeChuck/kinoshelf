@@ -74,10 +74,24 @@ test('files movies under collections: the list, the page of a film, a whole sele
   await expect(page.getByRole('radio', { name: 'Collection', exact: true })).toBeChecked();
   await expect(page.getByRole('row')).toHaveCount(3);
 
-  // The page of the film: TMDB's saga, with the film it lacks.
+  // The page of the film: the collection is a fact, and its edition is a dialog, not a block.
   await dune.getByRole('button', { name: /^Dune$/ }).click();
-  const section = page.getByRole('region', { name: 'Collection' });
+  await expect(page.getByRole('region', { name: 'Collection' })).toHaveCount(0);
+  await expect(page.getByRole('radio', { name: /TMDB collection/ })).toHaveCount(0);
+  const edit = page.getByRole('button', { name: 'Edit the collection Dune - Saga' });
+  await expect(edit).toBeVisible();
+
+  // Escape closes it without changing anything, and the focus goes back to the button.
+  await edit.click();
+  const section = page.getByRole('dialog', { name: 'Collection — Dune (2021)' });
+  await expect(section.getByText('Currently: Dune - Saga (TMDB)')).toBeVisible();
   await expect(section.getByRole('radio', { name: 'TMDB collection: Dune - Saga' })).toBeChecked();
+  await page.keyboard.press('Escape');
+  await expect(section).toBeHidden();
+  await expect(edit).toBeFocused();
+
+  // TMDB's saga, with the film it lacks.
+  await edit.click();
   await expect(section.getByText('Missing').first()).toBeVisible();
   await expect(section.getByRole('link', { name: /Open Dune : Part Two on TMDB/ })).toBeVisible();
   await expect(
@@ -92,7 +106,8 @@ test('files movies under collections: the list, the page of a film, a whole sele
   await section.getByLabel('Collection name').fill('Univers Arrakis');
   await expect(section.getByText('<set><name>Univers Arrakis</name></set>')).toBeVisible();
   await apply.click();
-  await expect(page.getByRole('status').filter({ hasText: 'NFO rewritten: 1' })).toBeVisible();
+  await expect(section).toBeHidden();
+  await expect(page.getByRole('status').filter({ hasText: '1 NFO rewritten' })).toBeVisible();
   await expect
     .poll(async () => readFile(library('sagas', 'Dune (2021)', 'movie.nfo'), 'utf8'))
     .toContain('<name>Univers Arrakis</name>');
@@ -101,10 +116,18 @@ test('files movies under collections: the list, the page of a film, a whole sele
   // A whole selection at once, from the bar.
   await page.getByRole('checkbox', { name: /Select all/ }).check();
   await page.getByRole('button', { name: 'Set the collection…' }).click();
-  const bulk = page.getByRole('region', { name: 'Set the collection of the selection (2)' });
+  const bulk = page.getByRole('dialog', { name: 'Collection of 2 movies' });
+  // The same dialog for several movies: nothing chosen beforehand, no saga and no preview.
+  await expect(bulk.getByRole('radio', { name: /Each movie’s TMDB collection/ })).not.toBeChecked();
+  await expect(bulk.getByText('2 movies concerned')).toBeVisible();
+  await expect(bulk.getByText('Written in the NFO')).toHaveCount(0);
+  const bulkApply = bulk.getByRole('button', { name: 'Apply' });
+  await expect(bulkApply).toBeDisabled();
+  await bulk.getByRole('radio', { name: 'Custom collection' }).check();
   await bulk.getByLabel('Collection name').fill('Films de sable');
-  await bulk.getByRole('button', { name: 'Apply' }).click();
-  await expect(page.getByRole('status').filter({ hasText: 'NFO rewritten: 2' })).toBeVisible();
+  await bulkApply.click();
+  await expect(bulk).toBeHidden();
+  await expect(page.getByRole('status').filter({ hasText: '2 NFOs rewritten' })).toBeVisible();
   await expect
     .poll(async () => readFile(library('sagas', 'Alien (1979)', 'movie.nfo'), 'utf8'))
     .toContain('<name>Films de sable</name>');

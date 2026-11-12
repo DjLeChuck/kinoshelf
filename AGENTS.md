@@ -282,14 +282,19 @@ other file is an entry of its own, and the episodes of a series are grouped by `
   (`hdr`, `audioLanguages`, `subtitleLanguages`, server migration 025) fills the details of each
   version; the list reads them from the snapshot (`file`: `null` until probed) and never probes.
   Languages are ISO 639-2 as the file tags them, shown short (`fre` gives `FR`), an unknown code as is.
-- **The web** (`LibraryView`, `ShowsTree`, `ItemPanel`, `EpisodePanel`, `CoverageMatrix`,
-  `VersionBadges`, `SlotBadges`): one line per work with a chevron when there are several versions;
-  `GET .../shows/:tmdbId` gives one episode per number with its `versions[]` and the `nfo`
-  `{expected, present}` tallies. The episode panel reads the episode, not each file: one **Thumbnail**
-  block and one **NFO** block (a status for all the versions, and one "Generate the missing NFO" that is
-  Refresh for every version lacking it), then a card per version that keeps only what is the file's own
-  (name, codecs, "Rename", "Add the version to the name"). `canNameVersion` is false when the name
-  already ends with ` - <size>`.
+- **The web** (`LibraryView`, `ShowsTree`, `ItemPanel`, `ShowPanel`, `EpisodePanel`, `VersionsSection`,
+  `VersionsTable`, `CoverageMatrix`, `MetadataMarks`, `VersionBadges`, `SlotBadges`): one line per work with a chevron
+  when there are several versions; `GET .../shows/:tmdbId` gives one episode per number with its `versions[]`, the
+  `nfo` `{expected, present}` tallies, TMDB's `overview` and `runtime`, and the show's `known` (episodes TMDB lists,
+  specials left out: "25 of 30"). **The three sheets (movie, show, episode) share one skeleton** (`WorkCard`): banner
+  (an episode's 16:9 thumbnail), identity, a meta line of editorial facts only (`lib/fiche.ts`: length or counts, genres;
+  never a size or a count of versions), the TMDB link, the synopsis, the facts (`.facts`, a 124 px label column
+  everywhere; **Path is always a folder**, no File line; Metadata is one line of ticks), then **Versions**: a section
+  whose header carries the summary (`Versions · 2 · 31.6 GiB`), a `VersionsTable` for a movie and an episode (one column
+  per file, a Status row: "Complete" green or "NFO missing" orange from the file's own NFO) and the `CoverageMatrix`
+  grid for a show (neutral grey, orange, dashed: unchanged). An episode has no action: it is analysed and matched
+  with its series or season. The episode panel reads the episode, not each file, and a version's `ffprobe` details
+  come with each file's own page.
 
 ## NFO and artwork
 
@@ -447,9 +452,9 @@ section or bulk action (`hasCollections`, `library.collections` of `GET .../item
   wrote it and nobody touched it since (`madeByUs`), else it is `kept` and the answer says so. The old one goes
   to `<config>/replaced/` and the batch (`replaced` entries) can be undone. Nothing moves. TMDB is read before
   anything changes, so a failure leaves the choice as it was.
-- **The web** (`CollectionBar`, `CollectionPanel`, `CollectionBulk`, `lib/collections.ts`): the column and the
+- **The web** (`CollectionBar`, `CollectionDialog`, `lib/collections.ts`): the column and the
   filters show once a library has a collection (`?collection=in|out|incomplete|<key>`, `?sort=collection|year`
-  in the URL), filing stays offered in the bar before that. Every settled movie can be ticked, not only the ones
+  in the URL), filing stays offered in the bar before that. A movie's page holds one fact line (name, the list's pastille, "Show in the list", an Edit / Set button); the edition is `CollectionDialog`, which also serves the bar's "Set the collection…" in multiple mode (nothing preselected, no saga, no preview). Every settled movie can be ticked, not only the ones
   to rename. Collection images are out of scope: no convention is shared by the players.
 
 ## Libraries and scan

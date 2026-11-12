@@ -5,7 +5,7 @@
   import { messageOf } from '../lib/errors.js';
   import { refetchOn } from '../lib/events.svelte.js';
   import { t } from '../lib/i18n.svelte.js';
-  import type { Settled } from '../lib/arrivals.js';
+  import { imageUrl, workImageUrl, type Settled } from '../lib/arrivals.js';
   import { router } from '../lib/router.svelte.js';
   import { validations } from '../lib/validations.svelte.js';
   import { listOf, listParam } from '../lib/routes.js';
@@ -17,7 +17,6 @@
     settleKey,
     lacksOnTmdb,
     thumbOf,
-    type Coverage,
     type EpisodeState,
     type ShowEpisode,
     type LibraryItem,
@@ -73,7 +72,6 @@
         readonly tmdbId: number;
         readonly episode: ShowEpisode;
         /** The versions of the show, as its season lists them. */
-        readonly coverage: readonly Coverage[];
       };
 
   // The panel sits beside the tree only while the table's narrowest form fits in what it leaves:
@@ -171,6 +169,14 @@
     }
   }
 
+  /** The series' poster for an episode's sheet: the file when it is there, else what TMDB offers. */
+  function showPoster(tmdbId: number): string | undefined {
+    const show = shows?.items.find((candidate) => candidate.tmdbId === tmdbId);
+    return show?.poster === true
+      ? workImageUrl(`/api/libraries/${libraryId}/shows/${String(tmdbId)}`, 'poster', 0)
+      : imageUrl('w154', details[tmdbId]?.posterPath);
+  }
+
   const selectedItem = $derived(selection?.kind === 'item' ? selection.item : undefined);
 
   const chosenShow = $derived.by(() => {
@@ -254,8 +260,19 @@
 
   refetchOn(['jobs', 'arrivals', 'history', 'settings', 'ready'], () => void load());
 
+  /** Folding what holds the episode on display would hide it and leave the panel orphaned. */
+  const holdsEpisode = (tmdbId: number, season?: number): boolean =>
+    selection?.kind === 'episode' &&
+    selection.tmdbId === tmdbId &&
+    (season === undefined || selection.episode.season === season);
+
   async function toggle(show: Show): Promise<void> {
+    // From an episode, the show's row goes up to the show's panel and leaves the tree as it is.
+    const stay = holdsEpisode(show.tmdbId) && opened.includes(show.tmdbId);
     selection = { kind: 'show', tmdbId: show.tmdbId };
+    if (stay) {
+      return;
+    }
     if (opened.includes(show.tmdbId)) {
       router.setQuery({ open: listParam(opened.filter((id) => id !== show.tmdbId)) });
       return;
@@ -283,6 +300,15 @@
 
   const seasonKey = (tmdbId: number, season: number): string => `${tmdbId}:${season}`;
   function toggleSeason(key: string): void {
+    const [tmdbId, season] = key.split(':').map(Number);
+    if (
+      tmdbId !== undefined &&
+      season !== undefined &&
+      holdsEpisode(tmdbId, season) &&
+      seasonsOpen.includes(key)
+    ) {
+      return;
+    }
     router.setQuery({
       seasons: listParam(
         seasonsOpen.includes(key) ? seasonsOpen.filter((k) => k !== key) : [...seasonsOpen, key],
@@ -619,7 +645,6 @@
                                   kind: 'episode',
                                   tmdbId: show.tmdbId,
                                   episode,
-                                  coverage: season.versions,
                                 })}
                             >
                               <span class="code"
@@ -720,13 +745,8 @@
             tmdbId={chosen.tmdbId}
             showTitle={shows.items.find((show) => show.tmdbId === chosen.tmdbId)?.title ?? ''}
             episode={chosen.episode}
-            coverage={chosen.coverage}
+            poster={showPoster(chosen.tmdbId)}
             {busy}
-            ondone={(message: string) => {
-              selection = undefined;
-              onsettled(message);
-              void load();
-            }}
             onimage={(message: string) => {
               // The episode stays selected: only the lists behind it are read again.
               onsettled(message);

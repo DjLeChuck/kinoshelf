@@ -1,25 +1,23 @@
 <script lang="ts">
-  import { formatBytes } from '@kinoshelf/i18n';
   import { workImageUrl } from '../lib/arrivals.js';
-  import { messageOf } from '../lib/errors.js';
+  import { episodeMeta, versionsSummary } from '../lib/fiche.js';
   import { locale, t } from '../lib/i18n.svelte.js';
   import {
-    canNameVersion,
-    canRun,
     episodeLabel,
     libraryItems,
     nfoOf,
     thumbOf,
-    type Coverage,
     type ItemDetail,
-    type LibraryItem,
     type ShowEpisode,
+    type Version,
   } from '../lib/library-items.js';
-  import { baseName } from '../lib/paths.js';
-  import { codecLine, languageShort, slotsOf, versionLabel, type Slot } from '../lib/versions.js';
+  import { messageOf } from '../lib/errors.js';
+  import { dirName } from '../lib/paths.js';
   import { EPISODE_KINDS } from '../lib/images.js';
   import ImagesDialog from './ImagesDialog.svelte';
-  import RunDialog from './RunDialog.svelte';
+  import MetadataMarks from './MetadataMarks.svelte';
+  import VersionsSection from './VersionsSection.svelte';
+  import VersionsTable from './VersionsTable.svelte';
   import WorkCard from './WorkCard.svelte';
 
   let {
@@ -27,20 +25,17 @@
     tmdbId,
     showTitle,
     episode,
-    coverage,
+    poster,
     busy = false,
-    ondone,
     onimage,
   }: {
     libraryId: string;
     tmdbId: number;
     showTitle: string;
     episode: ShowEpisode;
-    /** The versions of the show, as its season lists them. */
-    coverage: readonly Coverage[];
+    /** The series' poster: the small one beside the title. */
+    poster?: string | undefined;
     busy?: boolean;
-    /** A batch was queued: what to tell the user. */
-    ondone: (message: string) => void;
     /** The image was changed: the panel stays on the episode, the page only reads its lists again. */
     onimage: (message: string) => void;
   } = $props();
@@ -48,9 +43,6 @@
   // The parent keys this panel on the episode, so the files read here once are right for its life.
   let details = $state<Readonly<Record<string, ItemDetail>>>({});
   let failure = $state<unknown>(undefined);
-  let running = $state<
-    { mode: 'rename' | 'refresh' | 'version'; items: readonly LibraryItem[] } | undefined
-  >(undefined);
 
   /* svelte-ignore state_referenced_locally */
   const files = episode.versions;
@@ -65,12 +57,22 @@
     },
   );
 
-  const slots = $derived(slotsOf(coverage, files));
+  // One column per file; what `ffprobe` read of it comes with its page, so a column fills in late.
+  const versions = $derived<Version[]>(
+    files.map((file) => ({
+      id: file.id,
+      path: file.path,
+      state: file.state,
+      resolution: file.resolution,
+      nfo: file.nfo,
+      entryId: file.entryId,
+      file: details[file.id]?.file ?? null,
+    })),
+  );
+
   // The files are read once: after a change every version has the picture, so the panel says so.
   let imageChanged = $state(false);
   const nfo = $derived(nfoOf(files));
-  // The files that lack their NFO: one button writes them all, whatever the version.
-  const lackingNfo = $derived(files.filter((file) => file.nfo === false));
   const thumb = $derived(imageChanged ? true : thumbOf(files));
   // The picture is the episode's, one for all its versions: it is changed from here, not per file.
   const imagesBase = $derived(
@@ -83,169 +85,85 @@
   let stamp = $state(Date.now());
   let editing = $state(false);
   let imageFailed = $state(false);
-  const statusChip = {
-    complete: 'chip-ok',
-    'nfo-missing': 'chip-warn',
-    absent: 'chip-neutral',
-  } as const;
-
-  const specs = (detail: ItemDetail | undefined): string => {
-    const file = detail?.file ?? null;
-    if (file === null) {
-      return '';
-    }
-    return [
-      codecLine(file),
-      file.audioLanguages.map(languageShort).join(' '),
-      file.subtitleLanguages.length
-        ? t('web.library.version.subtitles', {
-            languages: file.subtitleLanguages.map(languageShort).join(' '),
-          })
-        : '',
-      formatBytes(file.size, locale.value),
-    ]
-      .filter(Boolean)
-      .join(' · ');
-  };
-
-  const label = (slot: Slot): string =>
-    versionLabel(slot.resolution, slot.file ? (details[slot.file.id]?.file ?? null) : null).join(
-      ' ',
-    ) || t('web.library.version.unknown');
+  const showImage = $derived(hasImage && !imageFailed);
+  // The season's folder: where the files of the episode lie.
+  const folder = $derived(files[0] ? dirName(files[0].path) : undefined);
+  const marks = $derived([
+    { label: 'NFO', value: nfo },
+    { label: t('web.library.col.thumb'), value: thumb },
+  ]);
+  const label = $derived(`${showTitle} · ${episodeLabel(episode.season, episode.episode)}`);
 </script>
 
+{#snippet still()}
+  {#if showImage}
+    {#if canEdit}
+      <button
+        type="button"
+        class="zone fill"
+        disabled={busy}
+        aria-label={t('web.images.change-thumb')}
+        onclick={() => (editing = true)}
+      >
+        <img
+          src={workImageUrl(imagesBase, 'thumb', stamp)}
+          alt=""
+          onerror={() => {
+            imageFailed = true;
+          }}
+        />
+        <span class="veil" aria-hidden="true"></span>
+        <span class="pill" aria-hidden="true">{t('web.images.change-thumb')}</span>
+      </button>
+    {:else}
+      <img
+        class="fill"
+        src={workImageUrl(imagesBase, 'thumb', stamp)}
+        alt=""
+        onerror={() => {
+          imageFailed = true;
+        }}
+      />
+    {/if}
+  {:else}
+    <button type="button" class="zone fill add" disabled={busy} onclick={() => (editing = true)}>
+      + {t('web.images.add-thumb')}
+    </button>
+  {/if}
+{/snippet}
+
 <WorkCard
-  title={`${showTitle} · ${episodeLabel(episode.season, episode.episode)}`}
-  meta={[episode.title, episode.airDate].filter(Boolean).join(' · ')}
+  kicker={label}
+  title={episode.title ?? episodeLabel(episode.season, episode.episode)}
+  meta={episodeMeta(episode.airDate, episode.runtime, locale.value, t)}
+  tmdbUrl={`https://www.themoviedb.org/tv/${String(tmdbId)}/season/${String(episode.season)}/episode/${String(episode.episode)}`}
+  {poster}
+  still={showImage || canEdit ? still : undefined}
 >
   {#if failure}
     <p class="alert alert-danger" role="alert">{messageOf(t, failure)}</p>
   {/if}
-  {#if thumb !== null}
-    <section aria-labelledby="thumb">
-      <h3 id="thumb">{t('web.library.episode.thumb')}</h3>
-      {#if hasImage && !imageFailed}
-        {#if canEdit}
-          <button
-            type="button"
-            class="zone still-button"
-            disabled={busy}
-            aria-label={t('web.images.change-thumb')}
-            onclick={() => (editing = true)}
-          >
-            <img
-              class="still"
-              src={workImageUrl(imagesBase, 'thumb', stamp)}
-              alt=""
-              onerror={() => {
-                imageFailed = true;
-              }}
-            />
-            <span class="veil" aria-hidden="true">{t('web.images.change-thumb')}</span>
-          </button>
-        {:else}
-          <img
-            class="still"
-            src={workImageUrl(imagesBase, 'thumb', stamp)}
-            alt=""
-            onerror={() => {
-              imageFailed = true;
-            }}
-          />
-        {/if}
-      {/if}
-      <p class="state">
-        <span class={thumb ? 'ok' : 'missing'} aria-hidden="true">{thumb ? '✓' : '✗'}</span>
-        {t(thumb ? 'web.library.present' : 'web.library.missing')}
-      </p>
-      {#if canEdit && !(hasImage && !imageFailed)}
-        <button type="button" class="btn" disabled={busy} onclick={() => (editing = true)}>
-          {t('web.images.add-thumb')}
-        </button>
-      {/if}
-    </section>
+  {#if episode.overview}<p>{episode.overview}</p>{:else}<p class="muted">
+      {t('web.library.no-overview')}
+    </p>{/if}
+
+  <dl class="facts">
+    {#if folder}
+      <dt class="muted">{t('web.library.path')}</dt>
+      <dd class="mono">{folder}</dd>
+    {/if}
+    <dt class="muted">{t('web.library.metadata')}</dt>
+    <dd><MetadataMarks {marks} /></dd>
+  </dl>
+
+  {#if versions.length > 0}
+    <VersionsSection summary={versionsSummary(versions, locale.value)}>
+      <VersionsTable {versions} />
+    </VersionsSection>
   {/if}
 
-  <!-- One NFO status for the episode: each version has its own file, written from the same data. -->
-  {#if nfo !== null}
-    <section aria-labelledby="nfo">
-      <h3 id="nfo">{t('web.library.nfo.title')}</h3>
-      <p class="state">
-        <span class={nfo ? 'ok' : 'missing'} aria-hidden="true">{nfo ? '✓' : '✗'}</span>
-        {t(nfo ? 'web.library.present' : 'web.library.missing')}
-      </p>
-      <!-- With several versions, which of them lack theirs. -->
-      {#if files.length > 1}
-        {#each lackingNfo as file (file.id)}
-          {#each (details[file.id]?.nfoFiles ?? []).filter((known) => !known.present) as lacking (lacking.path)}
-            <p class="muted mono lacking">{baseName(lacking.path)}</p>
-          {/each}
-        {/each}
-      {/if}
-      {#if lackingNfo.some((file) => canRun(file))}
-        <button
-          type="button"
-          class="btn"
-          disabled={busy}
-          onclick={() => {
-            running = { mode: 'refresh', items: lackingNfo.filter((file) => canRun(file)) };
-          }}
-        >
-          {t('web.library.nfo.generate')}
-        </button>
-      {/if}
-    </section>
-  {/if}
-
-  <section aria-labelledby="versions">
-    <h3 id="versions">{t('web.library.episode.versions')}</h3>
-    <ul class="cards">
-      {#each slots as slot (slot.resolution ?? '')}
-        {@const file = slot.file}
-        {@const detail = file ? details[file.id] : undefined}
-        <li class="version" class:absent={slot.status === 'absent'}>
-          <div class="head">
-            <strong>{label(slot)}</strong>
-            <span class="chip {statusChip[slot.status]}"
-              >{t(`web.library.version.status.${slot.status}`)}</span
-            >
-          </div>
-          {#if file === undefined}
-            <p class="muted">{t('web.library.episode.no-file')}</p>
-          {:else}
-            {#if specs(detail)}<p class="muted">{specs(detail)}</p>{/if}
-            <p class="mono">{baseName(file.path)}</p>
-            <div class="actions">
-              {#if canRun(file) && file.state === 'rename'}
-                <button
-                  type="button"
-                  class="btn btn-primary"
-                  disabled={busy}
-                  onclick={() => {
-                    running = { mode: 'rename', items: [file] };
-                  }}
-                >
-                  {t('web.library.run.rename')}
-                </button>
-              {/if}
-              {#if canNameVersion(file)}
-                <button
-                  type="button"
-                  class="btn"
-                  disabled={busy}
-                  onclick={() => {
-                    running = { mode: 'version', items: [file] };
-                  }}
-                >
-                  {t('web.library.run.version')}
-                </button>
-              {/if}
-            </div>
-          {/if}
-        </li>
-      {/each}
-    </ul>
-  </section>
+  <!-- No buttons: the analysis and the matching are the series' or the season's, not an episode's. -->
+  <p class="muted hint">{t('web.library.episode.actions-hint')}</p>
 </WorkCard>
 
 {#if editing}
@@ -266,128 +184,73 @@
   />
 {/if}
 
-{#if running}
-  <RunDialog
-    {libraryId}
-    items={running.items}
-    mode={running.mode}
-    onclose={() => {
-      running = undefined;
-    }}
-    {ondone}
-  />
-{/if}
-
 <style>
-  .lacking {
-    margin: 0 0 6px;
-  }
-
-  .state {
-    margin: 0 0 10px;
-  }
-
-  .still-button {
-    position: relative;
-    display: block;
-    width: 100%;
-    max-width: 360px;
-    margin: 0 0 8px;
-    padding: 0;
-    border: 0;
-    border-radius: 6px;
-    background: none;
-    color: #fff;
-    cursor: pointer;
-    overflow: hidden;
-  }
-
-  .still-button .still {
-    margin: 0;
-  }
-
-  .veil {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: rgb(10 12 16 / 0.6);
-    font-size: 13px;
-    font-weight: 600;
-    opacity: 0;
-  }
-
-  .still-button:hover .veil,
-  .still-button:focus-visible .veil {
-    opacity: 1;
-  }
-
-  .still {
-    display: block;
-    width: 100%;
-    max-width: 360px;
-    aspect-ratio: 16 / 9;
-    object-fit: cover;
-    border-radius: 6px;
-    margin: 0 0 8px;
-  }
-
   p {
     margin: 0;
   }
 
-  h3 {
-    margin: 0 0 6px;
-    font-size: 14px;
+  .hint {
+    font-size: 12.5px;
   }
 
-  .cards {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    margin: 0;
+  .fill {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .zone {
     padding: 0;
-    list-style: none;
+    border: 0;
+    background: none;
+    color: #fff;
+    cursor: pointer;
   }
 
-  .version {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    padding: 10px 12px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
+  .zone img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
   }
 
-  .version.absent {
-    border-style: dashed;
+  /* The same overlay as the banner of a movie or a show: a light veil and a pill at the top right. */
+  .veil {
+    position: absolute;
+    inset: 0;
+    background: rgb(10 12 16 / 0.35);
+    opacity: 0;
   }
 
-  .head {
+  .pill {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    min-height: 44px;
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 8px;
+    padding: 0 14px;
+    border-radius: 22px;
+    background: rgb(20 22 27 / 0.88);
+    font-weight: 600;
+    font-size: 14px;
+    opacity: 0;
   }
 
-  .mono {
-    overflow-wrap: anywhere;
-    font-size: 12px;
+  .zone:hover .veil,
+  .zone:focus-visible .veil,
+  .zone:hover .pill,
+  .zone:focus-visible .pill {
+    opacity: 1;
   }
 
-  .ok {
-    color: var(--ok);
-  }
-
-  .missing {
-    color: var(--danger);
-  }
-
-  .actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-top: 4px;
+  .zone.add {
+    border: 2px dashed var(--border-strong);
+    color: var(--muted);
+    font-weight: 600;
+    font-size: 14px;
   }
 </style>

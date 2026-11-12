@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
+  canApply,
   canFile,
   draftOf,
   isChanged,
   isValid,
   nameOfKey,
+  nfoCount,
   pillOf,
   setPreview,
   startsGroup,
@@ -133,5 +135,55 @@ describe('itemsUrl with collections', () => {
     expect(itemsUrl('films', { collection: 'c:Univers Marvel', sort: 'title', limit: 50 })).toBe(
       '/api/libraries/films/items?collection=c%3AUnivers%20Marvel&limit=50',
     );
+  });
+});
+
+describe('canApply (the dialog’s Apply)', () => {
+  const tmdb = { mode: 'tmdb', name: '' } as const;
+  const none = { mode: 'none', name: '' } as const;
+  const custom = (name: string) => ({ mode: 'custom', name }) as const;
+
+  describe('for one movie, where the choice must differ from where it stands', () => {
+    it('is off until the owner changes the choice', () => {
+      expect(canApply(tmdb, tmdb)).toBe(false);
+      expect(canApply(custom('Saga'), custom('Saga'))).toBe(false);
+      expect(canApply(custom(' Saga '), custom('Saga'))).toBe(false);
+    });
+
+    it('is on for another mode, or another custom name', () => {
+      expect(canApply(none, tmdb)).toBe(true);
+      expect(canApply(custom('Saga 2'), custom('Saga'))).toBe(true);
+    });
+
+    it('stays off for a custom collection with no name, even though it changes', () => {
+      expect(canApply(custom('  '), tmdb)).toBe(false);
+      expect(canApply(custom(''), none)).toBe(false);
+    });
+  });
+
+  describe('for a selection, where nothing is chosen beforehand', () => {
+    it('is off until a choice is made', () => {
+      expect(canApply(undefined, undefined)).toBe(false);
+    });
+
+    it('is on for any valid choice, TMDB’s and none included', () => {
+      expect(canApply(tmdb, undefined)).toBe(true);
+      expect(canApply(none, undefined)).toBe(true);
+      expect(canApply(custom('Saga'), undefined)).toBe(true);
+    });
+
+    it('stays off for a custom collection with no name', () => {
+      expect(canApply(custom(' '), undefined)).toBe(false);
+    });
+  });
+});
+
+describe('nfoCount', () => {
+  it('counts one NFO per version, so a movie held twice counts twice', () => {
+    expect(nfoCount([{ versions: [1, 2] }, { versions: [1] }, { versions: [1, 2, 3] }])).toBe(6);
+  });
+
+  it('counts a movie with no version listed once', () => {
+    expect(nfoCount([{ versions: [] }])).toBe(1);
   });
 });

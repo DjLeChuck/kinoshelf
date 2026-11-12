@@ -10,15 +10,19 @@
   // has a zone of its own so that pointing at it never targets the background.
   let {
     title,
+    kicker,
     meta,
     tmdbUrl,
     poster,
     backdrop,
     logo,
     onedit,
+    still,
     children,
   }: {
     title: string;
+    /** A line above the title: an episode names its series and number there. */
+    kicker?: string | undefined;
     meta: string;
     tmdbUrl?: string | undefined;
     poster?: string | undefined;
@@ -26,12 +30,16 @@
     logo?: string | undefined;
     /** Absent when the images cannot be changed: they are then only shown. */
     onedit?: ((type: ImageKind) => void) | undefined;
+    /** The banner's place taken by the caller's own (an episode's 16:9 thumbnail). */
+    still?: Snippet | undefined;
     children: Snippet;
   } = $props();
 </script>
 
 <article class="card">
-  {#if backdrop || onedit}
+  {#if still}
+    <div class="stage">{@render still()}</div>
+  {:else if backdrop || onedit}
     <div class="stage">
       {#if onedit}
         <button
@@ -98,6 +106,7 @@
       <img class="poster" src={poster} alt="" width="92" height="138" />
     {/if}
     <div>
+      {#if kicker}<p class="kicker muted">{kicker}</p>{/if}
       <h2>{title}</h2>
       <p class="muted">{meta}</p>
       {#if tmdbUrl}
@@ -281,6 +290,10 @@
 
   h2 {
     font-size: 18px;
+  }
+
+  .kicker {
+    font-size: 12.5px;
   }
 
   p {

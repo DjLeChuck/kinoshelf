@@ -3,9 +3,9 @@
   import { imageUrl, workImageUrl, type ImageKind } from '../lib/arrivals.js';
   import { api } from '../lib/api.js';
   import { messageOf } from '../lib/errors.js';
-  import { formatBytes } from '@kinoshelf/i18n';
   import { locale, t } from '../lib/i18n.svelte.js';
-  import { languageName, totalSize, HDR_LABEL } from '../lib/versions.js';
+  import { movieMeta, versionsSummary } from '../lib/fiche.js';
+  import { pillOf } from '../lib/collections.js';
   import type { Arrival, Settled } from '../lib/arrivals.js';
   import {
     canNameVersion,
@@ -13,18 +13,20 @@
     isListed,
     isSettling,
     versionsToRun,
-    type Version,
     libraryItems,
     type ItemDetail,
     type LibraryItem,
   } from '../lib/library-items.js';
   import { router } from '../lib/router.svelte.js';
   import ArrivalDetail from './ArrivalDetail.svelte';
-  import CollectionPanel from './CollectionPanel.svelte';
+  import CollectionDialog from './CollectionDialog.svelte';
   import ImagesDialog from './ImagesDialog.svelte';
+  import MetadataMarks from './MetadataMarks.svelte';
   import RescanButton from './RescanButton.svelte';
   import RematchButton from './RematchButton.svelte';
   import RunDialog from './RunDialog.svelte';
+  import VersionsSection from './VersionsSection.svelte';
+  import VersionsTable from './VersionsTable.svelte';
   import WorkCard from './WorkCard.svelte';
 
   let {
@@ -123,37 +125,44 @@
     );
     onnotice?.(message);
   }
-  const effective = $derived(detail?.collectionChoice?.effective ?? null);
   const runItems = $derived(isListed(item) ? versionsToRun(item, 'refresh') : [item]);
   const missingNfo = $derived((detail?.nfoFiles ?? []).filter(({ present: there }) => !there));
-  const size = $derived(totalSize((detail?.versions ?? []).map(({ file }) => file)));
-  const compared = $derived(item.kind === 'movie' && (detail?.versions.length ?? 0) > 1);
-  type Row = {
-    readonly key: 'hdr' | 'video' | 'audio' | 'subtitles' | 'size' | 'file';
-    readonly read: (version: Version) => string;
-  };
-  const dash = '—';
-  const names = (codes: readonly string[]): string =>
-    codes.map((code) => languageName(code, locale.value)).join(', ');
-  // What the "Compare" table lists, one line per fact; a file not read yet has none to give.
-  const compareRows: readonly Row[] = [
-    {
-      key: 'hdr',
-      read: (v) =>
-        v.file === null ? dash : v.file.hdr ? HDR_LABEL[v.file.hdr] : t('web.library.compare.sdr'),
-    },
-    { key: 'video', read: (v) => v.file?.video ?? dash },
-    {
-      key: 'audio',
-      read: (v) =>
-        [v.file?.audio, names(v.file?.audioLanguages ?? [])].filter(Boolean).join(' · ') || dash,
-    },
-    { key: 'subtitles', read: (v) => names(v.file?.subtitleLanguages ?? []) || dash },
-    { key: 'size', read: (v) => (v.file ? formatBytes(v.file.size, locale.value) : dash) },
-    { key: 'file', read: (v) => baseName(v.path) },
-  ];
-  const present = (value: boolean | null): string =>
-    value === null ? '—' : t(value ? 'web.library.present' : 'web.library.missing');
+  const title = $derived(
+    detail
+      ? `${detail.title ?? baseName(detail.path)}${detail.year ? ` (${detail.year})` : ''}`
+      : '',
+  );
+  const effective = $derived(detail?.collectionChoice?.effective ?? null);
+  // The collection dialog, opened from the Collection fact; its button gets the focus back when it
+  // closes, whatever the fact now says.
+  let collecting = $state(false);
+  let collectionButton = $state<HTMLButtonElement | undefined>(undefined);
+  const marks = $derived(
+    detail
+      ? [
+          {
+            label: 'NFO',
+            value: detail.nfo,
+            title: detail.nfoFiles.map((file) => baseName(file.path)).join(', '),
+          },
+          {
+            label: t('web.library.col.poster'),
+            value: detail.poster,
+            unavailable: detail.unavailable.includes('poster'),
+          },
+          {
+            label: t('web.library.col.fanart'),
+            value: detail.fanart,
+            unavailable: detail.unavailable.includes('fanart'),
+          },
+          {
+            label: t('web.library.col.logo'),
+            value: detail.logo,
+            unavailable: detail.unavailable.includes('logo'),
+          },
+        ]
+      : [],
+  );
 </script>
 
 {#if failure}
@@ -162,19 +171,8 @@
   <ArrivalDetail {entry} {siblings} {ondone} />
 {:else if detail}
   <WorkCard
-    title={`${detail.title ?? baseName(detail.path)}${detail.year ? ` (${detail.year})` : ''}`}
-    meta={[
-      detail.runtime ? t('web.library.runtime', { minutes: detail.runtime }) : undefined,
-      detail.genres.join(', ') || undefined,
-      size === null
-        ? undefined
-        : t('web.library.versions.summary', {
-            count: detail.versions.length,
-            size: formatBytes(size, locale.value),
-          }),
-    ]
-      .filter(Boolean)
-      .join(' · ')}
+    {title}
+    meta={movieMeta(detail.runtime, detail.genres, t)}
     tmdbUrl={detail.tmdbId
       ? `https://www.themoviedb.org/${detail.kind === 'series' ? 'tv' : 'movie'}/${detail.tmdbId}`
       : undefined}
@@ -189,99 +187,49 @@
       </p>{/if}
 
     <dl class="facts">
-      <dt class="muted">{t('web.library.path')}</dt>
-      <dd class="mono">{compared ? dirName(detail.path) : detail.path}</dd>
-      {#if detail.file}
-        <dt class="muted">{t('web.library.file')}</dt>
-        <dd>
-          {[
-            detail.resolution,
-            detail.file.video,
-            detail.file.audio,
-            formatBytes(detail.file.size, locale.value),
-          ]
-            .filter(Boolean)
-            .join(' · ')}
-        </dd>
-      {/if}
       {#if detail.collectionChoice}
         <dt class="muted">{t('web.collection.fact')}</dt>
         <dd class="collection-fact">
-          {#if effective === null}
-            {t('web.collection.fact.none')}
-          {:else if effective.custom || effective.total === null}
-            {t('web.collection.fact.custom', { name: effective.name })}
-          {:else}
-            {t('web.collection.fact.tmdb', {
-              name: effective.name,
-              held: effective.held,
-              total: effective.total,
-            })}
-          {/if}
-          {#if effective}
-            <button
-              type="button"
-              class="link show"
-              onclick={() => {
-                router.setQuery({ collection: effective.key });
-              }}>{t('web.collection.fact.show')}</button
-            >
-          {/if}
+          <span class="info">
+            {#if effective === null}
+              {t('web.collection.fact.none')}
+            {:else}
+              {@const pill = pillOf(effective)}
+              <span>{effective.name}</span>
+              <span class="chip chip-{pill.kind}">{pill.text ?? t('web.collection.custom')}</span>
+              <button
+                type="button"
+                class="link show"
+                onclick={() => {
+                  router.setQuery({ collection: effective.key });
+                }}>{t('web.collection.fact.show')}</button
+              >
+            {/if}
+          </span>
+          <button
+            type="button"
+            class="btn small"
+            bind:this={collectionButton}
+            aria-label={effective === null
+              ? t('web.collection.fact.set.label', { title })
+              : t('web.collection.fact.edit.label', { name: effective.name })}
+            onclick={() => {
+              collecting = true;
+            }}
+          >
+            {t(effective === null ? 'web.collection.fact.set' : 'web.collection.fact.edit')}
+          </button>
         </dd>
       {/if}
+      <dt class="muted">{t('web.library.path')}</dt>
+      <dd class="mono">{dirName(detail.path)}</dd>
       <dt class="muted">{t('web.library.metadata')}</dt>
-      <dd class="marks">
-        {#each [['NFO', detail.nfo, false, detail.nfoFiles
-              .map((file) => baseName(file.path))
-              .join(', ')], [t('web.library.col.poster'), detail.poster, detail.unavailable.includes('poster')], [t('web.library.col.fanart'), detail.fanart, detail.unavailable.includes('fanart')], [t('web.library.col.logo'), detail.logo, detail.unavailable.includes('logo')]] as const as [label, value, unavailable] (label)}
-          <span>
-            <span
-              aria-hidden="true"
-              class:ok={!unavailable && value === true}
-              class:ko={!unavailable && value === false}
-              >{unavailable || value === null ? '—' : value ? '✓' : '✗'}</span
-            >
-            {label}<span class="sr-only"
-              >: {unavailable ? t('web.library.unavailable') : present(value)}</span
-            >
-          </span>
-        {/each}
-      </dd>
+      <dd><MetadataMarks {marks} /></dd>
     </dl>
-    {#if detail.collectionChoice}
-      <CollectionPanel
-        {libraryId}
-        itemId={item.id}
-        detail={detail.collectionChoice}
-        ondone={collectionChanged}
-      />
-    {/if}
-    {#if compared}
-      <section aria-labelledby="compare">
-        <h3 id="compare">{t('web.library.compare.title')}</h3>
-        <div class="scroll">
-          <table class="compare">
-            <thead>
-              <tr>
-                <th scope="col"></th>
-                {#each detail.versions as version (version.id)}
-                  <th scope="col">{version.resolution ?? t('web.library.version.unknown')}</th>
-                {/each}
-              </tr>
-            </thead>
-            <tbody>
-              {#each compareRows as row (row.key)}
-                <tr>
-                  <th scope="row">{t(`web.library.compare.${row.key}`)}</th>
-                  {#each detail.versions as version (version.id)}
-                    <td class:mono={row.key === 'file'}>{row.read(version)}</td>
-                  {/each}
-                </tr>
-              {/each}
-            </tbody>
-          </table>
-        </div>
-      </section>
+    {#if item.kind === 'movie' && detail.versions.length > 0}
+      <VersionsSection summary={versionsSummary(detail.versions, locale.value)}>
+        <VersionsTable versions={detail.versions} />
+      </VersionsSection>
     {/if}
     {#if missingNfo.length > 0 && canRun(item)}
       <div>
@@ -345,6 +293,19 @@
       </div>
     {/if}
   </WorkCard>
+  {#if collecting && detail.collectionChoice}
+    <CollectionDialog
+      {libraryId}
+      items={[item.id]}
+      {title}
+      detail={detail.collectionChoice}
+      onclose={() => {
+        collecting = false;
+        collectionButton?.focus();
+      }}
+      ondone={collectionChanged}
+    />
+  {/if}
   {#if imagesTab}
     <ImagesDialog
       base={work}
@@ -375,91 +336,32 @@
     margin: 0;
   }
 
-  h3 {
-    margin: 0 0 6px;
-    font-size: 14px;
-  }
-
-  .scroll {
-    overflow-x: auto;
-  }
-
-  .compare {
-    width: max-content;
-    min-width: 100%;
-    border-collapse: collapse;
-    font-size: 12.5px;
-  }
-
-  .compare th,
-  .compare td {
-    padding: 4px 8px;
-    border-bottom: 1px solid var(--border);
-    text-align: left;
-    vertical-align: top;
-    overflow-wrap: anywhere;
-  }
-
-  /* The versions make the columns, so there is no telling how many: the table scrolls sideways
-     rather than crushing the names of the lines, which stay in view. */
-  .compare td,
-  .compare th[scope='col'] {
-    min-width: 64px;
-    /* A long file name wraps in its column instead of widening every one of them. */
-    max-width: 92px;
-  }
-
-  /* The corner is held with the names of the lines, so a header scrolling sideways never slides over it. */
-  .compare th[scope='row'],
-  .compare thead th:first-child {
-    position: sticky;
-    left: 0;
-    z-index: 1;
-    box-shadow: 1px 0 0 var(--border);
-    background: var(--surface);
-  }
-
-  .compare th[scope='row'] {
-    color: var(--muted);
-    font-weight: 600;
-    white-space: nowrap;
-  }
-
-  .facts {
-    display: grid;
-    grid-template-columns: max-content 1fr;
-    align-items: baseline;
-    gap: 6px 16px;
-    margin: 0;
-  }
-
-  .marks {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px 14px;
-  }
-
-  .ok {
-    color: var(--ok);
-  }
-
-  .ko {
-    color: var(--danger);
-  }
-
-  .facts dd {
-    margin: 0;
-    overflow-wrap: anywhere;
-  }
-
   .collection-fact {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 4px 12px;
+  }
+
+  .info {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 4px 8px;
+    gap: 2px 8px;
+    min-width: 0;
+  }
+
+  /* Compact: the button sits at the end of the line, not a block of its own. */
+  .small {
+    flex: none;
+    min-height: 36px;
+    padding: 0 12px;
+    font-size: 13px;
   }
 
   .show {
+    min-height: 0;
     color: var(--accent-text);
+    text-decoration: underline;
   }
 </style>

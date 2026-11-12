@@ -485,3 +485,18 @@ input[type='radio']:disabled {
   font-size: 11.5px;
   overflow-wrap: anywhere;
 }
+
+/* The facts of a sheet (movie, show, episode): label and value, the label column the same width
+   on every sheet so they line up whatever the length of the labels. */
+.facts {
+  display: grid;
+  grid-template-columns: 124px minmax(0, 1fr);
+  align-items: baseline;
+  gap: 6px 16px;
+  margin: 0;
+}
+
+.facts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
