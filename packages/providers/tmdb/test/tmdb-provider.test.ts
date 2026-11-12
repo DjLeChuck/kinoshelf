@@ -1,6 +1,12 @@
 import { KinoshelfError } from '@kinoshelf/core';
 import { describe, expect, it } from 'vitest';
-import { MemoryCache, RequestPool, TmdbProvider, type CacheEntry } from '../src/index.js';
+import {
+  MemoryCache,
+  RequestPool,
+  TmdbProvider,
+  type CacheEntry,
+  type TmdbUsageEvent,
+} from '../src/index.js';
 import { at, fakeFetch, fixture, fixtureJson, json, tmdbRoutes } from './helpers.js';
 
 const BEARER = 'eyJhbGciOiJIUzI1NiJ9.payload.signature';
@@ -995,5 +1001,64 @@ describe('listImages', () => {
     ]);
     expect(await provider.listImages({ provider: 'tmdb', id: 1 }, 'series')).toBeNull();
     expect(requests[0]?.url.pathname).toBe('/3/tv/1/images');
+  });
+});
+
+describe('usage', () => {
+  const recorder = () => {
+    const events: TmdbUsageEvent[] = [];
+    return { events, sink: { record: (event: TmdbUsageEvent) => events.push(event) } };
+  };
+
+  it('tells a request sent from a call the cache answered', async () => {
+    const { events, sink } = recorder();
+    const { provider } = make(tmdbRoutes, { usage: sink, cache: new MemoryCache() });
+    await provider.searchMovies({ title: 'Dune' });
+    await provider.searchMovies({ title: 'Dune' });
+    const searches = events.filter((event) => event.kind === 'search');
+    expect(searches.map((event) => event.outcome)).toEqual(['network', 'cache']);
+    expect(searches[0]).toMatchObject({ status: 200, final: true });
+  });
+
+  it('counts every request of a retried call, and marks the last', async () => {
+    const { events, sink } = recorder();
+    const { provider } = make([() => new Response('', { status: 429 })], { usage: sink });
+    await codeOf(provider.searchMovies({ title: 'x' }));
+    expect(events.map((event) => [event.outcome, event.attempt, event.final])).toEqual([
+      ['rate-limited', 0, false],
+      ['rate-limited', 1, false],
+      ['rate-limited', 2, false],
+      ['rate-limited', 3, true],
+    ]);
+  });
+
+  it('counts a refused key once, and a network failure as unreachable', async () => {
+    const refused = recorder();
+    const a = make([() => new Response('', { status: 401 })], { usage: refused.sink });
+    await codeOf(a.provider.searchMovies({ title: 'x' }));
+    expect(refused.events.map((e) => [e.outcome, e.final])).toEqual([['refused', true]]);
+
+    const down = recorder();
+    const b = make(tmdbRoutes, {
+      usage: down.sink,
+      fetch: () => Promise.reject(new Error('offline')),
+      maxRetries: 1,
+    });
+    await codeOf(b.provider.searchMovies({ title: 'x' }));
+    expect(down.events.map((e) => [e.outcome, e.final])).toEqual([
+      ['unreachable', false],
+      ['unreachable', true],
+    ]);
+  });
+
+  it('is not broken by a sink that throws', async () => {
+    const { provider } = make(tmdbRoutes, {
+      usage: {
+        record: () => {
+          throw new Error('boom');
+        },
+      },
+    });
+    expect(await provider.searchMovies({ title: 'Dune' })).not.toHaveLength(0);
   });
 });

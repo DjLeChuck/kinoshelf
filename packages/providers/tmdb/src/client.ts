@@ -1,6 +1,7 @@
 import { KinoshelfError } from '@kinoshelf/core';
 import type { z } from 'zod';
 import { MemoryCache, type HttpCache } from './cache.js';
+import { callKindOf, type TmdbUsageEvent, type UsageSink } from './usage.js';
 
 export interface TmdbClientOptions {
   /** A v4 "API Read Access Token" (sent as a Bearer token) or a v3 API key (`api_key` query). */
@@ -16,6 +17,8 @@ export interface TmdbClientOptions {
   readonly maxRetries?: number;
   readonly sleep?: (ms: number) => Promise<void>;
   readonly now?: () => number;
+  /** Told of every answer from the cache and every request sent (see `UsageSink`). */
+  readonly usage?: UsageSink;
 }
 
 export interface GetOptions {
@@ -93,6 +96,7 @@ export class TmdbClient {
   private readonly maxRetries: number;
   private readonly sleep: (ms: number) => Promise<void>;
   private readonly now: () => number;
+  private readonly usage: UsageSink | undefined;
 
   constructor(options: TmdbClientOptions) {
     this.apiKey = options.apiKey;
@@ -103,6 +107,15 @@ export class TmdbClient {
     this.maxRetries = options.maxRetries ?? 3;
     this.sleep = options.sleep ?? ((ms) => new Promise((resolve) => setTimeout(resolve, ms)));
     this.now = options.now ?? Date.now;
+    this.usage = options.usage;
+  }
+
+  private report(event: TmdbUsageEvent): void {
+    try {
+      this.usage?.record(event);
+    } catch {
+      // Counting is a courtesy.
+    }
   }
 
   async get<T>(
@@ -121,6 +134,9 @@ export class TmdbClient {
     const cacheKey = `${path}?${query.toString()}`;
 
     const cached = this.cache.get(cacheKey, this.now());
+    if (cached) {
+      this.report({ kind: callKindOf(path), outcome: 'cache', path, attempt: 0, final: true });
+    }
     // The key is the cache's: the same path and query is the same request.
     const entry =
       cached ?? (await this.pool.once(cacheKey, () => this.fetchWithRetry(path, query)));
@@ -165,8 +181,10 @@ export class TmdbClient {
       url.searchParams.set('api_key', this.apiKey);
     }
 
+    const kind = callKindOf(path);
     for (let attempt = 0; ; attempt += 1) {
       const last = attempt >= this.maxRetries;
+      const started = this.now();
       let response: Response | undefined;
       let body: string | undefined;
       try {
@@ -178,6 +196,7 @@ export class TmdbClient {
           body = await response.text();
         }
       } catch {
+        this.report({ kind, outcome: 'unreachable', path, attempt, final: last });
         if (last) {
           throw new KinoshelfError('tmdb.network', { path });
         }
@@ -187,10 +206,28 @@ export class TmdbClient {
 
       const { status } = response;
       if (body !== undefined) {
+        this.report({
+          kind,
+          outcome: 'network',
+          ms: Math.max(0, this.now() - started),
+          path,
+          status,
+          attempt,
+          final: true,
+        });
         return { status, body };
       }
       // Not read, so not left open: an unconsumed body keeps its connection.
       void response.body?.cancel().catch(() => undefined);
+      const retryable = status === 429 || status >= 500;
+      this.report({
+        kind,
+        outcome: status === 429 ? 'rate-limited' : status >= 500 ? 'server-error' : 'refused',
+        path,
+        status,
+        attempt,
+        final: !retryable || last,
+      });
       if (status === 401) {
         throw new KinoshelfError('tmdb.invalid-key');
       }

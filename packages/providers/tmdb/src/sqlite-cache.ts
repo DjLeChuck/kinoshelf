@@ -39,4 +39,19 @@ export class SqliteHttpCache implements HttpCache {
   prune(now: number): number {
     return this.db.prepare('DELETE FROM tmdb_http_cache WHERE expires_at < ?').run(now).changes;
   }
+
+  /** What the cache holds, expired answers included until the next prune. */
+  stats(): { entries: number; bytes: number } {
+    const row = this.db
+      .prepare<[], { entries: number; bytes: number }>(
+        'SELECT COUNT(*) AS entries, COALESCE(SUM(LENGTH(body)), 0) AS bytes FROM tmdb_http_cache',
+      )
+      .get();
+    return { entries: row?.entries ?? 0, bytes: row?.bytes ?? 0 };
+  }
+
+  /** Forgets every answer; returns how many were held. */
+  clear(): number {
+    return this.db.prepare('DELETE FROM tmdb_http_cache').run().changes;
+  }
 }

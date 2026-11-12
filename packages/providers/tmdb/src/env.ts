@@ -2,6 +2,7 @@ import { join } from 'node:path';
 import { KinoshelfError, type Config } from '@kinoshelf/core';
 import type { HttpCache } from './cache.js';
 import type { RequestPool } from './client.js';
+import type { UsageSink } from './usage.js';
 import { TmdbProvider } from './tmdb-provider.js';
 
 type Env = Readonly<Record<string, string | undefined>>;
@@ -31,6 +32,7 @@ export function tmdbFromEnv(options: {
   readonly language: string;
   readonly cache: HttpCache;
   readonly pool?: RequestPool;
+  readonly usage?: UsageSink;
 }): TmdbProvider {
   const apiKey = tmdbApiKey(options.env, options.config);
   if (apiKey === undefined) {
@@ -46,6 +48,7 @@ export function tmdbFromEnv(options: {
     language: options.language,
     cache: options.cache,
     ...(options.pool && { pool: options.pool }),
+    ...(options.usage && { usage: options.usage }),
     ...(baseUrl !== '' && { baseUrl }),
     ...(imagesUrl !== '' && { imagesUrl }),
   });
