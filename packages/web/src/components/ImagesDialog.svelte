@@ -348,7 +348,10 @@
                 <dt>{t('web.images.file')}</dt>
                 <dd class="mono">{fileOf(tab)}</dd>
                 <dt>{t('web.images.folder')}</dt>
-                <dd class="mono">{listing.folder}/</dd>
+                <dd class="mono path">
+                  {#each listing.folder.split('/') as part, index (index)}{#if index > 0}/<wbr
+                      />{/if}{part}{/each}/
+                </dd>
               </dl>
             </div>
           </aside>
@@ -728,6 +731,14 @@
   dd {
     margin: 0;
     overflow-wrap: anywhere;
+  }
+
+  /* A path breaks after a slash; a word is cut only when one segment is wider than the column. */
+  dd.path {
+    min-width: 0;
+    /* `.mono` (app.css) cuts anywhere; here only after a slash. */
+    word-break: normal;
+    overflow-wrap: break-word;
   }
 
   .choose {
