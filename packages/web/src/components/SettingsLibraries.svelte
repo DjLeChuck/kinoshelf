@@ -3,10 +3,16 @@
   import { resource } from '../lib/resource.svelte.js';
   import { t } from '../lib/i18n.svelte.js';
   import { groupOf, libraryApi, type Library, type LibraryGroup } from '../lib/libraries.js';
-  import type { Naming, NamingExample } from '../lib/settings.js';
+  import type { Metadata, Naming, NamingExample } from '../lib/settings.js';
   import LibraryForm from './LibraryForm.svelte';
 
-  let { examples }: { examples: Readonly<Record<Naming, NamingExample>> } = $props();
+  let {
+    examples,
+    defaults,
+  }: {
+    examples: Readonly<Record<Naming, NamingExample>>;
+    defaults: { naming: Naming; metadata: Metadata };
+  } = $props();
 
   const GROUPS: readonly LibraryGroup[] = ['in-place', 'arrival'];
 
@@ -133,6 +139,7 @@
               library={current}
               group={current ? groupOf(current) : 'group' in editing ? editing.group : 'in-place'}
               {examples}
+              {defaults}
               {libraries}
               onsaved={() => {
                 if (!current) {

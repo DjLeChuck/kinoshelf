@@ -261,15 +261,15 @@
   </header>
 
   {#if status === 'ready'}
-    <p class="alert" role="note">{t('web.queue.ready')}</p>
+    <p class="alert alert-info" role="note">{t('web.queue.ready')}</p>
   {/if}
   {#if entry.detached}
-    <p class="alert" role="note">
+    <p class="alert alert-info" role="note">
       {t('web.queue.detached', { release: entry.release ? releaseName(entry.release) : '' })}
     </p>
   {/if}
   {#if siblings > 1}
-    <p class="alert" role="note">{t('web.queue.release-scope', { count: siblings })}</p>
+    <p class="alert alert-info" role="note">{t('web.queue.release-scope', { count: siblings })}</p>
   {/if}
 
   <dl class="tags" aria-label={t('web.queue.detected')}>

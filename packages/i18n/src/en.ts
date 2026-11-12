@@ -451,10 +451,10 @@ export const en = {
   'web.libraries.arrival.hint':
     'Downloads land here and are sent to your libraries. Nothing is ever kept in this folder.',
   'web.libraries.source.arrival.hint': 'Where the downloads arrive.',
-  'web.libraries.type': 'What it holds',
+  'web.libraries.type': 'Holds',
   'web.libraries.type.movie': 'Movies',
   'web.libraries.type.series': 'Series',
-  'web.libraries.type.fixed': 'The type of a library cannot be changed once it is created.',
+  'web.libraries.type.fixed': 'Set when it was created.',
   'web.libraries.into': 'Sent to',
   'web.libraries.into.movie': 'Movies go to',
   'web.libraries.into.series': 'Series go to',
@@ -463,6 +463,7 @@ export const en = {
     'The default destinations: each file can still be sent to another library when it is validated.',
   'web.libraries.advanced': 'Advanced',
   'web.libraries.close': 'Close',
+  'web.libraries.unsaved': 'Unsaved changes',
   'web.libraries.group.in-place': 'Organized in place',
   'web.libraries.group.in-place.empty':
     'No library yet. Add the folder where your movies live, and the one for your series.',
@@ -823,20 +824,20 @@ export const en = {
   'web.profile.naming.hint': 'How the folders and files are named.',
   'web.profile.naming.with-id': 'With the TMDB id',
   'web.profile.naming.with-id.help':
-    'The TMDB id goes in braces in the movie and series folders and in the movie file name ({tmdb-438631}). Plex and Jellyfin then recognize the right work even when two share a title and year.',
+    'The folder and the file carry the TMDB id ({tmdb-438631}): the player never mixes up two movies sharing a title and a year.',
   'web.profile.naming.no-id': 'Without the id',
   'web.profile.naming.no-id.help':
-    'Cleaner names, but the player then identifies a work by its title and year alone, which can mix up two works sharing both (a remake released the same year). The NFO files, when written, still carry the id.',
+    'More readable names. The player relies on the NFO, or on the title and year otherwise.',
   'web.profile.metadata': 'Metadata files',
   'web.profile.metadata.hint': 'What is written next to the videos.',
   'web.profile.metadata.none': 'None',
   'web.profile.metadata.none.help':
-    'Only the videos are renamed. The player fetches the descriptions and the artwork itself.',
+    'Only the videos are renamed: the player looks up descriptions and images itself.',
   'web.profile.metadata.nfo': 'NFO files and images',
   'web.profile.metadata.nfo.help':
-    'Writes a Kodi-format NFO file (movie.nfo, tvshow.nfo, one per episode) and the poster, background and logo images next to the videos, and the season posters in the show’s folder. Jellyfin reads them before it asks any online source. Plex only does with the optional “Plex NFO” agent (Plex Media Server 1.43.1 or later): its default agents ignore them.',
+    'Writes the NFO files and the images (poster, background, logo) next to the videos. Jellyfin, Kodi and Plex’s “Plex NFO” agent read them; Plex’s default agents ignore them.',
   'web.profile.default': 'Default',
-  'web.profile.default.help': 'What is set in the settings.',
+  'web.profile.default.named': 'Default ({value})',
   'web.profile.example.movie': 'Movie',
   'web.profile.example.series': 'Episode',
   'web.profile.explain': 'What this naming writes',

@@ -22,6 +22,8 @@
   --ok-bg: rgb(95 196 138 / 14%);
   --warn-bg: rgb(242 169 59 / 14%);
   --danger-bg: rgb(240 122 106 / 14%);
+  --info: #6cb0f2;
+  --info-bg: rgb(108 176 242 / 14%);
   --neutral-bg: rgb(155 161 171 / 12%);
   --logo-dark: block;
   --logo-light: none;
@@ -46,6 +48,8 @@
   --ok-bg: rgb(30 127 76 / 12%);
   --warn-bg: rgb(143 86 0 / 12%);
   --danger-bg: rgb(179 56 42 / 12%);
+  --info: #1f5f9f;
+  --info-bg: rgb(31 95 159 / 10%);
   --neutral-bg: rgb(91 96 104 / 12%);
   --logo-dark: none;
   --logo-light: block;
@@ -307,6 +311,18 @@ input[type='radio']:disabled {
   border-color: var(--ok);
 }
 
+.alert-info {
+  color: var(--info);
+  background: var(--info-bg);
+  border-color: var(--info);
+}
+
+.alert-warn {
+  color: var(--warn);
+  background: var(--warn-bg);
+  border-color: var(--warn);
+}
+
 .alert-danger {
   color: var(--danger);
   background: var(--danger-bg);
@@ -404,4 +420,68 @@ input[type='radio']:disabled {
 
 .option-name {
   font-weight: 600;
+}
+
+/* A row of pills in a tray; the radio stays for the keyboard. */
+.segments {
+  display: flex;
+  flex-wrap: wrap;
+  align-self: flex-start;
+  gap: 4px;
+  max-width: 100%;
+  padding: 4px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+}
+
+.segment {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 0 14px;
+  border-radius: 7px;
+  color: var(--muted);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.segment:hover {
+  background: var(--surface-2);
+}
+
+.segment.on {
+  color: var(--text);
+  background: var(--surface-2);
+  box-shadow: inset 0 -2px 0 var(--accent);
+}
+
+.segment input {
+  position: absolute;
+  opacity: 0;
+  inset: 0;
+  margin: 0;
+  cursor: pointer;
+}
+
+.segment:has(input:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* What the selected choice means, and what it writes. */
+.segment-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border-left: 2px solid var(--accent);
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+}
+
+.example {
+  font-size: 11.5px;
+  overflow-wrap: anywhere;
 }

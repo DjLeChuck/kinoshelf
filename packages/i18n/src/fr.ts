@@ -472,10 +472,10 @@ export const fr: Record<keyof typeof en, string> = {
   'web.libraries.arrival.hint':
     'Les téléchargements arrivent ici et sont envoyés vers vos bibliothèques. Rien n’est jamais conservé dans ce dossier.',
   'web.libraries.source.arrival.hint': 'Là où arrivent les téléchargements.',
-  'web.libraries.type': 'Ce qu’elle contient',
+  'web.libraries.type': 'Contient',
   'web.libraries.type.movie': 'Films',
   'web.libraries.type.series': 'Séries',
-  'web.libraries.type.fixed': 'Le type d’une bibliothèque ne peut plus changer une fois créée.',
+  'web.libraries.type.fixed': 'Fixé à la création.',
   'web.libraries.into': 'Envoyé vers',
   'web.libraries.into.movie': 'Les films vont dans',
   'web.libraries.into.series': 'Les séries vont dans',
@@ -483,6 +483,7 @@ export const fr: Record<keyof typeof en, string> = {
   'web.libraries.into.hint':
     'Les destinations par défaut : chaque fichier peut encore être envoyé vers une autre bibliothèque au moment de sa validation.',
   'web.libraries.advanced': 'Avancé',
+  'web.libraries.unsaved': 'Modifications non enregistrées',
   'web.libraries.close': 'Fermer',
   'web.libraries.group.in-place': 'Rangées sur place',
   'web.libraries.group.in-place.empty':
@@ -849,20 +850,20 @@ export const fr: Record<keyof typeof en, string> = {
   'web.profile.naming.hint': 'La façon de nommer les dossiers et les fichiers.',
   'web.profile.naming.with-id': 'Avec l’id TMDB',
   'web.profile.naming.with-id.help':
-    'L’id TMDB figure entre accolades dans les dossiers de films et de séries et dans le nom du fichier d’un film ({tmdb-438631}). Plex et Jellyfin reconnaissent alors la bonne œuvre, même quand deux partagent un titre et une année.',
+    'Le dossier et le fichier portent l’id TMDB ({tmdb-438631}) : le lecteur ne confond jamais deux films de même titre et de même année.',
   'web.profile.naming.no-id': 'Sans l’id',
   'web.profile.naming.no-id.help':
-    'Des noms plus propres, mais le lecteur identifie alors une œuvre par son titre et son année seuls, ce qui peut confondre deux œuvres qui les partagent (un remake sorti la même année). Les fichiers NFO, quand ils sont écrits, portent quand même l’id.',
+    'Des noms plus lisibles. Le lecteur s’appuie sur le NFO, ou à défaut sur le titre et l’année.',
   'web.profile.metadata': 'Fichiers de métadonnées',
   'web.profile.metadata.hint': 'Ce qui est écrit à côté des vidéos.',
   'web.profile.metadata.none': 'Aucun',
   'web.profile.metadata.none.help':
-    'Seules les vidéos sont renommées. Le lecteur va chercher lui-même les descriptions et les images.',
+    'Seules les vidéos sont renommées : le lecteur cherche lui-même les descriptions et les images.',
   'web.profile.metadata.nfo': 'Fichiers NFO et images',
   'web.profile.metadata.nfo.help':
-    'Écrit un fichier NFO au format Kodi (movie.nfo, tvshow.nfo, un par épisode) et les images d’affiche, de fond et de logo à côté des vidéos, ainsi que les affiches de saison dans le dossier de la série. Jellyfin les lit avant d’interroger une source en ligne. Plex ne le fait qu’avec l’agent facultatif « Plex NFO » (Plex Media Server 1.43.1 ou plus) : ses agents par défaut les ignorent.',
+    'Écrit les fichiers NFO et les images (affiche, fond, logo) à côté des vidéos. Jellyfin, Kodi et l’agent « Plex NFO » les lisent ; les agents par défaut de Plex les ignorent.',
   'web.profile.default': 'Par défaut',
-  'web.profile.default.help': 'Ce qui est défini dans les réglages.',
+  'web.profile.default.named': 'Par défaut ({value})',
   'web.profile.example.movie': 'Film',
   'web.profile.example.series': 'Épisode',
   'web.profile.explain': 'Ce que ce nommage écrit',

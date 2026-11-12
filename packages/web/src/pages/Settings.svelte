@@ -10,7 +10,7 @@
   import { api } from '../lib/api.js';
   import { messageOf } from '../lib/errors.js';
   import { t } from '../lib/i18n.svelte.js';
-  import type { Settings } from '../lib/settings.js';
+  import { DEFAULT_METADATA, DEFAULT_NAMING, type Settings } from '../lib/settings.js';
 
   /** In page order: the nav lists them, and each wraps its section so a click can reach it. */
   const SECTIONS = [
@@ -58,7 +58,15 @@
       <button type="button" class="btn" onclick={() => void load()}>{t('web.retry')}</button>
     {:else if settings}
       <div id="general"><SettingsGeneral {settings} {save} /></div>
-      <div id="libraries"><SettingsLibraries examples={settings.namingExamples} /></div>
+      <div id="libraries">
+        <SettingsLibraries
+          examples={settings.namingExamples}
+          defaults={{
+            naming: settings.processing.naming ?? DEFAULT_NAMING,
+            metadata: settings.processing.metadata ?? DEFAULT_METADATA,
+          }}
+        />
+      </div>
       <div id="watch"><SettingsWatch {settings} {save} /></div>
       <div id="processing"><SettingsProcessing {settings} {save} /></div>
       <div id="plex"><SettingsServer kind="plex" {settings} {save} /></div>
