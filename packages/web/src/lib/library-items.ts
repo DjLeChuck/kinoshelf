@@ -1,5 +1,11 @@
 import { api } from './api.js';
 import type { Library } from './libraries.js';
+import type {
+  CollectionDetail,
+  CollectionFilter,
+  ItemCollection,
+  ItemSort,
+} from './collections.js';
 
 export type ItemState = 'review' | 'rename' | 'unrecognized' | 'incomplete' | 'ok';
 export type ItemFilter =
@@ -87,6 +93,8 @@ export interface Version {
 /** An entry of a list: a movie is one, with a version per file; its state is the worst of them. */
 export interface ListedItem extends LibraryItem {
   readonly versions: readonly Version[];
+  /** The collection its NFO files it under; `null` for none, and in a library that writes no NFO. */
+  readonly collection: ItemCollection | null;
 }
 
 /** The page of one item: the work as TMDB knows it, and the file as `ffprobe` read it. */
@@ -104,6 +112,8 @@ export interface ItemDetail extends LibraryItem {
   readonly versions: readonly Version[];
   /** The NFO files the profile expects for the work, and whether each is on the disk. */
   readonly nfoFiles: readonly { readonly path: string; readonly present: boolean }[];
+  /** A movie of a library that writes NFO: its collection and what can be chosen; else `null`. */
+  readonly collectionChoice: CollectionDetail | null;
 }
 
 export interface ScanProgress {
@@ -130,7 +140,11 @@ export interface ItemsPage {
       readonly logo: boolean;
       readonly thumb: boolean;
     };
+    /** The library files its movies under collections: it writes NFO. */
+    readonly collections: boolean;
   };
+  /** Movies per collection filter; all zero when the library has no collections. */
+  readonly collectionCounts: Readonly<Record<'all' | 'in' | 'out' | 'incomplete', number>>;
   /** `null` until a scan of the source has ended. */
   readonly scannedAt: string | null;
   readonly scan: {
@@ -153,14 +167,21 @@ export const PAGE_SIZE = 50;
 
 export interface ItemsQuery {
   readonly state?: ItemFilter | undefined;
+  readonly collection?: CollectionFilter | undefined;
+  readonly sort?: ItemSort | undefined;
   readonly q?: string | undefined;
   readonly limit: number;
   readonly offset?: number;
 }
 
-export function itemsUrl(libraryId: string, { state, q, limit, offset }: ItemsQuery): string {
+export function itemsUrl(
+  libraryId: string,
+  { state, collection, sort, q, limit, offset }: ItemsQuery,
+): string {
   const parameters = [
     ...(state ? [`state=${state}`] : []),
+    ...(collection ? [`collection=${encodeURIComponent(collection)}`] : []),
+    ...(sort && sort !== 'title' ? [`sort=${sort}`] : []),
     ...(q?.trim() ? [`q=${encodeURIComponent(q.trim())}`] : []),
     `limit=${limit}`,
     ...(offset ? [`offset=${offset}`] : []),

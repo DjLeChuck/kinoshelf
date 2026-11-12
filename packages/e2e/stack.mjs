@@ -139,10 +139,24 @@ createServer((request, response) => {
         genres: [],
         credits: { cast: [], crew: [] },
         external_ids: {},
+        // Dune belongs to a saga of which the library can hold only the first film.
+        ...(found.id === 438631 && {
+          belongs_to_collection: { id: 726871, name: 'Dune - Saga' },
+        }),
       });
     } else {
       response.writeHead(404).end();
     }
+  } else if (url.pathname === '/3/collection/726871') {
+    json({
+      id: 726871,
+      name: 'Dune - Saga',
+      overview: 'Spice.',
+      parts: [
+        { id: 438631, title: 'Dune', release_date: '2021-09-15' },
+        { id: 693134, title: 'Dune : Part Two', release_date: '2024-02-27' },
+      ],
+    });
   } else if (url.pathname === '/3/search/tv') {
     const word = (url.searchParams.get('query') ?? '').toLowerCase().split(' ')[0];
     json({ results: word && 'severance'.startsWith(word) ? [show] : [] });

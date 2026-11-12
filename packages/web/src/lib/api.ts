@@ -30,7 +30,7 @@ interface ErrorBody {
  * sends it. `fetcher` is injectable for tests.
  */
 export async function request<T>(
-  method: 'GET' | 'POST' | 'PATCH' | 'DELETE',
+  method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',
   url: string,
   body?: unknown,
   fetcher: Fetch = (input, init) => fetch(input, init),
@@ -78,6 +78,7 @@ export async function request<T>(
 export const api = {
   get: <T>(url: string) => request<T>('GET', url),
   post: <T>(url: string, body?: unknown) => request<T>('POST', url, body),
+  put: <T>(url: string, body?: unknown) => request<T>('PUT', url, body),
   patch: <T>(url: string, body?: unknown) => request<T>('PATCH', url, body),
   delete: <T>(url: string) => request<T>('DELETE', url),
 };

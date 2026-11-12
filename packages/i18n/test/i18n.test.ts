@@ -41,6 +41,12 @@ describe('catalogs', () => {
     const SAME_IN_BOTH: readonly string[] = [
       'entry.score',
       'web.library.scan.running',
+      'web.collection.filter.label',
+      'web.collection.sort.collection',
+      'web.collection.col',
+      'web.collection.fact',
+      'web.collection.title',
+      'web.collection.part.tmdb',
       'web.library.col.fanart',
       'web.library.col.logo',
       'web.library.col.versions',

@@ -24,6 +24,17 @@
     type ItemState,
     type ItemsPage,
   } from '../lib/library-items.js';
+  import {
+    ITEM_SORTS,
+    canFile,
+    nameOfKey,
+    pillOf,
+    startsGroup,
+    type CollectionFilter,
+    type ItemSort,
+  } from '../lib/collections.js';
+  import CollectionBar from './CollectionBar.svelte';
+  import CollectionBulk from './CollectionBulk.svelte';
   import ItemPanel from './ItemPanel.svelte';
   import RunDialog from './RunDialog.svelte';
   import Link from './Link.svelte';
@@ -67,10 +78,17 @@
   let starting = $state(false);
   let picked = $state<readonly string[]>([]);
   let running = $state<'rename' | 'refresh' | undefined>(undefined);
+  let filing = $state(false);
+
+  /** A row can be ticked to be renamed or refreshed, or (a library with collections) to be filed. */
+  const selectable = (
+    item: Parameters<typeof canRun>[0] & Parameters<typeof canFile>[0],
+  ): boolean => canRun(item) || (page?.library.collections === true && canFile(item));
 
   const pickedIds = $derived(new Set(picked));
   const pickedItems = $derived((page?.items ?? []).filter(({ id }) => pickedIds.has(id)));
   const split = $derived(partition(pickedItems));
+  const toFile = $derived(pickedItems.filter(canFile).map(({ id }) => id));
   const toRun = $derived.by(() => {
     const mode = running;
     if (mode === undefined) {
@@ -92,9 +110,19 @@
   const filters = $derived(isSeries ? SERIES_FILTERS : ITEM_FILTERS);
   // The filter lives in the URL (`?state=review`): a link keeps it, and so does a reload.
   const filter = $derived(oneOf(router.query.get('state'), filters));
-  let shown = untrack(() => filter);
+  // The collection filter and the sort live in the URL too (`?collection=in&sort=collection`).
+  const collectionFilter = $derived(router.query.get('collection') ?? undefined);
+  const sort = $derived<ItemSort>(oneOf(router.query.get('sort'), ITEM_SORTS) ?? 'title');
+  // The column and the filters appear once there is a collection to show (or one is being looked at):
+  // a library with none would only carry empty controls. Filing a movie stays offered.
+  const showsCollections = $derived(
+    page?.library.collections === true &&
+      (page.collectionCounts.in > 0 || collectionFilter !== undefined || sort !== 'title'),
+  );
+
+  let shown = untrack(() => `${filter ?? ''}|${collectionFilter ?? ''}|${sort}`);
   $effect(() => {
-    const current = filter;
+    const current = `${filter ?? ''}|${collectionFilter ?? ''}|${sort}`;
     if (current !== shown) {
       shown = current;
       untrack(refilter);
@@ -116,6 +144,8 @@
       // The tree reads its shows itself: here only the counts and the scan are wanted.
       const answer = await libraryItems.page(library.id, {
         state: isSeries ? undefined : (filter as ItemFilter | undefined),
+        collection: isSeries ? undefined : collectionFilter,
+        sort: isSeries ? undefined : sort,
         q: searched,
         limit: isSeries ? 1 : limit,
       });
@@ -285,6 +315,21 @@
       oninput={search}
     />
 
+    {#if showsCollections}
+      <CollectionBar
+        counts={page.collectionCounts}
+        filter={collectionFilter}
+        {sort}
+        activeName={collectionFilter ? nameOfKey(collectionFilter, page.items) : ''}
+        onfilter={(next: CollectionFilter | undefined) => {
+          router.setQuery({ collection: next });
+        }}
+        onsort={(next: ItemSort) => {
+          router.setQuery({ sort: next === 'title' ? undefined : next });
+        }}
+      />
+    {/if}
+
     {#if isSeries}
       <ShowsTree
         libraryId={library.id}
@@ -301,17 +346,17 @@
     {:else if page.items.length === 0}
       <p class="card muted">{t('web.library.empty')}</p>
     {:else}
-      {#if page.items.some(canRun)}
+      {#if page.items.some(selectable)}
         <div class="bar" role="group">
           <label class="check">
             <input
               type="checkbox"
-              checked={pickedItems.length === page.items.filter(canRun).length}
+              checked={pickedItems.length === page.items.filter(selectable).length}
               indeterminate={pickedItems.length > 0 &&
-                pickedItems.length < page.items.filter(canRun).length}
+                pickedItems.length < page.items.filter(selectable).length}
               onchange={(event) => {
                 picked = event.currentTarget.checked
-                  ? (page?.items.filter(canRun).map(({ id }) => id) ?? [])
+                  ? (page?.items.filter(selectable).map(({ id }) => id) ?? [])
                   : [];
               }}
             />
@@ -339,8 +384,36 @@
             >
               {t('web.library.run.refresh')}
             </button>
+            {#if page.library.collections}
+              <button
+                type="button"
+                class="btn"
+                aria-expanded={filing}
+                disabled={toFile.length === 0}
+                onclick={() => {
+                  filing = !filing;
+                }}
+              >
+                {t('web.collection.bulk')}
+              </button>
+            {/if}
           {/if}
         </div>
+        {#if filing && toFile.length > 0}
+          <CollectionBulk
+            libraryId={library.id}
+            items={toFile}
+            onclose={() => {
+              filing = false;
+            }}
+            ondone={(message: string) => {
+              notice = message;
+              picked = [];
+              filing = false;
+              void load();
+            }}
+          />
+        {/if}
       {/if}
       <div class="layout">
         <div class="table-wrap">
@@ -350,6 +423,7 @@
                 <th></th>
                 <th>{t('web.library.col.title')}</th>
                 <th>{t('web.library.col.year')}</th>
+                {#if showsCollections}<th>{t('web.collection.col')}</th>{/if}
                 <th>{t('web.library.col.versions')}</th>
                 {#if page.library.writes.nfo}<th>NFO</th>{/if}
                 {#if page.library.writes.artwork}
@@ -360,10 +434,13 @@
               </tr>
             </thead>
             <tbody>
-              {#each page.items as item (item.id)}
-                <tr class:current={open?.id === item.id}>
+              {#each page.items as item, index (item.id)}
+                <tr
+                  class:current={open?.id === item.id}
+                  class:group-start={startsGroup(page.items, index, sort)}
+                >
                   <td class="narrow">
-                    {#if canRun(item)}
+                    {#if selectable(item)}
                       <input
                         type="checkbox"
                         aria-label={t('web.library.run.select', {
@@ -401,6 +478,29 @@
                       >{/if}
                   </td>
                   <td>{item.year ?? ''}</td>
+                  {#if showsCollections}
+                    <td class="collection">
+                      {#if item.collection}
+                        {@const pill = pillOf(item.collection)}
+                        {@const named = item.collection}
+                        <button
+                          type="button"
+                          class="link collection-name"
+                          aria-label={t('web.collection.filter.by', { name: named.name })}
+                          onclick={() => {
+                            router.setQuery({ collection: named.key });
+                          }}>{named.name}</button
+                        >
+                        <span class="chip chip-{pill.kind}"
+                          >{pill.text ?? t('web.collection.custom')}</span
+                        >
+                      {:else}
+                        <span class="muted" aria-hidden="true">—</span><span class="sr-only"
+                          >{t('web.collection.none')}</span
+                        >
+                      {/if}
+                    </td>
+                  {/if}
                   <td><VersionBadges versions={item.versions} /></td>
                   {#if page.library.writes.nfo}<td><Presence value={item.nfo} /></td>{/if}
                   {#if page.library.writes.artwork}
@@ -447,6 +547,10 @@
                 source={library.source}
                 item={open}
                 {busy}
+                onnotice={(message: string) => {
+                  notice = message;
+                  void load();
+                }}
                 ondone={(message: string, settled?: Settled) => {
                   notice = message;
                   // Another row may be open by now: close the panel only if it is the one validated.
@@ -602,6 +706,29 @@
 
   tr.current {
     background: var(--surface-2);
+  }
+
+  /* Sorted by collection, a heavier line sets each saga apart from the one above. */
+  tr.group-start > td {
+    border-top: 2px solid var(--border-strong);
+  }
+
+  .collection {
+    min-width: 0;
+  }
+
+  .collection > * {
+    vertical-align: middle;
+  }
+
+  .collection-name {
+    max-width: 18ch;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-decoration: underline;
+    text-decoration-color: var(--border-strong);
+    text-underline-offset: 3px;
   }
 
   /* An inset shadow, not a border: a border on a row of a collapsed table is not drawn everywhere. */

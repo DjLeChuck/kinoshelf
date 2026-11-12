@@ -18,7 +18,9 @@
     type ItemDetail,
     type LibraryItem,
   } from '../lib/library-items.js';
+  import { router } from '../lib/router.svelte.js';
   import ArrivalDetail from './ArrivalDetail.svelte';
+  import CollectionPanel from './CollectionPanel.svelte';
   import ImagesDialog from './ImagesDialog.svelte';
   import RescanButton from './RescanButton.svelte';
   import RematchButton from './RematchButton.svelte';
@@ -32,6 +34,7 @@
     siblings = 1,
     busy = false,
     ondone,
+    onnotice,
   }: {
     libraryId: string;
     /** The library's folder: what a scan of one movie must stay inside. */
@@ -43,6 +46,8 @@
     busy?: boolean;
     /** The file was settled (transferred or set aside): what to tell the user. */
     ondone: (message: string, settled?: Settled) => void;
+    /** Something changed that the page behind should read again, with no row settled. */
+    onnotice?: (message: string) => void;
   } = $props();
 
   // The parent keys this panel on the item, so what is read here once is right for its life.
@@ -108,6 +113,17 @@
       () => undefined,
     );
   }
+  /** The collection was changed: the NFO is written again, so the page reads what it says now. */
+  function collectionChanged(message: string): void {
+    void libraryItems.detail(libraryId, item.id).then(
+      (fresh) => {
+        detail = fresh;
+      },
+      () => undefined,
+    );
+    onnotice?.(message);
+  }
+  const effective = $derived(detail?.collectionChoice?.effective ?? null);
   const runItems = $derived(isListed(item) ? versionsToRun(item, 'refresh') : [item]);
   const missingNfo = $derived((detail?.nfoFiles ?? []).filter(({ present: there }) => !there));
   const size = $derived(totalSize((detail?.versions ?? []).map(({ file }) => file)));
@@ -188,6 +204,31 @@
             .join(' · ')}
         </dd>
       {/if}
+      {#if detail.collectionChoice}
+        <dt class="muted">{t('web.collection.fact')}</dt>
+        <dd class="collection-fact">
+          {#if effective === null}
+            {t('web.collection.fact.none')}
+          {:else if effective.custom || effective.total === null}
+            {t('web.collection.fact.custom', { name: effective.name })}
+          {:else}
+            {t('web.collection.fact.tmdb', {
+              name: effective.name,
+              held: effective.held,
+              total: effective.total,
+            })}
+          {/if}
+          {#if effective}
+            <button
+              type="button"
+              class="link show"
+              onclick={() => {
+                router.setQuery({ collection: effective.key });
+              }}>{t('web.collection.fact.show')}</button
+            >
+          {/if}
+        </dd>
+      {/if}
       <dt class="muted">{t('web.library.metadata')}</dt>
       <dd class="marks">
         {#each [['NFO', detail.nfo, false], [t('web.library.col.poster'), detail.poster, detail.unavailable.includes('poster')], [t('web.library.col.fanart'), detail.fanart, detail.unavailable.includes('fanart')], [t('web.library.col.logo'), detail.logo, detail.unavailable.includes('logo')]] as const as [label, value, unavailable] (label)}
@@ -205,6 +246,14 @@
         {/each}
       </dd>
     </dl>
+    {#if detail.collectionChoice}
+      <CollectionPanel
+        {libraryId}
+        itemId={item.id}
+        detail={detail.collectionChoice}
+        ondone={collectionChanged}
+      />
+    {/if}
     {#if compared}
       <section aria-labelledby="compare">
         <h3 id="compare">{t('web.library.compare.title')}</h3>
@@ -418,5 +467,16 @@
   .facts dd {
     margin: 0;
     overflow-wrap: anywhere;
+  }
+
+  .collection-fact {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 8px;
+  }
+
+  .show {
+    color: var(--accent-text);
   }
 </style>
