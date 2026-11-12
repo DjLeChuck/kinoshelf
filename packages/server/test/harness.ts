@@ -77,7 +77,7 @@ export interface Harness {
   readonly destination: string;
   /** An authenticated request. */
   readonly request: (
-    method: 'GET' | 'POST' | 'PATCH' | 'DELETE',
+    method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',
     url: string,
     payload?: object,
   ) => Promise<LightMyRequestResponse>;

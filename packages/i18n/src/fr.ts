@@ -242,6 +242,11 @@ export const fr: Record<keyof typeof en, string> = {
   'error.library.in-use':
     'Le dossier d’arrivée « {name} » envoie ses fichiers dans cette bibliothèque.',
   'error.library.invalid': 'Cette bibliothèque n’est pas valide : {detail}',
+  'error.library.no-collections':
+    'Cette bibliothèque n’écrit pas de NFO : elle n’a pas de collections, rien ne les dirait au lecteur.',
+  'error.collection.name-required': 'Donnez un nom à la collection.',
+  'error.provider.movie-unknown':
+    'TMDB ne connaît plus ce film : son NFO ne peut pas être réécrit.',
   'error.library.nothing-to-do': 'Cette sélection n’a plus rien à faire.',
   'error.library.version-unavailable':
     'Ces fichiers ne peuvent pas recevoir de version : aucune taille d’image n’a été trouvée (dans le nom du fichier, ni dans le fichier si la lecture ffprobe est activée), ou le profil ne prévoit pas de nom pour les versions. Choisissez une taille.',

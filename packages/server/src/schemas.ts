@@ -1022,16 +1022,41 @@ export const versionSchema = {
 } as const;
 
 /**
+ * The collection a movie of a library is filed under, as its NFO says (`<set>`), with how much of
+ * it the library holds. `null` for a movie in none, and always in a library that writes no NFO.
+ */
+export const collectionSchema = {
+  type: 'object',
+  nullable: true,
+  required: ['key', 'name', 'custom', 'held', 'total'],
+  properties: {
+    key: {
+      type: 'string',
+      description: 'Stable id of the collection in a library: `t:<TMDB id>` or `c:<name>`.',
+    },
+    name: { type: 'string' },
+    custom: { type: 'boolean', description: 'The owner’s own collection: it has no TMDB id.' },
+    held: { type: 'integer', description: 'Movies of it that the library holds.' },
+    total: {
+      type: 'integer',
+      nullable: true,
+      description: 'Movies TMDB lists in it; `null` for a custom collection, or when unknown.',
+    },
+  },
+} as const;
+
+/**
  * An entry of a list: a movie is one whatever its versions, the other files their own. The
  * fields are the first file's, but for the state and the files, which are those of all versions
  * (the worst state; a file missing from any one).
  */
 export const workSchema = {
   ...libraryItemSchema,
-  required: [...libraryItemSchema.required, 'versions'],
+  required: [...libraryItemSchema.required, 'versions', 'collection'],
   properties: {
     ...libraryItemSchema.properties,
     versions: { type: 'array', items: versionSchema },
+    collection: collectionSchema,
   },
 } as const;
 

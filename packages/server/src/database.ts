@@ -395,6 +395,35 @@ export const SERVER_MIGRATIONS: readonly { readonly name: string; readonly sql: 
       CREATE INDEX library_items_lead ON library_items (library_id, lead, sort, path);
       CREATE INDEX library_items_work ON library_items (library_id, work_key);`,
   },
+  {
+    // A movie's collection as the provider names it, read where the details are (a scan, a match),
+    // and what each collection lists. The owner's choice for one movie of one library is kept
+    // apart (`collection_overrides`): a refresh rewrites the first two and never the third.
+    // `collection_*` of a row are derived from the three (see `LibraryItemStore.refreshCollections`).
+    name: 'server:032-collections',
+    sql: `
+      CREATE TABLE collections (
+        id INTEGER PRIMARY KEY,
+        name TEXT NOT NULL,
+        overview TEXT,
+        parts TEXT NOT NULL
+      );
+      CREATE TABLE movie_collections (
+        movie_id INTEGER PRIMARY KEY,
+        collection_id INTEGER NOT NULL
+      );
+      CREATE TABLE collection_overrides (
+        library_id TEXT NOT NULL,
+        movie_id INTEGER NOT NULL,
+        mode TEXT NOT NULL,
+        name TEXT,
+        PRIMARY KEY (library_id, movie_id)
+      );
+      ALTER TABLE library_items ADD COLUMN collection_key TEXT;
+      ALTER TABLE library_items ADD COLUMN collection_name TEXT;
+      ALTER TABLE library_items ADD COLUMN collection_total INTEGER;
+      CREATE INDEX library_items_collection ON library_items (library_id, collection_key);`,
+  },
 ];
 
 /** Opens the single SQLite file of the config directory, shared with the CLI and the cache. */

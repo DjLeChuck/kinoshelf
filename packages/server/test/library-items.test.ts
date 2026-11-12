@@ -213,6 +213,7 @@ describe('GET /api/libraries/:id/items', () => {
     const body = await list(h);
     expect(body.library).toEqual({
       writes: { nfo: true, artwork: true, logo: true, thumb: false },
+      collections: true,
     });
     expect(body.scannedAt).toEqual(expect.any(String));
     expect(body.scan).toBeNull();
@@ -450,6 +451,7 @@ describe('the logo of a library item', () => {
     const body = (await h.request('GET', '/api/libraries/films/items')).json<ItemsBody>();
     expect(body.library).toEqual({
       writes: { nfo: true, artwork: true, logo: true, thumb: false },
+      collections: true,
     });
     const byPath = new Map(body.items.map((item) => [item.path, item]));
     expect(byPath.get(alien)).toMatchObject({ poster: true, fanart: true, logo: false });

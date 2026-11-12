@@ -17,6 +17,7 @@ import {
   type MetadataProvider,
 } from '@kinoshelf/core';
 import { RequestPool, SqliteHttpCache, tmdbFromEnv } from '@kinoshelf/provider-tmdb';
+import { CollectionStore } from './collections.js';
 import type { Job, ProcessedJob } from './jobs.js';
 import { probePictureSize, type SizeReader } from './probe.js';
 import type { ProgressTracker } from './progress.js';
@@ -114,6 +115,7 @@ async function process(deps: ProcessorDeps, job: Job): Promise<ProcessedJob> {
   );
   progress?.discovered(job.id, files.length);
   const journal = new SqliteJournal(deps.database);
+  const collections = new CollectionStore(deps.database);
   const analysis = await analyze(files, {
     parser: new GuessitParser(),
     provider: makeProvider(deps, settings.metadataLanguage),
@@ -136,7 +138,14 @@ async function process(deps: ProcessorDeps, job: Job): Promise<ProcessedJob> {
     ...(settings.threshold !== undefined && { matching: { threshold: settings.threshold } }),
     ...withSizeReader(deps),
     madeByUs: (path) => madeByUs(journal, path),
+    // What the owner decided for a movie outlives the provider's record, which a scan rewrites.
+    collectionOverride: (candidate) => collections.override(job.libraryId, candidate.id.id),
   });
+  for (const entry of analysis.entries) {
+    if (entry.outcome.status === 'matched' && entry.outcome.best.candidate.kind === 'movie') {
+      collections.record(entry.outcome.best.candidate.id.id, entry.collection);
+    }
+  }
   return {
     analysis,
     settings: {

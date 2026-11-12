@@ -21,6 +21,7 @@ import { createTranslator, detectLocale } from '@kinoshelf/i18n';
 import type { DeliveryOptions } from './notify/delivery.js';
 import { Notifier } from './notify/notifier.js';
 import { revertedFolders } from './notify/paths.js';
+import { CollectionEditor, CollectionStore } from './collections.js';
 import { createProcessor, type ProcessorDeps } from './processor.js';
 import { forgetReplacedScans, purgeHistory, type LibraryScan } from './purge.js';
 import { registerFsRoutes } from './fs-routes.js';
@@ -519,9 +520,24 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
       },
       ...(options.fetchImage && { fetchImage: options.fetchImage }),
     });
+    const collectionStore = new CollectionStore(options.database);
+    const collectionEditor = new CollectionEditor({
+      config: () => options.config,
+      journal,
+      items,
+      store: collectionStore,
+      movie: (tmdbId) => service.movie(tmdbId),
+      imageUrl: (path, size) => service.imageUrl(path, size),
+      backupDir: join(options.configDir, 'replaced'),
+      changed: (folder) => {
+        notifier.foldersChanged([folder]);
+      },
+    });
     registerLibraryRoutes(api, {
       config: configStore,
       artwork,
+      collections: collectionStore,
+      collectionEditor,
       jobs,
       entries,
       items,

@@ -21,6 +21,7 @@ import {
 } from '@kinoshelf/core';
 import type { FastifyInstance } from 'fastify';
 import { ApiError } from './api-error.js';
+import { hasCollections, type CollectionEditor, type CollectionStore } from './collections.js';
 import { toCandidate, type CandidateBody } from './candidate-body.js';
 import { isSystemPath } from './system-paths.js';
 import { largestFirst } from './versions.js';
@@ -35,12 +36,16 @@ import type { EventBus } from './events.js';
 import type { JobStore } from './jobs.js';
 import {
   ITEM_FILTERS,
+  ITEM_SORTS,
   itemId,
   profileWrites,
   isUnsettled,
   resolutionOfItem,
   SHOW_FILTERS,
+  type CollectionFilter,
   type ItemFilter,
+  type ItemSort,
+  type RowCollection,
   type ItemState,
   type ShowStateFilter,
   type LibraryItem,
@@ -54,6 +59,7 @@ import {
   libraryCreateSchema,
   libraryItemSchema,
   workSchema,
+  collectionSchema,
   fileSchema,
   matchBodySchema,
   versionSchema,
@@ -84,6 +90,10 @@ export interface LibraryContext {
   readonly seriesFiles: SeriesFilesStore;
   /** Says whether the images of a work can be changed from its page, and which are there. */
   readonly artwork: Artwork;
+  /** The collections of movies: what the provider says, and what the owner decided. */
+  readonly collections: CollectionStore;
+  /** Changes the collection of movies and writes their NFO again. */
+  readonly collectionEditor: CollectionEditor;
   /** Plans and queues the transfers of a scan's files (see `POST /api/plans/{id}/execute`). */
   readonly batch: {
     readonly dryRun: (
@@ -242,9 +252,21 @@ const allThere = (values: readonly (boolean | null)[]): boolean | null =>
  * An entry of a list: the first file with the state and files of all its versions. A movie held
  * in two qualities is one entry, which needs renaming when any version does.
  */
+const presentCollection = (collection: RowCollection | undefined) =>
+  collection
+    ? {
+        key: collection.key,
+        name: collection.name,
+        custom: collection.key.startsWith('c:'),
+        held: collection.held,
+        total: collection.total,
+      }
+    : null;
+
 const presentWork = (
   work: readonly LibraryItem[],
   probeOf: (path: string) => Probe | undefined,
+  collectionOf: (path: string) => RowCollection | undefined,
   release?: ReleaseOf,
 ): unknown => {
   const [first] = work;
@@ -268,8 +290,13 @@ const presentWork = (
     versions: largestFirst(work, resolutionOfItem).map((item) =>
       presentVersion(item, probeOf(item.path)),
     ),
+    // Every version of a movie is filed under the same collection.
+    collection: presentCollection(collectionOf(first.path)),
   };
 };
+
+const collectionFilterOf = (value: string): CollectionFilter =>
+  value === 'in' || value === 'out' || value === 'incomplete' ? value : { key: value };
 
 /** The year of an ISO date, if there is one. */
 const yearOf = (date: string | undefined): number | null =>
@@ -581,7 +608,12 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
 
   api.get<{
     Params: { id: string };
-    Querystring: Paging & { state?: ItemFilter; q?: string };
+    Querystring: Paging & {
+      state?: ItemFilter;
+      q?: string;
+      collection?: string;
+      sort?: ItemSort;
+    };
   }>(
     '/api/libraries/:id/items',
     {
@@ -593,13 +625,19 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
           '`missing-artwork` look at the files, so one without either shows under both); `q` ' +
           'matches the title or the file name. `counts` do not depend on the filters. ' +
           '`scannedAt` is `null` until a scan of the source has ended; `scan` is the one queued ' +
-          'or running. `writes` says which columns the profile gives a page.',
+          'or running. `writes` says which columns the profile gives a page. In a movie library ' +
+          'that writes NFO, `collections` is true: each movie carries its `collection`, `collection` ' +
+          '(`in`, `out`, `incomplete`, or a key `t:<id>` / `c:<name>`) narrows the list and `sort` ' +
+          "orders it (a collection's movies by year, movies in none last). `collectionCounts` " +
+          'counts movies for those filters.',
         params: idParams,
         querystring: {
           type: 'object',
           properties: {
             state: { type: 'string', enum: ITEM_FILTERS },
             q: { type: 'string', minLength: 1 },
+            collection: { type: 'string', minLength: 1 },
+            sort: { type: 'string', enum: ITEM_SORTS },
             ...paging,
           },
         },
@@ -608,6 +646,7 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
             type: 'object',
             required: [
               'library',
+              'collectionCounts',
               'scannedAt',
               'scan',
               'transfer',
@@ -617,10 +656,24 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
               'items',
             ],
             properties: {
+              collectionCounts: {
+                type: 'object',
+                required: ['all', 'in', 'out', 'incomplete'],
+                properties: {
+                  all: { type: 'integer' },
+                  in: { type: 'integer' },
+                  out: { type: 'integer' },
+                  incomplete: { type: 'integer' },
+                },
+              },
               library: {
                 type: 'object',
-                required: ['writes'],
+                required: ['writes', 'collections'],
                 properties: {
+                  collections: {
+                    type: 'boolean',
+                    description: 'The library files its movies under collections (it writes NFO).',
+                  },
                   writes: {
                     type: 'object',
                     required: ['nfo', 'artwork', 'logo', 'thumb'],
@@ -696,13 +749,23 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
         throw new ApiError(409, 'library.not-typed');
       }
       const profile = buildProfile(libraryProfile(library, store.config));
-      const { state, q, limit, offset } = request.query;
+      const { state, q, limit, offset, collection, sort } = request.query;
+      // A collection exists for a player only through the NFO: without one there is nothing to show.
+      const collections = hasCollections(library, store.config);
       const page = items.page(library.id, {
         ...(state && { filter: state }),
+        ...(collections && collection && { collection: collectionFilterOf(collection) }),
+        ...(sort && (collections || sort !== 'collection') && { sort }),
         ...(q && { query: q }),
         limit,
         offset,
       });
+      const filed = collections
+        ? items.collectionsOf(
+            library.id,
+            page.works.flatMap((work) => (work[0] ? [work[0].path] : [])),
+          )
+        : new Map<string, RowCollection>();
       const releases = ctx.entries.releasesOf(
         page.items.flatMap((item) => (item.entryId === null ? [] : [item.entryId])),
       );
@@ -713,7 +776,10 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
       const last = jobs.lastScan(library.id, library.source);
       const running = last?.status === 'queued' || last?.status === 'running' ? last : undefined;
       return {
-        library: { writes: profileWrites(profile, library.type) },
+        library: { writes: profileWrites(profile, library.type), collections },
+        collectionCounts: collections
+          ? items.collectionCounts(library.id)
+          : { all: 0, in: 0, out: 0, incomplete: 0 },
         // A scan that found nothing leaves no row, yet it did end.
         scannedAt:
           items.scannedAt(library.id) ?? (last?.status === 'done' ? last.finishedAt : null),
@@ -735,6 +801,7 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
           return presentWork(
             work,
             (path) => probed.get(path),
+            (path) => filed.get(path),
             entryId == null ? undefined : releases.get(entryId),
           );
         }),
@@ -772,9 +839,47 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
               'file',
               'versions',
               'nfoFiles',
+              'collectionChoice',
             ],
             properties: {
               ...libraryItemSchema.properties,
+              collectionChoice: {
+                type: 'object',
+                nullable: true,
+                description:
+                  'The collection section of a movie of a library that writes NFO; `null` for ' +
+                  'anything else. `tmdb` is what TMDB says whatever the owner decided, `choice` ' +
+                  'what the NFO follows (`tmdb`, `none` or `custom` with `name`), `effective` the ' +
+                  'collection the movie is filed under. `parts` lists the movies of the TMDB ' +
+                  'collection with the ones the library holds (`present`); `customNames` are the ' +
+                  'owner’s own collections of the library, for shortcuts.',
+                required: ['tmdb', 'choice', 'name', 'effective', 'parts', 'customNames'],
+                properties: {
+                  tmdb: {
+                    type: 'object',
+                    nullable: true,
+                    required: ['id', 'name'],
+                    properties: { id: { type: 'integer' }, name: { type: 'string' } },
+                  },
+                  choice: { type: 'string', enum: ['tmdb', 'none', 'custom'] },
+                  name: { type: 'string', nullable: true },
+                  effective: collectionSchema,
+                  parts: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      required: ['id', 'title', 'year', 'present'],
+                      properties: {
+                        id: { type: 'integer' },
+                        title: { type: 'string' },
+                        year: { type: 'integer', nullable: true },
+                        present: { type: 'boolean' },
+                      },
+                    },
+                  },
+                  customNames: { type: 'array', items: { type: 'string' } },
+                },
+              },
               overview: { type: 'string', nullable: true },
               runtime: { type: 'integer', nullable: true },
               genres: { type: 'array', items: { type: 'string' } },
@@ -863,7 +968,111 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
           ...(presentVersion(row, probed[index]) as object),
         })),
         nfoFiles: nfo.expected.map((path) => ({ path, present: nfo.present.includes(path) })),
+        collectionChoice:
+          item.kind === 'movie' && item.tmdbId !== null && !isUnsettled(item)
+            ? collectionChoiceOf(library, item)
+            : null,
       };
+    },
+  );
+
+  /** The collection section of a movie's page. */
+  const collectionChoiceOf = (library: LibraryConfig, item: LibraryItem) => {
+    if (!hasCollections(library, store.config) || item.tmdbId === null) {
+      return null;
+    }
+    const provider = ctx.collections.ofMovie(item.tmdbId);
+    const override = ctx.collections.override(library.id, item.tmdbId);
+    const effective = items.collectionsOf(library.id, [item.path]).get(item.path);
+    const held = provider
+      ? items.movieIdsIn(library.id, `t:${String(provider.id)}`)
+      : new Set<number>();
+    return {
+      tmdb: provider ? { id: provider.id, name: provider.name } : null,
+      choice: override ? override.mode : 'tmdb',
+      name: override?.mode === 'custom' ? override.name : null,
+      effective: presentCollection(effective),
+      parts: (provider?.parts ?? [])
+        .map((part) => ({ ...part, present: held.has(part.id) }))
+        .sort((a, b) => (a.year ?? 9999) - (b.year ?? 9999) || a.title.localeCompare(b.title)),
+      customNames: ctx.collections.customNames(library.id),
+    };
+  };
+
+  api.put<{
+    Params: { id: string };
+    Body: {
+      items: string[];
+      choice: 'tmdb' | 'none' | 'custom';
+      name?: string;
+    };
+  }>(
+    '/api/libraries/:id/collection',
+    {
+      schema: {
+        summary: 'Change the collection of movies and write their NFO again',
+        description:
+          'The owner’s choice for each movie: `tmdb` (the one TMDB names, the default: it clears ' +
+          'any override), `none`, or `custom` with a `name`. The choice is kept apart from TMDB’s ' +
+          'record, so a refresh does not overwrite it. Only the `<set>` of the NFO changes, and ' +
+          'nothing moves: the NFO is generated again as a whole, so one that was edited since is ' +
+          'left as it is (`kept`). The batch can be undone from the history. 409 ' +
+          '`library.no-collections` for a library that writes no NFO.',
+        params: idParams,
+        body: {
+          type: 'object',
+          required: ['items', 'choice'],
+          properties: {
+            items: {
+              type: 'array',
+              minItems: 1,
+              maxItems: MAX_SELECTION,
+              items: { type: 'string' },
+              description: 'The `id`s of the movies in `GET /api/libraries/{id}/items`.',
+            },
+            choice: { type: 'string', enum: ['tmdb', 'none', 'custom'] },
+            name: { type: 'string', maxLength: 200 },
+          },
+          additionalProperties: false,
+        },
+        response: {
+          200: {
+            type: 'object',
+            required: ['movies', 'rewritten', 'unchanged', 'kept', 'missing', 'batchId'],
+            properties: {
+              movies: { type: 'integer' },
+              rewritten: { type: 'integer', description: 'NFO written again.' },
+              unchanged: { type: 'integer', description: 'NFO that already said it.' },
+              kept: { type: 'integer', description: 'NFO edited since: left as they are.' },
+              missing: { type: 'integer', description: 'NFO not on the disk yet.' },
+              batchId: {
+                type: 'string',
+                nullable: true,
+                description: 'To undo, when any was written.',
+              },
+            },
+          },
+          401: errorSchema,
+          404: errorSchema,
+          409: errorSchema,
+          422: errorSchema,
+          502: errorSchema,
+        },
+      },
+    },
+    async (request) => {
+      const library = find(store.config, request.params.id);
+      const { items: ids, choice, name } = request.body;
+      const result = await ctx.collectionEditor.apply(
+        library,
+        ids,
+        choice === 'custom' ? { mode: 'custom', name: name ?? '' } : { mode: choice },
+      );
+      if (result.batchId !== null) {
+        events.emit('history');
+      }
+      events.emit('jobs');
+      return result;
     },
   );
 

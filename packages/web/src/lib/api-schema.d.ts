@@ -2262,13 +2262,15 @@ export interface paths {
         };
         /**
          * What a library holds, as its last scan saw it
-         * @description Read from the snapshot a scan leaves, never from the disk: listing costs nothing, and transfers and undos keep it in step. `state` filters (`missing-nfo` and `missing-artwork` look at the files, so one without either shows under both); `q` matches the title or the file name. `counts` do not depend on the filters. `scannedAt` is `null` until a scan of the source has ended; `scan` is the one queued or running. `writes` says which columns the profile gives a page.
+         * @description Read from the snapshot a scan leaves, never from the disk: listing costs nothing, and transfers and undos keep it in step. `state` filters (`missing-nfo` and `missing-artwork` look at the files, so one without either shows under both); `q` matches the title or the file name. `counts` do not depend on the filters. `scannedAt` is `null` until a scan of the source has ended; `scan` is the one queued or running. `writes` says which columns the profile gives a page. In a movie library that writes NFO, `collections` is true: each movie carries its `collection`, `collection` (`in`, `out`, `incomplete`, or a key `t:<id>` / `c:<name>`) narrows the list and `sort` orders it (a collection's movies by year, movies in none last). `collectionCounts` counts movies for those filters.
          */
         get: {
             parameters: {
                 query?: {
                     state?: "review" | "rename" | "unrecognized" | "missing-nfo" | "missing-artwork" | "multi-version";
                     q?: string;
+                    collection?: string;
+                    sort?: "title" | "collection" | "year";
                     limit?: number;
                     offset?: number;
                 };
@@ -2287,7 +2289,15 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
+                            collectionCounts: {
+                                all: number;
+                                in: number;
+                                out: number;
+                                incomplete: number;
+                            };
                             library: {
+                                /** @description The library files its movies under collections (it writes NFO). */
+                                collections: boolean;
                                 writes: {
                                     nfo: boolean;
                                     artwork: boolean;
@@ -2399,6 +2409,17 @@ export interface paths {
                                         size: number;
                                     } | null;
                                 }[];
+                                collection: {
+                                    /** @description Stable id of the collection in a library: `t:<TMDB id>` or `c:<name>`. */
+                                    key: string;
+                                    name: string;
+                                    /** @description The owner’s own collection: it has no TMDB id. */
+                                    custom: boolean;
+                                    /** @description Movies of it that the library holds. */
+                                    held: number;
+                                    /** @description Movies TMDB lists in it; `null` for a custom collection, or when unknown. */
+                                    total: number | null;
+                                } | null;
                             }[];
                         };
                     };
@@ -2543,6 +2564,34 @@ export interface paths {
                             cluster: number | null;
                             /** @description Files a validation of this one settles: itself and the rest of its series in the release. */
                             releaseFiles: number | null;
+                            /** @description The collection section of a movie of a library that writes NFO; `null` for anything else. `tmdb` is what TMDB says whatever the owner decided, `choice` what the NFO follows (`tmdb`, `none` or `custom` with `name`), `effective` the collection the movie is filed under. `parts` lists the movies of the TMDB collection with the ones the library holds (`present`); `customNames` are the owner’s own collections of the library, for shortcuts. */
+                            collectionChoice: {
+                                tmdb: {
+                                    id: number;
+                                    name: string;
+                                } | null;
+                                /** @enum {string} */
+                                choice: "tmdb" | "none" | "custom";
+                                name: string | null;
+                                effective: {
+                                    /** @description Stable id of the collection in a library: `t:<TMDB id>` or `c:<name>`. */
+                                    key: string;
+                                    name: string;
+                                    /** @description The owner’s own collection: it has no TMDB id. */
+                                    custom: boolean;
+                                    /** @description Movies of it that the library holds. */
+                                    held: number;
+                                    /** @description Movies TMDB lists in it; `null` for a custom collection, or when unknown. */
+                                    total: number | null;
+                                } | null;
+                                parts: {
+                                    id: number;
+                                    title: string;
+                                    year: number | null;
+                                    present: boolean;
+                                }[];
+                                customNames: string[];
+                            } | null;
                             overview: string | null;
                             runtime: number | null;
                             genres: string[];
@@ -2631,6 +2680,149 @@ export interface paths {
             };
         };
         put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/libraries/{id}/collection": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Change the collection of movies and write their NFO again
+         * @description The owner’s choice for each movie: `tmdb` (the one TMDB names, the default: it clears any override), `none`, or `custom` with a `name`. The choice is kept apart from TMDB’s record, so a refresh does not overwrite it. Only the `<set>` of the NFO changes, and nothing moves: the NFO is generated again as a whole, so one that was edited since is left as it is (`kept`). The batch can be undone from the history. 409 `library.no-collections` for a library that writes no NFO.
+         */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** @description The `id`s of the movies in `GET /api/libraries/{id}/items`. */
+                        items: string[];
+                        /** @enum {string} */
+                        choice: "tmdb" | "none" | "custom";
+                        name?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            movies: number;
+                            /** @description NFO written again. */
+                            rewritten: number;
+                            /** @description NFO that already said it. */
+                            unchanged: number;
+                            /** @description NFO edited since: left as they are. */
+                            kept: number;
+                            /** @description NFO not on the disk yet. */
+                            missing: number;
+                            /** @description To undo, when any was written. */
+                            batchId: string | null;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Default Response */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Default Response */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Default Response */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Default Response */
+                502: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
         post?: never;
         delete?: never;
         options?: never;

@@ -22,6 +22,7 @@ import {
   type Journal,
   type LibraryConfig,
   type MetadataProvider,
+  type CollectionInfo,
   type MovieDetails,
   type ParsedMedia,
   type SeasonInfo,
@@ -35,6 +36,7 @@ import {
   type UndoEntryResult,
 } from '@kinoshelf/core';
 import { ApiError } from './api-error.js';
+import { CollectionStore } from './collections.js';
 import {
   workKindOf as kindOf,
   type EntryStore,
@@ -263,12 +265,23 @@ export class Service {
     const profile = buildProfile(settings.profile);
     const provider = this.provider();
     const loader = new MetadataLoader({ provider, profile });
+    const collections = new CollectionStore(this.deps.database);
     const planned: Entry[] = [];
     const inputs: PlanInput[] = [];
     for (const file of files) {
       try {
-        const metadata = await loader.forCandidate(candidate, file.parsed);
-        inputs.push({ parsed: withQuality(file.parsed), candidate, ...metadata });
+        const { collection, ...metadata } = await loader.forCandidate(candidate, file.parsed);
+        if (candidate.kind === 'movie') {
+          collections.record(candidate.id.id, collection);
+        }
+        const override =
+          candidate.kind === 'movie' ? collections.override(libraryId, candidate.id.id) : undefined;
+        inputs.push({
+          parsed: withQuality(file.parsed),
+          candidate,
+          ...metadata,
+          ...(override && { collectionOverride: override }),
+        });
         planned.push(file);
       } catch (error) {
         if (file === main) {
@@ -302,6 +315,38 @@ export class Service {
     const provider = this.provider();
     const id = { provider: provider.name, id: tmdbId };
     return kind === 'movie' ? provider.getMovieDetails(id) : provider.getSeriesDetails(id);
+  }
+
+  /**
+   * A movie as its NFO is written: the details with the overview of its collection, which the
+   * movie's own record lacks (`MetadataLoader` does the same when a scan writes the file). The
+   * collection is the provider's, whatever the owner decided; the caller applies that.
+   */
+  async movie(
+    tmdbId: number,
+  ): Promise<{ details: MovieDetails; collection: CollectionInfo | null } | null> {
+    const provider = this.provider();
+    const details = await provider.getMovieDetails({ provider: provider.name, id: tmdbId });
+    if (!details) {
+      return null;
+    }
+    if (!details.collection?.id) {
+      return { details, collection: null };
+    }
+    const collection = await provider.getCollection(details.collection.id);
+    if (!collection) {
+      return { details, collection: null };
+    }
+    return {
+      details: {
+        ...details,
+        collection: {
+          ...details.collection,
+          ...(collection.overview !== undefined && { overview: collection.overview }),
+        },
+      },
+      collection,
+    };
   }
 
   /**
@@ -366,20 +411,30 @@ export class Service {
     const profile = buildProfile(settings.profile);
     const provider = this.provider();
     const loader = new MetadataLoader({ provider, profile });
-    let metadata: LoadedMetadata = {};
+    let loaded: LoadedMetadata = {};
     try {
-      metadata = await loader.forCandidate(candidate, entry.parsed);
+      loaded = await loader.forCandidate(candidate, entry.parsed);
     } catch (error) {
       if (!options.lenient) {
         throw error;
       }
     }
+    const { collection, ...metadata } = loaded;
+    const collections = new CollectionStore(this.deps.database);
+    if (candidate.kind === 'movie') {
+      collections.record(candidate.id.id, collection);
+    }
+    const override =
+      candidate.kind === 'movie'
+        ? collections.override(options.libraryId, candidate.id.id)
+        : undefined;
     const plan = await createPlan(
       [
         {
           parsed: withQuality(entry.parsed),
           candidate,
           ...metadata,
+          ...(override && { collectionOverride: override }),
           ...(options.applyVersion && { applyVersion: true }),
         },
       ],

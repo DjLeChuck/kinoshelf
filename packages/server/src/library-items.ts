@@ -232,6 +232,7 @@ export class LibraryItemStore {
   private regroup(libraryId: string, keys?: ReadonlySet<string>): void {
     const scope = keys === undefined ? '' : ' AND work_key IN (SELECT value FROM json_each(?))';
     const args = keys === undefined ? [] : [JSON.stringify([...keys])];
+    this.refreshCollections(libraryId, scope, args);
     this.database
       .prepare(
         `UPDATE library_items SET lead = CASE WHEN path IN (
@@ -242,6 +243,46 @@ export class LibraryItemStore {
          WHERE library_id = ?${scope}`,
       )
       .run(libraryId, ...args, libraryId, ...args);
+  }
+
+  /**
+   * Files each movie under its effective collection (`collection_key`: `t:<id>` for the
+   * provider's, `c:<name>` for the owner's, none for a movie in none), from what the provider
+   * said and what the owner decided. Stored on the row so a list can filter and order by it; the
+   * count of what the library holds is read, not stored (it moves with every other row).
+   */
+  private refreshCollections(libraryId: string, scope: string, args: readonly string[]): void {
+    this.database
+      .prepare(
+        `UPDATE library_items AS t
+         SET collection_key = x.key, collection_name = x.name, collection_total = x.total
+         FROM (
+           SELECT li.path AS path,
+             CASE o.mode WHEN 'none' THEN NULL WHEN 'custom' THEN 'c:' || o.name
+               ELSE CASE WHEN mc.collection_id IS NULL THEN NULL ELSE 't:' || mc.collection_id END
+             END AS key,
+             CASE o.mode WHEN 'none' THEN NULL WHEN 'custom' THEN o.name ELSE c.name END AS name,
+             CASE WHEN o.mode IS NULL AND c.id IS NOT NULL
+               THEN NULLIF(json_array_length(c.parts), 0) END AS total
+           FROM library_items li
+           LEFT JOIN collection_overrides o
+             ON o.library_id = li.library_id AND o.movie_id = li.tmdb_id
+           LEFT JOIN movie_collections mc ON mc.movie_id = li.tmdb_id
+           LEFT JOIN collections c ON c.id = mc.collection_id
+           WHERE li.library_id = ? AND li.kind = 'movie'${scope.replaceAll('work_key', 'li.work_key')}
+         ) AS x
+         WHERE t.library_id = ? AND t.path = x.path`,
+      )
+      .run(libraryId, ...args, libraryId);
+  }
+
+  /** The movies' collections were rewritten (an override, a scan): their rows follow. */
+  refreshMovies(libraryId: string, movieIds: readonly number[]): void {
+    this.database.transaction(() => {
+      this.refreshCollections(libraryId, ' AND work_key IN (SELECT value FROM json_each(?))', [
+        JSON.stringify(movieIds.map((id) => `m${String(id)}`)),
+      ]);
+    })();
   }
 
   /** The works the rows at these paths belong to (their stored key). */
@@ -456,7 +497,12 @@ export class LibraryItemStore {
    */
   forget(libraryId: string): void {
     this.database.transaction(() => {
-      for (const table of ['library_items', 'series_completeness', 'series_files']) {
+      for (const table of [
+        'library_items',
+        'series_completeness',
+        'series_files',
+        'collection_overrides',
+      ]) {
         this.database.prepare(`DELETE FROM ${table} WHERE library_id = ?`).run(libraryId);
       }
     })();
@@ -534,28 +580,34 @@ export class LibraryItemStore {
    */
   page(
     libraryId: string,
-    options: { filter?: ItemFilter; query?: string; limit: number; offset: number },
+    options: {
+      filter?: ItemFilter;
+      collection?: CollectionFilter;
+      sort?: ItemSort;
+      query?: string;
+      limit: number;
+      offset: number;
+    },
   ): { total: number; groups: number; items: LibraryItem[]; works: LibraryItem[][] } {
-    const where = [
-      'library_id = ?',
+    const queryCondition =
+      "(sort_key(title) LIKE ? ESCAPE '\\' OR sort_key(path) LIKE ? ESCAPE '\\')";
+    const collection = options.collection ? collectionSql(options.collection) : undefined;
+    const conditions = [
       ...(options.filter ? [FILTER_SQL[options.filter]] : []),
+      ...(collection ? [collection.sql] : []),
+      ...(options.query ? [queryCondition] : []),
+    ];
+    const where = ['library_id = ?', ...conditions].join(' AND ');
+    const params: (string | number)[] = [
+      libraryId,
+      ...(collection?.params ?? []),
       ...(options.query
-        ? ["(sort_key(title) LIKE ? ESCAPE '\\' OR sort_key(path) LIKE ? ESCAPE '\\')"]
+        ? [contains(sortKey(options.query)), contains(sortKey(options.query))]
         : []),
-    ].join(' AND ');
-    const queryParams = options.query
-      ? [contains(sortKey(options.query)), contains(sortKey(options.query))]
-      : [];
-    const params: (string | number)[] = [libraryId, ...queryParams];
+    ];
     // `where` over the files, for the groups of a validation; the list itself reads one row per work.
-    const leads = leadWhere(
-      [
-        ...(options.filter ? [FILTER_SQL[options.filter]] : []),
-        ...(options.query
-          ? ["(sort_key(title) LIKE ? ESCAPE '\\' OR sort_key(path) LIKE ? ESCAPE '\\')"]
-          : []),
-      ].join(' AND '),
-    );
+    const leads = leadWhere(conditions.join(' AND '));
+    const order = ITEM_ORDER[options.sort ?? 'title'];
     const total =
       this.database
         .prepare<unknown[], { total: number }>(
@@ -566,7 +618,7 @@ export class LibraryItemStore {
     const keys = this.database
       .prepare<unknown[], { key: string }>(
         `SELECT work_key AS key FROM library_items AS lead_row WHERE ${leads}
-         ORDER BY sort, path LIMIT ? OFFSET ?`,
+         ORDER BY ${order} LIMIT ? OFFSET ?`,
       )
       .all(...params, options.limit, options.offset)
       .map(({ key }) => key);
@@ -606,6 +658,52 @@ export class LibraryItemStore {
         )
         .get(...params)?.groups ?? 0
     );
+  }
+
+  /** The effective collection of the rows at these paths, by path; a row in none is absent. */
+  collectionsOf(libraryId: string, paths: readonly string[]): Map<string, RowCollection> {
+    const rows = this.database
+      .prepare<
+        [string, string],
+        { path: string; key: string; name: string; total: number | null; held: number }
+      >(
+        `SELECT path, collection_key AS key, collection_name AS name, collection_total AS total,
+           ${HELD} AS held
+         FROM library_items
+         WHERE library_id = ? AND collection_key IS NOT NULL
+           AND path IN (SELECT value FROM json_each(?))`,
+      )
+      .all(libraryId, JSON.stringify(paths));
+    return new Map(rows.map((row) => [row.path, row]));
+  }
+
+  /** The movies (TMDB ids) of the library filed under a collection. */
+  movieIdsIn(libraryId: string, collectionKey: string): Set<number> {
+    return new Set(
+      this.database
+        .prepare<[string, string], { tmdb_id: number }>(
+          `SELECT DISTINCT tmdb_id FROM library_items
+           WHERE library_id = ? AND collection_key = ? AND tmdb_id IS NOT NULL`,
+        )
+        .all(libraryId, collectionKey)
+        .map((row) => row.tmdb_id),
+    );
+  }
+
+  /** What each collection filter holds (movies, not files), for the buttons of the page. */
+  collectionCounts(libraryId: string): Record<'all' | 'in' | 'out' | 'incomplete', number> {
+    const count = (extra: string): number =>
+      this.database
+        .prepare<[string], { total: number }>(
+          `SELECT COUNT(*) AS total FROM library_items AS lead_row WHERE ${leadWhere(extra)}`,
+        )
+        .get(libraryId)?.total ?? 0;
+    return {
+      all: count(''),
+      in: count(collectionSql('in').sql),
+      out: count(collectionSql('out').sql),
+      incomplete: count(collectionSql('incomplete').sql),
+    };
   }
 
   /** What each filter holds, for the tabs of the page. */
@@ -885,6 +983,48 @@ const leadWhere = (rowFilter: string): string =>
              AND library_items.work_key = lead_row.work_key AND ${rowFilter})`
       : ''
   }`;
+
+/** How a list is ordered: by title (the default), by collection, or by year, newest first. */
+export const ITEM_SORTS = ['title', 'collection', 'year'] as const;
+export type ItemSort = (typeof ITEM_SORTS)[number];
+
+// A collection's groups follow its name, a group's movies their year; movies in none come last.
+const ITEM_ORDER: Record<ItemSort, string> = {
+  title: 'sort, path',
+  year: 'year IS NULL, year DESC, sort, path',
+  collection:
+    'collection_key IS NULL, sort_key(collection_name), collection_key, year IS NULL, year, sort, path',
+};
+
+/** The movies of the row's collection that the library holds (a movie once, whatever its versions). */
+const HELD = `(SELECT COUNT(DISTINCT held.work_key) FROM library_items held
+  WHERE held.library_id = library_items.library_id
+    AND held.collection_key = library_items.collection_key)`;
+
+/**
+ * What narrows a list by collection: movies in one, in none, in one the library holds only a
+ * part of, or in a given one (`t:<id>` for the provider's, `c:<name>` for the owner's).
+ */
+export type CollectionFilter = 'in' | 'out' | 'incomplete' | { readonly key: string };
+
+const collectionSql = (filter: CollectionFilter): { sql: string; params: string[] } =>
+  filter === 'in'
+    ? { sql: 'collection_key IS NOT NULL', params: [] }
+    : filter === 'out'
+      ? { sql: 'collection_key IS NULL', params: [] }
+      : filter === 'incomplete'
+        ? { sql: `(collection_total IS NOT NULL AND collection_total > ${HELD})`, params: [] }
+        : { sql: 'collection_key = ?', params: [filter.key] };
+
+/** A movie's effective collection, with how much of it the library holds. */
+export interface RowCollection {
+  readonly key: string;
+  readonly name: string;
+  /** The provider's count of its movies; `null` for the owner's own collection (nothing to count). */
+  readonly total: number | null;
+  /** Movies of it in the library. */
+  readonly held: number;
+}
 
 /** The views of a library: a state, or a kind of file that is missing. */
 export const ITEM_FILTERS = [

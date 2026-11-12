@@ -229,6 +229,11 @@ export const en = {
   'error.job.not-found': 'This job does not exist.',
   'error.library.in-use': 'The arrival folder “{name}” sends its files to this library.',
   'error.library.invalid': 'This library is not valid: {detail}',
+  'error.library.no-collections':
+    'This library writes no NFO, so it has no collections: nothing would tell the player.',
+  'error.collection.name-required': 'Give the collection a name.',
+  'error.provider.movie-unknown':
+    'TMDB does not know this movie any more, so its NFO cannot be written again.',
   'error.library.nothing-to-do': 'This selection has nothing left to do.',
   'error.library.version-unavailable':
     'These files cannot be given a version: no picture size could be found (in the file name, or in the file when ffprobe reading is on), or the profile has no naming for versions. Choose a size.',
