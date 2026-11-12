@@ -6,17 +6,17 @@ import type {
   ItemCollection,
   ItemSort,
 } from './collections.js';
+import type { SortDirection } from './list-filters.js';
 
 export type ItemState = 'review' | 'rename' | 'unrecognized' | 'incomplete' | 'ok';
-export type ItemFilter =
-  'review' | 'rename' | 'unrecognized' | 'missing-nfo' | 'missing-artwork' | 'multi-version';
+/** What a list is narrowed to: one state, or one kind of missing file. */
+export type ItemFilter = 'review' | 'rename' | 'unrecognized' | 'missing-nfo' | 'missing-artwork';
 export const ITEM_FILTERS: readonly ItemFilter[] = [
   'review',
   'rename',
   'unrecognized',
   'missing-nfo',
   'missing-artwork',
-  'multi-version',
 ];
 /** A series library also filters its shows. Its tabs count shows, except the files that wait for a person. */
 export type ShowFilter =
@@ -27,7 +27,8 @@ export const SERIES_FILTERS: readonly ShowFilter[] = [
   'missing-episodes',
   'missing-show-files',
 ];
-export type Counts = Readonly<Record<ShowFilter | 'all', number>>;
+/** `multi-version` is no state (it combines with one) but is counted for its button. */
+export type Counts = Readonly<Record<ShowFilter | 'multi-version' | 'all', number>>;
 
 /** What a library holds, as `GET /api/libraries/{id}/items` lists it. */
 export interface ImagesPresent {
@@ -167,8 +168,12 @@ export const PAGE_SIZE = 50;
 
 export interface ItemsQuery {
   readonly state?: ItemFilter | undefined;
+  /** Only the movies held in several versions, whatever the state. */
+  readonly multi?: boolean | undefined;
   readonly collection?: CollectionFilter | undefined;
   readonly sort?: ItemSort | undefined;
+  /** Left out for the sort's own first direction. */
+  readonly dir?: SortDirection | undefined;
   readonly q?: string | undefined;
   readonly limit: number;
   readonly offset?: number;
@@ -176,12 +181,14 @@ export interface ItemsQuery {
 
 export function itemsUrl(
   libraryId: string,
-  { state, collection, sort, q, limit, offset }: ItemsQuery,
+  { state, multi, collection, sort, dir, q, limit, offset }: ItemsQuery,
 ): string {
   const parameters = [
     ...(state ? [`state=${state}`] : []),
+    ...(multi ? ['multi=true'] : []),
     ...(collection ? [`collection=${encodeURIComponent(collection)}`] : []),
     ...(sort && sort !== 'title' ? [`sort=${sort}`] : []),
+    ...(dir ? [`dir=${dir}`] : []),
     ...(q?.trim() ? [`q=${encodeURIComponent(q.trim())}`] : []),
     `limit=${limit}`,
     ...(offset ? [`offset=${offset}`] : []),
@@ -282,19 +289,27 @@ export interface ShowsQuery {
   readonly incomplete?: boolean | undefined;
   /** Only the shows holding a file of this state (or lacking this kind of file). */
   readonly state?: ItemFilter | 'incomplete-versions' | undefined;
+  /** Only the shows held in several versions, whatever the state. */
+  readonly multi?: boolean | undefined;
+  readonly sort?: 'title' | 'year' | 'missing' | undefined;
+  /** Left out for the sort's own first direction. */
+  readonly dir?: SortDirection | undefined;
   readonly limit: number;
   readonly offset?: number;
 }
 
 export function showsUrl(
   libraryId: string,
-  { q, missing, incomplete, state, limit, offset }: ShowsQuery,
+  { q, missing, incomplete, state, multi, sort, dir, limit, offset }: ShowsQuery,
 ): string {
   const parameters = [
     ...(q?.trim() ? [`q=${encodeURIComponent(q.trim())}`] : []),
     ...(missing ? ['missing=true'] : []),
     ...(incomplete ? ['incomplete=true'] : []),
     ...(state ? [`state=${state}`] : []),
+    ...(multi ? ['multi=true'] : []),
+    ...(sort && sort !== 'title' ? [`sort=${sort}`] : []),
+    ...(dir ? [`dir=${dir}`] : []),
     `limit=${limit}`,
     ...(offset ? [`offset=${offset}`] : []),
   ];

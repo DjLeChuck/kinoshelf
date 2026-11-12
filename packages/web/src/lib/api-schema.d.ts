@@ -2262,15 +2262,17 @@ export interface paths {
         };
         /**
          * What a library holds, as its last scan saw it
-         * @description Read from the snapshot a scan leaves, never from the disk: listing costs nothing, and transfers and undos keep it in step. `state` filters (`missing-nfo` and `missing-artwork` look at the files, so one without either shows under both); `q` matches the title or the file name. `counts` do not depend on the filters. `scannedAt` is `null` until a scan of the source has ended; `scan` is the one queued or running. `writes` says which columns the profile gives a page. In a movie library that writes NFO, `collections` is true: each movie carries its `collection`, `collection` (`in`, `out`, `incomplete`, or a key `t:<id>` / `c:<name>`) narrows the list and `sort` orders it (a collection's movies by year, movies in none last). `collectionCounts` counts movies for those filters.
+         * @description Read from the snapshot a scan leaves, never from the disk: listing costs nothing, and transfers and undos keep it in step. `state` filters (`missing-nfo` and `missing-artwork` look at the files, so one without either shows under both); `q` matches the title or the file name; `multi=true` keeps the works held in several versions, whatever the state. `counts` do not depend on the filters. `scannedAt` is `null` until a scan of the source has ended; `scan` is the one queued or running. `writes` says which columns the profile gives a page. In a movie library that writes NFO, `collections` is true: each movie carries its `collection`, `collection` (`in`, `out`, `incomplete`, or a key `t:<id>` / `c:<name>`) narrows the list and `sort` orders it, `dir` (`asc` or `desc`) turning it over (a collection's movies by year, movies in none last; each sort has its own default direction). `collectionCounts` counts movies for those filters.
          */
         get: {
             parameters: {
                 query?: {
-                    state?: "review" | "rename" | "unrecognized" | "missing-nfo" | "missing-artwork" | "multi-version";
+                    state?: "review" | "rename" | "unrecognized" | "missing-nfo" | "missing-artwork";
+                    multi?: boolean;
                     q?: string;
                     collection?: string;
                     sort?: "title" | "collection" | "year";
+                    dir?: "asc" | "desc";
                     limit?: number;
                     offset?: number;
                 };
@@ -2839,7 +2841,7 @@ export interface paths {
         };
         /**
          * The shows of a series library
-         * @description One row per work (files nobody identified are not shows: they are in `GET /api/libraries/{id}/items`, filtered by state). `missing` is the number of aired episodes no file holds, as last counted: `null` until it was (it is counted on opening a show, and in the background when no job runs), never by this request. `missing=true` keeps the shows that lack some; `incomplete=true` those lacking a file the profile writes for the show or a season (`tvshow.nfo`, an image: see `nfo`, `poster`, `fanart`, `logo`); `state` keeps the shows holding a file of that state, as `GET /api/libraries/{id}/items` filters. 409 `library.not-series` for a movie library.
+         * @description One row per work (files nobody identified are not shows: they are in `GET /api/libraries/{id}/items`, filtered by state). `missing` is the number of aired episodes no file holds, as last counted: `null` until it was (it is counted on opening a show, and in the background when no job runs), never by this request. `missing=true` keeps the shows that lack some; `incomplete=true` those lacking a file the profile writes for the show or a season (`tvshow.nfo`, an image: see `nfo`, `poster`, `fanart`, `logo`); `state` keeps the shows holding a file of that state, as `GET /api/libraries/{id}/items` filters, `multi=true` those held in several versions (with or without a state). `sort` orders the shows (by title, year or `missing`, uncounted last) and `dir` turns it over. 409 `library.not-series` for a movie library.
          */
         get: {
             parameters: {
@@ -2847,7 +2849,10 @@ export interface paths {
                     q?: string;
                     missing?: boolean;
                     incomplete?: boolean;
-                    state?: "review" | "rename" | "unrecognized" | "missing-nfo" | "missing-artwork" | "multi-version" | "incomplete-versions";
+                    state?: "review" | "rename" | "unrecognized" | "missing-nfo" | "missing-artwork" | "incomplete-versions";
+                    multi?: boolean;
+                    sort?: "title" | "year" | "missing";
+                    dir?: "asc" | "desc";
                     limit?: number;
                     offset?: number;
                 };

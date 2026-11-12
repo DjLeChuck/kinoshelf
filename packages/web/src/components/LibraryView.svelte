@@ -23,18 +23,27 @@
     type ItemFilter,
     type ItemState,
     type ItemsPage,
+    type ShowFilter,
   } from '../lib/library-items.js';
+  import { canFile, nameOfKey, nfoCount, pillOf, type ItemSort } from '../lib/collections.js';
   import {
-    ITEM_SORTS,
-    canFile,
-    nameOfKey,
-    nfoCount,
-    pillOf,
-    startsGroup,
-    type CollectionFilter,
-    type ItemSort,
-  } from '../lib/collections.js';
-  import CollectionBar from './CollectionBar.svelte';
+    activeCount,
+    activePills,
+    ariaSortOf,
+    directionToAsk,
+    groupHeading,
+    headingLabel,
+    nextSort,
+    sortFromQuery,
+    sortToQuery,
+    visibleChips,
+    type ListFilters,
+    type Pill,
+    type SortColumn,
+  } from '../lib/list-filters.js';
+  import ListFilterRow from './ListFilterRow.svelte';
+  import ListToolbar from './ListToolbar.svelte';
+  import SortButton from './SortButton.svelte';
   import CollectionDialog from './CollectionDialog.svelte';
   import ItemPanel from './ItemPanel.svelte';
   import RunDialog from './RunDialog.svelte';
@@ -109,22 +118,85 @@
   // A series library always reads as a tree of shows, whatever the tab: the tab narrows the shows
   // (and its counts are in shows). A movie library is a flat list of files.
   const isSeries = $derived(library.type === 'series');
-  const filters = $derived(isSeries ? SERIES_FILTERS : ITEM_FILTERS);
-  // The filter lives in the URL (`?state=review`): a link keeps it, and so does a reload.
-  const filter = $derived(oneOf(router.query.get('state'), filters));
-  // The collection filter and the sort live in the URL too (`?collection=in&sort=collection`).
-  const collectionFilter = $derived(router.query.get('collection') ?? undefined);
-  const sort = $derived<ItemSort>(oneOf(router.query.get('sort'), ITEM_SORTS) ?? 'title');
+  const states: readonly ShowFilter[] = $derived(isSeries ? SERIES_FILTERS : ITEM_FILTERS);
+  // The filters and the sort live in the URL (`?state=review&multi=1&collection=in&sort=year&dir=asc`):
+  // a link keeps them, and so does a reload.
+  const filter = $derived(oneOf(router.query.get('state'), states));
+  const multi = $derived(router.query.get('multi') === '1');
+  const collectionFilter = $derived(
+    isSeries ? undefined : (router.query.get('collection') ?? undefined),
+  );
   // The column and the filters appear once there is a collection to show (or one is being looked at):
   // a library with none would only carry empty controls. Filing a movie stays offered.
   const showsCollections = $derived(
-    page?.library.collections === true &&
-      (page.collectionCounts.in > 0 || collectionFilter !== undefined || sort !== 'title'),
+    !isSeries &&
+      page?.library.collections === true &&
+      (page.collectionCounts.in > 0 ||
+        collectionFilter !== undefined ||
+        router.query.get('sort') === 'collection'),
+  );
+  const columns = $derived<readonly SortColumn[]>(
+    isSeries
+      ? ['title', 'year', 'missing']
+      : ['title', 'year', ...(showsCollections ? (['collection'] as const) : [])],
+  );
+  const order = $derived(
+    sortFromQuery({ sort: router.query.get('sort'), dir: router.query.get('dir') }, columns),
   );
 
-  let shown = untrack(() => `${filter ?? ''}|${collectionFilter ?? ''}|${sort}`);
+  const filters = $derived<ListFilters>({ state: filter, multi, collection: collectionFilter });
+  const badge = $derived(activeCount(filters));
+  const chips = $derived(page ? visibleChips(states, page.counts, filter) : []);
+  const pills = $derived(activePills(filters));
+  /** How many the list holds once narrowed; a series library's tree says it (it reads its own shows). */
+  let shownShows = $state<number | undefined>(undefined);
+  const filtered = $derived(badge > 0 || searched.trim() !== '');
+  const result = $derived.by(() => {
+    const count = isSeries ? shownShows : page?.total;
+    if (!page || !filtered || count === undefined) {
+      return '';
+    }
+    return t(isSeries ? 'web.library.result.shows' : 'web.library.result.movies', {
+      count,
+      total: page.counts.all,
+    });
+  });
+
+  /** The cells of a row, for the line that opens a group to span them all. */
+  const columnCount = $derived(
+    4 +
+      (showsCollections ? 1 : 0) +
+      (page?.library.writes.nfo ? 1 : 0) +
+      (page?.library.writes.artwork ? 2 : 0) +
+      (page?.library.writes.logo ? 1 : 0),
+  );
+
+  const sortBy = (column: SortColumn): void => {
+    router.setQuery(sortToQuery(nextSort(order, column)));
+  };
+
+  /** Removes every filter and the search: the view a library opens on. */
+  function reset(): void {
+    const searching = query !== '' || searched !== '';
+    clearTimeout(typing);
+    query = '';
+    searched = '';
+    router.setQuery({ state: undefined, multi: undefined, collection: undefined });
+    // A change of the URL reloads by itself (below); a search alone does not.
+    if (searching && badge === 0) {
+      refilter();
+    }
+  }
+
+  function remove(pill: Pill): void {
+    router.setQuery(pill.id === 'multi' ? { multi: undefined } : { collection: undefined });
+  }
+
+  const asked = (): string =>
+    `${filter ?? ''}|${multi}|${collectionFilter ?? ''}|${order.sort}|${order.dir}`;
+  let shown = untrack(asked);
   $effect(() => {
-    const current = `${filter ?? ''}|${collectionFilter ?? ''}|${sort}`;
+    const current = asked();
     if (current !== shown) {
       shown = current;
       untrack(refilter);
@@ -146,8 +218,10 @@
       // The tree reads its shows itself: here only the counts and the scan are wanted.
       const answer = await libraryItems.page(library.id, {
         state: isSeries ? undefined : (filter as ItemFilter | undefined),
+        multi: isSeries ? undefined : multi,
         collection: isSeries ? undefined : collectionFilter,
-        sort: isSeries ? undefined : sort,
+        sort: isSeries ? undefined : (order.sort as ItemSort),
+        dir: isSeries ? undefined : directionToAsk(order),
         q: searched,
         limit: isSeries ? 1 : limit,
       });
@@ -226,14 +300,17 @@
 
 <div class="stack">
   <div class="head">
-    <div>
+    <div class="identity">
       <h2>{library.name}</h2>
-      <p class="muted mono path">{library.source}</p>
-      <p class="muted">
+      <p class="muted meta">
+        <span class="mono path">{library.source}</span>
         {#if page?.scannedAt}
-          {t('web.library.scanned', { date: formatDate(page.scannedAt, locale.value) })}
+          <span aria-hidden="true">·</span>
+          <span>{t('web.library.scanned', { date: formatDate(page.scannedAt, locale.value) })}</span
+          >
         {:else if page}
-          {t('web.library.never')}
+          <span aria-hidden="true">·</span>
+          <span>{t('web.library.never')}</span>
         {/if}
       </p>
     </div>
@@ -293,42 +370,41 @@
       <p class="muted">{t('web.library.never.body')}</p>
     </section>
   {:else}
-    <div class="filters" role="group" aria-label={t('web.library.filter.label')}>
-      {#each [undefined, ...filters] as option (option ?? 'all')}
-        <button
-          type="button"
-          class="btn"
-          aria-pressed={filter === option}
-          onclick={() => {
-            router.setQuery({ state: option });
-          }}
-        >
-          {t(`web.library.filter.${option ?? 'all'}`)}
-          <span class="count">{page.counts[option ?? 'all']}</span>
-        </button>
-      {/each}
-    </div>
-    {#if showsCollections}
-      <CollectionBar
-        counts={page.collectionCounts}
-        filter={collectionFilter}
-        {sort}
-        activeName={collectionFilter ? nameOfKey(collectionFilter, page.items) : ''}
-        onfilter={(next: CollectionFilter | undefined) => {
-          router.setQuery({ collection: next });
-        }}
-        onsort={(next: ItemSort) => {
-          router.setQuery({ sort: next === 'title' ? undefined : next });
-        }}
-      />
-    {/if}
-    <input
-      class="input"
-      type="search"
-      placeholder={t('web.library.search')}
-      aria-label={t('web.library.search')}
-      bind:value={query}
-      oninput={search}
+    <ListToolbar
+      {query}
+      oninput={(value: string) => {
+        query = value;
+        search();
+      }}
+      {states}
+      counts={page.counts}
+      chosen={filter}
+      {multi}
+      collection={collectionFilter}
+      collectionCounts={showsCollections ? page.collectionCounts : undefined}
+      {badge}
+      onstate={(next: ShowFilter | undefined) => {
+        router.setQuery({ state: next });
+      }}
+      onmulti={(next: boolean) => {
+        router.setQuery({ multi: next ? '1' : undefined });
+      }}
+      oncollection={(next: string | undefined) => {
+        router.setQuery({ collection: next });
+      }}
+      onreset={reset}
+    />
+    <ListFilterRow
+      {chips}
+      {filters}
+      {pills}
+      collectionName={collectionFilter ? nameOfKey(collectionFilter, page.items) : ''}
+      {result}
+      onstate={(next: ShowFilter | undefined) => {
+        router.setQuery({ state: next });
+      }}
+      onremove={remove}
+      onreset={reset}
     />
 
     {#if isSeries}
@@ -338,14 +414,26 @@
         writes={page.library.writes}
         query={searched}
         {filter}
+        {multi}
+        sort={order.sort as 'title' | 'year' | 'missing'}
+        dir={directionToAsk(order)}
         {busy}
+        onshown={(count: number | undefined) => {
+          shownShows = count;
+        }}
         onsettled={(message: string) => {
           notice = message;
           void load();
         }}
       />
     {:else if page.items.length === 0}
-      <p class="card muted">{t('web.library.empty')}</p>
+      <p class="card muted empty">
+        {filtered ? t('web.library.empty.filtered') : t('web.library.empty')}
+        {#if filtered}
+          <button type="button" class="btn" onclick={reset}>{t('web.library.filters.clear')}</button
+          >
+        {/if}
+      </p>
     {:else}
       {#if page.items.some(selectable)}
         <div class="bar" role="group">
@@ -424,9 +512,35 @@
             <thead>
               <tr>
                 <th></th>
-                <th>{t('web.library.col.title')}</th>
-                <th>{t('web.library.col.year')}</th>
-                {#if showsCollections}<th>{t('web.collection.col')}</th>{/if}
+                <th aria-sort={ariaSortOf(order, 'title')}>
+                  <SortButton
+                    column="title"
+                    current={order}
+                    label={t('web.library.col.title')}
+                    onsort={sortBy}
+                  />
+                </th>
+                <th aria-sort={ariaSortOf(order, 'year')}>
+                  <SortButton
+                    column="year"
+                    current={order}
+                    label={t('web.library.col.year')}
+                    onsort={sortBy}
+                  />
+                </th>
+                {#if showsCollections}
+                  <th
+                    aria-sort={ariaSortOf(order, 'collection')}
+                    title={t('web.collection.sort.hint')}
+                  >
+                    <SortButton
+                      column="collection"
+                      current={order}
+                      label={t('web.collection.col')}
+                      onsort={sortBy}
+                    />
+                  </th>
+                {/if}
                 <th>{t('web.library.col.versions')}</th>
                 {#if page.library.writes.nfo}<th>NFO</th>{/if}
                 {#if page.library.writes.artwork}
@@ -438,10 +552,13 @@
             </thead>
             <tbody>
               {#each page.items as item, index (item.id)}
-                <tr
-                  class:current={open?.id === item.id}
-                  class:group-start={startsGroup(page.items, index, sort)}
-                >
+                {@const heading = groupHeading(page.items, index, order.sort)}
+                {#if heading}
+                  <tr class="heading">
+                    <td colspan={columnCount}>{headingLabel(heading, t)}</td>
+                  </tr>
+                {/if}
+                <tr class:current={open?.id === item.id}>
                   <td class="narrow">
                     {#if selectable(item)}
                       <input
@@ -605,9 +722,26 @@
   .head {
     display: flex;
     flex-wrap: wrap;
-    align-items: flex-start;
+    align-items: center;
     justify-content: space-between;
-    gap: 12px;
+    gap: 12px 24px;
+  }
+
+  .identity {
+    display: flex;
+    flex: 1 1 420px;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  /* One line under the name: the path, then the date, wrapping rather than cutting a long path. */
+  .meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 10px;
+    font-size: 13px;
   }
 
   h2 {
@@ -619,12 +753,14 @@
   }
 
   .path {
-    font-size: 11.5px;
+    font-size: 12px;
+    overflow-wrap: anywhere;
   }
 
-  .filters {
+  .empty {
     display: flex;
     flex-wrap: wrap;
+    align-items: center;
     gap: 8px;
   }
 
@@ -633,16 +769,6 @@
     margin-left: 4px;
     padding-left: 12px;
     border-left: 1px solid var(--border-strong);
-  }
-
-  .filters [aria-pressed='true'] {
-    border-color: var(--accent);
-    background: var(--surface-2);
-  }
-
-  .count {
-    margin-left: 6px;
-    color: var(--muted);
   }
 
   .bar {
@@ -711,9 +837,13 @@
     background: var(--surface-2);
   }
 
-  /* Sorted by collection, a heavier line sets each saga apart from the one above. */
-  tr.group-start > td {
-    border-top: 2px solid var(--border-strong);
+  /* Sorted by collection, a line names each saga (and how much of it is held) above its movies. */
+  tr.heading > td {
+    padding-top: 16px;
+    border-bottom: 1px solid var(--border-strong);
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 600;
   }
 
   .collection {

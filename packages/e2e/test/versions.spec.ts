@@ -33,9 +33,14 @@ test('lists a movie held in two versions once', async ({ page, request }) => {
   await expect(page.getByRole('button', { name: /versions of/ })).toHaveCount(0);
 
   // The filter counts the movie, once.
+  await page.getByRole('button', { name: 'Filters' }).click();
   await page.getByRole('button', { name: /Several versions/ }).click();
-  await expect(page).toHaveURL(/state=multi-version/);
+  await expect(page).toHaveURL(/multi=1/);
+  await expect(page.getByRole('group', { name: 'Active filters' })).toContainText(
+    'Several versions',
+  );
   await expect(page.getByRole('row').filter({ hasText: '1984' })).toHaveCount(1);
+  await page.keyboard.press('Escape');
 
   // The panel compares the versions, each with the state of its NFO, without a tally.
   await row.locator('button.link').click();

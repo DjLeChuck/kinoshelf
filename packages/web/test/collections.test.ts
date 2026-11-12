@@ -9,7 +9,6 @@ import {
   nfoCount,
   pillOf,
   setPreview,
-  startsGroup,
   type ItemCollection,
 } from '../src/lib/collections.js';
 import { itemsUrl } from '../src/lib/library-items.js';
@@ -42,30 +41,6 @@ describe('canFile', () => {
     expect(canFile({ kind: 'movie', tmdbId: 1, state: 'review' })).toBe(false);
     expect(canFile({ kind: 'movie', tmdbId: null, state: 'ok' })).toBe(false);
     expect(canFile({ kind: 'series', tmdbId: 1, state: 'ok' })).toBe(false);
-  });
-});
-
-describe('startsGroup', () => {
-  const items = [
-    { collection: coll({ key: 't:1' }) },
-    { collection: coll({ key: 't:1' }) },
-    { collection: coll({ key: 'c:Marvel' }) },
-    { collection: null },
-    { collection: null },
-  ];
-
-  it('marks each change of collection when sorted by collection, never the first row', () => {
-    expect(items.map((_, i) => startsGroup(items, i, 'collection'))).toEqual([
-      false,
-      false,
-      true,
-      true,
-      false,
-    ]);
-  });
-
-  it('marks nothing under another sort', () => {
-    expect(items.some((_, i) => startsGroup(items, i, 'title'))).toBe(false);
   });
 });
 

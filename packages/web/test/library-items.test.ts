@@ -38,6 +38,13 @@ describe('itemsUrl', () => {
     );
     expect(itemsUrl('films', { q: '  ', limit: 50 })).not.toContain('q=');
   });
+
+  it('combines a state with the versions and a direction', () => {
+    expect(
+      itemsUrl('films', { state: 'rename', multi: true, sort: 'year', dir: 'asc', limit: 50 }),
+    ).toBe('/api/libraries/films/items?state=rename&multi=true&sort=year&dir=asc&limit=50');
+    expect(itemsUrl('films', { multi: false, limit: 50 })).not.toContain('multi');
+  });
 });
 
 describe('scanPercent', () => {
@@ -70,6 +77,10 @@ describe('showsUrl', () => {
     expect(showsUrl('series', { incomplete: true, limit: 50 })).toBe(
       '/api/libraries/series/shows?incomplete=true&limit=50',
     );
+    expect(
+      showsUrl('series', { state: 'rename', multi: true, sort: 'missing', dir: 'asc', limit: 50 }),
+    ).toBe('/api/libraries/series/shows?state=rename&multi=true&sort=missing&dir=asc&limit=50');
+    expect(showsUrl('series', { sort: 'title', limit: 50 })).not.toContain('sort');
   });
 });
 

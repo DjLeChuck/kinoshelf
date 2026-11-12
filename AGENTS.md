@@ -488,10 +488,30 @@ section or bulk action (`hasCollections`, `library.collections` of `GET .../item
   wrote it and nobody touched it since (`madeByUs`), else it is `kept` and the answer says so. The old one goes
   to `<config>/replaced/` and the batch (`replaced` entries) can be undone. Nothing moves. TMDB is read before
   anything changes, so a failure leaves the choice as it was.
-- **The web** (`CollectionBar`, `CollectionDialog`, `lib/collections.ts`): the column and the
-  filters show once a library has a collection (`?collection=in|out|incomplete|<key>`, `?sort=collection|year`
-  in the URL), filing stays offered in the bar before that. A movie's page holds one fact line (name, the list's pastille, "Show in the list", an Edit / Set button); the edition is `CollectionDialog`, which also serves the bar's "Set the collection…" in multiple mode (nothing preselected, no saga, no preview). Every settled movie can be ticked, not only the ones
+- **The web** (`CollectionDialog`, `lib/collections.ts`): the column and the Collection group of the
+  Filters panel show once a library has a collection (`?collection=in|out|incomplete|<key>`,
+  `?sort=collection` in the URL), filing stays offered in the bar before that. Sorted by collection, a line
+  opens each group (`Dragons - Saga · 2 of 3`, then "No collection"). A movie's page holds one fact line (name, the list's pastille, "Show in the list", an Edit / Set button); the edition is `CollectionDialog`, which also serves the bar's "Set the collection…" in multiple mode (nothing preselected, no saga, no preview). Every settled movie can be ticked, not only the ones
   to rename. Collection images are out of scope: no convention is shared by the players.
+
+## List header
+
+A library's list has two rows above it (`ListToolbar`, `ListFilterRow`, `lib/list-filters.ts`, the rules tested
+in `list-filters.test.ts`). The **toolbar** is the search box and a Filters button (a non-modal panel: Escape or a
+click outside closes it, the focus goes back to the button; a sheet at the foot of the screen on a phone) whose badge
+counts the active filters. The panel holds the states with their counts (one at a time, clicking the active one
+clears it), "Several versions" and, for movies with collections, the Collection group. The **row below** holds the
+chips of the states to handle (only those above 0, "All" always, the chosen one even at 0; "Nothing to handle" when
+none), the removable pills of the traits (versions, collection) and the "2 of 5 movies" status. The panel and the
+chips are the same filter.
+
+- **"Several versions" is not a state**: `multi=true` of `GET .../items` and `.../shows` combines with `state`
+  (`multi-version` stays a key of `counts`, for its count, but is no longer a value of `state`).
+- **Sorting is the column headers'** (`SortButton` in a `<th aria-sort>`): movies by title, year, collection, shows
+  by title, year, missing; `sort` and `dir` of both lists, `?sort=&dir=` in the URL with the defaults left out. A
+  first click goes up for a title or a collection, down for a year or a count (`FIRST_DIRECTION`, the server's
+  `DEFAULT_DIRECTION`: keep them equal). Filters and sort live in the URL, so changing library (a link with no
+  query) resets them.
 
 ## Libraries and scan
 

@@ -77,18 +77,6 @@ export function pillOf(collection: ItemCollection): {
   };
 }
 
-/** Whether a row opens a new group: the list is ordered by collection and this one is not the last's. */
-export function startsGroup(
-  items: readonly Pick<{ collection: ItemCollection | null }, 'collection'>[],
-  index: number,
-  sort: ItemSort,
-): boolean {
-  if (sort !== 'collection' || index === 0) {
-    return false;
-  }
-  return (items[index]?.collection?.key ?? null) !== (items[index - 1]?.collection?.key ?? null);
-}
-
 /** The name of the collection a filter by key shows: the one of any row that has it. */
 export function nameOfKey(
   key: string,

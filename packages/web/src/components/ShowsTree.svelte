@@ -10,6 +10,14 @@
   import { validations } from '../lib/validations.svelte.js';
   import { listOf, listParam } from '../lib/routes.js';
   import {
+    FIRST_DIRECTION,
+    ariaSortOf,
+    nextSort,
+    sortToQuery,
+    type SortColumn,
+  } from '../lib/list-filters.js';
+  import SortButton from './SortButton.svelte';
+  import {
     PAGE_SIZE,
     episodeLabel,
     groupSettling,
@@ -42,7 +50,11 @@
     writes,
     query,
     filter,
+    multi,
+    sort,
+    dir,
     onsettled,
+    onshown,
     busy = false,
   }: {
     libraryId: string;
@@ -52,6 +64,13 @@
     query: string;
     /** The tab: the shows it keeps, and the files waiting for a person (`review`, `unrecognized`). */
     filter: ShowFilter | undefined;
+    /** Only the shows held in several versions, whatever the tab. */
+    multi: boolean;
+    /** How the shows are ordered; the direction is left out for the column's first one. */
+    sort: 'title' | 'year' | 'missing';
+    dir: 'asc' | 'desc' | undefined;
+    /** How many shows the list holds (the node of files to validate, on its tabs), for the page's "2 of 5". */
+    onshown: (count: number | undefined) => void;
     /** A file was settled: what to tell the user, and the library to read again. */
     onsettled: (message: string) => void;
     /** A transfer is going on: nothing new is started until it ends. */
@@ -190,13 +209,13 @@
   });
 
   let latest = 0;
-  async function load(wanted = { query, filter }): Promise<void> {
+  async function load(wanted = { query, filter, multi, sort, dir }): Promise<void> {
     const ticket = ++latest;
     try {
       // The files that wait for a person are one node at the top, never inside a show: the tabs
       // `review` and `unrecognized` list them alone, and the tab of every show lists both kinds.
       const waiting = (['review', 'unrecognized'] as const).filter(
-        (state) => wanted.filter === undefined || wanted.filter === state,
+        (state) => !wanted.multi && (wanted.filter === undefined || wanted.filter === state),
       );
       const answer =
         wanted.filter === 'review' || wanted.filter === 'unrecognized'
@@ -205,6 +224,9 @@
               q: wanted.query,
               missing: wanted.filter === 'missing-episodes',
               incomplete: wanted.filter === 'missing-show-files',
+              multi: wanted.multi,
+              sort: wanted.sort,
+              dir: wanted.dir,
               ...(wanted.filter !== undefined &&
                 wanted.filter !== 'missing-episodes' &&
                 wanted.filter !== 'missing-show-files' && { state: wanted.filter }),
@@ -227,6 +249,12 @@
         const present = new Set(settling.map(settleKey));
         startedKeys = startedKeys.filter((key) => present.has(key));
         settleTotal = pages.reduce((sum, page) => sum + page.groups, 0);
+        // The tabs of the files to validate count that node, as their chips do.
+        onshown(
+          wanted.filter === 'review' || wanted.filter === 'unrecognized'
+            ? settleTotal
+            : answer.total,
+        );
         // Only what is open is kept: a closed show is read again when it opens.
         details = Object.fromEntries(
           Object.entries({
@@ -249,7 +277,7 @@
   // Not on the first run: `refetchOn` below reads it once.
   let mounted = false;
   $effect(() => {
-    const [wantedQuery, wantedFilter] = [query, filter];
+    const wanted = { query, filter, multi, sort, dir };
     untrack(() => {
       if (!mounted) {
         mounted = true;
@@ -257,7 +285,7 @@
       }
       limit = PAGE_SIZE;
       picked = [];
-      void load({ query: wantedQuery, filter: wantedFilter });
+      void load(wanted);
     });
   });
 
@@ -318,6 +346,12 @@
       ),
     });
   }
+
+  /** The sort as the page's URL holds it, for the headers to read and to turn over. */
+  const current = $derived({ sort, dir: dir ?? FIRST_DIRECTION[sort] });
+  const sortBy = (column: SortColumn): void => {
+    router.setQuery(sortToQuery(nextSort(current, column)));
+  };
 
   const columns = $derived(
     6 +
@@ -382,8 +416,22 @@
       <table bind:this={tableEl}>
         <thead>
           <tr>
-            <th>{t('web.library.col.title')}</th>
-            <th>{t('web.library.col.year')}</th>
+            <th aria-sort={ariaSortOf(current, 'title')}>
+              <SortButton
+                column="title"
+                {current}
+                label={t('web.library.col.title')}
+                onsort={sortBy}
+              />
+            </th>
+            <th aria-sort={ariaSortOf(current, 'year')}>
+              <SortButton
+                column="year"
+                {current}
+                label={t('web.library.col.year')}
+                onsort={sortBy}
+              />
+            </th>
             <th>{t('web.library.col.seasons')}</th>
             <th>{t('web.library.col.episodes')}</th>
             <th>{t('web.library.col.versions')}</th>
@@ -394,7 +442,14 @@
             {/if}
             {#if writes.logo}<th>{t('web.library.col.logo')}</th>{/if}
             {#if writes.thumb}<th>{t('web.library.col.thumb')}</th>{/if}
-            <th>{t('web.library.col.missing')}</th>
+            <th aria-sort={ariaSortOf(current, 'missing')}>
+              <SortButton
+                column="missing"
+                {current}
+                label={t('web.library.col.missing')}
+                onsort={sortBy}
+              />
+            </th>
           </tr>
         </thead>
         <tbody>

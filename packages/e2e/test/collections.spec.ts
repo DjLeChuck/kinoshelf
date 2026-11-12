@@ -57,22 +57,35 @@ test('files movies under collections: the list, the page of a film, a whole sele
   await expect(dune.getByText('1/2')).toBeVisible();
   await expect(page.getByRole('row', { name: /Alien/ })).toBeVisible();
 
-  // Filtering by collection, from the group of buttons and from a name in the list.
-  await page.getByRole('button', { name: /^Incomplete collection/ }).click();
+  // Filtering by collection, from the panel and from a name in the list; each is a pill to remove.
+  await page.getByRole('button', { name: 'Filters' }).click();
+  await page.getByRole('radio', { name: /^Incomplete collection/ }).check();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('button', { name: /^Filters/ })).toBeFocused();
+  await expect(page.getByRole('button', { name: /^Filters, 1 active filter$/ })).toBeVisible();
   await expect(page.getByRole('row', { name: /Alien/ })).toHaveCount(0);
-  await page.getByRole('button', { name: /^All/ }).first().click();
+  await page.getByRole('button', { name: 'Remove the filter Incomplete collection' }).click();
+  await expect(page.getByRole('row', { name: /Alien/ })).toBeVisible();
   await dune.getByRole('button', { name: /Show only the collection Dune - Saga/ }).click();
   await expect(
-    page.getByRole('button', { name: 'Remove the filter on the collection Dune - Saga' }),
+    page.getByRole('button', { name: 'Remove the filter Collection: Dune - Saga' }),
   ).toBeVisible();
   await expect(page.getByRole('row', { name: /Alien/ })).toHaveCount(0);
-  await page
-    .getByRole('button', { name: 'Remove the filter on the collection Dune - Saga' })
-    .click();
-  // The sort's radios are visually hidden: a person clicks the label, so the test does too.
-  await page.getByRole('group', { name: 'Sort by' }).getByText('Collection').click();
-  await expect(page.getByRole('radio', { name: 'Collection', exact: true })).toBeChecked();
-  await expect(page.getByRole('row')).toHaveCount(3);
+  await expect(page.getByRole('status').filter({ hasText: '1 of 2 movies' })).toBeVisible();
+  await page.getByRole('button', { name: 'Clear all' }).click();
+  await expect(page.getByRole('row', { name: /Alien/ })).toBeVisible();
+
+  // Sorting is the header's: a first click reads the collections upwards, a line names each group.
+  const header = page.getByRole('columnheader', { name: 'Collection', exact: true });
+  await header.getByRole('button').click();
+  await expect(header).toHaveAttribute('aria-sort', 'ascending');
+  await expect(page.getByRole('columnheader', { name: 'Title' })).not.toHaveAttribute('aria-sort');
+  await expect(page.getByRole('row', { name: 'Dune - Saga · 1 of 2', exact: true })).toBeVisible();
+  await expect(page.getByRole('row', { name: 'No collection', exact: true })).toBeVisible();
+  // The explanation is a tooltip, not a sentence under the list.
+  await expect(header).toHaveAttribute('title', /each saga by year/);
+  await header.getByRole('button').click();
+  await expect(header).toHaveAttribute('aria-sort', 'descending');
 
   // The page of the film: the collection is a fact, and its edition is a dialog, not a block.
   await dune.getByRole('button', { name: /^Dune$/ }).click();
