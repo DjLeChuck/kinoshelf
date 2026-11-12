@@ -3,11 +3,18 @@
 RUN ?= $(if $(shell command -v pnpm 2>/dev/null),,nix develop -c)
 PNPM := $(RUN) pnpm
 IMAGE ?= kinoshelf:dev
+# Building ffprobe needs a compiler and a static libc: the flake's `ffprobe` shell. Empty where the
+# toolchain is already there (CI): `make FFPROBE_RUN= ffprobe`.
+FFPROBE_RUN ?= nix develop .\#ffprobe -c
+FFPROBE_DIR := .work/ffprobe-out
+SEA_DIST := packages/sea/dist
+SEA_CONFIG ?= .work/sea-config
+SEA_PORT ?= 18484
 
 .DEFAULT_GOAL := help
 
 .PHONY: help hooks install build build-web dev-server dev-web typecheck lint format format-check test test-corpus \
-        test-e2e test-live corpus-report corpus-record check docker-build players-up players-down players-seed flake-check clean
+        test-e2e test-live corpus-report corpus-record check docker-build ffprobe sea sea-run players-up players-down players-seed flake-check clean
 
 help: ## List the targets
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}'
@@ -58,6 +65,20 @@ corpus-record: ## Re-record the TMDB responses (needs TMDB_API_KEY in .env)
 	$(PNPM) corpus:record
 
 check: typecheck lint format-check test ## Everything required before considering work done
+
+$(FFPROBE_DIR)/ffprobe: scripts/build-ffprobe.sh
+	$(FFPROBE_RUN) scripts/build-ffprobe.sh $(FFPROBE_DIR)
+
+ffprobe: $(FFPROBE_DIR)/ffprobe ## Build the minimal ffprobe into .work/ffprobe-out (cached; rebuilt when the script changes)
+
+sea: build build-web ffprobe ## Build the standalone binary, with its ffprobe, in packages/sea/dist
+	$(PNPM) --filter @kinoshelf/sea build
+	cp $(FFPROBE_DIR)/ffprobe $(SEA_DIST)/ffprobe
+	cp -r $(FFPROBE_DIR)/LICENSES $(SEA_DIST)/LICENSES
+
+sea-run: sea ## Run the standalone binary on :SEA_PORT with a throwaway config in SEA_CONFIG (.work/sea-config)
+	@echo "API key: KINOSHELF_CONFIG_DIR=$(SEA_CONFIG) $(SEA_DIST)/kinoshelf api-key create"
+	KINOSHELF_CONFIG_DIR=$(SEA_CONFIG) KINOSHELF_HOST=127.0.0.1 KINOSHELF_PORT=$(SEA_PORT) $(SEA_DIST)/kinoshelf serve
 
 hooks: ## Use the versioned git hooks (.githooks): pre-push runs every test
 	git config core.hooksPath .githooks
