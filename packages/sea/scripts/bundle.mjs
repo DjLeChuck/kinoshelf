@@ -20,6 +20,10 @@ const root = fileURLToPath(new URL('..', import.meta.url));
 const webDist = join(root, '../web/dist');
 const out = join(root, 'dist');
 
+// The node to inject into. Unset, the one running this script; set, another one (the Docker build
+// runs on its own architecture and injects into the target's musl node, already stripped).
+const baseNode = process.env.KINOSHELF_SEA_NODE;
+
 // The release workflow gives the tag's version: the packages all say 0.0.0 until one is cut.
 const version =
   process.env.KINOSHELF_VERSION ??
@@ -83,28 +87,31 @@ if (process.argv.includes('--build')) {
   // The injection needs a copy of node to write into; stripping it first (Linux) saves some 40 MB,
   // and has to come before the injection, which a strip would break.
   const node = join(out, 'node');
-  if (process.platform === 'linux') {
+  if (baseNode !== undefined) {
+    copyFileSync(baseNode, node);
+  } else if (process.platform === 'linux') {
     execFileSync('strip', ['--strip-unneeded', '-o', node, process.execPath]);
   } else {
     copyFileSync(process.execPath, node);
   }
   // macOS refuses to modify a signed binary, and to run an unsigned one: the signature goes before
   // the injection, and an ad hoc one (no certificate) comes back after it.
-  if (process.platform === 'darwin') {
+  const sign = baseNode === undefined && process.platform === 'darwin';
+  if (sign) {
     execFileSync('codesign', ['--remove-signature', node]);
   }
   execFileSync(process.execPath, ['--build-sea', join(out, 'sea-config.json')], {
     cwd: out,
     stdio: 'inherit',
   });
-  if (process.platform === 'darwin') {
+  if (sign) {
     execFileSync('codesign', ['--sign', '-', join(out, 'kinoshelf')]);
   }
   console.log(`executable: ${join(out, 'kinoshelf')}`);
 
   // Node's licence (and those of what it bundles) is at the root of its official tarball; the
   // archive has to carry it. Some distributions (nixpkgs) leave it out: said, not guessed.
-  const licenseOf = join(dirname(dirname(process.execPath)), 'LICENSE');
+  const licenseOf = join(dirname(dirname(baseNode ?? process.execPath)), 'LICENSE');
   if (existsSync(licenseOf)) {
     mkdirSync(join(out, 'LICENSES/node'), { recursive: true });
     copyFileSync(licenseOf, join(out, 'LICENSES/node/LICENSE'));
