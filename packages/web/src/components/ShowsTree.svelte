@@ -79,6 +79,7 @@
   let layoutWidth = $state(0);
   let tableEl = $state<HTMLTableElement | undefined>(undefined);
   let stacked = $state(false);
+  let panelWidth = $state(340);
   $effect(() => {
     // `columns` and the rows read here make the measure run again when either changes.
     const rows = shows?.items.length ?? 0;
@@ -89,8 +90,10 @@
     tableEl.style.width = 'min-content';
     const narrowest = tableEl.offsetWidth;
     tableEl.style.width = previous;
-    const panel = Math.max(340, layoutWidth * 0.36);
-    stacked = narrowest > layoutWidth - 16 - panel;
+    // The panel takes up to 36%, but gives back what the table needs, down to 340px.
+    const room = layoutWidth - 16 - narrowest;
+    stacked = room < 340;
+    panelWidth = Math.min(layoutWidth * 0.36, room);
   });
 
   let shows = $state<{ total: number; items: readonly Show[] } | undefined>(undefined);
@@ -369,7 +372,12 @@
       {/if}
     </div>
   {/if}
-  <div class="layout" class:stacked bind:clientWidth={layoutWidth}>
+  <div
+    class="layout"
+    class:stacked
+    style:--panel={`${Math.max(340, panelWidth)}px`}
+    bind:clientWidth={layoutWidth}
+  >
     <div class="table-wrap">
       <table bind:this={tableEl}>
         <thead>
@@ -841,7 +849,7 @@
   .layout {
     display: grid;
     /* The tree takes what the panel does not need: extra width goes to the columns. */
-    grid-template-columns: minmax(0, 1fr) minmax(340px, 36%);
+    grid-template-columns: minmax(0, 1fr) var(--panel, minmax(340px, 36%));
     gap: 16px;
     align-items: start;
   }
