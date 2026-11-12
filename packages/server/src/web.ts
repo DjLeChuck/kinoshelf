@@ -1,18 +1,24 @@
 import { existsSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, extname, join } from 'node:path';
+import { isSea } from 'node:sea';
 import { fileURLToPath } from 'node:url';
 import fastifyStatic from '@fastify/static';
 import type { FastifyInstance, FastifyReply } from 'fastify';
 
 /**
- * Where the built web UI is: `KINOSHELF_WEB_DIR`, else the `@kinoshelf/web` package the Docker
+ * Where the built web UI is: `KINOSHELF_WEB_DIR`, else, in the standalone binary, the `web/` folder
+ * of its embedded files (beside the bundle), else the `@kinoshelf/web` package the Docker
  * image ships beside the server, else the sibling package of a checkout. `undefined` means the
  * server only has its API, which is a normal way to run it.
  */
-export function findWebRoot(env: Readonly<Record<string, string | undefined>>): string | undefined {
+export function findWebRoot(
+  env: Readonly<Record<string, string | undefined>>,
+  { sea = isSea(), bundleDir = import.meta.dirname } = {},
+): string | undefined {
   const candidates = [
     env.KINOSHELF_WEB_DIR,
+    sea ? join(bundleDir, 'web') : undefined,
     (() => {
       try {
         const manifest = createRequire(import.meta.url).resolve('@kinoshelf/web/package.json');

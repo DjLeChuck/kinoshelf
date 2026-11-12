@@ -80,6 +80,16 @@ describe('findWebRoot', () => {
     expect(findWebRoot({ KINOSHELF_WEB_DIR: dir })).toBe(dir);
   });
 
+  it('looks in web/ beside the bundle in the standalone binary, after the variable', async () => {
+    const bundleDir = await makeDir();
+    await put(join(bundleDir, 'web', 'index.html'), 'x');
+    expect(findWebRoot({}, { sea: true, bundleDir })).toBe(join(bundleDir, 'web'));
+    expect(findWebRoot({}, { sea: false, bundleDir })).not.toBe(join(bundleDir, 'web'));
+    const dir = await makeDir();
+    await put(join(dir, 'index.html'), 'x');
+    expect(findWebRoot({ KINOSHELF_WEB_DIR: dir }, { sea: true, bundleDir })).toBe(dir);
+  });
+
   it('ignores a folder without index.html', async () => {
     const dir = await makeDir();
     const found = findWebRoot({ KINOSHELF_WEB_DIR: dir });

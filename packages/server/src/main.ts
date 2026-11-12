@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-import { readFileSync } from 'node:fs';
 import type { Database } from '@kinoshelf/core';
 import {
   configDirectory,
@@ -25,6 +24,7 @@ import { PlexSession } from './plex-session.js';
 import { createShutdown } from './shutdown.js';
 import { findWebRoot } from './web.js';
 import { describeListenError, parseServerCommand } from './startup.js';
+import { serverVersion } from './version.js';
 
 const DEFAULT_RETENTION_DAYS = 90;
 
@@ -85,10 +85,7 @@ if (command.kind === 'notify') {
   );
 }
 
-// `dist/` sits next to `package.json`, so this resolves the same in a checkout and once installed.
-const { version } = JSON.parse(
-  readFileSync(new URL('../package.json', import.meta.url), 'utf8'),
-) as { version: string };
+const version = serverVersion();
 
 let config: Config;
 let database: Database;
