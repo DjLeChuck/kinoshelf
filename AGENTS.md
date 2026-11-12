@@ -437,7 +437,9 @@ section or bulk action (`hasCollections`, `library.collections` of `GET .../item
   by its movies, cached by the provider) and reports it as `LoadedMetadata.collection` (`null`: read, in none, so
   a collection the movie left is forgotten; absent: not read). `analyze`, `Service.planGroup` and `Service.plan`
   record it (`CollectionStore.record`: `collections`, `movie_collections`, server migration 032). Nothing is
-  fetched on a listing.
+  fetched on a listing. A part with no release date or one still to come (a rumoured or planned film)
+  is left out of `parts`, hence of the total (`getCollection`): `/collection` gives no status, and the
+  library could never hold it. A stored collection takes a part in once a movie of it is read again.
 - **The owner's choice is kept apart** (`collection_overrides`, per library and movie): absent is TMDB's, `none`
   is no collection, `custom` is a name with no TMDB id. A scan rewrites TMDB's record and never this table;
   `analyze` takes it through `collectionOverride`, so an NFO written later follows it. `effectiveCollection`

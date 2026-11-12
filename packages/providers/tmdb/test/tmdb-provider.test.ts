@@ -360,7 +360,7 @@ describe('getMovieDetails and getSeriesDetails', () => {
     expect(movie?.tags).toEqual(['desert', 'based on novel or book']);
   });
 
-  it('lists the movies of a collection, with their year, in the language asked', async () => {
+  it('lists the released movies of a collection, with their year, in the language asked', async () => {
     const { provider, requests } = make([
       at('/3/collection/726871', () =>
         json(
@@ -372,6 +372,8 @@ describe('getMovieDetails and getSeriesDetails', () => {
               { id: 438631, title: 'Dune', release_date: '2021-09-15' },
               { id: 693134, title: 'Dune : Deuxième partie', release_date: '2024-02-27' },
               { id: 1, title: 'Not yet dated', release_date: '' },
+              { id: 2, title: 'Announced', release_date: '2999-01-01' },
+              { id: 3, title: 'Rumoured', release_date: null },
             ],
           }),
         ),
@@ -386,7 +388,6 @@ describe('getMovieDetails and getSeriesDetails', () => {
       parts: [
         { id: { provider: 'tmdb', id: 438631 }, title: 'Dune', year: 2021 },
         { id: { provider: 'tmdb', id: 693134 }, title: 'Dune : Deuxième partie', year: 2024 },
-        { id: { provider: 'tmdb', id: 1 }, title: 'Not yet dated' },
       ],
     });
     expect(requests[0]?.url.searchParams.get('language')).toBe('fr');

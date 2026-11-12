@@ -160,6 +160,10 @@ const extraTitles = (titles: readonly string[], known: readonly string[]): strin
   ...new Set(titles.filter((title) => !known.includes(title))),
 ];
 
+/** Whether a TMDB `release_date` (`YYYY-MM-DD`) is set and not after today. */
+const isReleased = (releaseDate: string | null | undefined): boolean =>
+  !!releaseDate && releaseDate <= new Date().toISOString().slice(0, 10);
+
 export class TmdbProvider implements MetadataProvider {
   readonly name = 'tmdb';
   private readonly client: TmdbClient;
@@ -258,14 +262,19 @@ export class TmdbProvider implements MetadataProvider {
       id: { provider: this.name, id: r.id },
       name: r.name,
       ...(r.overview?.trim() && { overview: r.overview.trim() }),
-      parts: (r.parts ?? []).map((part) => {
-        const year = /^\d{4}/.exec(part.release_date ?? '')?.[0];
-        return {
-          id: { provider: this.name, id: part.id },
-          title: part.title,
-          ...(year && { year: Number(year) }),
-        };
-      }),
+      // A part with no release date or one still to come (a rumoured or planned film) is not
+      // counted: a library could never hold it, so the collection would read as incomplete forever.
+      // The collection endpoint gives no status, and one request per part would cost too much.
+      parts: (r.parts ?? [])
+        .filter((part) => isReleased(part.release_date))
+        .map((part) => {
+          const year = /^\d{4}/.exec(part.release_date ?? '')?.[0];
+          return {
+            id: { provider: this.name, id: part.id },
+            title: part.title,
+            ...(year && { year: Number(year) }),
+          };
+        }),
     };
   }
 
