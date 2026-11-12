@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import swagger from '@fastify/swagger';
 import { KinoshelfError, SqliteJournal, type ImageFetcher, type Journal } from '@kinoshelf/core';
 import type { Database } from '@kinoshelf/core';
-import Fastify, { type FastifyInstance } from 'fastify';
+import Fastify, { LogController, type FastifyInstance } from 'fastify';
 import { SqliteHttpCache } from '@kinoshelf/provider-tmdb';
 import { ApiError } from './api-error.js';
 import { hasApiKey, isValidApiKey } from './auth.js';
@@ -17,6 +17,8 @@ import { ExecutionStore } from './executions.js';
 import { History } from './history.js';
 import { registerImageRoutes } from './images.js';
 import { JobStore } from './jobs.js';
+import { registerLogRoutes } from './log-routes.js';
+import { LOG_LEVELS, LogStore, type LogLevel } from './logs.js';
 import { createTranslator, detectLocale } from '@kinoshelf/i18n';
 import type { DeliveryOptions } from './notify/delivery.js';
 import { Notifier } from './notify/notifier.js';
@@ -73,6 +75,13 @@ export interface AppOptions extends Omit<ProcessorDeps, 'database'> {
   /** Already migrated (see `database.ts`). */
   readonly database: Database;
   readonly logger?: boolean;
+  /**
+   * Where the logger writes, and what the System page reads. Without one, the lines are kept in
+   * memory only (and only when `logger` is on).
+   */
+  readonly logs?: LogStore;
+  /** The level to log at, until the System page changes it (default `info`). */
+  readonly logLevel?: LogLevel;
   /** Replaces the real pipeline, for tests. */
   readonly processor?: JobProcessor;
   /** Wraps the real transfer, for tests that must hold one open (a gate before it runs). */
@@ -126,9 +135,21 @@ export function trustProxyOf(value: string | undefined): boolean | string {
  * the logic lives in the core. Responses carry codes and parameters, never translated text.
  */
 export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
+  const logs = options.logs ?? new LogStore();
   const app = Fastify({
-    // An ISO date rather than pino's epoch milliseconds, which nobody reads in `docker logs`.
-    logger: options.logger ? { timestamp: () => `,"time":"${new Date().toISOString()}"` } : false,
+    logger:
+      options.logger || options.logs
+        ? {
+            // An ISO date rather than pino's epoch milliseconds, which nobody reads in `docker logs`.
+            timestamp: () => `,"time":"${new Date().toISOString()}"`,
+            level: options.logLevel ?? 'info',
+            // No pid or host name: one process per container, and they only fatten the file.
+            base: null,
+            stream: logs,
+          }
+        : false,
+    // A request is one line, at `debug` (below): two at `info` each would drown the rest.
+    logController: new LogController({ disableRequestLogging: true }),
     trustProxy: trustProxyOf(options.env.KINOSHELF_TRUST_PROXY),
     // Fastify strips unknown fields by default; a client sending `dryRun` must hear it is not
     // supported rather than believe it was honored.
@@ -139,7 +160,23 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     void reply.header('x-content-type-options', 'nosniff');
     done(null, payload);
   });
+  // One line per answer, at `debug`; the page that reads the log must not fill it with its own reads.
+  app.addHook('onResponse', (request, reply, done) => {
+    const path = request.url.split('?')[0] ?? request.url;
+    if (!path.startsWith('/api/logs') && path !== '/api/events') {
+      request.log.debug(
+        { component: 'http' },
+        `${request.method} ${path} ${reply.statusCode} · ${Math.round(reply.elapsedTime)} ms`,
+      );
+    }
+    done();
+  });
   const events = new EventBus();
+  logs.subscribe(() => {
+    events.emit('logs');
+  });
+  // Each part of the server logs under its own name, which the System page filters on.
+  const noted = (component: 'notify' | 'scan' | 'watcher') => app.log.child({ component });
   // Where each analysis is, told to the clients at most twice a second (see `ProgressTracker`).
   // A topic of its own: `jobs` makes every list reload, which a scan must not do twice a second.
   const progress = new ProgressTracker(() => {
@@ -189,13 +226,13 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     translate: createTranslator(detectLocale(undefined, options.config.locale, options.env)),
     log: {
       info: (message) => {
-        app.log.info(message);
+        noted('notify').info(message);
       },
       warn: (message) => {
-        app.log.warn(message);
+        noted('notify').warn(message);
       },
       error: (error) => {
-        app.log.error(error);
+        noted('notify').error(error);
       },
     },
     ...(options.delivery && { delivery: options.delivery }),
@@ -213,7 +250,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     prober: options.prober ?? ffprobe,
     busy: () => runner.busy,
     onError: (error) => {
-      app.log.warn(error, 'Could not read a video with ffprobe');
+      noted('scan').warn(error, 'Could not read a video with ffprobe');
     },
   });
   // Counts the episodes each show lacks, with the same patience: after the jobs, never during.
@@ -223,7 +260,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     fetch: (tmdbId) => service.seasons(tmdbId),
     busy: () => runner.busy,
     onError: (error) => {
-      app.log.warn(error, 'Could not count the missing episodes of a show');
+      noted('scan').warn(error, 'Could not count the missing episodes of a show');
     },
   });
   const seriesFilesStore = new SeriesFilesStore(options.database);
@@ -233,7 +270,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     items,
     store: seriesFilesStore,
     onError: (error) => {
-      app.log.warn(error, 'Could not look for the files of a show');
+      noted('scan').warn(error, 'Could not look for the files of a show');
     },
     refreshed: () => {
       events.emit('history');
@@ -262,7 +299,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
         ...options,
         progress,
         onUnreadable: (path, error) => {
-          app.log.warn(error, `Left out a folder that cannot be read: ${path}`);
+          noted('scan').warn(error, `Left out a folder that cannot be read: ${path}`);
         },
       }),
     options.executeWith ? options.executeWith(transfer) : transfer,
@@ -317,7 +354,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     },
     log: {
       warn: (message) => {
-        app.log.warn(message);
+        noted('watcher').warn(message);
       },
     },
   });
@@ -567,6 +604,15 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
       events,
     });
     registerWatchRoutes(api, watcher);
+    registerLogRoutes(api, {
+      logs,
+      level: {
+        get: () => LOG_LEVELS.find((level) => level === app.log.level) ?? 'info',
+        set: (level) => {
+          app.log.level = level;
+        },
+      },
+    });
     registerImageRoutes(api, {
       cacheDir: join(options.configDir, 'images'),
       ...((options.env.KINOSHELF_TMDB_IMAGES_URL ?? '') !== '' && {

@@ -20,10 +20,12 @@ import {
   setApiKey,
 } from './auth.js';
 import { openDatabase } from './database.js';
+import { LOG_LEVELS, LogStore } from './logs.js';
 import { PlexTv } from './notify/plex-auth.js';
 import { runNotifyCommand } from './notify-command.js';
 import { PlexSession } from './plex-session.js';
 import { createShutdown } from './shutdown.js';
+import { join } from 'node:path';
 import { findWebRoot } from './web.js';
 import { describeListenError, parseServerCommand } from './startup.js';
 
@@ -126,6 +128,27 @@ const port = Number(process.env.KINOSHELF_PORT ?? 8484);
 
 const webRoot = findWebRoot(process.env);
 
+// What the server logs goes to the output (`docker logs`), to a file that rotates in the config
+// folder, and to the System page. Secrets are wiped before any of them: the values the settings
+// and the environment hold, read at each line since the settings change while the server runs.
+const logs = new LogStore({
+  directory: join(configDir, 'logs'),
+  echo: (line) => process.stdout.write(`${line}\n`),
+  secrets: () => [
+    process.env.TMDB_API_KEY ?? '',
+    process.env.KINOSHELF_API_KEY ?? '',
+    config.apiKey?.tmdb ?? '',
+    config.apiKey?.plex ?? '',
+    config.apiKey?.jellyfin ?? '',
+    ...(config.notify?.webhooks ?? []).flatMap((hook) => [
+      hook.url,
+      ...Object.values(hook.headers ?? {}),
+    ]),
+  ],
+});
+await logs.open();
+const logLevel = LOG_LEVELS.find((level) => level === process.env.KINOSHELF_LOG_LEVEL);
+
 const app = await buildApp({
   version,
   ...(webRoot && { webRoot }),
@@ -134,6 +157,8 @@ const app = await buildApp({
   database,
   env: process.env,
   logger: true,
+  logs,
+  ...(logLevel && { logLevel }),
   // Finished jobs older than this are forgotten; 0 in config.yaml keeps everything.
   retentionDays: config.retentionDays ?? DEFAULT_RETENTION_DAYS,
 });
@@ -164,7 +189,11 @@ try {
 }
 
 const shutdown = createShutdown({
-  close: () => app.close().finally(() => database.close()),
+  close: () =>
+    app
+      .close()
+      .finally(() => database.close())
+      .finally(() => logs.close()),
   busy: () => app.jobs.busy,
   log: (message) => {
     app.log.warn(message);

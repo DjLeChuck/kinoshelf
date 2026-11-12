@@ -291,7 +291,7 @@ export interface paths {
         };
         /**
          * Stream of changes (Server-Sent Events)
-         * @description Each event is named after what changed (`jobs`, `progress`, `arrivals`, `history`, `settings`) and carries no data: refetch the matching list. `progress` is only where a running analysis is (`GET /api/jobs/{id}`), at most twice a second; `jobs` is a job queued, started or ended. A `ready` event opens the stream.
+         * @description Each event is named after what changed (`jobs`, `progress`, `arrivals`, `history`, `settings`, `logs`) and carries no data: refetch the matching list. `progress` is only where a running analysis is (`GET /api/jobs/{id}`), at most twice a second; `jobs` is a job queued, started or ended; `logs` is lines written, at most twice a second. A `ready` event opens the stream.
          */
         get: {
             parameters: {
@@ -5051,6 +5051,256 @@ export interface paths {
                 };
             };
         };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/logs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The last lines of the server's log
+         * @description Read from memory (the last few thousand lines), newest first. Keys, tokens and webhook addresses are wiped before a line is kept. `after` is the `seq` of the newest line a client shows: `newer` then counts the matching lines it does not show yet.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description This level and above. */
+                    level?: "debug" | "info" | "warn" | "error";
+                    component?: "server" | "http" | "scan" | "transfer" | "watcher" | "tmdb" | "notify";
+                    q?: string;
+                    minutes?: number;
+                    limit?: number;
+                    after?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Newest first. */
+                            entries: {
+                                /** @description Grows with each line. */
+                                seq: number;
+                                /** Format: date-time */
+                                time: string;
+                                /** @enum {unknown} */
+                                level: "debug" | "info" | "warn" | "error";
+                                /** @enum {unknown} */
+                                component: "server" | "http" | "scan" | "transfer" | "watcher" | "tmdb" | "notify";
+                                message: string;
+                                /** @description The job the line is about, if any. */
+                                job: string | null;
+                                /** @description The line's other fields. */
+                                data: {
+                                    [key: string]: unknown;
+                                };
+                            }[];
+                            /** @description Matching lines newer than `after`; 0 without it. */
+                            newer: number;
+                            /** @description Lines held in memory. */
+                            kept: number;
+                            /**
+                             * Format: date-time
+                             * @description The oldest of them.
+                             */
+                            since: string | null;
+                            /** @description What the log files hold on the disk. */
+                            fileBytes: number;
+                            /**
+                             * @description The level the server logs at now.
+                             * @enum {unknown}
+                             */
+                            level: "debug" | "info" | "warn" | "error";
+                        };
+                    };
+                };
+                /** @description Default Response */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Default Response */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/logs/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The log file
+         * @description Every line kept on the disk, oldest first, as JSON lines (`kinoshelf.log`). Wiped of secrets like the list.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description application/x-ndjson */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": string;
+                    };
+                };
+                /** @description Default Response */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/logs/level": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Change the level the server logs at
+         * @description Takes effect at once and lasts until the server restarts (then `KINOSHELF_LOG_LEVEL`, or `info`, applies again): `debug` is for finding a problem, not for keeping.
+         */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** @enum {unknown} */
+                        level: "debug" | "info" | "warn" | "error";
+                    };
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {unknown} */
+                            level: "debug" | "info" | "warn" | "error";
+                        };
+                    };
+                };
+                /** @description Default Response */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Default Response */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
