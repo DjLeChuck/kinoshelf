@@ -77,6 +77,8 @@ describe('GET /api/openapi.json', () => {
       '/api/settings/api-key',
       '/api/settings/tmdb/test',
       '/api/setup/api-key',
+      '/api/tmdb/cache',
+      '/api/tmdb/usage',
       '/api/watch',
       '/api/watch/scan',
       '/health',
