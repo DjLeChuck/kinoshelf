@@ -72,8 +72,8 @@ test('shows what was sent to TMDB, by period, and the key and cache', async ({ p
     .click();
   await expect(page).toHaveURL(/tab=tmdb/);
 
-  await expect(page.getByText('Requests sent')).toBeVisible();
-  await expect(page.getByText('From the cache')).toBeVisible();
+  await expect(page.getByText('Requests sent', { exact: true })).toBeVisible();
+  await expect(page.getByText('From the cache', { exact: true })).toBeVisible();
 
   // The period is in the URL, like the log's filters.
   await page.getByRole('button', { name: '7 days' }).click();
