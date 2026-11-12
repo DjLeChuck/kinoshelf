@@ -28,13 +28,15 @@
         };
 
       # Kodi has no maintained Docker image: it runs from nixpkgs on a virtual screen, served to a
-      # browser by noVNC (see kodi.sh).
+      # browser by noVNC (see kodi.sh). `flavour` names its state folder, so that Kodi 21 and 22,
+      # whose databases are not the same, never share one.
       kodi =
-        pkgs:
+        pkgs: kodiPackage: flavour:
         pkgs.writeShellApplication {
           name = "kodi-dev";
+          runtimeEnv.KODI_FLAVOUR = flavour;
           runtimeInputs = [
-            pkgs.kodi
+            kodiPackage
             pkgs.xorg-server
             pkgs.x11vnc
             pkgs.novnc
@@ -48,7 +50,7 @@
 
       # `players <up|down|logs|status|seed> [jellyfin|plex|kodi]`: no player named means all three.
       players =
-        pkgs:
+        pkgs: kodiPackage: flavour:
         pkgs.writeShellApplication {
           name = "players";
           runtimeInputs = [
@@ -97,26 +99,34 @@
             fi
             if [ "$player" = kodi ] || [ "$player" = all ]; then
               # `logs` follows one stream: with no player named it is the Docker ones, Kodi's is `logs kodi`.
-              if [ "$cmd" != logs ] || [ "$player" = kodi ]; then ${kodi pkgs}/bin/kodi-dev "$cmd"; fi
+              if [ "$cmd" != logs ] || [ "$player" = kodi ]; then ${kodi pkgs kodiPackage flavour}/bin/kodi-dev "$cmd"; fi
             fi
           '';
         };
     in
     {
+      # `kodi22` is the same tool with Kodi 22 (built from source, see kodi22.nix): a separate output,
+      # so that nobody builds it unless asked.
       packages = forAllSystems (pkgs: {
-        default = players pkgs;
+        default = players pkgs pkgs.kodi "";
+        kodi22 = players pkgs (import ./kodi22.nix pkgs) "22";
       });
 
       apps = forAllSystems (pkgs: {
         default = {
           type = "app";
-          meta.description = "Start or stop Jellyfin and Plex in Docker";
-          program = "${players pkgs}/bin/players";
+          meta.description = "Start or stop Jellyfin, Plex and Kodi";
+          program = "${players pkgs pkgs.kodi ""}/bin/players";
+        };
+        kodi22 = {
+          type = "app";
+          meta.description = "The same, with Kodi 22 (a long build the first time)";
+          program = "${players pkgs (import ./kodi22.nix pkgs) "22"}/bin/players";
         };
       });
 
       devShells = forAllSystems (pkgs: {
-        default = pkgs.mkShell { packages = [ (players pkgs) ]; };
+        default = pkgs.mkShell { packages = [ (players pkgs pkgs.kodi "") ]; };
       });
     };
 }

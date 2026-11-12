@@ -81,6 +81,11 @@ libraries in Jellyfin and Plex.
   library" in Kodi, after Kinoshelf has moved files). Its logs: `… -- logs kodi`. That setup is
   written once: delete `.work/players/kodi` to start over. The screen is 1920x1080; set
   `KODI_RESOLUTION=2560x1440` (after a `down`) for another size.
+- Kodi 22 (release candidate): `make players-kodi22-up` / `players-kodi22-down`. nixpkgs only has Kodi
+  21, so Kodi 22 is built from source (`dev/players/kodi22.nix`): a first build takes 30 minutes or
+  more, then it is cached. It runs alone (it takes the same display and ports as Kodi 21, so stop
+  that one first) and keeps its own state in `.work/players/kodi22`, since its database is not the
+  one of Kodi 21.
 - For the notifications, Kinoshelf's "Path in Kinoshelf" is `.work/media/…` as the server sees it,
   and the player's side is `/media/…`.
 

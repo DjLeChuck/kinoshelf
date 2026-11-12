@@ -1,8 +1,9 @@
 # Kodi for trying Kinoshelf's layout on this machine, with no Docker: Kodi has no maintained image,
 # so it runs from nixpkgs on a virtual screen (Xvfb) that x11vnc and noVNC serve to a browser.
-# Usage: kodi <up|down|logs|status>. State lives in .work/players/kodi, media in .work/media (read by
-# Kodi, never written by it).
-dir="${WORK:?}/players/kodi"
+# Usage: kodi <up|down|logs|status>. State lives in .work/players/kodi (kodi22 for Kodi 22: its
+# database is not Kodi 21's, see KODI_FLAVOUR in the flake), media in .work/media (read by Kodi, never
+# written by it). Both share the display and the ports: run one at a time.
+dir="${WORK:?}/players/kodi${KODI_FLAVOUR:-}"
 run="$dir/run"
 home="$dir/home"
 userdata="$home/.kodi/userdata"

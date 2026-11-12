@@ -15,7 +15,7 @@ VERSION ?= 0.0.0-dev
 .DEFAULT_GOAL := help
 
 .PHONY: help hooks install build build-web dev-server dev-web typecheck lint format format-check test test-corpus \
-        test-e2e test-live corpus-report corpus-record check docker-build ffprobe sea sea-run test-sea sea-archive smoke-sea players-up players-down players-seed flake-check clean
+        test-e2e test-live corpus-report corpus-record check docker-build ffprobe sea sea-run test-sea sea-archive smoke-sea players-up players-down players-seed players-kodi22-up players-kodi22-down flake-check clean
 
 help: ## List the targets
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}'
@@ -102,6 +102,12 @@ players-up: ## Start Jellyfin (:8096) and Plex (:32400) in Docker and Kodi (:608
 
 players-down: ## Stop them (their state in .work/players is kept)
 	nix run ./dev/players -- down
+
+players-kodi22-up: ## Start Kodi 22 (RC) alone, on :6080 (built from source the first time: 30 minutes or more)
+	nix run ./dev/players#kodi22 -- up kodi
+
+players-kodi22-down: ## Stop it (its state in .work/players/kodi22 is kept)
+	nix run ./dev/players#kodi22 -- down kodi
 
 players-seed: ## Put tiny clips named like releases in .work/media/arrivals, for Kinoshelf to organize
 	nix run ./dev/players -- seed
