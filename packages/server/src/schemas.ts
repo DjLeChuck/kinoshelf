@@ -1177,12 +1177,24 @@ export const seasonSchema = {
       type: 'array',
       items: {
         type: 'object',
-        required: ['season', 'episode', 'title', 'airDate', 'state', 'versions', 'nfo'],
+        required: [
+          'season',
+          'episode',
+          'title',
+          'airDate',
+          'overview',
+          'runtime',
+          'state',
+          'versions',
+          'nfo',
+        ],
         properties: {
           season: { type: 'integer' },
           episode: { type: 'integer' },
           title: { type: 'string', nullable: true },
           airDate: { type: 'string', nullable: true },
+          overview: { type: 'string', nullable: true, description: 'The provider’s synopsis.' },
+          runtime: { type: 'integer', nullable: true, description: 'Minutes.' },
           state: { type: 'string', enum: ['present', 'missing', 'unaired', 'extra'] },
           versions: {
             type: 'array',

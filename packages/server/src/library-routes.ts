@@ -27,7 +27,13 @@ import { isSystemPath } from './system-paths.js';
 import { largestFirst } from './versions.js';
 import { isInside } from './notify/paths.js';
 import type { SeriesFilesStore } from './series-files.js';
-import { compare, missingOf, type Completeness, type EpisodeReport } from './completeness.js';
+import {
+  compare,
+  knownOf,
+  missingOf,
+  type Completeness,
+  type EpisodeReport,
+} from './completeness.js';
 import type { Execution, ExecutionStore } from './executions.js';
 import type { Probe, ProbeQueue } from './probe.js';
 import type { ExecutionReport } from './service.js';
@@ -1153,6 +1159,8 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
     episode: episode.episode,
     title: episode.title,
     airDate: episode.airDate,
+    overview: episode.overview,
+    runtime: episode.runtime,
     state: episode.state,
     versions: episode.versions.map((version) => presentItem(version)),
     nfo: episode.nfo,
@@ -1191,6 +1199,7 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
               'status',
               'determined',
               'missing',
+              'known',
               'seasons',
             ],
             properties: {
@@ -1206,6 +1215,12 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
               status: { type: 'string', nullable: true, description: 'The provider’s wording.' },
               determined: { type: 'boolean' },
               missing: { type: 'integer', nullable: true },
+              known: {
+                type: 'integer',
+                nullable: true,
+                description:
+                  'Episodes the provider lists, specials left out: the total `missing` is read against.',
+              },
               seasons: { type: 'array', items: seasonSchema },
             },
           },
@@ -1242,6 +1257,7 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
         status: details?.status ?? null,
         determined: counted !== null,
         missing: counted ? missingOf(counted.seasons) : null,
+        known: counted ? knownOf(counted.seasons) : null,
         seasons: seasons.map((season) => ({
           season: season.season,
           name: season.name,

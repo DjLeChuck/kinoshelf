@@ -3009,6 +3009,8 @@ export interface paths {
                             status: string | null;
                             determined: boolean;
                             missing: number | null;
+                            /** @description Episodes the provider lists, specials left out: the total `missing` is read against. */
+                            known: number | null;
                             seasons: {
                                 /** @description 0 is the specials. */
                                 season: number;
@@ -3033,6 +3035,10 @@ export interface paths {
                                     episode: number;
                                     title: string | null;
                                     airDate: string | null;
+                                    /** @description The provider’s synopsis. */
+                                    overview: string | null;
+                                    /** @description Minutes. */
+                                    runtime: number | null;
                                     /** @enum {string} */
                                     state: "present" | "missing" | "unaired" | "extra";
                                     /** @description The files that hold it, one per version; none when it is missing. */

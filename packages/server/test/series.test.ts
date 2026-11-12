@@ -97,6 +97,7 @@ interface Shows {
 interface Show {
   determined: boolean;
   missing: number | null;
+  known: number | null;
   seasons: {
     season: number;
     missing: number;
@@ -242,6 +243,8 @@ describe('the page of a show', () => {
     const show = (await h.request('GET', '/api/libraries/shows/shows/95396')).json<Show>();
     expect(show.determined).toBe(true);
     expect(show.missing).toBe(1);
+    // What TMDB lists, specials and the file it does not know left out: the total "1 of 6" reads against.
+    expect(show.known).toBe(6);
     const [specials, first, second] = show.seasons;
     expect(specials).toMatchObject({ season: 0, missing: 0 });
     // Only the special the library holds is listed.
@@ -333,6 +336,24 @@ describe('comparing the files with the provider', () => {
       [9, 'extra'],
     ]);
     expect(season?.missing).toBe(1);
+  });
+
+  it('carries the synopsis and the length of an episode, none for one the provider does not know', () => {
+    const [season] = compare(
+      [row(1, 1), row(1, 9)],
+      [
+        {
+          season: 1,
+          episodes: [{ ...episode(1, 1, '2020-01-01'), overview: 'Pilot.', runtime: 68 }],
+        },
+      ],
+      [],
+      '2026-01-01',
+    );
+    expect(season?.episodes.map((e) => [e.episode, e.overview, e.runtime])).toEqual([
+      [1, 'Pilot.', 68],
+      [9, null, null],
+    ]);
   });
 
   it('lists the versions of an episode as one present episode, never as unknown to the provider', () => {

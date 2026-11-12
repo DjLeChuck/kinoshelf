@@ -29,6 +29,9 @@ export interface EpisodeReport {
   readonly episode: number;
   readonly title: string | null;
   readonly airDate: string | null;
+  /** The provider's synopsis and length in minutes; `null` for a file it does not list. */
+  readonly overview: string | null;
+  readonly runtime: number | null;
   readonly state: EpisodeState;
   /**
    * The files that hold it, one per version (a multi-episode file is shared by its episodes);
@@ -94,6 +97,8 @@ export function compare(
           episode: info.episode,
           title: info.title ?? null,
           airDate: info.airDate ?? null,
+          overview: info.overview ?? null,
+          runtime: info.runtime ?? null,
           versions: holders,
           nfo: nfoTally(holders),
         };
@@ -114,6 +119,8 @@ export function compare(
         episode,
         title: null,
         airDate: null,
+        overview: null,
+        runtime: null,
         state: 'extra',
         versions,
         nfo: nfoTally(versions),
@@ -138,6 +145,15 @@ export function compare(
 
 export const missingOf = (reports: readonly SeasonReport[]): number =>
   reports.reduce((total, { missing }) => total + missing, 0);
+
+/** Episodes the provider lists (specials and files it does not know left out). */
+export const knownOf = (reports: readonly SeasonReport[]): number =>
+  reports
+    .filter(({ season }) => season > 0)
+    .reduce(
+      (total, { episodes }) => total + episodes.filter(({ state }) => state !== 'extra').length,
+      0,
+    );
 
 interface CountRow {
   missing: number;
