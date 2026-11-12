@@ -57,7 +57,7 @@ describe('a movie held in two versions', () => {
     expect(page.items).toHaveLength(1);
     expect(page.items[0]?.versions).toHaveLength(2);
     expect(page.counts).toMatchObject({ all: 1, 'multi-version': 1, 'missing-nfo': 0 });
-    expect((await list(h, '?state=multi-version')).total).toBe(1);
+    expect((await list(h, '?multi=true')).total).toBe(1);
   });
 
   it('shares one movie.nfo between its versions: there or not, for both', async () => {
@@ -165,7 +165,8 @@ describe('the counts of a movie library', () => {
       }>();
     const { counts } = await page('');
     for (const filter of ITEM_FILTERS) {
-      expect(counts[filter], filter).toBe((await page(`?state=${filter}`)).total);
+      const opens = filter === 'multi-version' ? '?multi=true' : `?state=${filter}`;
+      expect(counts[filter], filter).toBe((await page(opens)).total);
     }
     expect(counts.all).toBe((await page('')).total);
     // The mix must exercise something, or the loop proves nothing.
@@ -346,7 +347,7 @@ describe('a series held in two versions', () => {
     expect((await shows(h, '?state=incomplete-versions')).items.map((s) => s.tmdbId)).toEqual([
       93740,
     ]);
-    expect((await shows(h, '?state=multi-version')).total).toBe(1);
+    expect((await shows(h, '?multi=true')).total).toBe(1);
   });
 
   it('is not incomplete once every version holds every episode', async () => {

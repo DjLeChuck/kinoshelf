@@ -11,6 +11,9 @@ import {
   LibrarySnapshot,
   itemId,
   type LibraryItem,
+  type ShowSort,
+  type SortDirection,
+  type StateFilter,
 } from '../src/library-items.js';
 import { cleanup, fakeProvider, harness, batchOf, makeDir, put } from './harness.js';
 
@@ -775,6 +778,54 @@ describe('the lookups of the item store', () => {
     ]);
   });
 
+  it('orders the shows by title, year or what they lack, either way', () => {
+    const database = migrated(new Database(':memory:'));
+    const store = new LibraryItemStore(database);
+    const show = (tmdbId: number, title: string, year: number, missing: number | null): void => {
+      store.put(row(`/lib/${title}/1.mkv`, { tmdbId, title, year }));
+      if (missing !== null) {
+        database
+          .prepare(
+            `INSERT INTO series_completeness (library_id, tmdb_id, missing, signature, computed_at)
+             VALUES ('shows', ?, ?, '', '')`,
+          )
+          .run(tmdbId, missing);
+      }
+    };
+    show(1, 'Foundation', 2021, 25);
+    show(2, 'Severance', 2022, 1);
+    show(3, 'The Expanse', 2015, 6);
+    show(4, 'Andor', 2022, null);
+    const titles = (sort?: ShowSort, dir?: SortDirection): (string | null)[] =>
+      store
+        .shows('shows', { limit: 50, offset: 0, ...(sort && { sort }), ...(dir && { dir }) })
+        .items.map((item) => item.title);
+
+    expect(titles()).toEqual(['Andor', 'Foundation', 'Severance', 'The Expanse']);
+    expect(titles('title', 'desc')).toEqual(['The Expanse', 'Severance', 'Foundation', 'Andor']);
+    // A year's first click is the newest, ties by title.
+    expect(titles('year')).toEqual(['Andor', 'Severance', 'Foundation', 'The Expanse']);
+    expect(titles('year', 'asc')).toEqual(['The Expanse', 'Foundation', 'Andor', 'Severance']);
+    // A show not counted yet comes last whichever way.
+    expect(titles('missing')).toEqual(['Foundation', 'The Expanse', 'Severance', 'Andor']);
+    expect(titles('missing', 'asc')).toEqual(['Severance', 'The Expanse', 'Foundation', 'Andor']);
+  });
+
+  it('keeps the works held in several versions that also match a state', () => {
+    const store = new LibraryItemStore(migrated(new Database(':memory:')));
+    store.put(film('/a/1080p.mkv', 'Alien', 1, { nfo: false }));
+    store.put(film('/a/2160p.mkv', 'Alien', 1, { nfo: true }));
+    store.put(film('/b/b.mkv', 'Blade', 2, { nfo: false }));
+    store.put(film('/c/1080p.mkv', 'Cube', 3, { nfo: true }));
+    store.put(film('/c/2160p.mkv', 'Cube', 3, { nfo: true }));
+    const titles = (options: { filter?: StateFilter; multi?: boolean }): (string | null)[] =>
+      store.page('films', { ...options, limit: 50, offset: 0 }).items.map((item) => item.title);
+
+    expect(titles({ multi: true })).toEqual(['Alien', 'Cube']);
+    expect(titles({ filter: 'missing-nfo' })).toEqual(['Alien', 'Blade']);
+    expect(titles({ filter: 'missing-nfo', multi: true })).toEqual(['Alien']);
+  });
+
   it('finds the files of one show of a library', () => {
     const store = new LibraryItemStore(migrated(new Database(':memory:')));
     store.put(row('/lib/A/1.mkv', { tmdbId: 1 }));
@@ -824,7 +875,7 @@ describe('the lookups of the item store', () => {
     };
     store.page('films', { limit: 50, offset: 100 });
     store.page('films', { filter: 'missing-nfo', limit: 50, offset: 0 });
-    store.page('films', { filter: 'multi-version', limit: 50, offset: 0 });
+    store.page('films', { multi: true, limit: 50, offset: 0 });
     store.page('films', { query: 'ali', limit: 50, offset: 0 });
     store.counts('films');
     (database as unknown as { prepare: unknown }).prepare = prepare;
@@ -839,7 +890,7 @@ describe('the lookups of the item store', () => {
         .join('\n');
       expect(plan, text).not.toContain('USE TEMP B-TREE FOR ORDER BY');
     }
-    const unfiltered = sql.find((text) => text.includes('ORDER BY sort, path LIMIT'));
+    const unfiltered = sql.find((text) => text.includes('ORDER BY sort ASC, path ASC LIMIT'));
     expect(
       database
         .prepare(`EXPLAIN QUERY PLAN ${unfiltered ?? ''}`)

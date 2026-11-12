@@ -118,6 +118,19 @@ describe('the collection of a movie in the list', () => {
     expect((await list('?sort=year')).items.map((i) => i.title)).toEqual(['Dune', 'Alien']);
   });
 
+  it('turns an order over with `dir`, movies in none staying last', async () => {
+    const { list } = await setup();
+    expect((await list('?sort=title&dir=desc')).items.map((i) => i.title)).toEqual([
+      'Dune',
+      'Alien',
+    ]);
+    expect((await list('?sort=year&dir=asc')).items.map((i) => i.title)).toEqual(['Alien', 'Dune']);
+    expect((await list('?sort=collection&dir=desc')).items.map((i) => i.title)).toEqual([
+      'Dune',
+      'Alien',
+    ]);
+  });
+
   it('does not exist in a library that writes no NFO', async () => {
     const { list } = await setup('none');
     const body = await list('?collection=in&sort=collection');

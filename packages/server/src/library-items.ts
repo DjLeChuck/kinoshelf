@@ -190,6 +190,8 @@ interface ShowFilter {
    * held in several versions (`multi-version`), or with a version short of an episode.
    */
   state?: ShowStateFilter;
+  /** Only the shows held in several versions; combines with `state`. */
+  multi?: boolean;
 }
 
 export class LibraryItemStore {
@@ -581,9 +583,12 @@ export class LibraryItemStore {
   page(
     libraryId: string,
     options: {
-      filter?: ItemFilter;
+      filter?: StateFilter;
+      /** Only the works held in several versions; combines with `filter`. */
+      multi?: boolean;
       collection?: CollectionFilter;
       sort?: ItemSort;
+      dir?: SortDirection;
       query?: string;
       limit: number;
       offset: number;
@@ -594,6 +599,7 @@ export class LibraryItemStore {
     const collection = options.collection ? collectionSql(options.collection) : undefined;
     const conditions = [
       ...(options.filter ? [FILTER_SQL[options.filter]] : []),
+      ...(options.multi ? [FILTER_SQL['multi-version']] : []),
       ...(collection ? [collection.sql] : []),
       ...(options.query ? [queryCondition] : []),
     ];
@@ -607,7 +613,7 @@ export class LibraryItemStore {
     ];
     // `where` over the files, for the groups of a validation; the list itself reads one row per work.
     const leads = leadWhere(conditions.join(' AND '));
-    const order = ITEM_ORDER[options.sort ?? 'title'];
+    const order = itemOrder(options.sort ?? 'title', options.dir);
     const total =
       this.database
         .prepare<unknown[], { total: number }>(
@@ -728,7 +734,9 @@ export class LibraryItemStore {
         counts[filter] =
           filter === 'review' || filter === 'unrecognized'
             ? this.groupsWhere(`library_id = ? AND ${FILTER_SQL[filter]}`, [libraryId])
-            : this.countShows(libraryId, { state: filter });
+            : filter === 'multi-version'
+              ? this.countShows(libraryId, { multi: true })
+              : this.countShows(libraryId, { state: filter });
       }
     }
     // Counted in shows, not files: it is the list of shows that this filter narrows.
@@ -747,12 +755,19 @@ export class LibraryItemStore {
    */
   shows(
     libraryId: string,
-    options: ShowFilter & { limit: number; offset: number },
+    options: ShowFilter & {
+      limit: number;
+      offset: number;
+      sort?: ShowSort;
+      dir?: SortDirection;
+    },
   ): { total: number; items: ShowRow[] } {
     const { grouped, params } = this.groupedShows(libraryId, options);
     const total = this.countShows(libraryId, options);
     const rows = this.database
-      .prepare<unknown[], ShowQuery>(`${grouped} ORDER BY sort, tmdb_id LIMIT ? OFFSET ?`)
+      .prepare<unknown[], ShowQuery>(
+        `${grouped} ORDER BY ${showOrder(options.sort ?? 'title', options.dir)} LIMIT ? OFFSET ?`,
+      )
       .all(...params, options.limit, options.offset);
     // The episodes and versions are read from the files, once for the page: a range holds several
     // episodes and two versions hold one, which a count in SQL cannot tell.
@@ -833,16 +848,21 @@ export class LibraryItemStore {
     libraryId: string,
     options: ShowFilter,
   ): { grouped: string; params: (string | number)[] } {
+    // The shows to keep by their versions: held in several, and/or with one lacking an episode.
+    const sets =
+      options.multi || options.state === 'incomplete-versions'
+        ? this.versionedShows(libraryId)
+        : undefined;
+    const versioned: number[][] = [
+      ...(options.multi && sets ? [sets.multi] : []),
+      ...(options.state === 'incomplete-versions' && sets ? [sets.incomplete] : []),
+    ];
     const where = [
       "i.library_id = ? AND i.kind = 'series' AND i.tmdb_id IS NOT NULL",
       ...(options.query ? ["sort_key(i.title) LIKE ? ESCAPE '\\'"] : []),
-      ...(options.state === 'multi-version' || options.state === 'incomplete-versions'
-        ? ['i.tmdb_id IN (SELECT value FROM json_each(?))']
-        : []),
+      ...versioned.map(() => 'i.tmdb_id IN (SELECT value FROM json_each(?))'),
       // The filter's columns are unqualified: inside the sub-query they are the inner table's.
-      ...(options.state &&
-      options.state !== 'multi-version' &&
-      options.state !== 'incomplete-versions'
+      ...(options.state && options.state !== 'incomplete-versions'
         ? [
             `EXISTS (SELECT 1 FROM library_items x WHERE x.library_id = i.library_id
                AND x.tmdb_id = i.tmdb_id AND x.kind = 'series' AND ${FILTER_SQL[options.state]})`,
@@ -863,15 +883,7 @@ export class LibraryItemStore {
     const params: (string | number)[] = [
       libraryId,
       ...(options.query ? [contains(sortKey(options.query))] : []),
-      ...(options.state === 'multi-version' || options.state === 'incomplete-versions'
-        ? [
-            JSON.stringify(
-              this.versionedShows(libraryId)[
-                options.state === 'multi-version' ? 'multi' : 'incomplete'
-              ],
-            ),
-          ]
-        : []),
+      ...versioned.map((ids) => JSON.stringify(ids)),
     ];
     const grouped = `
       SELECT i.tmdb_id AS tmdb_id, MIN(i.title) AS title, MIN(i.year) AS year, MIN(i.sort) AS sort,
@@ -984,16 +996,51 @@ const leadWhere = (rowFilter: string): string =>
       : ''
   }`;
 
-/** How a list is ordered: by title (the default), by collection, or by year, newest first. */
+/** How a list is ordered: by title (the default), by collection, or by year. */
 export const ITEM_SORTS = ['title', 'collection', 'year'] as const;
 export type ItemSort = (typeof ITEM_SORTS)[number];
 
-// A collection's groups follow its name, a group's movies their year; movies in none come last.
-const ITEM_ORDER: Record<ItemSort, string> = {
-  title: 'sort, path',
-  year: 'year IS NULL, year DESC, sort, path',
-  collection:
-    'collection_key IS NULL, sort_key(collection_name), collection_key, year IS NULL, year, sort, path',
+export const SORT_DIRECTIONS = ['asc', 'desc'] as const;
+export type SortDirection = (typeof SORT_DIRECTIONS)[number];
+
+/** A column's first click: Title and Collection read upwards, Year and Missing the largest first. */
+export const DEFAULT_DIRECTION: Record<ItemSort | ShowSort, SortDirection> = {
+  title: 'asc',
+  collection: 'asc',
+  year: 'desc',
+  missing: 'desc',
+};
+
+const SQL_DIRECTION: Record<SortDirection, string> = { asc: 'ASC', desc: 'DESC' };
+
+// A collection's groups follow its name (the direction turns them over), a group's movies their
+// year; movies in none come last either way. A movie with no year comes last in a year order.
+const itemOrder = (sort: ItemSort, direction?: SortDirection): string => {
+  const dir = SQL_DIRECTION[direction ?? DEFAULT_DIRECTION[sort]];
+  switch (sort) {
+    case 'title':
+      return `sort ${dir}, path ${dir}`;
+    case 'year':
+      return `year IS NULL, year ${dir}, sort, path`;
+    case 'collection':
+      return `collection_key IS NULL, sort_key(collection_name) ${dir}, collection_key, year IS NULL, year, sort, path`;
+  }
+};
+
+/** How the shows are ordered: by title, year, or what they lack (a show not counted yet comes last). */
+export const SHOW_SORTS = ['title', 'year', 'missing'] as const;
+export type ShowSort = (typeof SHOW_SORTS)[number];
+
+const showOrder = (sort: ShowSort, direction?: SortDirection): string => {
+  const dir = SQL_DIRECTION[direction ?? DEFAULT_DIRECTION[sort]];
+  switch (sort) {
+    case 'title':
+      return `sort ${dir}, tmdb_id`;
+    case 'year':
+      return `year IS NULL, year ${dir}, sort, tmdb_id`;
+    case 'missing':
+      return `missing IS NULL, missing ${dir}, sort, tmdb_id`;
+  }
 };
 
 /** The movies of the row's collection that the library holds (a movie once, whatever its versions). */
@@ -1037,8 +1084,17 @@ export const ITEM_FILTERS = [
 ] as const;
 export type ItemFilter = (typeof ITEM_FILTERS)[number];
 
+/**
+ * The states a list is narrowed to. "Several versions" is no state but a trait that combines with
+ * one (`multi`), so it is not among them.
+ */
+export const STATE_FILTERS = ITEM_FILTERS.filter(
+  (filter): filter is Exclude<ItemFilter, 'multi-version'> => filter !== 'multi-version',
+);
+export type StateFilter = (typeof STATE_FILTERS)[number];
+
 /** What narrows the shows of a series library: those of the items, and the versions that lack. */
-export const SHOW_FILTERS = [...ITEM_FILTERS, 'incomplete-versions'] as const;
+export const SHOW_FILTERS = [...STATE_FILTERS, 'incomplete-versions'] as const;
 export type ShowStateFilter = (typeof SHOW_FILTERS)[number];
 
 const FILTER_SQL: Record<ItemFilter, string> = {

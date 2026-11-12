@@ -48,9 +48,14 @@ import {
   isUnsettled,
   resolutionOfItem,
   SHOW_FILTERS,
+  SHOW_SORTS,
+  SORT_DIRECTIONS,
+  STATE_FILTERS,
   type CollectionFilter,
-  type ItemFilter,
   type ItemSort,
+  type ShowSort,
+  type SortDirection,
+  type StateFilter,
   type RowCollection,
   type ItemState,
   type ShowStateFilter,
@@ -615,10 +620,12 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
   api.get<{
     Params: { id: string };
     Querystring: Paging & {
-      state?: ItemFilter;
+      state?: StateFilter;
+      multi?: boolean;
       q?: string;
       collection?: string;
       sort?: ItemSort;
+      dir?: SortDirection;
     };
   }>(
     '/api/libraries/:id/items',
@@ -629,21 +636,25 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
           'Read from the snapshot a scan leaves, never from the disk: listing costs nothing, and ' +
           'transfers and undos keep it in step. `state` filters (`missing-nfo` and ' +
           '`missing-artwork` look at the files, so one without either shows under both); `q` ' +
-          'matches the title or the file name. `counts` do not depend on the filters. ' +
+          'matches the title or the file name; `multi=true` keeps the works held in several ' +
+          'versions, whatever the state. `counts` do not depend on the filters. ' +
           '`scannedAt` is `null` until a scan of the source has ended; `scan` is the one queued ' +
           'or running. `writes` says which columns the profile gives a page. In a movie library ' +
           'that writes NFO, `collections` is true: each movie carries its `collection`, `collection` ' +
           '(`in`, `out`, `incomplete`, or a key `t:<id>` / `c:<name>`) narrows the list and `sort` ' +
-          "orders it (a collection's movies by year, movies in none last). `collectionCounts` " +
+          "orders it, `dir` (`asc` or `desc`) turning it over (a collection's movies by year, movies in none " +
+          'last; each sort has its own default direction). `collectionCounts` ' +
           'counts movies for those filters.',
         params: idParams,
         querystring: {
           type: 'object',
           properties: {
-            state: { type: 'string', enum: ITEM_FILTERS },
+            state: { type: 'string', enum: STATE_FILTERS },
+            multi: { type: 'boolean' },
             q: { type: 'string', minLength: 1 },
             collection: { type: 'string', minLength: 1 },
             sort: { type: 'string', enum: ITEM_SORTS },
+            dir: { type: 'string', enum: SORT_DIRECTIONS },
             ...paging,
           },
         },
@@ -755,13 +766,15 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
         throw new ApiError(409, 'library.not-typed');
       }
       const profile = buildProfile(libraryProfile(library, store.config));
-      const { state, q, limit, offset, collection, sort } = request.query;
+      const { state, multi, q, limit, offset, collection, sort, dir } = request.query;
       // A collection exists for a player only through the NFO: without one there is nothing to show.
       const collections = hasCollections(library, store.config);
       const page = items.page(library.id, {
         ...(state && { filter: state }),
+        ...(multi && { multi }),
         ...(collections && collection && { collection: collectionFilterOf(collection) }),
         ...(sort && (collections || sort !== 'collection') && { sort }),
+        ...(dir && { dir }),
         ...(q && { query: q }),
         limit,
         offset,
@@ -1100,6 +1113,9 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
       missing?: boolean;
       incomplete?: boolean;
       state?: ShowStateFilter;
+      multi?: boolean;
+      sort?: ShowSort;
+      dir?: SortDirection;
     };
   }>(
     '/api/libraries/:id/shows',
@@ -1113,7 +1129,9 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
           'opening a show, and in the background when no job runs), never by this request. ' +
           '`missing=true` keeps the shows that lack some; `incomplete=true` those lacking a file the profile ' +
           'writes for the show or a season (`tvshow.nfo`, an image: see `nfo`, `poster`, `fanart`, `logo`); ' +
-          '`state` keeps the shows holding a file of that state, as `GET /api/libraries/{id}/items` filters. 409 `library.not-series` for a movie library.',
+          '`state` keeps the shows holding a file of that state, as `GET /api/libraries/{id}/items` filters, ' +
+          '`multi=true` those held in several versions (with or without a state). `sort` orders the ' +
+          'shows (by title, year or `missing`, uncounted last) and `dir` turns it over. 409 `library.not-series` for a movie library.',
         params: idParams,
         querystring: {
           type: 'object',
@@ -1122,6 +1140,9 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
             missing: { type: 'boolean' },
             incomplete: { type: 'boolean' },
             state: { type: 'string', enum: [...SHOW_FILTERS] },
+            multi: { type: 'boolean' },
+            sort: { type: 'string', enum: SHOW_SORTS },
+            dir: { type: 'string', enum: SORT_DIRECTIONS },
             ...paging,
           },
         },
@@ -1142,12 +1163,15 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
     },
     (request) => {
       const library = seriesLibrary(request.params.id);
-      const { q, missing, incomplete, state, limit, offset } = request.query;
+      const { q, missing, incomplete, state, multi, sort, dir, limit, offset } = request.query;
       return items.shows(library.id, {
         ...(q && { query: q }),
         ...(missing && { missing }),
         ...(incomplete && { incomplete }),
         ...(state && { state }),
+        ...(multi && { multi }),
+        ...(sort && { sort }),
+        ...(dir && { dir }),
         limit,
         offset,
       });
