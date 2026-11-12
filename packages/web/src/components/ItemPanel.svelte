@@ -231,7 +231,9 @@
       {/if}
       <dt class="muted">{t('web.library.metadata')}</dt>
       <dd class="marks">
-        {#each [['NFO', detail.nfo, false], [t('web.library.col.poster'), detail.poster, detail.unavailable.includes('poster')], [t('web.library.col.fanart'), detail.fanart, detail.unavailable.includes('fanart')], [t('web.library.col.logo'), detail.logo, detail.unavailable.includes('logo')]] as const as [label, value, unavailable] (label)}
+        {#each [['NFO', detail.nfo, false, detail.nfoFiles
+              .map((file) => baseName(file.path))
+              .join(', ')], [t('web.library.col.poster'), detail.poster, detail.unavailable.includes('poster')], [t('web.library.col.fanart'), detail.fanart, detail.unavailable.includes('fanart')], [t('web.library.col.logo'), detail.logo, detail.unavailable.includes('logo')]] as const as [label, value, unavailable] (label)}
           <span>
             <span
               aria-hidden="true"
@@ -281,34 +283,20 @@
         </div>
       </section>
     {/if}
-    <section aria-labelledby="nfo">
-      <h3 id="nfo">{t('web.library.nfo.title')}</h3>
-      {#if detail.nfoFiles.length === 0}
-        <p class="muted">{t('web.library.nfo.none')}</p>
-      {:else}
-        <ul class="nfos">
-          {#each detail.nfoFiles as file (file.path)}
-            <li>
-              <span aria-hidden="true">{file.present ? '✓' : '✗'}</span>
-              <span class="mono">{baseName(file.path)}</span>
-              <span class="sr-only">: {present(file.present)}</span>
-            </li>
-          {/each}
-        </ul>
-        {#if missingNfo.length > 0 && canRun(item)}
-          <button
-            type="button"
-            class="btn"
-            disabled={busy}
-            onclick={() => {
-              running = 'refresh';
-            }}
-          >
-            {t('web.library.nfo.generate')}
-          </button>
-        {/if}
-      {/if}
-    </section>
+    {#if missingNfo.length > 0 && canRun(item)}
+      <div>
+        <button
+          type="button"
+          class="btn"
+          disabled={busy}
+          onclick={() => {
+            running = 'refresh';
+          }}
+        >
+          {t('web.library.nfo.generate')}
+        </button>
+      </div>
+    {/if}
     {#if canRun(item) && !(item.state === 'incomplete' && missingNfo.length > 0)}
       <div>
         <button
@@ -437,15 +425,10 @@
     white-space: nowrap;
   }
 
-  .nfos {
-    margin: 6px 0;
-    padding: 0;
-    list-style: none;
-  }
-
   .facts {
     display: grid;
     grid-template-columns: max-content 1fr;
+    align-items: baseline;
     gap: 6px 16px;
     margin: 0;
   }

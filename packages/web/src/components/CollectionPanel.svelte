@@ -69,134 +69,143 @@
   }
 </script>
 
-<section aria-labelledby="collection-title">
-  <h3 id="collection-title">{t('web.collection.title')}</h3>
+<details>
+  <summary>{t('web.collection.title')}</summary>
+  <div class="body">
+    <fieldset>
+      <legend class="sr-only">{t('web.collection.title')}</legend>
+      {#each options as option (option.mode)}
+        <label class="opt" class:off={option.disabled}>
+          <input
+            type="radio"
+            name="collection-mode"
+            value={option.mode}
+            checked={draft.mode === option.mode}
+            disabled={option.disabled}
+            onchange={() => {
+              choose(option.mode);
+            }}
+          />
+          {option.label}
+        </label>
+      {/each}
+    </fieldset>
 
-  <fieldset>
-    <legend class="sr-only">{t('web.collection.title')}</legend>
-    {#each options as option (option.mode)}
-      <label class="opt" class:off={option.disabled}>
-        <input
-          type="radio"
-          name="collection-mode"
-          value={option.mode}
-          checked={draft.mode === option.mode}
-          disabled={option.disabled}
-          onchange={() => {
-            choose(option.mode);
-          }}
-        />
-        {option.label}
-      </label>
-    {/each}
-  </fieldset>
-
-  {#if draft.mode === 'custom'}
-    <div class="custom">
-      <div class="field">
-        <label for="collection-name">{t('web.collection.name')}</label>
-        <input
-          id="collection-name"
-          class="input"
-          value={draft.name}
-          placeholder={t('web.collection.name.placeholder')}
-          oninput={(event) => {
-            edited = { mode: 'custom', name: event.currentTarget.value };
-          }}
-        />
-      </div>
-      {#if detail.customNames.length > 0}
-        <div class="names">
-          <span class="muted hint">{t('web.collection.existing')}</span>
-          {#each detail.customNames as name (name)}
-            <button
-              type="button"
-              class="btn name"
-              onclick={() => {
-                edited = { mode: 'custom', name };
-              }}>{name}</button
-            >
-          {/each}
+    {#if draft.mode === 'custom'}
+      <div class="custom">
+        <div class="field">
+          <label for="collection-name">{t('web.collection.name')}</label>
+          <input
+            id="collection-name"
+            class="input"
+            value={draft.name}
+            placeholder={t('web.collection.name.placeholder')}
+            oninput={(event) => {
+              edited = { mode: 'custom', name: event.currentTarget.value };
+            }}
+          />
         </div>
-      {/if}
-    </div>
-  {/if}
-
-  {#if draft.mode === 'tmdb' && detail.parts.length > 0}
-    <div class="parts">
-      <p class="muted hint">
-        {t('web.collection.parts', { held, total: detail.parts.length })}
-      </p>
-      <ul>
-        {#each detail.parts as part (part.id)}
-          <li>
-            <span class:ok={part.present} aria-hidden="true">{part.present ? '✓' : '○'}</span>
-            <span class:muted={!part.present}>{part.title}{part.year ? ` (${part.year})` : ''}</span
-            >
-            <span class="sr-only"
-              >: {part.present
-                ? t('web.collection.part.present')
-                : t('web.collection.part.missing')}</span
-            >
-            {#if !part.present}
-              <span class="chip chip-warn">{t('web.collection.part.missing')}</span>
-              <a
-                href={`https://www.themoviedb.org/movie/${part.id}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label={t('web.collection.part.tmdb.label', { title: part.title })}
-                >{t('web.collection.part.tmdb')}</a
+        {#if detail.customNames.length > 0}
+          <div class="names">
+            <span class="muted hint">{t('web.collection.existing')}</span>
+            {#each detail.customNames as name (name)}
+              <button
+                type="button"
+                class="btn name"
+                onclick={() => {
+                  edited = { mode: 'custom', name };
+                }}>{name}</button
               >
-            {/if}
-          </li>
-        {/each}
-      </ul>
+            {/each}
+          </div>
+        {/if}
+      </div>
+    {/if}
+
+    {#if draft.mode === 'tmdb' && detail.parts.length > 0}
+      <div class="parts">
+        <p class="muted hint">
+          {t('web.collection.parts', { held, total: detail.parts.length })}
+        </p>
+        <ul>
+          {#each detail.parts as part (part.id)}
+            <li>
+              <span class:ok={part.present} aria-hidden="true">{part.present ? '✓' : '○'}</span>
+              <span class:muted={!part.present}
+                >{part.title}{part.year ? ` (${part.year})` : ''}</span
+              >
+              <span class="sr-only"
+                >: {part.present
+                  ? t('web.collection.part.present')
+                  : t('web.collection.part.missing')}</span
+              >
+              {#if !part.present}
+                <span class="chip chip-warn">{t('web.collection.part.missing')}</span>
+                <a
+                  href={`https://www.themoviedb.org/movie/${part.id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={t('web.collection.part.tmdb.label', { title: part.title })}
+                  >{t('web.collection.part.tmdb')}</a
+                >
+              {/if}
+            </li>
+          {/each}
+        </ul>
+      </div>
+    {/if}
+
+    <div class="preview">
+      <span class="muted hint">{t('web.collection.preview')}</span>
+      <code>{preview ?? t('web.collection.preview.none')}</code>
     </div>
-  {/if}
 
-  <div class="preview">
-    <span class="muted hint">{t('web.collection.preview')}</span>
-    <code>{preview ?? t('web.collection.preview.none')}</code>
-  </div>
-
-  <div class="actions">
-    <button
-      type="button"
-      class="btn btn-primary"
-      disabled={!canApply || working}
-      onclick={() => void apply()}
-    >
-      {t('web.collection.apply')}
-    </button>
-    {#if changed}
+    <div class="actions">
       <button
         type="button"
-        class="btn"
-        onclick={() => {
-          edited = undefined;
-          failure = undefined;
-        }}
+        class="btn btn-primary"
+        disabled={!canApply || working}
+        onclick={() => void apply()}
       >
-        {t('web.collection.cancel')}
+        {t('web.collection.apply')}
       </button>
-    {/if}
+      {#if changed}
+        <button
+          type="button"
+          class="btn"
+          onclick={() => {
+            edited = undefined;
+            failure = undefined;
+          }}
+        >
+          {t('web.collection.cancel')}
+        </button>
+      {/if}
+    </div>
+    {#if failure}<p class="alert alert-danger" role="alert">{messageOf(t, failure)}</p>{/if}
+    <p class="muted hint">{t('web.collection.hint')}</p>
   </div>
-  {#if failure}<p class="alert alert-danger" role="alert">{messageOf(t, failure)}</p>{/if}
-  <p class="muted hint">{t('web.collection.hint')}</p>
-</section>
+</details>
 
 <style>
-  section {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    padding-top: 16px;
+  details {
+    padding-top: 12px;
     border-top: 1px solid var(--border);
   }
 
-  h3 {
+  summary {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
     color: var(--muted);
     font-size: 13px;
+    cursor: pointer;
+  }
+
+  .body {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
   }
 
   fieldset {

@@ -306,15 +306,6 @@
         </button>
       {/each}
     </div>
-    <input
-      class="input"
-      type="search"
-      placeholder={t('web.library.search')}
-      aria-label={t('web.library.search')}
-      bind:value={query}
-      oninput={search}
-    />
-
     {#if showsCollections}
       <CollectionBar
         counts={page.collectionCounts}
@@ -329,6 +320,14 @@
         }}
       />
     {/if}
+    <input
+      class="input"
+      type="search"
+      placeholder={t('web.library.search')}
+      aria-label={t('web.library.search')}
+      bind:value={query}
+      oninput={search}
+    />
 
     {#if isSeries}
       <ShowsTree
