@@ -812,11 +812,13 @@ export const en = {
   'web.settings.tmdb.test': 'Test the key',
   'web.settings.tmdb.testing': 'Testing…',
   'web.settings.tmdb.ok': 'TMDB accepts the key.',
-  'web.settings.general.metadata': 'Metadata language',
+  'web.settings.advanced': 'Advanced',
+  'web.settings.general.metadata': 'TMDB titles language',
   'web.settings.general.metadata.hint':
-    'The language of titles fetched from TMDB, e.g. fr or en-US.',
-  'web.settings.general.locale': 'Server language',
-  'web.settings.general.locale.hint': 'The language of notifications.',
+    'Leave empty to follow the language above. Otherwise a code such as de or en-US.',
+  'web.settings.general.locale': 'Language',
+  'web.settings.general.locale.hint':
+    'The language of notifications and of titles fetched from TMDB.',
   'web.profile.naming': 'Names',
   'web.profile.naming.hint': 'How the folders and files are named.',
   'web.profile.naming.with-id': 'With the TMDB id',

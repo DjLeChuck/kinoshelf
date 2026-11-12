@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import { api, ApiError } from '../lib/api.js';
   import { messageOf } from '../lib/errors.js';
-  import { t } from '../lib/i18n.svelte.js';
+  import { locale, t } from '../lib/i18n.svelte.js';
   import { createDestinations, type StepId } from '../lib/onboarding.js';
   import { folderName, libraryApi } from '../lib/libraries.js';
   import {
@@ -31,6 +31,8 @@
   }: { step: StepId; editing?: boolean; ondone?: () => void } = $props();
 
   let tmdbKey = $state('');
+  /** Starts from the interface's language (the browser's): a Docker server has no LANG to tell. */
+  let language = $state<'en' | 'fr'>(locale.value);
   let kind = $state<'plex' | 'jellyfin'>('plex');
   let url = $state('');
   let token = $state('');
@@ -94,7 +96,7 @@
   async function save(): Promise<void> {
     switch (step) {
       case 'tmdb':
-        await api.patch('/api/settings', { tmdb: { apiKey: tmdbKey.trim() } });
+        await api.patch('/api/settings', { tmdb: { apiKey: tmdbKey.trim() }, locale: language });
         try {
           // A key TMDB refuses would only show up later, as a failed analysis.
           await api.post('/api/settings/tmdb/test');
@@ -207,6 +209,14 @@
         aria-describedby="ob-tmdb-hint"
       />
       <span id="ob-tmdb-hint" class="muted hint">{t('web.onboarding.form.tmdb.hint')}</span>
+    </div>
+    <div class="field">
+      <label for="ob-language">{t('web.settings.general.locale')}</label>
+      <select id="ob-language" class="input" bind:value={language}>
+        <option value="fr">Français</option>
+        <option value="en">English</option>
+      </select>
+      <span class="muted hint">{t('web.settings.general.locale.hint')}</span>
     </div>
   {:else if step === 'server'}
     <div class="field">

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { api } from '../lib/api.js';
   import { messageOf } from '../lib/errors.js';
-  import { t } from '../lib/i18n.svelte.js';
+  import { locale as uiLocale, t } from '../lib/i18n.svelte.js';
   import { nullIfBlank, type Settings } from '../lib/settings.js';
   import SettingsSection from './SettingsSection.svelte';
 
@@ -11,7 +11,7 @@
   /* svelte-ignore state_referenced_locally */
   let language = $state(settings.tmdb.language ?? '');
   /* svelte-ignore state_referenced_locally */
-  let locale = $state<string>(settings.locale ?? '');
+  let locale = $state<'en' | 'fr'>(settings.locale ?? uiLocale.value);
   let key = $state('');
   let testing = $state(false);
   /** What the test said, as text; `undefined` before any test. */
@@ -22,7 +22,7 @@
   async function submit(): Promise<void> {
     await save({
       tmdb: { language: nullIfBlank(language), ...(key.trim() !== '' && { apiKey: key.trim() }) },
-      locale: locale === '' ? null : locale,
+      locale,
     });
     key = '';
   }
@@ -61,20 +61,27 @@
   </div>
 
   <div class="field">
-    <label for="metadata-language">{t('web.settings.general.metadata')}</label>
-    <input id="metadata-language" class="input" bind:value={language} placeholder="fr" />
-    <span class="muted hint">{t('web.settings.general.metadata.hint')}</span>
-  </div>
-
-  <div class="field">
     <label for="server-locale">{t('web.settings.general.locale')}</label>
     <select id="server-locale" class="input" bind:value={locale}>
-      <option value="">{t('web.settings.unset')}</option>
       <option value="fr">Français</option>
       <option value="en">English</option>
     </select>
     <span class="muted hint">{t('web.settings.general.locale.hint')}</span>
   </div>
+
+  <details>
+    <summary>{t('web.settings.advanced')}</summary>
+    <div class="field">
+      <label for="metadata-language">{t('web.settings.general.metadata')}</label>
+      <input
+        id="metadata-language"
+        class="input"
+        bind:value={language}
+        placeholder={locale === 'fr' ? 'fr' : 'en-US'}
+      />
+      <span class="muted hint">{t('web.settings.general.metadata.hint')}</span>
+    </div>
+  </details>
 
   {#snippet actions()}
     <button
