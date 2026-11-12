@@ -9,6 +9,7 @@ export default defineConfig({
       'packages/providers/tmdb',
       'packages/cli',
       'packages/server',
+      'packages/sea',
       'packages/corpus',
       'packages/web',
     ],

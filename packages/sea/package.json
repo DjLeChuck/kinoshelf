@@ -1,0 +1,17 @@
+{
+  "name": "@kinoshelf/sea",
+  "version": "0.0.0",
+  "private": true,
+  "description": "The standalone binary: one `kinoshelf` for the server and the CLI (Node single executable).",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "bundle": "node scripts/bundle.mjs",
+    "build": "node scripts/bundle.mjs --build"
+  },
+  "devDependencies": {
+    "@kinoshelf/cli": "workspace:*",
+    "@kinoshelf/server": "workspace:*",
+    "esbuild": "^0.28.0"
+  }
+}

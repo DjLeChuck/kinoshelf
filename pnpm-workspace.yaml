@@ -3,5 +3,4 @@ packages:
   - packages/providers/*
 # esbuild ships its own binary.
 allowBuilds:
-  better-sqlite3: set this to true or false
   esbuild: true
