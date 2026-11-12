@@ -76,6 +76,25 @@
         readonly coverage: readonly Coverage[];
       };
 
+  // The panel sits beside the tree only while the table's narrowest form fits in what it leaves:
+  // columns come and go with the profile, so the width is measured, not guessed from the screen.
+  let layoutWidth = $state(0);
+  let tableEl = $state<HTMLTableElement | undefined>(undefined);
+  let stacked = $state(false);
+  $effect(() => {
+    // `columns` and the rows read here make the measure run again when either changes.
+    const rows = shows?.items.length ?? 0;
+    const columns = [writes.nfo, writes.artwork, writes.logo, writes.thumb].filter(Boolean).length;
+    if (!tableEl || layoutWidth === 0) return;
+    tableEl.dataset.columns = `${columns}/${rows}`;
+    const previous = tableEl.style.width;
+    tableEl.style.width = 'min-content';
+    const narrowest = tableEl.offsetWidth;
+    tableEl.style.width = previous;
+    const panel = Math.max(340, layoutWidth * 0.36);
+    stacked = narrowest > layoutWidth - 16 - panel;
+  });
+
   let shows = $state<{ total: number; items: readonly Show[] } | undefined>(undefined);
   let settling = $state<readonly LibraryItem[]>([]);
   const settleGroups = $derived(groupSettling(settling));
@@ -324,9 +343,9 @@
       {/if}
     </div>
   {/if}
-  <div class="layout">
+  <div class="layout" class:stacked bind:clientWidth={layoutWidth}>
     <div class="table-wrap">
-      <table>
+      <table bind:this={tableEl}>
         <thead>
           <tr>
             <th>{t('web.library.col.title')}</th>
@@ -816,6 +835,7 @@
   }
 
   .table-wrap {
+    min-width: 0;
     display: flex;
     flex-direction: column;
     gap: 12px;
@@ -899,19 +919,17 @@
     margin: 0;
   }
 
-  @media (max-width: 960px) {
-    .table-wrap {
-      overflow-x: auto;
-    }
+  .stacked .table-wrap {
+    overflow-x: auto;
+  }
 
-    .layout {
-      grid-template-columns: 1fr;
-    }
+  .stacked {
+    grid-template-columns: 1fr;
+  }
 
-    .side {
-      position: static;
-      max-height: none;
-      overflow-y: visible;
-    }
+  .stacked .side {
+    position: static;
+    max-height: none;
+    overflow-y: visible;
   }
 </style>
