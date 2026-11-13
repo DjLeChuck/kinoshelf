@@ -989,6 +989,50 @@ describe('the lookups of the item store', () => {
     expect(counts.all).toBe(4);
   });
 
+  it('counts a movie library as the lists it opens', () => {
+    const store = new LibraryItemStore(migrated(new Database(':memory:')));
+    // A work with two versions, one lacking its NFO; one lacking artwork; a film to rename; two files
+    // waiting for a person (one guessing the id of a film that is held, which makes it no version of it).
+    store.put(film('/a/alien - 1080p.mkv', 'Alien', 1, { nfo: true }));
+    store.put(film('/a/alien - 2160p.mkv', 'Alien', 1, { nfo: false }));
+    store.put(film('/b/blade.mkv', 'Blade', 2, { poster: false }));
+    store.put(film('/c/cube.mkv', 'Cube', 3, { state: 'rename' }));
+    store.put(film('/d/guess.mkv', 'Guess', 1, { state: 'review' }));
+    store.put(film('/e/lost.mkv', 'Lost', 5, { state: 'unrecognized' }));
+    // Blade is held once: a file waiting for a person that guesses its id does not make it two versions.
+    store.put(film('/g/guess.mkv', 'Blade?', 2, { state: 'review' }));
+    store.put(film('/f/dune - 1080p.mkv', 'Dune', 6));
+    store.put(film('/f/dune - 2160p.mkv', 'Dune', 6, { state: 'rename' }));
+
+    const counts = store.counts('films');
+    expect(counts).toMatchObject({
+      all: 7,
+      review: 2,
+      rename: 2,
+      unrecognized: 1,
+      'missing-nfo': 1,
+      'missing-artwork': 1,
+      'multi-version': 2,
+      'incomplete-versions': 0,
+    });
+    // Each count is the total of the list its filter opens.
+    for (const filter of [
+      'review',
+      'rename',
+      'unrecognized',
+      'missing-nfo',
+      'missing-artwork',
+    ] as const) {
+      expect(store.page('films', { filter, limit: 50, offset: 0 }).total, filter).toBe(
+        counts[filter],
+      );
+    }
+    expect(store.page('films', { multi: true, limit: 50, offset: 0 }).total).toBe(
+      counts['multi-version'],
+    );
+    expect(store.page('films', { limit: 50, offset: 0 }).total).toBe(counts.all);
+  });
+
   it('keeps the counts of the rows until a row changes, and never hands out the kept object', () => {
     const store = new LibraryItemStore(migrated(new Database(':memory:')));
     store.put(row('/lib/A/1.mkv', { tmdbId: 1, nfo: false }));
@@ -1078,7 +1122,8 @@ describe('the lookups of the item store', () => {
     (database as unknown as { prepare: unknown }).prepare = prepare;
 
     const lists = sql.filter((text) => text.includes('lead_row'));
-    expect(lists).toHaveLength(2 * 4 + 7);
+    // Two statements per page (total, keys); the tabs' counts name no lead row (they count works).
+    expect(lists).toHaveLength(2 * 4);
     for (const text of lists) {
       const plan = database
         .prepare(`EXPLAIN QUERY PLAN ${text}`)
