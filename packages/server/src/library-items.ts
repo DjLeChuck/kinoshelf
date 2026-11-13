@@ -920,11 +920,12 @@ export class LibraryItemStore {
       "i.library_id = ? AND i.kind = 'series' AND i.tmdb_id IS NOT NULL",
       ...(options.query ? ["sort_key(i.title) LIKE ? ESCAPE '\\'"] : []),
       ...versioned.map(() => 'i.tmdb_id IN (SELECT value FROM json_each(?))'),
-      // The filter's columns are unqualified: inside the sub-query they are the inner table's.
+      // The shows holding such a file, found once: a sub-query per row would walk every episode of
+      // the show for each of them. The filter's columns are unqualified, so the inner table's.
       ...(options.state && options.state !== 'incomplete-versions'
         ? [
-            `EXISTS (SELECT 1 FROM library_items x WHERE x.library_id = i.library_id
-               AND x.tmdb_id = i.tmdb_id AND x.kind = 'series' AND ${FILTER_SQL[options.state]})`,
+            `i.tmdb_id IN (SELECT x.tmdb_id FROM library_items x WHERE x.library_id = ?
+               AND x.kind = 'series' AND x.tmdb_id IS NOT NULL AND ${FILTER_SQL[options.state]})`,
           ]
         : []),
       // A season's row only ever carries its poster, so one check covers the show and its seasons.
@@ -943,6 +944,7 @@ export class LibraryItemStore {
       libraryId,
       ...(options.query ? [contains(sortKey(options.query))] : []),
       ...versioned.map((ids) => JSON.stringify(ids)),
+      ...(options.state && options.state !== 'incomplete-versions' ? [libraryId] : []),
     ];
     const grouped = `
       SELECT i.tmdb_id AS tmdb_id, MIN(i.title) AS title, MIN(i.year) AS year, MIN(i.sort) AS sort,

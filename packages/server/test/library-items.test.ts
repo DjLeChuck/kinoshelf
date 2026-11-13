@@ -840,6 +840,27 @@ describe('the lookups of the item store', () => {
     (database as unknown as { prepare: unknown }).prepare = prepare;
   });
 
+  it('finds the shows holding a file of a state once, not by a sub-query per episode', () => {
+    const database = migrated(new Database(':memory:'));
+    const store = new LibraryItemStore(database);
+    store.put(row('/lib/A/1.mkv', { tmdbId: 1, state: 'rename' }));
+    store.put(row('/lib/A/2.mkv', { tmdbId: 1 }));
+    store.put(row('/lib/B/1.mkv', { tmdbId: 2 }));
+    const { grouped, params } = (
+      store as unknown as {
+        groupedShows: (id: string, options: object) => { grouped: string; params: unknown[] };
+      }
+    ).groupedShows('shows', { state: 'rename' });
+    const plan = database
+      .prepare(`EXPLAIN QUERY PLAN ${grouped}`)
+      .all(...(params as never[]))
+      .map((step) => (step as { detail: string }).detail)
+      .join('\n');
+    // A correlated EXISTS walks every episode of the show for each row: 100 ms on 20 000 files.
+    expect(plan).not.toContain('EXISTS');
+    expect(store.shows('shows', { state: 'rename', limit: 50, offset: 0 }).items).toHaveLength(1);
+  });
+
   it('keeps the counts of the rows until a row changes, and never hands out the kept object', () => {
     const store = new LibraryItemStore(migrated(new Database(':memory:')));
     store.put(row('/lib/A/1.mkv', { tmdbId: 1, nfo: false }));
