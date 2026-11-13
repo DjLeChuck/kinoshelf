@@ -16,6 +16,7 @@ import {
   type Candidate,
   classifyItem,
   type ErrorInfo,
+  type ImageFetcher,
   type ImageSize,
   type ImageCandidate,
   type WorkImages,
@@ -104,6 +105,8 @@ export interface ServiceDeps extends ProcessorDeps {
   readonly snapshot: LibrarySnapshot;
   /** The validations in flight: one match at a time per release, with their progress. */
   readonly matches: MatchTracker;
+  /** Replaces the download of the images a plan writes, for tests: the default is the network. */
+  readonly fetchImage?: ImageFetcher;
 }
 
 const report = (result: OperationResult): OperationReport => ({
@@ -843,6 +846,7 @@ export class Service {
       journal: this.deps.journal,
       backupDir: this.backupDir(),
       batchId,
+      ...(this.deps.fetchImage && { fetchImage: this.deps.fetchImage }),
       onItem: (result) => {
         const entry = entryOfItem.get(result.itemId);
         if (entry) {

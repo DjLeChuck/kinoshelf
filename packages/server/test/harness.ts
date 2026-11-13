@@ -1,5 +1,5 @@
 import { stat } from 'node:fs/promises';
-import { Database } from '@kinoshelf/core';
+import { Database, KinoshelfError, type ImageFetcher } from '@kinoshelf/core';
 import type { FastifyInstance, LightMyRequestResponse } from 'fastify';
 import type { Config, MetadataProvider } from '@kinoshelf/core';
 import {
@@ -70,6 +70,14 @@ export const fakeProber: Prober = async (path) => {
   };
 };
 
+/**
+ * No test reaches the network: the provider's image addresses (`https://image.test/…`) are not
+ * served, and the failure is instant. Left to the real `fetch`, a resolver that takes seconds to
+ * answer made a transfer outlast the test's timeout on a CI runner.
+ */
+export const offlineImages: ImageFetcher = (url) =>
+  Promise.reject(new KinoshelfError('execute.download-failed', { url, status: 'network' }));
+
 export interface Harness {
   readonly app: FastifyInstance;
   readonly database: Database;
@@ -127,6 +135,7 @@ export async function harness(
     ...(!realProvider && { createProvider: () => fakeProvider }),
     // Nothing in a test is a real video: the real `ffprobe` has its own test.
     prober: fakeProber,
+    fetchImage: offlineImages,
     // Nothing is probed for a size either, unless a test gives the sizes it wants.
     sizeReader: () => Promise.resolve(undefined),
     ...options,
