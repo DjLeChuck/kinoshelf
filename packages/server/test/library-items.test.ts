@@ -820,7 +820,11 @@ describe('the lookups of the item store', () => {
     let reads = 0;
     const prepare = database.prepare.bind(database) as (text: string) => unknown;
     (database as unknown as { prepare: (text: string) => unknown }).prepare = (text) => {
-      if (text.includes("library_id = ? AND kind = 'series' AND tmdb_id IS NOT NULL")) {
+      // The rows read whole, to tell the versions apart (not the ids of the shows).
+      if (
+        text.includes('SELECT library_id, path, kind') &&
+        text.includes("library_id = ? AND kind = 'series' AND tmdb_id IS NOT NULL")
+      ) {
         reads += 1;
       }
       return prepare(text);
@@ -934,6 +938,55 @@ describe('the lookups of the item store', () => {
     // A correlated EXISTS walks every episode of the show for each row: 100 ms on 20 000 files.
     expect(plan).not.toContain('EXISTS');
     expect(store.shows('shows', { state: 'rename', limit: 50, offset: 0 }).items).toHaveLength(1);
+  });
+
+  it('counts the shows lacking episodes or files as the grouped query does', () => {
+    const database = migrated(new Database(':memory:'));
+    const store = new LibraryItemStore(database);
+    for (const id of [1, 2, 3, 4]) {
+      store.put(row(`/lib/S${id}/1.mkv`, { tmdbId: id }));
+      store.put(row(`/lib/S${id}/2.mkv`, { tmdbId: id }));
+    }
+    const completeness = database.prepare(
+      `INSERT INTO series_completeness (library_id, tmdb_id, missing, signature, computed_at)
+       VALUES ('shows', ?, ?, '', '')`,
+    );
+    // 1 and 3 lack episodes, 2 does not, 4 was not counted yet; 9 is a show no row holds any more.
+    for (const [id, missing] of [
+      [1, 3],
+      [2, 0],
+      [3, 1],
+      [9, 5],
+    ] as const) {
+      completeness.run(id, missing);
+    }
+    const files = database.prepare(
+      `INSERT INTO series_files (library_id, tmdb_id, season, nfo, poster, fanart, logo)
+       VALUES ('shows', ?, -1, ?, ?, 1, 1)`,
+    );
+    // 2 lacks its NFO, 3 its poster (but TMDB has none: not missing), 4 nothing, 9 is gone.
+    for (const [id, nfo, poster] of [
+      [1, 1, 1],
+      [2, 0, 1],
+      [3, 1, 0],
+      [4, 1, 1],
+      [9, 0, 0],
+    ] as const) {
+      files.run(id, nfo, poster);
+    }
+    database.prepare(`UPDATE library_items SET unavailable = '["poster"]' WHERE tmdb_id = 3`).run();
+
+    const reference = (options: object): number =>
+      (store as unknown as { countGrouped: (id: string, o: object) => number }).countGrouped(
+        'shows',
+        options,
+      );
+    const counts = store.counts('shows', true);
+    expect(counts['missing-episodes']).toBe(2);
+    expect(counts['missing-episodes']).toBe(reference({ missing: true }));
+    expect(counts['missing-show-files']).toBe(1);
+    expect(counts['missing-show-files']).toBe(reference({ incomplete: true }));
+    expect(counts.all).toBe(4);
   });
 
   it('keeps the counts of the rows until a row changes, and never hands out the kept object', () => {

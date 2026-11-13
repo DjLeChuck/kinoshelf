@@ -889,6 +889,10 @@ export class LibraryItemStore {
       return entry.values.get(key) as T;
     }
     const value = compute();
+    // Searches make keys: a generation that sees many keeps the last ones, not all of them.
+    if (entry.values.size >= 256) {
+      entry.values.clear();
+    }
     entry.values.set(key, value);
     return value;
   }
@@ -938,41 +942,92 @@ export class LibraryItemStore {
                AND x.kind = 'series' AND x.tmdb_id IS NOT NULL AND ${FILTER_SQL[options.state]})`,
           ]
         : []),
-      // A season's row only ever carries its poster, so one check covers the show and its seasons.
-      ...(options.incomplete
-        ? [
-            `EXISTS (SELECT 1 FROM series_files m WHERE m.library_id = i.library_id
-               AND m.tmdb_id = i.tmdb_id AND (m.nfo = 0
-                 OR (m.poster = 0 AND ${unavailableSql('poster')})
-                 OR (m.fanart = 0 AND ${unavailableSql('fanart')})
-                 OR (m.logo = 0 AND ${unavailableSql('logo')})))`,
-          ]
-        : []),
     ].join(' AND ');
-    const having = options.missing ? 'HAVING MAX(c.missing) > 0' : '';
+    // What is asked of a show as a whole (what its other tables say) is checked once per show, after
+    // the episodes are grouped: joined to every episode first, it was a lookup per file, ~20 000 of them.
+    const after = [
+      ...(options.missing ? ['c.missing > 0'] : []),
+      // A season's row only ever carries its poster, so one check covers the show and its seasons.
+      ...(options.incomplete ? [LACKS_SHOW_FILES] : []),
+    ];
     const params: (string | number)[] = [
       libraryId,
       ...(options.query ? [contains(sortKey(options.query))] : []),
       ...versioned.map((ids) => JSON.stringify(ids)),
       ...(options.state && options.state !== 'incomplete-versions' ? [libraryId] : []),
+      libraryId,
+      libraryId,
+      ...(options.incomplete ? [libraryId] : []),
     ];
     const grouped = `
-      SELECT i.tmdb_id AS tmdb_id, MIN(i.title) AS title, MIN(i.year) AS year, MIN(i.sort) AS sort,
-        COUNT(DISTINCT i.season) AS seasons,
-        MAX(c.missing) AS missing,
-        SUM(i.state = 'rename') AS rename, SUM(i.state = 'incomplete') AS refresh,
-        MAX(f.nfo) AS nfo, MAX(f.poster) AS poster, MAX(f.fanart) AS fanart,
-        MAX(f.logo) AS logo
-      FROM library_items i
-      LEFT JOIN series_completeness c ON c.library_id = i.library_id AND c.tmdb_id = i.tmdb_id
-      LEFT JOIN series_files f
-        ON f.library_id = i.library_id AND f.tmdb_id = i.tmdb_id AND f.season = -1
-      WHERE ${where} GROUP BY i.tmdb_id ${having}`;
+      SELECT s.tmdb_id AS tmdb_id, s.title AS title, s.year AS year, s.sort AS sort,
+        s.seasons AS seasons, c.missing AS missing, s.rename AS rename, s.refresh AS refresh,
+        f.nfo AS nfo, f.poster AS poster, f.fanart AS fanart, f.logo AS logo
+      FROM (
+        SELECT i.tmdb_id AS tmdb_id, MIN(i.title) AS title, MIN(i.year) AS year,
+          MIN(i.sort) AS sort, COUNT(DISTINCT i.season) AS seasons,
+          SUM(i.state = 'rename') AS rename, SUM(i.state = 'incomplete') AS refresh
+        FROM library_items i
+        WHERE ${where} GROUP BY i.tmdb_id
+      ) s
+      LEFT JOIN series_completeness c ON c.library_id = ? AND c.tmdb_id = s.tmdb_id
+      LEFT JOIN series_files f ON f.library_id = ? AND f.tmdb_id = s.tmdb_id AND f.season = -1
+      ${after.length > 0 ? `WHERE ${after.join(' AND ')}` : ''}`;
     return { grouped, params };
   }
 
   /** How many shows a filter keeps; the count alone, without reading a page of them. */
   private countShows(libraryId: string, options: ShowFilter): number {
+    const wantsOtherTables = options.missing === true || options.incomplete === true;
+    if (!wantsOtherTables) {
+      // Only the rows say: the same count for every page of the list until a row changes.
+      const key = `shows:${JSON.stringify([options.query, options.state, options.multi])}`;
+      return this.memo(libraryId, key, () => this.countGrouped(libraryId, options));
+    }
+    if (!options.query && !options.state && !options.multi) {
+      // Which shows exist is the rows' (kept); what each lacks is read from its own table, for those
+      // only: grouping the episodes again to count shows would read every one of them.
+      const ids = JSON.stringify(this.showIds(libraryId));
+      const lacking = options.missing
+        ? this.database
+            .prepare<[string, string], { total: number }>(
+              `SELECT COUNT(*) AS total FROM series_completeness c
+               WHERE c.library_id = ? AND c.missing > 0
+                 AND c.tmdb_id IN (SELECT value FROM json_each(?))`,
+            )
+            .get(libraryId, ids)
+        : undefined;
+      if (options.missing && !options.incomplete) {
+        return lacking?.total ?? 0;
+      }
+      if (options.incomplete && !options.missing) {
+        return (
+          this.database
+            .prepare<[string, string], { total: number }>(
+              `SELECT COUNT(*) AS total FROM (SELECT value AS tmdb_id FROM json_each(?)) s
+               WHERE ${LACKS_SHOW_FILES}`,
+            )
+            .get(ids, libraryId)?.total ?? 0
+        );
+      }
+    }
+    return this.countGrouped(libraryId, options);
+  }
+
+  /** The shows of a library (a TMDB id each), as its rows hold them. */
+  private showIds(libraryId: string): number[] {
+    return this.memo(libraryId, 'show-ids', () =>
+      this.database
+        .prepare<[string], { tmdb_id: number }>(
+          `SELECT DISTINCT tmdb_id FROM library_items
+           WHERE library_id = ? AND kind = 'series' AND tmdb_id IS NOT NULL`,
+        )
+        .all(libraryId)
+        .map((row) => row.tmdb_id),
+    );
+  }
+
+  private countGrouped(libraryId: string, options: ShowFilter): number {
     const { grouped, params } = this.groupedShows(libraryId, options);
     return (
       this.database
@@ -1235,6 +1290,13 @@ const unavailableSql = (kind: UnavailableImage): string =>
   `NOT EXISTS (SELECT 1 FROM library_items u, json_each(u.unavailable) j
      WHERE u.library_id = m.library_id AND u.tmdb_id = m.tmdb_id AND u.kind = 'series'
        AND j.value = '${kind}')`;
+
+/** For a row `s` holding a show's `tmdb_id` (one `?`: the library): it lacks a file the profile writes. */
+const LACKS_SHOW_FILES = `EXISTS (SELECT 1 FROM series_files m WHERE m.library_id = ?
+  AND m.tmdb_id = s.tmdb_id AND (m.nfo = 0
+    OR (m.poster = 0 AND ${unavailableSql('poster')})
+    OR (m.fanart = 0 AND ${unavailableSql('fanart')})
+    OR (m.logo = 0 AND ${unavailableSql('logo')})))`;
 
 interface ShowQuery {
   tmdb_id: number;
