@@ -205,6 +205,23 @@ export const probePictureSize: SizeReader = (path) =>
     );
   });
 
+let knownVersion: string | undefined;
+
+/**
+ * The version `ffprobe -version` prints (`7.1.1`), `null` when it is not installed or says
+ * nothing readable. Remembered once found; a missing one is asked again, so installing it shows.
+ */
+export const ffprobeVersion = (): Promise<string | null> =>
+  knownVersion !== undefined
+    ? Promise.resolve(knownVersion)
+    : new Promise((resolve) => {
+        execFile(ffprobeCommand(), ['-version'], { timeout: TIMEOUT_MS }, (error, stdout) => {
+          const found = error ? undefined : /^ffprobe version (\S+)/.exec(stdout)?.[1];
+          knownVersion = found;
+          resolve(found ?? null);
+        });
+      });
+
 const run = (args: readonly string[]): Promise<string> =>
   new Promise<string>((resolve, reject) => {
     execFile(

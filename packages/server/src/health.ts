@@ -3,15 +3,23 @@ import type { Config, Database } from '@kinoshelf/core';
 import type { PlexSession } from './plex-session.js';
 import type { FolderWatcher } from './watcher.js';
 
-/** Where a problem sits, which is also the Health card (and the settings section) it belongs to. */
-export type HealthArea = 'database' | 'libraries' | 'watch' | 'media';
+/** Where a problem sits: the Health card it is shown on. */
+export type HealthArea = 'ffprobe' | 'database' | 'disk' | 'watch' | 'media' | 'webhooks';
 
 /** Something the person has to fix: the server cannot do its job until they do. */
 export interface HealthProblem {
   readonly area: HealthArea;
-  /** Stable, translated at the edge (`health.problem.<code>`). */
+  /** Stable, translated at the edge (`web.health.problem.<code>`). */
   readonly code:
-    'database-unreadable' | 'library-unreachable' | 'watch-folder-unreachable' | 'plex-signed-out';
+    | 'database-unreadable'
+    | 'library-unreachable'
+    | 'watch-folder-unreachable'
+    | 'plex-signed-out'
+    // Warnings, found by the report (they cost a disk read or a probe): never in the verdict.
+    | 'ffprobe-missing'
+    | 'disk-low'
+    | 'webhook-failing'
+    | 'media-refresh-failed';
   readonly params?: Readonly<Record<string, string>>;
 }
 
@@ -61,7 +69,7 @@ export class Health {
     for (const { library, readable } of sources) {
       if (!readable) {
         found.push({
-          area: 'libraries',
+          area: 'disk',
           code: 'library-unreachable',
           params: { name: library.name, path: library.source },
         });

@@ -354,6 +354,15 @@ describe('a target that cannot be reached', () => {
       error: expect.stringMatching(/./) as string,
     });
     expect(JSON.stringify(failure)).not.toContain('SECRET');
+
+    // A webhook that failed is a warning on its card, never an error for the navigation's badge.
+    const { problems } = (await h.request('GET', '/api/health/report')).json<{
+      problems: { code: string; severity: string }[];
+    }>();
+    expect(problems).toContainEqual(
+      expect.objectContaining({ code: 'webhook-failing', severity: 'warn' }),
+    );
+    expect((await h.request('GET', '/api/health')).json()).toEqual({ errors: 0 });
   });
 });
 

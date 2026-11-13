@@ -49,6 +49,7 @@ import { PlexSession } from './plex-session.js';
 import { registerSettingsRoutes } from './settings-routes.js';
 import { ConfigStore } from './settings.js';
 import { Health } from './health.js';
+import { healthReport } from './health-report.js';
 import { registerHealthRoutes } from './health-routes.js';
 import { registerWatchRoutes } from './watch-routes.js';
 import { FolderWatcher, watcherSettings } from './watcher.js';
@@ -637,7 +638,18 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
       events,
     });
     registerWatchRoutes(api, watcher);
-    registerHealthRoutes(api, health);
+    registerHealthRoutes(api, health, () =>
+      healthReport({
+        health,
+        database: options.database,
+        config: () => configStore.config,
+        configDir: options.configDir,
+        version: options.version,
+        notifier,
+        probes,
+        completeness,
+      }),
+    );
     registerTmdbRoutes(api, tmdbUsage);
     registerLogRoutes(api, {
       logs,

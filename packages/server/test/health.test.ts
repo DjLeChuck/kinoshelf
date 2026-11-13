@@ -54,7 +54,7 @@ describe('Health', () => {
     await rm(source, { recursive: true });
     expect(await health.problems()).toEqual([
       {
-        area: 'libraries',
+        area: 'disk',
         code: 'library-unreachable',
         params: { name: 'Films', path: source },
       },
@@ -119,5 +119,49 @@ describe('GET /api/health', () => {
     await rm(source, { recursive: true });
     const { errors } = (await h.request('GET', '/api/health')).json<{ errors: number }>();
     expect(errors).toBeGreaterThan(0);
+  });
+});
+
+describe('GET /api/health/report', () => {
+  it('reads what each card shows', async () => {
+    const source = await makeDir();
+    const h = await harness({ config: { libraries: [...librariesAt(source)] } });
+    const report = (await h.request('GET', '/api/health/report')).json<{
+      problems: { code: string }[];
+      server: { version: string; node: string; uptimeSeconds: number };
+      database: {
+        sizeBytes: number | null;
+        journalEntries: number;
+        migrations: { applied: number; last: { name: string } | null };
+      };
+      disks: { libraryId: string; path: string; totalBytes: number; freeBytes: number }[];
+      queue: { analyses: { running: number; queued: number }; probes: number };
+      notify: { webhooks: number; recent: unknown[] };
+    }>();
+
+    expect(report.server.node).toBe(process.version);
+    expect(report.database.migrations.applied).toBeGreaterThan(10);
+    expect(report.database.migrations.last?.name).toMatch(/^(core|server):/);
+    expect(report.database.journalEntries).toBe(0);
+    expect(report.disks.map((d) => d.path)).toEqual([source, source]);
+    expect(report.disks[0]?.totalBytes).toBeGreaterThan(report.disks[0]?.freeBytes ?? 0);
+    expect(report.queue.analyses).toEqual({ running: 0, queued: 0 });
+    expect(report.notify).toMatchObject({ webhooks: 0, recent: [] });
+    // Nothing is wrong, bar a missing ffprobe on a machine without one.
+    expect(report.problems.filter((p) => p.code !== 'ffprobe-missing')).toEqual([]);
+  });
+
+  it('puts an unreachable library among the errors and says which one', async () => {
+    const source = await makeDir();
+    const h = await harness({ config: { libraries: [...librariesAt(source)] } });
+    await rm(source, { recursive: true });
+    const { problems, disks } = (await h.request('GET', '/api/health/report')).json<{
+      problems: { code: string; severity: string; area: string }[];
+      disks: { totalBytes: number | null }[];
+    }>();
+    expect(problems).toContainEqual(
+      expect.objectContaining({ code: 'library-unreachable', severity: 'error', area: 'disk' }),
+    );
+    expect(disks.every((d) => d.totalBytes === null)).toBe(true);
   });
 });

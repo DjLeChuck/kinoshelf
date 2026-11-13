@@ -5135,6 +5135,137 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/health/report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Everything the Health page shows
+         * @description Read when the page opens and at each `health` or `history` event. Slower than `GET /api/health`: disk space, `ffprobe`, the size of the database.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description What is wrong, errors then warnings. `area` is the card it belongs to, `code` is translated by the client (`web.health.problem.<code>`). */
+                            problems: {
+                                /** @enum {unknown} */
+                                area: "ffprobe" | "database" | "disk" | "watch" | "media" | "webhooks";
+                                code: string;
+                                /** @enum {unknown} */
+                                severity: "error" | "warn";
+                                params?: {
+                                    [key: string]: string;
+                                };
+                            }[];
+                            server: {
+                                version: string;
+                                uptimeSeconds: number;
+                                node: string;
+                                arch: string;
+                                configDir: string;
+                            };
+                            ffprobe: {
+                                /** @description `null` when missing. */
+                                version: string | null;
+                            };
+                            database: {
+                                /** @description The SQLite file, journal and cache. */
+                                sizeBytes: number | null;
+                                journalEntries: number;
+                                /** @description TMDB answers kept. */
+                                cacheEntries: number;
+                                migrations: {
+                                    applied: number;
+                                    last: {
+                                        name: string;
+                                        appliedAt: string;
+                                    } | null;
+                                };
+                            };
+                            disks: {
+                                libraryId: string;
+                                name: string;
+                                path: string;
+                                totalBytes: number | null;
+                                freeBytes: number | null;
+                            }[];
+                            queue: {
+                                analyses: {
+                                    running: number;
+                                    queued: number;
+                                };
+                                transfers: {
+                                    running: number;
+                                    queued: number;
+                                };
+                                /** @description Videos ffprobe has still to read. */
+                                probes: number;
+                                /** @description Shows whose missing episodes are to count. */
+                                completeness: number;
+                            };
+                            notify: {
+                                webhooks: number;
+                                plex: boolean;
+                                jellyfin: boolean;
+                                /** @description Since the server started, newest first. */
+                                recent: {
+                                    at: string;
+                                    /** @enum {unknown} */
+                                    kind: "webhook" | "plex" | "jellyfin";
+                                    target: string;
+                                    event: string;
+                                    ok: boolean;
+                                    attempts?: number;
+                                    status?: number;
+                                    error?: string;
+                                    failed?: number;
+                                }[];
+                            };
+                        };
+                    };
+                };
+                /** @description Default Response */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/tmdb/usage": {
         parameters: {
             query?: never;
