@@ -609,14 +609,23 @@ export class LibraryItemStore {
   ): { total: number; groups: number; items: LibraryItem[]; works: LibraryItem[][] } {
     const queryCondition =
       "(sort_key(title) LIKE ? ESCAPE '\\' OR sort_key(path) LIKE ? ESCAPE '\\')";
-    const collection = options.collection ? collectionSql(options.collection) : undefined;
+    // On the files (the groups of a validation) and on the lead row (the list): the collection is
+    // the same for every file of a work, so the list asks it of the lead row rather than of "any
+    // file of the work", which cost a pass over the collected rows for each work.
+    const collection = options.collection
+      ? collectionSql(options.collection, 'library_items')
+      : undefined;
+    const leadCollection = options.collection
+      ? collectionSql(options.collection, 'lead_row')
+      : undefined;
     const conditions = [
       ...(options.filter ? [FILTER_SQL[options.filter]] : []),
       ...(options.multi ? [FILTER_SQL['multi-version']] : []),
-      ...(collection ? [collection.sql] : []),
       ...(options.query ? [queryCondition] : []),
     ];
-    const where = ['library_id = ?', ...conditions].join(' AND ');
+    const where = ['library_id = ?', ...(collection ? [collection.sql] : []), ...conditions].join(
+      ' AND ',
+    );
     const params: (string | number)[] = [
       libraryId,
       ...(collection?.params ?? []),
@@ -625,7 +634,7 @@ export class LibraryItemStore {
         : []),
     ];
     // `where` over the files, for the groups of a validation; the list itself reads one row per work.
-    const leads = leadWhere(conditions.join(' AND '));
+    const leads = leadWhere(conditions.join(' AND '), leadCollection?.sql);
     const order = itemOrder(options.sort ?? 'title', options.dir);
     const total =
       this.database
@@ -687,7 +696,7 @@ export class LibraryItemStore {
         { path: string; key: string; name: string; total: number | null; held: number }
       >(
         `SELECT path, collection_key AS key, collection_name AS name, collection_total AS total,
-           ${HELD} AS held
+           ${heldOf('library_items')} AS held
          FROM library_items
          WHERE library_id = ? AND collection_key IS NOT NULL
            AND path IN (SELECT value FROM json_each(?))`,
@@ -711,17 +720,18 @@ export class LibraryItemStore {
 
   /** What each collection filter holds (movies, not files), for the buttons of the page. */
   collectionCounts(libraryId: string): Record<'all' | 'in' | 'out' | 'incomplete', number> {
-    const count = (extra: string): number =>
+    const count = (filter?: CollectionFilter): number =>
       this.database
         .prepare<[string], { total: number }>(
-          `SELECT COUNT(*) AS total FROM library_items AS lead_row WHERE ${leadWhere(extra)}`,
+          `SELECT COUNT(*) AS total FROM library_items AS lead_row
+           WHERE ${leadWhere('', filter && collectionSql(filter, 'lead_row').sql)}`,
         )
         .get(libraryId)?.total ?? 0;
     return {
-      all: count(''),
-      in: count(collectionSql('in').sql),
-      out: count(collectionSql('out').sql),
-      incomplete: count(collectionSql('incomplete').sql),
+      all: count(),
+      in: count('in'),
+      out: count('out'),
+      incomplete: count('incomplete'),
     };
   }
 
@@ -1048,8 +1058,8 @@ const sortOf = (item: Pick<LibraryItem, 'path' | 'title'>): string =>
  * work when **any** of its files matches it, hence the `EXISTS` over the work: the inner table is
  * not aliased, since `FILTER_SQL` names `library_items`.
  */
-const leadWhere = (rowFilter: string): string =>
-  `library_id = ? AND lead = 1${
+const leadWhere = (rowFilter: string, leadFilter?: string): string =>
+  `library_id = ? AND lead = 1${leadFilter ? ` AND ${leadFilter}` : ''}${
     rowFilter
       ? ` AND EXISTS (SELECT 1 FROM library_items
            WHERE library_items.library_id = lead_row.library_id
@@ -1105,9 +1115,13 @@ const showOrder = (sort: ShowSort, direction?: SortDirection): string => {
 };
 
 /** The movies of the row's collection that the library holds (a movie once, whatever its versions). */
-const HELD = `(SELECT COUNT(DISTINCT held.work_key) FROM library_items held
-  WHERE held.library_id = library_items.library_id
-    AND held.collection_key = library_items.collection_key)`;
+// `outer` is how the row asking is named where this is used (`lead_row` in a list). The index is forced:
+// with its columns in the index of the works, SQLite counts from that one, which has no collection
+// to seek and so reads the whole library for every row it is asked about.
+const heldOf = (outer: string): string =>
+  `(SELECT COUNT(DISTINCT held.work_key) FROM library_items held INDEXED BY library_items_collection
+  WHERE held.library_id = ${outer}.library_id
+    AND held.collection_key = ${outer}.collection_key)`;
 
 /**
  * What narrows a list by collection: movies in one, in none, in one the library holds only a
@@ -1115,13 +1129,19 @@ const HELD = `(SELECT COUNT(DISTINCT held.work_key) FROM library_items held
  */
 export type CollectionFilter = 'in' | 'out' | 'incomplete' | { readonly key: string };
 
-const collectionSql = (filter: CollectionFilter): { sql: string; params: string[] } =>
+const collectionSql = (
+  filter: CollectionFilter,
+  outer: string,
+): { sql: string; params: string[] } =>
   filter === 'in'
     ? { sql: 'collection_key IS NOT NULL', params: [] }
     : filter === 'out'
       ? { sql: 'collection_key IS NULL', params: [] }
       : filter === 'incomplete'
-        ? { sql: `(collection_total IS NOT NULL AND collection_total > ${HELD})`, params: [] }
+        ? {
+            sql: `(collection_total IS NOT NULL AND collection_total > ${heldOf(outer)})`,
+            params: [],
+          }
         : { sql: 'collection_key = ?', params: [filter.key] };
 
 /** A movie's effective collection, with how much of it the library holds. */

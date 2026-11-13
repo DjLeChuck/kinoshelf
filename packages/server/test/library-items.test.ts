@@ -840,6 +840,81 @@ describe('the lookups of the item store', () => {
     (database as unknown as { prepare: unknown }).prepare = prepare;
   });
 
+  describe('the collection filters of a movie list', () => {
+    const setup = () => {
+      const database = migrated(new Database(':memory:'));
+      const store = new LibraryItemStore(database);
+      // Dune and Alien (two versions) are in a saga of three, Cube in none.
+      store.put(film('/a/dune.mkv', 'Dune', 1, { nfo: false }));
+      store.put(film('/a/alien - 1080p.mkv', 'Alien', 2, { nfo: true }));
+      store.put(film('/a/alien - 2160p.mkv', 'Alien', 2, { nfo: false }));
+      store.put(film('/a/cube.mkv', 'Cube', 3, { nfo: true }));
+      const file = (total: number): void => {
+        database
+          .prepare(
+            `UPDATE library_items SET collection_key = 't:9', collection_name = 'Saga',
+               collection_total = ? WHERE library_id = 'films' AND tmdb_id IN (1, 2)`,
+          )
+          .run(total);
+      };
+      file(3);
+      const titles = (
+        options: Parameters<LibraryItemStore['page']>[1] extends infer O ? Partial<O> : never,
+      ) =>
+        store.page('films', { limit: 50, offset: 0, ...options }).items.map((item) => item.title);
+      return { database, store, file, titles };
+    };
+
+    it('keeps a movie by its collection, whatever its versions and the other filters', () => {
+      const { store, file, titles } = setup();
+      expect(titles({ collection: 'in' })).toEqual(['Alien', 'Dune']);
+      expect(titles({ collection: 'out' })).toEqual(['Cube']);
+      expect(titles({ collection: { key: 't:9' } })).toEqual(['Alien', 'Dune']);
+      expect(titles({ collection: 'incomplete' })).toEqual(['Alien', 'Dune']);
+      // A state is asked of the work's files, the collection of the work.
+      expect(titles({ collection: 'in', filter: 'missing-nfo' })).toEqual(['Alien', 'Dune']);
+      expect(titles({ collection: 'in', multi: true })).toEqual(['Alien']);
+      expect(titles({ collection: 'out', filter: 'missing-nfo' })).toEqual([]);
+      expect(titles({ collection: 'in', query: 'dun' })).toEqual(['Dune']);
+      expect(store.page('films', { collection: 'in', limit: 50, offset: 0 }).total).toBe(2);
+      expect(store.collectionCounts('films')).toEqual({ all: 3, in: 2, out: 1, incomplete: 2 });
+
+      // Holding the whole saga (two movies of two) is no longer incomplete.
+      file(2);
+      expect(titles({ collection: 'incomplete' })).toEqual([]);
+      expect(store.collectionCounts('films')).toEqual({ all: 3, in: 2, out: 1, incomplete: 0 });
+    });
+
+    it('is sought in the index of the collections, not read from the whole library', () => {
+      const { database, store } = setup();
+      const sent: string[] = [];
+      const prepare = database.prepare.bind(database) as (text: string) => unknown;
+      (database as unknown as { prepare: (text: string) => unknown }).prepare = (text) => {
+        sent.push(text);
+        return prepare(text);
+      };
+      for (const collection of ['in', 'incomplete', { key: 't:9' }] as const) {
+        store.page('films', { collection, limit: 50, offset: 0 });
+      }
+      store.collectionCounts('films');
+      (database as unknown as { prepare: unknown }).prepare = prepare;
+
+      const lists = sent.filter((text) => text.includes('lead_row'));
+      expect(lists.length).toBeGreaterThan(0);
+      for (const text of lists) {
+        const plan = database
+          .prepare(`EXPLAIN QUERY PLAN ${text}`)
+          .all(...placeholders(text))
+          .map((step) => (step as { detail: string }).detail)
+          .join('\n');
+        // The old shapes: the collected rows searched for each work (EXISTS), and the held count
+        // read from the index of the works, which reads the whole library per row.
+        expect(plan, text).not.toMatch(/EXISTS USING INDEX library_items_collection/);
+        expect(plan, text).not.toMatch(/SEARCH held USING INDEX library_items_work/);
+      }
+    });
+  });
+
   it('finds the shows holding a file of a state once, not by a sub-query per episode', () => {
     const database = migrated(new Database(':memory:'));
     const store = new LibraryItemStore(database);
