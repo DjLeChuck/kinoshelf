@@ -5266,6 +5266,130 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/diagnostic": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * What the diagnostic archive says of this install
+         * @description The versions to copy into a bug report and the configuration as the archive carries it: secrets are only said to be set, never shown.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            summary: {
+                                kinoshelf: string;
+                                node: string;
+                                platform: string;
+                                ffprobe: string | null;
+                                uptimeSeconds: number;
+                                locale: string | null;
+                            };
+                            config: {
+                                [key: string]: unknown;
+                            };
+                            /** @description The newest lines the archive holds. */
+                            logLines: number;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/diagnostic/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The diagnostic archive
+         * @description A zip made on the spot: `summary.json`, `config.json` (secrets left out), `health.json`, `tmdb-usage.json` (7 days) and the newest log lines (`logs.ndjson`, wiped of secrets).
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description application/zip */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": string;
+                    };
+                };
+                /** @description Default Response */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/tmdb/usage": {
         parameters: {
             query?: never;
