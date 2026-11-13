@@ -133,6 +133,21 @@ describe('after a transfer', () => {
     expect(json(updates[0] as Received).Updates).toEqual([
       { Path: '/data/movies/Dune (2021) {tmdb-438631}', UpdateType: 'Created' },
     ]);
+
+    // The Health card reads these: what went where, how, and after how many sends.
+    const recent = h.app.notifier.recent();
+    expect(recent.map((r) => [r.kind, r.event, r.ok])).toEqual(
+      expect.arrayContaining([
+        ['webhook', 'transferred', true],
+        ['plex', 'refresh', true],
+        ['jellyfin', 'refresh', true],
+      ]),
+    );
+    expect(recent.find((r) => r.kind === 'webhook')).toMatchObject({
+      target: `${hook.url}/…`,
+      status: 200,
+      attempts: 1,
+    });
   });
 
   it('speaks the language of the configuration', async () => {
@@ -330,6 +345,15 @@ describe('a target that cannot be reached', () => {
         'utf8',
       ),
     ).toBe('dune');
+
+    // The failure is kept for the Health card, without the secret part of the address.
+    const failure = h.app.notifier.recent().find((r) => r.kind === 'webhook');
+    expect(failure).toMatchObject({
+      ok: false,
+      attempts: 1,
+      error: expect.stringMatching(/./) as string,
+    });
+    expect(JSON.stringify(failure)).not.toContain('SECRET');
   });
 });
 

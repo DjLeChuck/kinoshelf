@@ -48,6 +48,28 @@ export interface TestResult {
   readonly error?: string;
 }
 
+/** How many outcomes `recent` keeps: a page of them, no more. */
+const RECENT_LIMIT = 20;
+
+/** One notification, or one refresh of a media server, and how it went. */
+export interface DeliveryRecord {
+  /** ISO 8601. */
+  readonly at: string;
+  readonly kind: 'webhook' | 'plex' | 'jellyfin';
+  /** Where it went, without the secret part of a URL. */
+  readonly target: string;
+  /** The notification's event, or `refresh` for a media server. */
+  readonly event: string;
+  readonly ok: boolean;
+  /** Webhooks only: the sends a delivery took (three at most). */
+  readonly attempts?: number;
+  readonly status?: number;
+  /** What went wrong, never carrying a URL. */
+  readonly error?: string;
+  /** Media servers only: folders the refresh could not reach. */
+  readonly failed?: number;
+}
+
 /**
  * Tells the targets of `notify` what happened, and asks the media servers to look at what was
  * transferred. Best effort by design: a target that is down costs a log line, never a transfer,
@@ -59,6 +81,8 @@ export class Notifier {
   private jellyfin: JellyfinClient | undefined;
   private translate: Translate;
   private readonly pending = new Set<Promise<void>>();
+  /** Newest first, in memory: like the log, it starts again empty with the server. */
+  private readonly outcomes: DeliveryRecord[] = [];
 
   constructor(private readonly deps: NotifierDeps) {
     this.translate = deps.translate;
@@ -142,6 +166,11 @@ export class Notifier {
     return { webhooks: this.webhooks.length, plex: !!this.plex, jellyfin: !!this.jellyfin };
   }
 
+  /** The last notifications and refreshes, newest first (since the server started). */
+  recent(): readonly DeliveryRecord[] {
+    return this.outcomes;
+  }
+
   /** Asks the media servers to look at these folders (Kinoshelf's paths), and waits for them. */
   async refreshPaths(
     targets: readonly RefreshTarget[],
@@ -197,8 +226,19 @@ export class Notifier {
       this.track(async () => {
         const result = await this.send(buildRequest(webhook, notification));
         const where = redactUrl(webhook.url);
+        this.record({
+          kind: 'webhook',
+          target: where,
+          event: notification.event,
+          ok: result.ok,
+          attempts: result.attempts,
+          ...(result.status !== undefined && { status: result.status }),
+          ...(result.error !== undefined && { error: result.error }),
+        });
         if (result.ok) {
-          this.deps.log.info(`Notified ${where}: ${notification.event}`);
+          // A webhook that needed a retry is worth knowing about before it stops answering.
+          const retried = result.attempts > 1 ? ` after ${result.attempts} attempts` : '';
+          this.deps.log.info(`Notified ${where}: ${notification.event}${retried}`);
         } else {
           this.deps.log.warn(
             `Notification to ${where} failed after ${result.attempts} attempt(s): ${result.error ?? result.status}`,
@@ -233,6 +273,7 @@ export class Notifier {
       const plex = this.plex;
       this.track(async () => {
         const report = await plex.refresh(list);
+        this.recordRefresh('plex', report);
         this.deps.log.info(
           `Plex: ${report.refreshed} refresh(es), ${report.skipped.length} skipped, ${report.failed.length} failed`,
         );
@@ -242,11 +283,27 @@ export class Notifier {
       const jellyfin = this.jellyfin;
       this.track(async () => {
         const report = await jellyfin.refresh(list);
+        this.recordRefresh('jellyfin', report);
         this.deps.log.info(
           `Jellyfin: ${report.refreshed} refresh(es), ${report.skipped.length} skipped, ${report.failed.length} failed`,
         );
       });
     }
+  }
+
+  private recordRefresh(kind: 'plex' | 'jellyfin', report: RefreshReport): void {
+    this.record({
+      kind,
+      target: kind,
+      event: 'refresh',
+      ok: report.failed.length === 0,
+      failed: report.failed.length,
+    });
+  }
+
+  private record(outcome: Omit<DeliveryRecord, 'at'>): void {
+    this.outcomes.unshift({ at: this.now().toISOString(), ...outcome });
+    this.outcomes.length = Math.min(this.outcomes.length, RECENT_LIMIT);
   }
 
   private send(request: HttpRequest): Promise<DeliveryResult> {
