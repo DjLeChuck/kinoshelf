@@ -74,6 +74,7 @@ describe('catalogs', () => {
       'web.logs.recorded.info',
       'web.system.tab.tmdb',
       'web.system.tab.diagnostic',
+      'web.diagnostic.file.summary.name',
       'web.health.state.ok',
       'web.health.card.ffprobe',
       'web.health.card.media',

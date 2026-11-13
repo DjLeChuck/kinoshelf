@@ -130,7 +130,7 @@ test('offers the diagnostic archive, with the configuration it carries and no se
     .click();
   await expect(page).toHaveURL(/tab=diagnostic/);
 
-  await page.getByText('Show the configuration').click();
+  await page.getByRole('button', { name: 'Preview of the configuration in the archive' }).click();
   await expect(page.locator('pre').first()).toContainText('"libraries"');
 
   const download = page.waitForEvent('download');
