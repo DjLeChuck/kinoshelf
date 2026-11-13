@@ -16,6 +16,7 @@
   // It feeds the nav and the root page, so it is fetched once, here.
   refetchOn(['settings', 'ready'], () => void shell.loadOnboarding());
   refetchOn(['arrivals', 'jobs', 'settings', 'ready'], () => void shell.loadArrivals());
+  refetchOn(['health', 'ready'], () => void shell.loadHealth());
 
   // Until the welcome page is left only what it needs is shown; unknown, everything is.
   const routes = $derived(
@@ -51,6 +52,13 @@
         {t(route.label)}
         {#if route.id === 'libraries' && (shell.arrivals ?? 0) > 0}<span class="chip chip-warn"
             >{shell.arrivals}</span
+          >{/if}
+        {#if route.id === 'system' && (shell.healthErrors ?? 0) > 0}<span
+            class="chip chip-danger"
+            title={t('web.nav.systemErrors', { count: shell.healthErrors ?? 0 })}
+            >{shell.healthErrors}<span class="sr-only"
+              >{t('web.nav.systemErrors', { count: shell.healthErrors ?? 0 })}</span
+            ></span
           >{/if}
       </Link>
     {/each}

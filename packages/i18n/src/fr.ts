@@ -289,6 +289,7 @@ export const fr: Record<keyof typeof en, string> = {
   'web.nav.history': 'Historique',
   'web.nav.settings': 'Réglages',
   'web.nav.system': 'Système',
+  'web.nav.systemErrors': '{count, plural, one {# erreur} other {# erreurs}} à corriger',
   'web.system.title': 'Système',
   'web.system.intro': 'Observer et diagnostiquer le serveur.',
   'web.system.intro.link': 'Le configurer dans les Réglages',

@@ -3,6 +3,7 @@ import type { Onboarding } from './onboarding.js';
 
 let onboarding = $state<Onboarding | undefined>(undefined);
 let arrivals = $state<number | undefined>(undefined);
+let healthErrors = $state<number | undefined>(undefined);
 /** Why the welcome state could not be read: the root page says it, rather than load forever. */
 let onboardingFailure = $state<unknown>(undefined);
 
@@ -18,6 +19,10 @@ export const shell = {
   /** Files waiting in the arrival folders: the badge of the navigation. */
   get arrivals(): number | undefined {
     return arrivals;
+  },
+  /** Things wrong enough to be an error (`GET /api/health`): the badge of the System entry. */
+  get healthErrors(): number | undefined {
+    return healthErrors;
   },
   get onboardingFailure(): unknown {
     return onboardingFailure;
@@ -39,6 +44,13 @@ export const shell = {
       arrivals = (await api.get<{ total: number }>('/api/arrivals?limit=1')).total;
     } catch {
       // Same as above.
+    }
+  },
+  async loadHealth(): Promise<void> {
+    try {
+      healthErrors = (await api.get<{ errors: number }>('/api/health')).errors;
+    } catch {
+      // A badge that cannot be read is no badge.
     }
   },
 };

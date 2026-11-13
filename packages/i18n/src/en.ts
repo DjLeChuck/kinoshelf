@@ -273,6 +273,7 @@ export const en = {
   'web.nav.history': 'History',
   'web.nav.settings': 'Settings',
   'web.nav.system': 'System',
+  'web.nav.systemErrors': '{count, plural, one {# error} other {# errors}} to fix',
   'web.system.title': 'System',
   'web.system.intro': 'Observe and diagnose the server.',
   'web.system.intro.link': 'Configure it in the settings',
