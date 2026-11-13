@@ -2,7 +2,12 @@
 export interface WatchStatus {
   readonly enabled: boolean;
   readonly mode: 'events' | 'poll';
-  readonly folders: readonly { path: string; libraryId: string | null; available: boolean }[];
+  readonly folders: readonly {
+    path: string;
+    libraryId: string | null;
+    available: boolean;
+    sentLastDay: number;
+  }[];
   readonly pending: number;
   readonly lastScanAt: string | null;
   readonly nextScanAt: string | null;

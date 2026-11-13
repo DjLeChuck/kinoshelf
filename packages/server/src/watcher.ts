@@ -19,6 +19,7 @@ const DEFAULT_SETTLE_SECONDS = 30;
 const SAFETY_SCAN_MS = 600_000;
 /** Used when events cannot be had, and when a scan left files still settling. */
 const FALLBACK_POLL_MS = 60_000;
+const DAY_MS = 86_400_000;
 
 /**
  * What the watcher runs with: the timings and `apply` are global (`watch:`), the folders are the
@@ -53,6 +54,12 @@ export interface FolderStatus {
   readonly libraryId: string | null;
   /** False when the folder is missing or unreadable (an unmounted share, say). */
   readonly available: boolean;
+  /**
+   * Releases sent to the queue from this folder over the last 24 hours: the jobs made for what
+   * lies under it (a scan of the whole folder is not one). Read from the jobs, not from what the
+   * watcher remembers of files, which it forgets once a transfer has moved them.
+   */
+  readonly sentLastDay: number;
 }
 
 export interface WatchStatus {
@@ -153,12 +160,24 @@ export class FolderWatcher {
         path,
         libraryId: this.config?.libraryIds?.get(path) ?? null,
         available: this.available.get(path) ?? false,
+        sentLastDay: this.sentSince(path, this.now() - DAY_MS),
       })),
       pending: this.pending,
       lastScanAt: this.lastScan === undefined ? null : new Date(this.lastScan).toISOString(),
       nextScanAt: this.period ? new Date(this.period.next).toISOString() : null,
       intervalSeconds: this.period ? this.period.ms / 1000 : null,
     };
+  }
+
+  private sentSince(folder: string, since: number): number {
+    const [from, to] = below(folder);
+    return (
+      this.deps.database
+        .prepare<[string, string, string], { n: number }>(
+          'SELECT COUNT(*) AS n FROM jobs WHERE path >= ? AND path < ? AND rescan = 0 AND created_at >= ?',
+        )
+        .get(from, to, new Date(since).toISOString())?.n ?? 0
+    );
   }
 
   /** A periodic scan that remembers when it fires next, which `status` reports. */

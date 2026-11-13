@@ -21,13 +21,17 @@ const statusSchema = {
       type: 'array',
       items: {
         type: 'object',
-        required: ['path', 'libraryId', 'available'],
+        required: ['path', 'libraryId', 'available', 'sentLastDay'],
         properties: {
           path: { type: 'string' },
           libraryId: { type: ['string', 'null'] },
           available: {
             type: 'boolean',
             description: 'False when the folder is missing or unreadable (an unmounted share).',
+          },
+          sentLastDay: {
+            type: 'integer',
+            description: 'Releases sent to the queue from this folder over the last 24 hours.',
           },
         },
       },

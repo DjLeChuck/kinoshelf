@@ -216,6 +216,10 @@
                     <span class="mono path">{folder.path}</span>
                     {#if !folder.available}
                       <span class="chip chip-danger">{t('web.health.watch.unreachable')}</span>
+                    {:else}
+                      <span class="muted">
+                        {t('web.health.watch.sent', { count: folder.sentLastDay })}
+                      </span>
                     {/if}
                   </li>
                 {/each}

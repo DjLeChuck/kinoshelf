@@ -62,7 +62,7 @@ describe('Health', () => {
   });
 
   it('reports a watched folder the watcher cannot read, once it has looked', async () => {
-    const folder = { path: '/mnt/gone', libraryId: null, available: false };
+    const folder = { path: '/mnt/gone', libraryId: null, available: false, sentLastDay: 0 };
     const before = await setup({ watcher: watching({ folders: [folder] }) });
     expect(await before.health.problems()).toEqual([]);
 

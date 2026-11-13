@@ -4959,6 +4959,8 @@ export interface paths {
                                 libraryId: string | null;
                                 /** @description False when the folder is missing or unreadable (an unmounted share). */
                                 available: boolean;
+                                /** @description Releases sent to the queue from this folder over the last 24 hours. */
+                                sentLastDay: number;
                             }[];
                             /** @description Releases still being written. */
                             pending: number;

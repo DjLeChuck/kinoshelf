@@ -355,6 +355,8 @@ export const en = {
   'web.health.watch.never': 'No pass yet.',
   'web.health.watch.pending':
     '{count, plural, one {# release still settling} other {# releases still settling}}',
+  'web.health.watch.sent':
+    '{count, plural, one {# release sent in 24 h} other {# releases sent in 24 h}}',
   'web.health.watch.unreachable': 'Unreachable',
   'web.health.watch.now': 'Check now',
   'web.health.watch.done': '{count, plural, one {# release sent} other {# releases sent}}.',

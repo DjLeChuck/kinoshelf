@@ -282,7 +282,8 @@ is built.
   `webhook-failing`, `media-refresh-failed`): a warning never turns the badge red. A problem is `{ area, code, params,
 severity }`, `area` being its card and `code` translated by the web (`web.health.problem.<code>`).
   Data comes from the modules that own it: `FolderWatcher.status()` (`lastScanAt`, `nextScanAt`, `intervalSeconds`: the
-  10-minute safety pass, or `pollSeconds`; also `GET /api/watch`), `Notifier.recent()` (the last 20 deliveries since
+  10-minute safety pass, or `pollSeconds`; per folder `sentLastDay`, the releases sent to the queue in 24 h, counted from
+  the jobs since `watched_files` forgets a file once it is moved; also `GET /api/watch`), `Notifier.recent()` (the last 20 deliveries since
   the start, in memory: webhooks with their `attempts`, a Plex or Jellyfin refresh with its `failed` folders) and
   `migrationState` (`schema-info.ts`, read from `schema_migrations`: the count and the last one applied, which on a
   fresh database may be a core one). Plex shows "connected" and whether it was signed in with an account, never an

@@ -180,7 +180,9 @@ describe('FolderWatcher', () => {
     await watcher.scan();
     await rename(folder, `${folder}-away`);
     await watcher.scan();
-    expect(watcher.status().folders).toEqual([{ path: folder, libraryId: null, available: false }]);
+    expect(watcher.status().folders).toEqual([
+      { path: folder, libraryId: null, available: false, sentLastDay: 0 },
+    ]);
     expect(database.prepare('SELECT 1 FROM watched_files').all()).toHaveLength(1);
     await rename(`${folder}-away`, folder);
     await watcher.scan();
@@ -249,6 +251,26 @@ describe('FolderWatcher', () => {
       nextScanAt: null,
       intervalSeconds: null,
     });
+  });
+
+  it('counts the releases sent from a folder over the last day, from the jobs', async () => {
+    const { folder, watcher, database } = await setup();
+    const jobs = new JobStore(database, new EntryStore(database), new ExecutionStore(database));
+    const recent = jobs.create(join(folder, 'Dune.2021'), false);
+    jobs.create(join(folder, 'Alien.1979.mkv'), false);
+    // Not releases of this folder: its own scan, a folder that only shares the name's start,
+    // a rescan, and a job from yesterday.
+    jobs.create(folder, false);
+    jobs.create(`${folder}-other/Heat.1995`, false);
+    const rescan = jobs.create(join(folder, 'Heat.1995'), false);
+    const old = jobs.create(join(folder, 'Old.1999'), false);
+    database.prepare('UPDATE jobs SET rescan = 1 WHERE id = ?').run(rescan.id);
+    database
+      .prepare('UPDATE jobs SET created_at = ? WHERE id = ?')
+      .run(new Date(NOW - 25 * 3_600_000).toISOString(), old.id);
+
+    expect(recent.path).toBe(join(folder, 'Dune.2021'));
+    expect(watcher.status().folders[0]?.sentLastDay).toBe(2);
   });
 
   it('does nothing once configured away', async () => {

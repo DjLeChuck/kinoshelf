@@ -373,6 +373,8 @@ export const fr: Record<keyof typeof en, string> = {
   'web.health.watch.never': 'Aucun passage pour l’instant.',
   'web.health.watch.pending':
     '{count, plural, one {# sortie encore en cours d’écriture} other {# sorties encore en cours d’écriture}}',
+  'web.health.watch.sent':
+    '{count, plural, one {# sortie envoyée en 24 h} other {# sorties envoyées en 24 h}}',
   'web.health.watch.unreachable': 'Inaccessible',
   'web.health.watch.now': 'Vérifier maintenant',
   'web.health.watch.done': '{count, plural, one {# sortie envoyée} other {# sorties envoyées}}.',
