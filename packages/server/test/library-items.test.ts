@@ -940,6 +940,28 @@ describe('the lookups of the item store', () => {
     expect(store.shows('shows', { state: 'rename', limit: 50, offset: 0 }).items).toHaveLength(1);
   });
 
+  it('searches the title and the file name from a stored key, never calling sort_key', () => {
+    const database = migrated(new Database(':memory:'));
+    const store = new LibraryItemStore(database);
+    store.put(film('/movies/a.mkv', 'Alien', 1, { nfo: false }));
+    store.put(film('/movies/Dune.2021.2160p.mkv', 'Dune', 2));
+    let calls = 0;
+    database.function('sort_key', { deterministic: true }, (value: unknown) => {
+      calls += 1;
+      return typeof value === 'string' ? value.toLowerCase() : null;
+    });
+    const titles = (query: string, filter?: 'missing-nfo'): string[] =>
+      store
+        .page('films', { query, ...(filter ? { filter } : {}), limit: 50, offset: 0 })
+        .items.map((item) => item.title ?? '');
+    expect(titles('ali')).toEqual(['Alien']);
+    expect(titles('2160P')).toEqual(['Dune']);
+    expect(titles('ali', 'missing-nfo')).toEqual(['Alien']);
+    // A folder's name is not a match: "movies" would otherwise list the whole library.
+    expect(titles('movies')).toEqual([]);
+    expect(calls).toBe(0);
+  });
+
   it('counts the shows lacking episodes or files as the grouped query does', () => {
     const database = migrated(new Database(':memory:'));
     const store = new LibraryItemStore(database);

@@ -101,7 +101,7 @@ const ROW_COLUMNS =
   'library_id, path, kind, tmdb_id, title, year, season, episode, episode_end, state, nfo, poster, fanart, logo, thumb, entry_id, scan_job_id, scanned_at, unavailable';
 
 /** The columns a row is written with: `item_id` is derived from the path, never read back. */
-const WRITTEN_COLUMNS = `${ROW_COLUMNS}, item_id, sort, work_key`;
+const WRITTEN_COLUMNS = `${ROW_COLUMNS}, item_id, sort, work_key, search_key`;
 
 /** Read with the picture size, which only the probe writes: a patch of a row never touches it. */
 const COLUMNS = `${ROW_COLUMNS}, picture`;
@@ -154,6 +154,7 @@ const valuesOf = (item: LibraryItem): (string | number | null)[] => [
   itemId(item.path),
   sortOf(item),
   workKeyOf(item),
+  searchKeyOf(item),
 ];
 
 const toItem = (row: Row): LibraryItem => ({
@@ -209,22 +210,23 @@ export class LibraryItemStore {
     this.fillSortKeys();
   }
 
-  /** Rows saved before `sort` and `work_key` existed get theirs, once (migration 031). */
+  /** Rows saved before `sort`, `work_key` and `search_key` existed get theirs, once (migrations 031, 033). */
   private fillSortKeys(): void {
     const missing = this.database
       .prepare<[], KeyRow & { library_id: string }>(
-        `SELECT library_id, path, kind, tmdb_id, title, state FROM library_items WHERE work_key IS NULL`,
+        `SELECT library_id, path, kind, tmdb_id, title, state FROM library_items WHERE work_key IS NULL OR search_key IS NULL`,
       )
       .all();
     if (missing.length === 0) {
       return;
     }
     const set = this.database.prepare(
-      'UPDATE library_items SET sort = ?, work_key = ? WHERE library_id = ? AND path = ?',
+      'UPDATE library_items SET sort = ?, work_key = ?, search_key = ? WHERE library_id = ? AND path = ?',
     );
     this.database.transaction(() => {
       for (const row of missing) {
-        set.run(sortOf(keyedItem(row)), workKeyOf(keyedItem(row)), row.library_id, row.path);
+        const item = keyedItem(row);
+        set.run(sortOf(item), workKeyOf(item), searchKeyOf(item), row.library_id, row.path);
       }
       for (const libraryId of new Set(missing.map((row) => row.library_id))) {
         this.regroup(libraryId);
@@ -387,9 +389,9 @@ export class LibraryItemStore {
         touched.add(workKeyOf(moved));
         this.database
           .prepare(
-            'UPDATE library_items SET sort = ?, work_key = ? WHERE library_id = ? AND path = ?',
+            'UPDATE library_items SET sort = ?, work_key = ?, search_key = ? WHERE library_id = ? AND path = ?',
           )
-          .run(sortOf(moved), workKeyOf(moved), libraryId, to);
+          .run(sortOf(moved), workKeyOf(moved), searchKeyOf(moved), libraryId, to);
       }
       this.regroup(libraryId, touched);
     })();
@@ -607,8 +609,7 @@ export class LibraryItemStore {
       offset: number;
     },
   ): { total: number; groups: number; items: LibraryItem[]; works: LibraryItem[][] } {
-    const queryCondition =
-      "(sort_key(title) LIKE ? ESCAPE '\\' OR sort_key(path) LIKE ? ESCAPE '\\')";
+    const queryCondition = "search_key LIKE ? ESCAPE '\\'";
     // On the files (the groups of a validation) and on the lead row (the list): the collection is
     // the same for every file of a work, so the list asks it of the lead row rather than of "any
     // file of the work", which cost a pass over the collected rows for each work.
@@ -626,13 +627,8 @@ export class LibraryItemStore {
     const where = ['library_id = ?', ...(collection ? [collection.sql] : []), ...conditions].join(
       ' AND ',
     );
-    const params: (string | number)[] = [
-      libraryId,
-      ...(collection?.params ?? []),
-      ...(options.query
-        ? [contains(sortKey(options.query)), contains(sortKey(options.query))]
-        : []),
-    ];
+    const matching = options.query ? [contains(sortKey(options.query))] : [];
+    const params: (string | number)[] = [libraryId, ...(collection?.params ?? []), ...matching];
     // `where` over the files, for the groups of a validation; the list itself reads one row per work.
     const leads = leadWhere(conditions.join(' AND '), leadCollection?.sql);
     const order = itemOrder(options.sort ?? 'title', options.dir);
@@ -941,7 +937,7 @@ export class LibraryItemStore {
     ];
     const where = [
       "i.library_id = ? AND i.kind = 'series' AND i.tmdb_id IS NOT NULL",
-      ...(options.query ? ["sort_key(i.title) LIKE ? ESCAPE '\\'"] : []),
+      ...(options.query ? ["i.sort LIKE ? ESCAPE '\\'"] : []),
       ...versioned.map(() => 'i.tmdb_id IN (SELECT value FROM json_each(?))'),
       // The shows holding such a file, found once: a sub-query per row would walk every episode of
       // the show for each of them. The filter's columns are unqualified, so the inner table's.
@@ -1116,6 +1112,15 @@ const workKeyOf = (item: Pick<LibraryItem, 'path' | 'kind' | 'tmdbId' | 'state'>
 /** What a list orders by: the title, or the path of a file nobody identified. */
 const sortOf = (item: Pick<LibraryItem, 'path' | 'title'>): string =>
   sortKey(item.title ?? item.path);
+
+/**
+ * What a search reads: the title and the file's name, folded as `sortKey` does and joined by a
+ * newline (a search never holds one, so it cannot match across the two). Stored in `search_key`
+ * so that `LIKE` runs inside SQLite, where `sort_key` was a JS call per row and per statement.
+ * Only the file's name, not its folders: the "movies" of a path would match the whole library.
+ */
+const searchKeyOf = (item: Pick<LibraryItem, 'path' | 'title'>): string =>
+  `${sortKey(item.title ?? '')}\n${sortKey(basename(item.path))}`;
 
 /**
  * The condition of a list read on the first file of each work (`lead_row`). A filter keeps the

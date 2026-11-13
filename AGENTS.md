@@ -505,6 +505,10 @@ chips of the states to handle (only those above 0, "All" always, the chosen one 
 none), the removable pills of the traits (versions, collection) and the "2 of 5 movies" status. The panel and the
 chips are the same filter.
 
+- **The search reads the title and the file's name**, never the folders (`search_key`, server migration 033:
+  both folded as `sortKey` does and joined by a newline, written with the row and filled at startup for older
+  ones). A series list searches the show's title (`sort`). `sort_key` stays a SQL function for ordering, but a
+  search never calls it: a JS call per row was most of its cost.
 - **"Several versions" is not a state**: `multi=true` of `GET .../items` and `.../shows` combines with `state`
   (`multi-version` stays a key of `counts`, for its count, but is no longer a value of `state`).
 - **Sorting is the column headers'** (`SortButton` in a `<th aria-sort>`): movies by title, year, collection, shows

@@ -424,6 +424,14 @@ export const SERVER_MIGRATIONS: readonly { readonly name: string; readonly sql: 
       ALTER TABLE library_items ADD COLUMN collection_total INTEGER;
       CREATE INDEX library_items_collection ON library_items (library_id, collection_key);`,
   },
+  {
+    // What a search reads (the title and the file's name, folded), stored with the row so that the
+    // `LIKE` runs in SQLite instead of calling `sort_key` in JS for every row. Existing rows get theirs
+    // from `LibraryItemStore` at startup (the accent folding is not SQL's); the search then finds
+    // nothing in them until then.
+    name: 'server:033-items-search-key',
+    sql: 'ALTER TABLE library_items ADD COLUMN search_key TEXT;',
+  },
 ];
 
 /** Opens the single SQLite file of the config directory, shared with the CLI and the cache. */
