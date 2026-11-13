@@ -291,7 +291,7 @@ export interface paths {
         };
         /**
          * Stream of changes (Server-Sent Events)
-         * @description Each event is named after what changed (`jobs`, `progress`, `arrivals`, `history`, `settings`, `logs`, `tmdb`) and carries no data: refetch the matching list. `progress` is only where a running analysis is (`GET /api/jobs/{id}`), at most twice a second; `jobs` is a job queued, started or ended; `logs` is lines written, at most twice a second; `tmdb` is TMDB counts written, every few seconds at most. A `ready` event opens the stream.
+         * @description Each event is named after what changed (`jobs`, `progress`, `arrivals`, `history`, `settings`, `logs`, `tmdb`, `health`) and carries no data: refetch the matching list. `progress` is only where a running analysis is (`GET /api/jobs/{id}`), at most twice a second; `jobs` is a job queued, started or ended; `logs` is lines written, at most twice a second; `tmdb` is TMDB counts written, every few seconds at most; `health` is the number of errors (`GET /api/health`) that changed. A `ready` event opens the stream.
          */
         get: {
             parameters: {
@@ -5072,6 +5072,63 @@ export interface paths {
                 };
             };
         };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * How many things are wrong enough to be an error
+         * @description Light on purpose (no disk space, nothing slow): the web reads it at each `health` event for the badge of the System entry. Warnings are not counted.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            errors: number;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;

@@ -48,6 +48,8 @@ import { registerPlexRoutes } from './plex-routes.js';
 import { PlexSession } from './plex-session.js';
 import { registerSettingsRoutes } from './settings-routes.js';
 import { ConfigStore } from './settings.js';
+import { Health } from './health.js';
+import { registerHealthRoutes } from './health-routes.js';
 import { registerWatchRoutes } from './watch-routes.js';
 import { FolderWatcher, watcherSettings } from './watcher.js';
 import { registerWeb } from './web.js';
@@ -370,6 +372,21 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
       },
     },
   });
+  const health = new Health({
+    database: options.database,
+    config: () => configStore.config,
+    watcher,
+    plexSession,
+    changed: () => {
+      events.emit('health');
+    },
+  });
+  // What the settings change (a library, Plex) may change the verdict at once.
+  events.subscribe((topic) => {
+    if (topic === 'settings') {
+      void health.check();
+    }
+  });
   app.decorate('jobs', runner);
   app.decorate('probes', probes);
   app.decorate('completeness', completeness);
@@ -405,6 +422,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
       seriesFiles.touch(id);
     });
     watcher.configure(watcherSettings(options.config));
+    health.start();
     purge();
     // Not kept alive by the timer: the process leaves when the server closes.
     purgeTimer = setInterval(purge, 86_400_000).unref();
@@ -415,6 +433,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
   });
   app.addHook('onClose', async () => {
     clearInterval(purgeTimer);
+    health.stop();
     tmdbUsage.close();
     progress.close();
     watcher.stop();
@@ -618,6 +637,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
       events,
     });
     registerWatchRoutes(api, watcher);
+    registerHealthRoutes(api, health);
     registerTmdbRoutes(api, tmdbUsage);
     registerLogRoutes(api, {
       logs,
