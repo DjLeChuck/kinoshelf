@@ -240,8 +240,9 @@ nowhere: a custom profile file is to be discussed again.
 ## System
 
 The System page (`/system`) is where the server is **observed**; the Settings stay where it is configured.
-Its tabs are Health (the default, `/system`), Logs (`?tab=logs`) and TMDB (`?tab=tmdb`); the rest (the diagnostic
-archive) is planned in the private notes and must not show as an empty tab or a "soon" badge before it is built.
+Its tabs are Health (the default, `/system`), Logs (`?tab=logs`), TMDB (`?tab=tmdb`) and Diagnostic (`?tab=diagnostic`);
+what is planned in the private notes (maintenance, security) must not show as an empty tab or a "soon" badge before it
+is built.
 
 - **The log** (`logs.ts`, `log-routes.ts`; `SystemLogs.svelte`): the destination of Fastify's pino logger. `LogStore`
   keeps the last 5000 lines in memory (what the page lists) and writes `<config>/logs/kinoshelf.log`, rotated at
@@ -286,6 +287,16 @@ severity }`, `area` being its card and `code` translated by the web (`web.health
   `migrationState` (`schema-info.ts`, read from `schema_migrations`: the count and the last one applied, which on a
   fresh database may be a core one). Plex shows "connected" and whether it was signed in with an account, never an
   expiry date (the token renews on demand).
+- **Diagnostic** (`diagnostic.ts`, `diagnostic-routes.ts`, `zip.ts`; `SystemDiagnostic.svelte`): `GET /api/diagnostic/archive`
+  builds a zip in memory (`zip.ts`, deflate through `node:zlib`, no dependency): `summary.json` (versions, platform, ffprobe),
+  `config.json`, `health.json` (the report), `tmdb-usage.json` (7 days) and `logs.ndjson` (the 2000 newest lines).
+  **No secret goes in, and each part is already clean where it is made**: the log by `scrub` when a line is written,
+  `config.json` by `presentSettings` (the very function behind `GET /api/settings`: a secret is only said to be set) plus
+  the libraries, which hold folders but no secret, the health report by `redactUrl`. Never put the raw `Config`, the
+  environment or a request in the archive; a test plants a secret in every place that holds one and searches the whole
+  archive for it. File and folder names are in it (the log, the libraries): the page says so. `GET /api/diagnostic` gives
+  the versions and the same configuration for the page's preview. The download is a plain link (like the log's), so there
+  is no "preparing" state; the issue link opens GitHub's form with the versions in its body.
 - Not done: the "connection lost" banner (the event stream does not tell the page it is down).
 
 ## History
