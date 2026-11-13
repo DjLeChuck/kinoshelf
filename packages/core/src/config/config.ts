@@ -2,7 +2,7 @@ import { constants } from 'node:fs';
 import { access, mkdir, readFile, rename, stat, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import { isMap, parseDocument, type Document } from 'yaml';
+import { isCollection, isScalar, isMap, parseDocument, type Document } from 'yaml';
 import { z } from 'zod';
 import { errnoCode, KinoshelfError } from '../errors.js';
 
@@ -269,6 +269,16 @@ export async function editConfig(directory: string, edits: readonly ConfigEdit[]
   const path = join(directory, CONFIG_FILE);
   const text = await readText(path);
   const document = parseText(text ?? '', path);
+  if (isScalar(document.contents) && document.contents.value === null) {
+    // `---`, `null` or `~` alone read as no configuration (as `validate` does), but `setIn` only
+    // writes into a map: start from an empty document instead of failing.
+    document.contents = null;
+  } else if (document.contents !== null && !isCollection(document.contents)) {
+    throw new KinoshelfError('config.invalid', {
+      path,
+      detail: 'the file is not a map of settings',
+    });
+  }
   for (const edit of edits) {
     if (edit.value === undefined) {
       // Nothing to remove from a file that does not exist yet (or lacks the key): a form unsets

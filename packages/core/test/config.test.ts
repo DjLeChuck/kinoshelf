@@ -224,6 +224,27 @@ describe('editConfig', () => {
     expect(await read(dir)).toBe('locale: fr\n');
   });
 
+  it.each([
+    ['---\n', '---\nnotify:\n  plex:\n    url: http://x\n'],
+    ['null\n', 'notify:\n  plex:\n    url: http://x\n'],
+    ['~\n', 'notify:\n  plex:\n    url: http://x\n'],
+  ])('writes into a file that reads as empty (%j)', async (text, written) => {
+    const dir = await makeDir();
+    await put(join(dir, 'config.yaml'), text);
+    const config = await editConfig(dir, [{ path: ['notify', 'plex', 'url'], value: 'http://x' }]);
+    expect(config).toEqual({ notify: { plex: { url: 'http://x' } } });
+    expect(await read(dir)).toBe(written);
+  });
+
+  it('refuses a file that is a bare value instead of crashing', async () => {
+    const dir = await makeDir();
+    await put(join(dir, 'config.yaml'), 'foo\n');
+    await expect(editConfig(dir, [{ path: ['mode'], value: 'copy' }])).rejects.toMatchObject({
+      info: { code: 'config.invalid' },
+    });
+    expect(await read(dir)).toBe('foo\n');
+  });
+
   it('keeps comments and order, and changes only what is asked', async () => {
     const dir = await makeDir();
     await put(
