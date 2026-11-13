@@ -199,6 +199,10 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     (options.config.libraries ?? []).flatMap((library) =>
       library.type ? [{ libraryId: library.id, source: library.source }] : [],
     );
+  // The lists are a cache rebuilt on a library's first read in a process: do it now, not in a request.
+  for (const { libraryId } of typedScans()) {
+    items.settle(libraryId);
+  }
   const snapshot = new LibrarySnapshot({
     config: () => options.config,
     jobs,

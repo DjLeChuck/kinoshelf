@@ -257,6 +257,15 @@ export class LibraryItemStore {
     this.staleWork(libraryId, keys ?? 'all');
   }
 
+  /**
+   * Brings the cached lists of a library up to date now. Every read does it anyway; calling it
+   * after a whole scan or at startup moves the ~100 ms rebuild off the first request.
+   */
+  settle(libraryId: string): void {
+    this.settleShows(libraryId);
+    this.settleWorks(libraryId);
+  }
+
   private staleWork(libraryId: string, keys: Iterable<string> | 'all'): void {
     const stale = this.staleWorks.get(libraryId);
     this.staleWorks.set(
@@ -438,6 +447,10 @@ export class LibraryItemStore {
         this.regroup(libraryId, touched);
       }
     })();
+    if (folder === undefined) {
+      // A whole scan stales every list: rebuilt here, in the job, not in the next request.
+      this.settle(libraryId);
+    }
   }
 
   /** Moves a row to another path, probe included: it is the same file, and its date will tell. */
