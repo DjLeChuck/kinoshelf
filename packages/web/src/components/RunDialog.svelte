@@ -238,9 +238,11 @@
     {#if report.skipped.length > 0}
       <p class="muted">{t('web.library.run.skipped', { count: report.skipped.length })}</p>
     {/if}
-    <p class="muted root">{t('web.library.run.root', { path: preview?.root ?? '' })}</p>
     <div class="list">
       <ChangeList {rows}>
+        {#snippet lead()}
+          <p class="muted root">{t('web.library.run.root', { path: preview?.root ?? '' })}</p>
+        {/snippet}
         {#snippet detail(row: ChangeRow)}
           {@const item = previewById.get(row.id)}
           {#if item}
@@ -314,6 +316,7 @@
   }
 
   .root {
+    margin: 0;
     font-size: 12.5px;
   }
 

@@ -13,10 +13,13 @@
   let {
     rows,
     detail,
+    lead,
   }: {
     rows: readonly ChangeRow[];
     /** What a row hides behind "+N files". */
     detail?: Snippet<[ChangeRow]>;
+    /** Shown at the left of the bar, on the search's line. */
+    lead?: Snippet;
   } = $props();
 
   const counts = $derived(countGroups(rows));
@@ -39,6 +42,9 @@
 
 <div class="change-list">
   <div class="bar">
+    {#if lead}
+      <div class="lead">{@render lead()}</div>
+    {/if}
     {#if counts.problems > 0}
       <div class="scopes" role="group" aria-label={t('web.changes.scope.label')}>
         {#each ['problems', 'all'] as const as option (option)}
@@ -120,6 +126,12 @@
     flex-wrap: wrap;
     align-items: center;
     gap: 8px 12px;
+  }
+
+  .lead {
+    flex: 1 1 200px;
+    min-width: 0;
+    overflow-wrap: anywhere;
   }
 
   .scopes {
