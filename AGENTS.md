@@ -298,7 +298,8 @@ severity }`, `area` being its card and `code` translated by the web (`web.health
   archive for it. File and folder names are in it (the log, the libraries): the page says so. `GET /api/diagnostic` gives
   the versions and the same configuration for the page's preview. The download is a plain link (like the log's), so there
   is no "preparing" state; the issue link opens GitHub's form with the versions in its body.
-- Not done: the "connection lost" banner (the event stream does not tell the page it is down).
+- **Decided not to build**: a "connection lost" banner on the logs (the event stream does not tell the page it is down). A
+  dropped stream reconnects by itself and every view reloads on `ready`; it is not worth an indicator of its own.
 
 ## History
 
