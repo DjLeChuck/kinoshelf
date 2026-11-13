@@ -296,6 +296,29 @@ export const fr: Record<keyof typeof en, string> = {
   'web.system.tabs': 'Sections de la page Système',
   'web.system.tab.logs': 'Journaux',
   'web.system.tab.tmdb': 'TMDB',
+  'web.system.tab.diagnostic': 'Diagnostic',
+  'web.diagnostic.title': 'Archive de diagnostic',
+  'web.diagnostic.intro':
+    'Un fichier à joindre à un rapport de bug, fabriqué à la demande. Il contient :',
+  'web.diagnostic.file.summary': 'les versions (Kinoshelf, Node, ffprobe) et le système ;',
+  'web.diagnostic.file.config': 'la configuration, sans ses secrets ;',
+  'web.diagnostic.file.health': 'l’état de santé, tel que l’onglet Santé le montre ;',
+  'web.diagnostic.file.tmdb': 'le décompte des requêtes TMDB des 7 derniers jours ;',
+  'web.diagnostic.file.logs': 'les {count} dernières lignes du journal.',
+  'web.diagnostic.secrets':
+    'Les clés d’API, les jetons et la partie secrète des adresses de webhooks n’y sont jamais : le journal est nettoyé à l’écriture de chaque ligne, et la configuration indique seulement si un secret est défini. Les noms de fichiers et de dossiers, eux, y figurent : relisez avant de le partager publiquement.',
+  'web.diagnostic.download': 'Télécharger l’archive de diagnostic',
+  'web.diagnostic.config.title': 'Configuration de l’archive',
+  'web.diagnostic.config.hint':
+    'Exactement ce que contient config.json. Un secret indique seulement s’il est défini.',
+  'web.diagnostic.config.show': 'Afficher la configuration',
+  'web.diagnostic.issue.title': 'Signaler un problème',
+  'web.diagnostic.issue.hint': 'Recopiez ces versions dans le rapport et joignez l’archive.',
+  'web.diagnostic.issue.reminder':
+    'Merci de joindre l’archive de diagnostic (Système, Diagnostic) et de décrire ce que vous attendiez et ce qui s’est passé.',
+  'web.diagnostic.issue.open': 'Ouvrir une issue sur GitHub',
+  'web.diagnostic.copy': 'Copier les versions',
+  'web.diagnostic.copied': 'Copié',
   'web.system.tab.health': 'Santé',
   'web.health.summary.ok': 'Tout est en ordre.',
   'web.health.summary.warn':

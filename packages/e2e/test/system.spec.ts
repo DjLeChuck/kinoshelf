@@ -118,3 +118,31 @@ test('opens on the health of the server, card by card', async ({ page }) => {
     page.getByRole('navigation').getByRole('link', { name: /^System/ }),
   ).not.toContainText('error');
 });
+
+test('offers the diagnostic archive, with the configuration it carries and no secret in it', async ({
+  page,
+}) => {
+  await signIn(page);
+  await page.goto('/system');
+  await page
+    .getByRole('navigation', { name: 'Sections of the System page' })
+    .getByRole('link', { name: 'Diagnostic' })
+    .click();
+  await expect(page).toHaveURL(/tab=diagnostic/);
+
+  await page.getByText('Show the configuration').click();
+  await expect(page.locator('pre').first()).toContainText('"libraries"');
+
+  const download = page.waitForEvent('download');
+  await page.getByRole('link', { name: 'Download the diagnostic archive' }).click();
+  const file = await download;
+  expect(file.suggestedFilename()).toMatch(/^kinoshelf-diagnostic-\d{8}-\d{4}\.zip$/);
+
+  // The issue form opens on GitHub with the versions in it.
+  const issue = page.getByRole('link', { name: 'Open an issue on GitHub' });
+  await expect(issue).toHaveAttribute(
+    'href',
+    /github\.com\/DjLeChuck\/kinoshelf\/issues\/new\?body=/,
+  );
+  await expect(issue).toHaveAttribute('target', '_blank');
+});

@@ -1,5 +1,6 @@
 <script lang="ts">
   import Link from '../components/Link.svelte';
+  import SystemDiagnostic from '../components/SystemDiagnostic.svelte';
   import SystemHealth from '../components/SystemHealth.svelte';
   import SystemLogs from '../components/SystemLogs.svelte';
   import SystemTmdb from '../components/SystemTmdb.svelte';
@@ -7,8 +8,7 @@
   import { router } from '../lib/router.svelte.js';
   import { oneOf } from '../lib/routes.js';
 
-  // The diagnostic archive joins them last: Health, Logs, TMDB, Diagnostic.
-  const TABS = ['health', 'logs', 'tmdb'] as const;
+  const TABS = ['health', 'logs', 'tmdb', 'diagnostic'] as const;
   const tab = $derived(oneOf(router.query.get('tab'), TABS) ?? 'health');
 </script>
 
@@ -38,6 +38,8 @@
       <SystemHealth />
     {:else if tab === 'tmdb'}
       <SystemTmdb />
+    {:else if tab === 'diagnostic'}
+      <SystemDiagnostic />
     {:else}
       <SystemLogs />
     {/if}

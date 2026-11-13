@@ -73,6 +73,7 @@ describe('catalogs', () => {
       'web.logs.recorded.debug',
       'web.logs.recorded.info',
       'web.system.tab.tmdb',
+      'web.system.tab.diagnostic',
       'web.health.state.ok',
       'web.health.card.ffprobe',
       'web.health.card.media',

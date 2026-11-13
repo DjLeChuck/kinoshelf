@@ -280,6 +280,28 @@ export const en = {
   'web.system.tabs': 'Sections of the System page',
   'web.system.tab.logs': 'Logs',
   'web.system.tab.tmdb': 'TMDB',
+  'web.system.tab.diagnostic': 'Diagnostic',
+  'web.diagnostic.title': 'Diagnostic archive',
+  'web.diagnostic.intro': 'One file to attach to a bug report, made on the spot. It holds:',
+  'web.diagnostic.file.summary': 'the versions (Kinoshelf, Node, ffprobe) and the system;',
+  'web.diagnostic.file.config': 'the configuration, without its secrets;',
+  'web.diagnostic.file.health': 'the state of health, as the Health tab shows it;',
+  'web.diagnostic.file.tmdb': 'the TMDB request counts of the last 7 days;',
+  'web.diagnostic.file.logs': 'the {count} newest log lines.',
+  'web.diagnostic.secrets':
+    'API keys, tokens and the secret part of webhook addresses are never in it: the logs are wiped when a line is written, and the configuration only says whether a secret is set. File names and folders are, though: have a look before sharing it publicly.',
+  'web.diagnostic.download': 'Download the diagnostic archive',
+  'web.diagnostic.config.title': 'Configuration in the archive',
+  'web.diagnostic.config.hint':
+    'Exactly what config.json holds. A secret only says whether it is set.',
+  'web.diagnostic.config.show': 'Show the configuration',
+  'web.diagnostic.issue.title': 'Report a problem',
+  'web.diagnostic.issue.hint': 'Copy these versions into the report, and attach the archive.',
+  'web.diagnostic.issue.reminder':
+    'Please attach the diagnostic archive (System, Diagnostic) and describe what you expected and what happened.',
+  'web.diagnostic.issue.open': 'Open an issue on GitHub',
+  'web.diagnostic.copy': 'Copy the versions',
+  'web.diagnostic.copied': 'Copied',
   'web.system.tab.health': 'Health',
   'web.health.summary.ok': 'Everything is in order.',
   'web.health.summary.warn':
