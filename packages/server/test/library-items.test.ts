@@ -940,6 +940,34 @@ describe('the lookups of the item store', () => {
     expect(store.shows('shows', { state: 'rename', limit: 50, offset: 0 }).items).toHaveLength(1);
   });
 
+  it('finds the works holding a file of a state or matching a search once, not per lead row', () => {
+    const database = migrated(new Database(':memory:'));
+    const store = new LibraryItemStore(database);
+    store.put(film('/a.mkv', 'Alien', 1, { nfo: false }));
+    const sql: string[] = [];
+    const prepare = database.prepare.bind(database) as (text: string) => unknown;
+    (database as unknown as { prepare: (text: string) => unknown }).prepare = (text) => {
+      sql.push(text);
+      return prepare(text);
+    };
+    store.page('films', { filter: 'missing-nfo', limit: 50, offset: 0 });
+    store.page('films', { query: 'ali', limit: 50, offset: 0 });
+    store.page('films', { filter: 'rename', query: 'ali', limit: 50, offset: 0 });
+    (database as unknown as { prepare: unknown }).prepare = prepare;
+
+    const lists = sql.filter((text) => text.includes('lead_row'));
+    expect(lists).toHaveLength(2 * 3);
+    for (const text of lists) {
+      const plan = database
+        .prepare(`EXPLAIN QUERY PLAN ${text}`)
+        .all(...(text.match(/\?/g) ?? []).map(() => null))
+        .map((step) => (step as { detail: string }).detail)
+        .join('\n');
+      // An EXISTS over the work's files for each lead row cost 10 ms a statement at 20 000 files.
+      expect(plan, text).not.toMatch(/EXISTS|CORRELATED/);
+    }
+  });
+
   it('searches the title and the file name from a stored key, never calling sort_key', () => {
     const database = migrated(new Database(':memory:'));
     const store = new LibraryItemStore(database);

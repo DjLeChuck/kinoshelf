@@ -629,22 +629,31 @@ export class LibraryItemStore {
     );
     const matching = options.query ? [contains(sortKey(options.query))] : [];
     const params: (string | number)[] = [libraryId, ...(collection?.params ?? []), ...matching];
+    // "Several versions" alone keeps nearly every file in play, where `IN` costs more than looking up
+    // each lead row's own files (measured: 37 ms against 50 at 20 000 files).
+    const correlated = options.multi === true && !options.filter && !options.query;
+    // The list's own: the lead row's collection, then the works holding a file that matches (`leadWhere`).
+    const leadParams: (string | number)[] = [
+      libraryId,
+      ...(leadCollection?.params ?? []),
+      ...(conditions.length > 0 && !correlated ? [libraryId, ...matching] : []),
+    ];
     // `where` over the files, for the groups of a validation; the list itself reads one row per work.
-    const leads = leadWhere(conditions.join(' AND '), leadCollection?.sql);
+    const leads = leadWhere(conditions.join(' AND '), leadCollection?.sql, correlated);
     const order = itemOrder(options.sort ?? 'title', options.dir);
     const total =
       this.database
         .prepare<unknown[], { total: number }>(
           `SELECT COUNT(*) AS total FROM library_items AS lead_row WHERE ${leads}`,
         )
-        .get(...params)?.total ?? 0;
+        .get(...leadParams)?.total ?? 0;
     const groups = this.groupsWhere(where, params);
     const keys = this.database
       .prepare<unknown[], { key: string }>(
         `SELECT work_key AS key FROM library_items AS lead_row WHERE ${leads}
          ORDER BY ${order} LIMIT ? OFFSET ?`,
       )
-      .all(...params, options.limit, options.offset)
+      .all(...leadParams, options.limit, options.offset)
       .map(({ key }) => key);
     const rows = this.database
       .prepare<[string, string], Row & { key: string; lead: number; sort: string }>(
@@ -1124,16 +1133,20 @@ const searchKeyOf = (item: Pick<LibraryItem, 'path' | 'title'>): string =>
 
 /**
  * The condition of a list read on the first file of each work (`lead_row`). A filter keeps the
- * work when **any** of its files matches it, hence the `EXISTS` over the work: the inner table is
- * not aliased, since `FILTER_SQL` names `library_items`.
+ * work when **any** of its files matches it: the works holding one are found once (`IN`, which
+ * takes `library_id` again as its first parameter, then the filter's), where an `EXISTS` looked up
+ * the work's files for each lead row (`correlated`, for the filter that keeps most files). The inner
+ * table is not aliased, since `FILTER_SQL` names `library_items`.
  */
-const leadWhere = (rowFilter: string, leadFilter?: string): string =>
+const leadWhere = (rowFilter: string, leadFilter?: string, correlated = false): string =>
   `library_id = ? AND lead = 1${leadFilter ? ` AND ${leadFilter}` : ''}${
-    rowFilter
-      ? ` AND EXISTS (SELECT 1 FROM library_items
-           WHERE library_items.library_id = lead_row.library_id
-             AND library_items.work_key = lead_row.work_key AND ${rowFilter})`
-      : ''
+    !rowFilter
+      ? ''
+      : correlated
+        ? ` AND EXISTS (SELECT 1 FROM library_items
+             WHERE library_items.library_id = lead_row.library_id
+               AND library_items.work_key = lead_row.work_key AND ${rowFilter})`
+        : ` AND work_key IN (SELECT work_key FROM library_items WHERE library_id = ? AND ${rowFilter})`
   }`;
 
 /** How a list is ordered: by title (the default), by collection, or by year. */
