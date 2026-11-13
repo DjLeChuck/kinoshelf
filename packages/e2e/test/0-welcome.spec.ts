@@ -19,7 +19,16 @@ test('welcomes a new install, remembers a skipped step and ends on the libraries
   await expect(progress).toHaveAttribute('aria-valuenow', '2');
 
   // The next step asks for what it needs on the spot, without a trip to the settings.
-  await page.getByLabel('Address').fill('http://plex.invalid:32400');
+  // Signing in with Plex is offered here as in the settings, and replaces the token.
+  const approval = page.waitForEvent('popup');
+  await page.getByRole('button', { name: 'Sign in with Plex' }).click();
+  await expect((await approval).getByRole('heading', { name: 'Kinoshelf approved' })).toBeVisible();
+  await expect(page.getByText('Signed in with Plex. The access renews itself.')).toBeVisible();
+  await expect(page.getByLabel('Or paste a token')).toHaveCount(0);
+  await page.getByLabel('Server of this account').selectOption('Living room');
+  await expect(page.getByLabel('Address', { exact: true })).toHaveValue(
+    'http://192.168.1.10:32400',
+  );
   await page.getByRole('button', { name: 'Save', exact: true }).click();
   await expect(progress).toHaveAttribute('aria-valuenow', '3');
 
@@ -31,12 +40,20 @@ test('welcomes a new install, remembers a skipped step and ends on the libraries
   // A step already settled can be changed: its form starts from what is saved.
   const server = page.getByRole('listitem').filter({ hasText: 'Connect Plex or Jellyfin' });
   await server.getByRole('button', { name: 'Edit' }).click();
-  await expect(server.getByLabel('Address')).toHaveValue('http://plex.invalid:32400');
-  await server.getByLabel('Address').fill('http://plex.invalid:32401');
+  await expect(server.getByText('Signed in with Plex. The access renews itself.')).toBeVisible();
+  await expect(server.getByLabel('Address', { exact: true })).toHaveValue(
+    'http://192.168.1.10:32400',
+  );
+  // Signed out, the token field is back, and the account is left as the settings' test expects it.
+  await server.getByRole('button', { name: 'Sign out' }).click();
+  await expect(server.getByLabel('Or paste a token')).toBeVisible();
+  await server.getByLabel('Address', { exact: true }).fill('http://plex.invalid:32401');
   await server.getByRole('button', { name: 'Save', exact: true }).click();
-  await expect(server.getByLabel('Address')).toHaveCount(0);
+  await expect(server.getByLabel('Address', { exact: true })).toHaveCount(0);
   await server.getByRole('button', { name: 'Edit' }).click();
-  await expect(server.getByLabel('Address')).toHaveValue('http://plex.invalid:32401');
+  await expect(server.getByLabel('Address', { exact: true })).toHaveValue(
+    'http://plex.invalid:32401',
+  );
   await server.getByRole('button', { name: 'Cancel' }).click();
   await expect(progress).toHaveAttribute('aria-valuenow', '3');
 

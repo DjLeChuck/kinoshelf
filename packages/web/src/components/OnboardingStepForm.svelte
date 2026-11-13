@@ -18,6 +18,7 @@
   import { shell } from '../lib/shell-state.svelte.js';
   import Link from './Link.svelte';
   import PathField from './PathField.svelte';
+  import PlexSignIn from './PlexSignIn.svelte';
   import ProfileChoice from './ProfileChoice.svelte';
 
   /**
@@ -36,6 +37,9 @@
   let kind = $state<'plex' | 'jellyfin'>('plex');
   let url = $state('');
   let token = $state('');
+  let account = $state<Settings['plexAccount']>(null);
+  // Signed in, the typed token is replaced; it stays the way in for anyone who prefers it.
+  const signedIn = $derived(kind === 'plex' && account === 'signed-in');
   let folder = $state('');
   let seriesFolder = $state('');
   let libraryName = $state('');
@@ -65,6 +69,7 @@
         kind = settings.plex ? 'plex' : 'jellyfin';
         url = server.url;
       }
+      account = settings.plexAccount;
     } else if (step === 'destination') {
       naming = settings?.processing.naming ?? DEFAULT_NAMING;
       metadata = settings?.processing.metadata ?? DEFAULT_METADATA;
@@ -237,16 +242,23 @@
         bind:value={url}
       />
     </div>
-    <div class="field">
-      <label for="ob-token">{t('web.settings.server.token')}</label>
-      <input
-        id="ob-token"
-        class="input mono"
-        type="password"
-        autocomplete="off"
-        bind:value={token}
-      />
-    </div>
+    {#if kind === 'plex'}
+      <PlexSignIn bind:account bind:url />
+    {/if}
+    {#if !signedIn}
+      <div class="field">
+        <label for="ob-token">
+          {kind === 'plex' ? t('web.settings.plex.token.alt') : t('web.settings.server.token')}
+        </label>
+        <input
+          id="ob-token"
+          class="input mono"
+          type="password"
+          autocomplete="off"
+          bind:value={token}
+        />
+      </div>
+    {/if}
   {:else}
     {#if step === 'destination'}
       <div class="field">
