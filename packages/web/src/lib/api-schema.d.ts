@@ -4933,7 +4933,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Whether any folder is watched */
+        /** What the watcher is doing */
         get: {
             parameters: {
                 query?: never;
@@ -4952,6 +4952,22 @@ export interface paths {
                         "application/json": {
                             /** @description At least one library is watched. */
                             enabled: boolean;
+                            /** @enum {string} */
+                            mode: "events" | "poll";
+                            folders: {
+                                path: string;
+                                libraryId: string | null;
+                                /** @description False when the folder is missing or unreadable (an unmounted share). */
+                                available: boolean;
+                            }[];
+                            /** @description Releases still being written. */
+                            pending: number;
+                            /** @description When the last scan ended. */
+                            lastScanAt: string | null;
+                            /** @description When the periodic pass (safety net or poll) runs next. */
+                            nextScanAt: string | null;
+                            /** @description Seconds between two such passes. */
+                            intervalSeconds: number | null;
                         };
                     };
                 };

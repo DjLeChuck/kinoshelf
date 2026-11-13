@@ -61,6 +61,12 @@ export interface WatchStatus {
   readonly folders: readonly FolderStatus[];
   /** Releases seen but not yet submitted: still being written, or settling. */
   readonly pending: number;
+  /** When the last scan ended (any cause: event, periodic pass, a click), ISO 8601. */
+  readonly lastScanAt: string | null;
+  /** When the periodic pass runs next: the safety net, or the poll. `null` when stopped. */
+  readonly nextScanAt: string | null;
+  /** Seconds between two periodic passes. */
+  readonly intervalSeconds: number | null;
 }
 
 export interface ScanResult {
@@ -111,6 +117,9 @@ export class FolderWatcher {
   private chain: Promise<unknown> = Promise.resolve();
   private available = new Map<string, boolean>();
   private pending = 0;
+  private lastScan: number | undefined;
+  /** The periodic pass: its period and when it fires next (timers do not say). */
+  private period: { ms: number; next: number } | undefined;
 
   constructor(private readonly deps: WatcherDeps) {}
 
@@ -121,15 +130,16 @@ export class FolderWatcher {
     this.available = new Map();
     if (!config) {
       this.pending = 0;
+      this.lastScan = undefined;
       return;
     }
     const pollMs = (config.pollSeconds ?? 0) * 1000;
     if (pollMs > 0) {
       this.polling = true;
-      this.timer = setInterval(() => void this.scan(), pollMs).unref();
+      this.timer = this.every(pollMs);
     } else {
       this.listen(config);
-      this.safetyTimer = setInterval(() => void this.scan(), SAFETY_SCAN_MS).unref();
+      this.safetyTimer = this.every(SAFETY_SCAN_MS);
     }
     // What arrived while the server was down.
     void this.scan();
@@ -145,7 +155,25 @@ export class FolderWatcher {
         available: this.available.get(path) ?? false,
       })),
       pending: this.pending,
+      lastScanAt: this.lastScan === undefined ? null : new Date(this.lastScan).toISOString(),
+      nextScanAt: this.period ? new Date(this.period.next).toISOString() : null,
+      intervalSeconds: this.period ? this.period.ms / 1000 : null,
     };
+  }
+
+  /** A periodic scan that remembers when it fires next, which `status` reports. */
+  private every(ms: number): NodeJS.Timeout {
+    // The periodic pass is the one the person can wait for: the fallback poll (below) replaces
+    // the safety net only when it is the faster one.
+    if (this.period === undefined || ms < this.period.ms) {
+      this.period = { ms, next: this.now() + ms };
+    }
+    return setInterval(() => {
+      if (this.period?.ms === ms) {
+        this.period.next = this.now() + ms;
+      }
+      void this.scan();
+    }, ms).unref();
   }
 
   /** One scan at a time: two at once would submit the same release twice. */
@@ -176,6 +204,7 @@ export class FolderWatcher {
     clearTimeout(this.wake);
     this.timer = this.safetyTimer = this.wake = undefined;
     this.polling = false;
+    this.period = undefined;
   }
 
   /** A burst of events (a release being written) leads to one scan, once it goes quiet. */
@@ -207,7 +236,7 @@ export class FolderWatcher {
       return;
     }
     this.deps.log.warn(`Cannot watch ${folder} for changes: scanning it every minute instead.`);
-    this.timer = setInterval(() => void this.scan(), FALLBACK_POLL_MS).unref();
+    this.timer = this.every(FALLBACK_POLL_MS);
   }
 
   private async scanFolders(force: boolean, all: boolean): Promise<ScanResult> {
@@ -222,6 +251,7 @@ export class FolderWatcher {
       }
     }
     this.pending = pending;
+    this.lastScan = this.now();
     // Files still settling are not announced by any event: look again once they might be done.
     if (pending > 0 && !this.polling) {
       this.schedule(Math.max(5, config?.settleSeconds ?? DEFAULT_SETTLE_SECONDS) * 1000);

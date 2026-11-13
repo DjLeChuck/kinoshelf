@@ -222,6 +222,8 @@ describe('FolderWatcher', () => {
     watchers.push(watcher);
     watcher.configure({ folders: [folder], settleSeconds: 0 });
     expect(watcher.status().mode).toBe('events');
+    // The safety net, not a poll: ten minutes, the figure the Health card shows.
+    expect(watcher.status().intervalSeconds).toBe(600);
     await watcher.idle();
     await put(join(folder, 'Dune.2021.mkv'));
     await vi.waitFor(
@@ -230,6 +232,23 @@ describe('FolderWatcher', () => {
       },
       { timeout: 5000 },
     );
+  });
+
+  it('says when it last looked and when the periodic pass runs next', async () => {
+    const { watcher } = await setup({ pollSeconds: 900 });
+    expect(watcher.status()).toMatchObject({
+      mode: 'poll',
+      lastScanAt: new Date(NOW).toISOString(),
+      nextScanAt: new Date(NOW + 900_000).toISOString(),
+      intervalSeconds: 900,
+    });
+
+    watcher.configure(undefined);
+    expect(watcher.status()).toMatchObject({
+      lastScanAt: null,
+      nextScanAt: null,
+      intervalSeconds: null,
+    });
   });
 
   it('does nothing once configured away', async () => {
@@ -315,7 +334,12 @@ describe('the watch API', () => {
       apply: true,
     });
     expect(await readFile(join(configDir, 'config.yaml'), 'utf8')).toContain('apply: true');
-    expect((await h.request('GET', '/api/watch')).json()).toEqual({ enabled: true });
+    expect((await h.request('GET', '/api/watch')).json()).toMatchObject({
+      enabled: true,
+      mode: 'poll',
+      intervalSeconds: 3600,
+      folders: [{ path: folder, libraryId: 'films' }],
+    });
 
     // `folders` is no longer a setting: libraries own it.
     expect((await patch({ watch: { folders: [folder] } })).statusCode).toBe(400);

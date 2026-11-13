@@ -5,8 +5,41 @@ import type { FolderWatcher } from './watcher.js';
 
 const statusSchema = {
   type: 'object',
-  required: ['enabled'],
-  properties: { enabled: { type: 'boolean', description: 'At least one library is watched.' } },
+  required: [
+    'enabled',
+    'mode',
+    'folders',
+    'pending',
+    'lastScanAt',
+    'nextScanAt',
+    'intervalSeconds',
+  ],
+  properties: {
+    enabled: { type: 'boolean', description: 'At least one library is watched.' },
+    mode: { type: 'string', enum: ['events', 'poll'] },
+    folders: {
+      type: 'array',
+      items: {
+        type: 'object',
+        required: ['path', 'libraryId', 'available'],
+        properties: {
+          path: { type: 'string' },
+          libraryId: { type: ['string', 'null'] },
+          available: {
+            type: 'boolean',
+            description: 'False when the folder is missing or unreadable (an unmounted share).',
+          },
+        },
+      },
+    },
+    pending: { type: 'integer', description: 'Releases still being written.' },
+    lastScanAt: { type: ['string', 'null'], description: 'When the last scan ended.' },
+    nextScanAt: {
+      type: ['string', 'null'],
+      description: 'When the periodic pass (safety net or poll) runs next.',
+    },
+    intervalSeconds: { type: ['integer', 'null'], description: 'Seconds between two such passes.' },
+  },
 } as const;
 
 /** What the watcher is doing, and the manual "check now" for when a person knows better. */
@@ -15,11 +48,11 @@ export function registerWatchRoutes(api: FastifyInstance, watcher: FolderWatcher
     '/api/watch',
     {
       schema: {
-        summary: 'Whether any folder is watched',
+        summary: 'What the watcher is doing',
         response: { 200: statusSchema, 401: errorSchema },
       },
     },
-    () => ({ enabled: watcher.status().enabled }),
+    () => watcher.status(),
   );
 
   api.post(
