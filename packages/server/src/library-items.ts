@@ -195,6 +195,12 @@ interface ShowFilter {
 }
 
 export class LibraryItemStore {
+  private readonly generations = new Map<string, number>();
+  private readonly memoized = new Map<
+    string,
+    { generation: number; values: Map<string, unknown> }
+  >();
+
   constructor(private readonly database: Database) {
     // SQLite's lower() only folds ASCII, so "Ça" would sort after "Z": the key drops accents too.
     database.function('sort_key', { deterministic: true }, (value: unknown) =>
@@ -280,6 +286,7 @@ export class LibraryItemStore {
 
   /** The movies' collections were rewritten (an override, a scan): their rows follow. */
   refreshMovies(libraryId: string, movieIds: readonly number[]): void {
+    this.changed(libraryId);
     this.database.transaction(() => {
       this.refreshCollections(libraryId, ' AND work_key IN (SELECT value FROM json_each(?))', [
         JSON.stringify(movieIds.map((id) => `m${String(id)}`)),
@@ -304,6 +311,7 @@ export class LibraryItemStore {
    * `folder` when one folder was scanned (a file, when that is what was).
    */
   replace(libraryId: string, items: readonly LibraryItem[], folder?: string): void {
+    this.changed(libraryId);
     // A range on the primary key: every path under `folder/` sorts between `folder/` and `folder0`.
     const scope =
       folder === undefined
@@ -364,6 +372,7 @@ export class LibraryItemStore {
 
   /** Moves a row to another path, probe included: it is the same file, and its date will tell. */
   rename(libraryId: string, from: string, to: string): void {
+    this.changed(libraryId);
     this.database.transaction(() => {
       const touched = this.workKeysAt(libraryId, ' AND path IN (?, ?)', [from, to]);
       this.database
@@ -420,6 +429,7 @@ export class LibraryItemStore {
   }
 
   setProbe(libraryId: string, path: string, probe: Probe): void {
+    this.changed(libraryId);
     this.database
       .prepare(
         `UPDATE library_items SET ${PROBE_ASSIGNMENTS}
@@ -475,6 +485,7 @@ export class LibraryItemStore {
   }
 
   put(item: LibraryItem): void {
+    this.changed(item.libraryId);
     this.database.transaction(() => {
       // The row may change work (a movie matched to another film, a file settled): both are regrouped.
       const touched = this.workKeysAt(item.libraryId, ' AND path = ?', [item.path]);
@@ -498,6 +509,7 @@ export class LibraryItemStore {
    * deleted or pointed at another folder must not find them again under the same id.
    */
   forget(libraryId: string): void {
+    this.changed(libraryId);
     this.database.transaction(() => {
       for (const table of [
         'library_items',
@@ -511,6 +523,7 @@ export class LibraryItemStore {
   }
 
   remove(libraryId: string, path: string): void {
+    this.changed(libraryId);
     this.database.transaction(() => {
       const touched = this.workKeysAt(libraryId, ' AND path = ?', [path]);
       this.database
@@ -714,7 +727,43 @@ export class LibraryItemStore {
 
   /** What each filter holds, for the tabs of the page. */
   counts(libraryId: string, series = false): ItemCounts {
-    const counts = { all: 0 } as ItemCounts;
+    // What the rows alone give is kept until they change; the rest reads other tables, which other
+    // stores write (the files waiting for a person, the episodes a show lacks, the show's files).
+    const counts = {
+      ...this.memo(libraryId, series ? 'counts:series' : 'counts:movies', () =>
+        this.countsOfRows(libraryId, series),
+      ),
+    };
+    if (series) {
+      // The files that wait for a person belong to no show (they are one node of the tree): the
+      // tabs count them as that node does, a release once.
+      for (const filter of ['review', 'unrecognized'] as const) {
+        counts[filter] = this.groupsWhere(`library_id = ? AND ${FILTER_SQL[filter]}`, [libraryId]);
+      }
+    }
+    // Counted in shows, not files: it is the list of shows that this filter narrows.
+    counts['missing-episodes'] = this.countShows(libraryId, { missing: true });
+    counts['missing-show-files'] = this.countShows(libraryId, { incomplete: true });
+    return counts;
+  }
+
+  /** The counts that depend on `library_items` only (the two the files waiting for a person need are set apart). */
+  private countsOfRows(libraryId: string, series: boolean): ItemCounts {
+    const counts = { all: 0, 'missing-episodes': 0, 'missing-show-files': 0 } as ItemCounts;
+    if (series) {
+      // A series library reads as a tree of shows, so its tabs count shows.
+      counts.all = this.countShows(libraryId, {});
+      for (const filter of ITEM_FILTERS) {
+        counts[filter] =
+          filter === 'review' || filter === 'unrecognized'
+            ? 0
+            : filter === 'multi-version'
+              ? this.countShows(libraryId, { multi: true })
+              : this.countShows(libraryId, { state: filter });
+      }
+      counts['incomplete-versions'] = this.countShows(libraryId, { state: 'incomplete-versions' });
+      return counts;
+    }
     const count = (extra: string): number =>
       this.database
         .prepare<[string], { total: number }>(
@@ -725,27 +774,8 @@ export class LibraryItemStore {
     for (const filter of ITEM_FILTERS) {
       counts[filter] = count(FILTER_SQL[filter]);
     }
-    if (series) {
-      // A series library reads as a tree of shows, so its tabs count shows. The files that wait
-      // for a person belong to no show (they are one node of the tree): the tabs count them as
-      // that node does, a release once.
-      counts.all = this.countShows(libraryId, {});
-      for (const filter of ITEM_FILTERS) {
-        counts[filter] =
-          filter === 'review' || filter === 'unrecognized'
-            ? this.groupsWhere(`library_id = ? AND ${FILTER_SQL[filter]}`, [libraryId])
-            : filter === 'multi-version'
-              ? this.countShows(libraryId, { multi: true })
-              : this.countShows(libraryId, { state: filter });
-      }
-    }
-    // Counted in shows, not files: it is the list of shows that this filter narrows.
-    counts['missing-episodes'] = this.countShows(libraryId, { missing: true });
-    counts['missing-show-files'] = this.countShows(libraryId, { incomplete: true });
     // Versions are a matter of shows: a movie is never short of one.
-    counts['incomplete-versions'] = series
-      ? this.countShows(libraryId, { state: 'incomplete-versions' })
-      : 0;
+    counts['incomplete-versions'] = 0;
     return counts;
   }
 
@@ -825,6 +855,35 @@ export class LibraryItemStore {
    * holds. Read from the files of the library: the sets are small, the rule is not SQL's.
    */
   private versionedShows(libraryId: string): { multi: number[]; incomplete: number[] } {
+    return this.memo(libraryId, 'versioned', () => this.readVersionedShows(libraryId));
+  }
+
+  /**
+   * Every write to a library's rows goes through this store, so a counter per library says whether
+   * what was derived from them (the shows held in several versions, the counts) is still true. A
+   * list reads those several times (the page, its total, the counts), and each costs a pass over
+   * every row.
+   */
+  private changed(libraryId: string): void {
+    this.generations.set(libraryId, (this.generations.get(libraryId) ?? 0) + 1);
+  }
+
+  private memo<T>(libraryId: string, key: string, compute: () => T): T {
+    const generation = this.generations.get(libraryId) ?? 0;
+    let entry = this.memoized.get(libraryId);
+    if (entry?.generation !== generation) {
+      entry = { generation, values: new Map() };
+      this.memoized.set(libraryId, entry);
+    }
+    if (entry.values.has(key)) {
+      return entry.values.get(key) as T;
+    }
+    const value = compute();
+    entry.values.set(key, value);
+    return value;
+  }
+
+  private readVersionedShows(libraryId: string): { multi: number[]; incomplete: number[] } {
     const rows = this.database
       .prepare<[string], Row>(
         `SELECT ${COLUMNS} FROM library_items

@@ -811,6 +811,54 @@ describe('the lookups of the item store', () => {
     expect(titles('missing', 'asc')).toEqual(['Severance', 'The Expanse', 'Foundation', 'Andor']);
   });
 
+  it('reads the shows held in several versions once, until a row changes', () => {
+    const database = migrated(new Database(':memory:'));
+    const store = new LibraryItemStore(database);
+    // The size is read from the name: two sizes of one episode are two versions.
+    const episode = (path: string): LibraryItem => row(path, { tmdbId: 7 });
+    store.put(episode('/lib/A/1 - 1080p.mkv'));
+    let reads = 0;
+    const prepare = database.prepare.bind(database) as (text: string) => unknown;
+    (database as unknown as { prepare: (text: string) => unknown }).prepare = (text) => {
+      if (text.includes("library_id = ? AND kind = 'series' AND tmdb_id IS NOT NULL")) {
+        reads += 1;
+      }
+      return prepare(text);
+    };
+    const multi = (): number => store.shows('shows', { multi: true, limit: 50, offset: 0 }).total;
+    expect(multi()).toBe(0);
+    store.counts('shows', true);
+    store.counts('shows', true);
+    expect(reads).toBe(1);
+
+    // A second version arrives: the answer follows it.
+    store.put(episode('/lib/A/1 - 2160p.mkv'));
+    expect(multi()).toBe(1);
+    expect(reads).toBe(2);
+    store.remove('shows', '/lib/A/1 - 2160p.mkv');
+    expect(multi()).toBe(0);
+    (database as unknown as { prepare: unknown }).prepare = prepare;
+  });
+
+  it('keeps the counts of the rows until a row changes, and never hands out the kept object', () => {
+    const store = new LibraryItemStore(migrated(new Database(':memory:')));
+    store.put(row('/lib/A/1.mkv', { tmdbId: 1, nfo: false }));
+    const first = store.counts('shows', true);
+    expect(first).toMatchObject({ all: 1, 'missing-nfo': 1 });
+    // A caller changing what it was given must not change what the next one gets.
+    (first as { all: number }).all = 99;
+    expect(store.counts('shows', true).all).toBe(1);
+
+    store.put(row('/lib/B/1.mkv', { tmdbId: 2, nfo: true }));
+    expect(store.counts('shows', true)).toMatchObject({ all: 2, 'missing-nfo': 1 });
+    store.put(row('/lib/B/1.mkv', { tmdbId: 2, nfo: false }));
+    expect(store.counts('shows', true)).toMatchObject({ all: 2, 'missing-nfo': 2 });
+    store.remove('shows', '/lib/A/1.mkv');
+    expect(store.counts('shows', true)).toMatchObject({ all: 1, 'missing-nfo': 1 });
+    store.forget('shows');
+    expect(store.counts('shows', true).all).toBe(0);
+  });
+
   it('keeps the works held in several versions that also match a state', () => {
     const store = new LibraryItemStore(migrated(new Database(':memory:')));
     store.put(film('/a/1080p.mkv', 'Alien', 1, { nfo: false }));
