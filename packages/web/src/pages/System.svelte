@@ -1,14 +1,15 @@
 <script lang="ts">
   import Link from '../components/Link.svelte';
+  import SystemHealth from '../components/SystemHealth.svelte';
   import SystemLogs from '../components/SystemLogs.svelte';
   import SystemTmdb from '../components/SystemTmdb.svelte';
   import { t } from '../lib/i18n.svelte.js';
   import { router } from '../lib/router.svelte.js';
   import { oneOf } from '../lib/routes.js';
 
-  // Health and the diagnostic archive join them in order: Health, Logs, TMDB, Diagnostic.
-  const TABS = ['logs', 'tmdb'] as const;
-  const tab = $derived(oneOf(router.query.get('tab'), TABS) ?? 'logs');
+  // The diagnostic archive joins them last: Health, Logs, TMDB, Diagnostic.
+  const TABS = ['health', 'logs', 'tmdb'] as const;
+  const tab = $derived(oneOf(router.query.get('tab'), TABS) ?? 'health');
 </script>
 
 <div class="page">
@@ -23,7 +24,7 @@
   <nav class="tabs" aria-label={t('web.system.tabs')}>
     {#each TABS as id (id)}
       <Link
-        href={id === 'logs' ? '/system' : `/system?tab=${id}`}
+        href={id === 'health' ? '/system' : `/system?tab=${id}`}
         class="tab"
         aria-current={tab === id ? 'page' : undefined}
       >
@@ -33,7 +34,9 @@
   </nav>
 
   <section aria-label={t(`web.system.tab.${tab}`)}>
-    {#if tab === 'tmdb'}
+    {#if tab === 'health'}
+      <SystemHealth />
+    {:else if tab === 'tmdb'}
       <SystemTmdb />
     {:else}
       <SystemLogs />

@@ -301,7 +301,7 @@
             </li>
           {/each}
         </ul>
-        <Link href="/system?component=tmdb&level=warn">{t('web.tmdb.errors.logs')} →</Link>
+        <Link href="/system?tab=logs&component=tmdb&level=warn">{t('web.tmdb.errors.logs')} →</Link>
       {/if}
     </section>
 
