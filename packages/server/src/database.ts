@@ -458,6 +458,39 @@ export const SERVER_MIGRATIONS: readonly { readonly name: string; readonly sql: 
       ) WITHOUT ROWID;
       CREATE INDEX library_shows_sort ON library_shows (library_id, sort, tmdb_id);`,
   },
+  {
+    // The same for a movie library: one row per list entry (a movie whatever its versions, a file
+    // nobody identified on its own) with what a list orders, filters and counts by: the lead file's
+    // title, year and path, the flags of its files, its collection. A cache of `library_items`,
+    // rebuilt by `LibraryItemStore` (the first read after a start, then the works a write touched).
+    // It replaces `lead`, the mark on each work's first file, which only served to find them.
+    name: 'server:035-library-works',
+    sql: `
+      CREATE TABLE library_works (
+        library_id TEXT NOT NULL,
+        work_key TEXT NOT NULL,
+        lead_path TEXT NOT NULL,
+        title TEXT,
+        year INTEGER,
+        sort TEXT,
+        n_files INTEGER NOT NULL,
+        has_review INTEGER NOT NULL,
+        has_rename INTEGER NOT NULL,
+        has_unrecognized INTEGER NOT NULL,
+        has_missing_nfo INTEGER NOT NULL,
+        has_missing_artwork INTEGER NOT NULL,
+        multi INTEGER NOT NULL,
+        collection_key TEXT,
+        collection_name TEXT,
+        collection_sort TEXT,
+        collection_total INTEGER,
+        PRIMARY KEY (library_id, work_key)
+      ) WITHOUT ROWID;
+      CREATE INDEX library_works_sort ON library_works (library_id, sort, lead_path);
+      CREATE INDEX library_works_collection ON library_works (library_id, collection_key);
+      DROP INDEX library_items_lead;
+      ALTER TABLE library_items DROP COLUMN lead;`,
+  },
 ];
 
 /** Opens the single SQLite file of the config directory, shared with the CLI and the cache. */

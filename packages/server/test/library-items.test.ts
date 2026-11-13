@@ -860,6 +860,11 @@ describe('the lookups of the item store', () => {
                collection_total = ? WHERE library_id = 'films' AND tmdb_id IN (1, 2)`,
           )
           .run(total);
+        // The test writes the rows behind the store's back: it is told which works changed.
+        (store as unknown as { staleWork: (id: string, keys: 'all') => void }).staleWork(
+          'films',
+          'all',
+        );
       };
       file(3);
       const titles = (
@@ -903,7 +908,7 @@ describe('the lookups of the item store', () => {
       store.collectionCounts('films');
       (database as unknown as { prepare: unknown }).prepare = prepare;
 
-      const lists = sent.filter((text) => text.includes('lead_row'));
+      const lists = sent.filter((text) => text.includes('FROM library_works'));
       expect(lists.length).toBeGreaterThan(0);
       for (const text of lists) {
         const plan = database
@@ -912,9 +917,9 @@ describe('the lookups of the item store', () => {
           .map((step) => (step as { detail: string }).detail)
           .join('\n');
         // The old shapes: the collected rows searched for each work (EXISTS), and the held count
-        // read from the index of the works, which reads the whole library per row.
-        expect(plan, text).not.toMatch(/EXISTS USING INDEX library_items_collection/);
-        expect(plan, text).not.toMatch(/SEARCH held USING INDEX library_items_work/);
+        // read from an index with no collection to seek, which reads the whole library per row.
+        expect(plan, text).not.toMatch(/EXISTS USING INDEX/);
+        expect(plan, text).not.toMatch(/SCAN held/);
       }
     });
   });
@@ -940,7 +945,7 @@ describe('the lookups of the item store', () => {
     expect(store.shows('shows', { state: 'rename', limit: 50, offset: 0 }).items).toHaveLength(1);
   });
 
-  it('finds the works holding a file of a state or matching a search once, not per lead row', () => {
+  it('reads the flags of the works for a state, and the files once for a search, never per row', () => {
     const database = migrated(new Database(':memory:'));
     const store = new LibraryItemStore(database);
     store.put(film('/a.mkv', 'Alien', 1, { nfo: false }));
@@ -955,7 +960,9 @@ describe('the lookups of the item store', () => {
     store.page('films', { filter: 'rename', query: 'ali', limit: 50, offset: 0 });
     (database as unknown as { prepare: unknown }).prepare = prepare;
 
-    const lists = sql.filter((text) => text.includes('lead_row'));
+    const lists = sql.filter(
+      (text) => text.startsWith('SELECT') && text.includes('FROM library_works'),
+    );
     expect(lists).toHaveLength(2 * 3);
     for (const text of lists) {
       const plan = database
@@ -973,6 +980,7 @@ describe('the lookups of the item store', () => {
     const store = new LibraryItemStore(database);
     store.put(film('/movies/a.mkv', 'Alien', 1, { nfo: false }));
     store.put(film('/movies/Dune.2021.2160p.mkv', 'Dune', 2));
+    store.page('films', { limit: 1, offset: 0 }); // settles the works, which folds a collection's name
     let calls = 0;
     database.function('sort_key', { deterministic: true }, (value: unknown) => {
       calls += 1;
@@ -988,6 +996,58 @@ describe('the lookups of the item store', () => {
     // A folder's name is not a match: "movies" would otherwise list the whole library.
     expect(titles('movies')).toEqual([]);
     expect(calls).toBe(0);
+  });
+
+  it('keeps the rows of its works as a rebuild from the files would, whatever was written', () => {
+    const database = migrated(new Database(':memory:'));
+    const store = new LibraryItemStore(database);
+    const summary = (): unknown[] =>
+      database.prepare('SELECT * FROM library_works ORDER BY library_id, work_key').all();
+    const read = (): void => void store.page('films', { limit: 50, offset: 0 });
+    const rebuilt = (): unknown[] => {
+      (store as unknown as { staleWorks: Map<string, string> }).staleWorks.set('films', 'all');
+      read();
+      return summary();
+    };
+    for (const id of [1, 2, 3]) {
+      store.put(film(`/m/${String(id)}/a.mkv`, `Film ${String(id)}`, id));
+    }
+    read();
+    // Each kind of write, read after each: a state, a second version, a move, a removal, a file settled as
+    // another film, a scan of one folder, and a collection rewritten.
+    store.put(film('/m/1/a.mkv', 'Film 1', 1, { nfo: false, state: 'rename' }));
+    read();
+    expect(summary()).toEqual(rebuilt());
+    store.put(film('/m/2/a - 2160p.mkv', 'Film 2', 2));
+    read();
+    expect(summary()).toEqual(rebuilt());
+    expect(
+      store.page('films', { multi: true, limit: 50, offset: 0 }).items.map((i) => i.tmdbId),
+    ).toEqual([2]);
+    store.rename('films', '/m/3/a.mkv', '/m/3/z.mkv');
+    read();
+    expect(summary()).toEqual(rebuilt());
+    store.put(film('/m/2/a - 2160p.mkv', 'Film 9', 9));
+    read();
+    expect(summary()).toEqual(rebuilt());
+    store.remove('films', '/m/3/z.mkv');
+    read();
+    expect(summary()).toEqual(rebuilt());
+    store.replace('films', [film('/m/1/a.mkv', 'Film 1', 1)], '/m/1');
+    read();
+    expect(summary()).toEqual(rebuilt());
+    database
+      .prepare(
+        `INSERT INTO collections (id, name, overview, parts) VALUES (5, 'Saga', NULL, '[1,2,9]')`,
+      )
+      .run();
+    database
+      .prepare('INSERT INTO movie_collections (movie_id, collection_id) VALUES (1, 5), (9, 5)')
+      .run();
+    store.refreshMovies('films', [1, 9]);
+    read();
+    expect(summary()).toEqual(rebuilt());
+    expect(store.collectionCounts('films')).toMatchObject({ in: 2, incomplete: 2 });
   });
 
   it('keeps the rows of its shows as a rebuild from the files would, whatever was written', () => {
@@ -1203,13 +1263,16 @@ describe('the lookups of the item store', () => {
       ...extra,
     });
 
-  const leadsOf = (database: Database): string[] =>
-    database
-      .prepare<[], { path: string }>(
-        "SELECT path FROM library_items WHERE library_id = 'films' AND lead = 1 ORDER BY sort, path",
+  // The lead of a work is the first of its files in the order of a list: `library_works` holds it, settled by a read.
+  const leadsOf = (database: Database, store: LibraryItemStore): string[] => {
+    store.page('films', { limit: 1, offset: 0 });
+    return database
+      .prepare<[], { lead_path: string }>(
+        "SELECT lead_path FROM library_works WHERE library_id = 'films' ORDER BY sort, lead_path",
       )
       .all()
-      .map(({ path }) => path);
+      .map(({ lead_path }) => lead_path);
+  };
 
   /** EXPLAIN needs a value for each `?`; the plan does not depend on them. */
   const placeholders = (text: string): null[] => (text.match(/\?/g) ?? []).map(() => null);
@@ -1231,9 +1294,10 @@ describe('the lookups of the item store', () => {
     store.counts('films');
     (database as unknown as { prepare: unknown }).prepare = prepare;
 
-    const lists = sql.filter((text) => text.includes('lead_row'));
-    // Two statements per page (total, keys); the tabs' counts name no lead row (they count works).
-    expect(lists).toHaveLength(2 * 4);
+    const lists = sql.filter((text) => text.includes('FROM library_works'));
+    // Two statements per page (total, keys); the tabs' counts are one pass over the works.
+    expect(lists.filter((text) => text.includes('LIMIT'))).toHaveLength(4);
+    expect(lists.filter((text) => text.includes('COUNT(*) AS total'))).toHaveLength(4 + 1);
     for (const text of lists) {
       const plan = database
         .prepare(`EXPLAIN QUERY PLAN ${text}`)
@@ -1242,38 +1306,38 @@ describe('the lookups of the item store', () => {
         .join('\n');
       expect(plan, text).not.toContain('USE TEMP B-TREE FOR ORDER BY');
     }
-    const unfiltered = sql.find((text) => text.includes('ORDER BY sort ASC, path ASC LIMIT'));
+    const unfiltered = sql.find((text) => text.includes('ORDER BY sort ASC, lead_path ASC LIMIT'));
     expect(
       database
         .prepare(`EXPLAIN QUERY PLAN ${unfiltered ?? ''}`)
         .all(...placeholders(unfiltered ?? ''))
         .map((step) => (step as { detail: string }).detail)
         .join('\n'),
-    ).toContain('library_items_lead');
+    ).toContain('library_works_sort');
   });
 
-  it('marks the first file of each work, in the order of a list', () => {
+  it('names the first file of each work as its lead, in the order of a list', () => {
     const database = migrated(new Database(':memory:'));
     const store = new LibraryItemStore(database);
     store.put(film('/b/Zulu.mkv', 'Zulu', 1));
     store.put(film('/c/Zulu - 2160p.mkv', 'Zulu', 1));
-    expect(leadsOf(database)).toEqual(['/b/Zulu.mkv']);
+    expect(leadsOf(database, store)).toEqual(['/b/Zulu.mkv']);
 
     // A second version that sorts before the first takes the lead.
     store.put(film('/a/Zulu - 1080p.mkv', 'Zulu', 1));
-    expect(leadsOf(database)).toEqual(['/a/Zulu - 1080p.mkv']);
+    expect(leadsOf(database, store)).toEqual(['/a/Zulu - 1080p.mkv']);
 
     // Removing the lead hands it to the next version.
     store.remove('films', '/a/Zulu - 1080p.mkv');
-    expect(leadsOf(database)).toEqual(['/b/Zulu.mkv']);
+    expect(leadsOf(database, store)).toEqual(['/b/Zulu.mkv']);
 
     // A file that is moved keeps one lead per work.
     store.rename('films', '/b/Zulu.mkv', '/d/Zulu.mkv');
-    expect(leadsOf(database)).toEqual(['/c/Zulu - 2160p.mkv']);
+    expect(leadsOf(database, store)).toEqual(['/c/Zulu - 2160p.mkv']);
 
     // A file settled elsewhere leaves its work, and is a work of its own.
     store.put(film('/c/Zulu - 2160p.mkv', 'Alien', 2));
-    expect(leadsOf(database)).toEqual(['/c/Zulu - 2160p.mkv', '/d/Zulu.mkv']);
+    expect(leadsOf(database, store)).toEqual(['/c/Zulu - 2160p.mkv', '/d/Zulu.mkv']);
     expect(store.page('films', { limit: 10, offset: 0 })).toMatchObject({
       total: 2,
       items: [{ title: 'Alien' }, { title: 'Zulu' }],
@@ -1289,22 +1353,24 @@ describe('the lookups of the item store', () => {
 
     // Only /y was scanned: Dune's version there is gone, the one in /x leads again.
     store.replace('films', [film('/y/Other.mkv', 'Other', 4)], '/y');
-    expect(leadsOf(database)).toEqual(['/x/Dune.mkv', '/y/Other.mkv']);
+    expect(leadsOf(database, store)).toEqual(['/x/Dune.mkv', '/y/Other.mkv']);
 
     store.replace('films', [film('/z/Dune.mkv', 'Dune', 3)]);
-    expect(leadsOf(database)).toEqual(['/z/Dune.mkv']);
+    expect(leadsOf(database, store)).toEqual(['/z/Dune.mkv']);
   });
 
   it('fills the keys of rows saved before they existed', () => {
     const database = migrated(new Database(':memory:'));
     new LibraryItemStore(database).put(film('/a/Élan.mkv', 'Élan', 5));
-    database.prepare('UPDATE library_items SET sort = NULL, work_key = NULL, lead = 0').run();
+    database
+      .prepare('UPDATE library_items SET sort = NULL, work_key = NULL, search_key = NULL')
+      .run();
 
     new LibraryItemStore(database);
-    expect(database.prepare('SELECT sort, work_key, lead FROM library_items').get()).toEqual({
+    expect(database.prepare('SELECT sort, work_key, search_key FROM library_items').get()).toEqual({
       sort: 'elan',
       work_key: 'm5',
-      lead: 1,
+      search_key: 'élan'.normalize('NFD').replace(/\p{M}/gu, '') + '\n' + 'elan.mkv',
     });
   });
 

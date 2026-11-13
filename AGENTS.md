@@ -599,6 +599,13 @@ refuses to delete a library an arrival folder points at (`library.in-use`). Ther
   `LibraryItemStore` names the shows it touches (`changed(library, shows)`; no argument means all) and the next read settles
   them (`settleShows`); a library is rebuilt whole the first time it is read in a process. **A new writer of `library_items`
   must name its shows**, or the list shows stale rows (a test holds it). `series_completeness` and `series_files` are joined at read.
+- **`library_works`** (server migration 035) is the same for a movie library: one row per list entry (a movie whatever its
+  versions, or a file nobody identified), with its lead file's title, year and path, the flags of its files, its collection.
+  `regroup` names the works a write touches (`staleWork`) and the next read settles them (`settleWorks`); the whole library is
+  rebuilt the first time it is read in a process. **A new writer of `library_items` must call `regroup`** (and name its shows,
+  above). Without a search a list reads these flags; with one, a single file must meet every condition, so the files are asked.
+  `groups` of `GET .../items` is a validation's count and is read from the files for the `review` and `unrecognized` filters
+  only; anywhere else it is `total`.
 - **Series** (`completeness.ts`, server migration 014): a row of a series library carries `season`,
   `episode` and `episodeEnd` (a file holding `S01E02E03` is one row, `episode` its first and
   `episodeEnd` its last). `GET /api/libraries/:id/shows` lists one row per work (files nobody identified

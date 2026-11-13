@@ -209,6 +209,9 @@ export class LibraryItemStore {
    */
   private readonly staleShows = new Map<string, Set<number> | 'all'>();
   private readonly settledShows = new Set<string>();
+  /** The same for `library_works`: the work keys a write touched, or `'all'`. */
+  private readonly staleWorks = new Map<string, Set<string> | 'all'>();
+  private readonly settledWorks = new Set<string>();
 
   constructor(private readonly database: Database) {
     // SQLite's lower() only folds ASCII, so "Ça" would sort after "Z": the key drops accents too.
@@ -243,24 +246,72 @@ export class LibraryItemStore {
   }
 
   /**
-   * Marks the first file of each work (`lead`, in the order of a list) again, for the works named
-   * or for the whole library. A work's lead depends on its other files, so every write that adds,
-   * removes or changes one calls this, in its own transaction.
+   * A write touched these works (or all of them): their collections follow what the provider and the
+   * owner said, and `library_works` is behind until the next read settles them. A work's row depends
+   * on its other files, so every write that adds, removes or changes one calls this.
    */
   private regroup(libraryId: string, keys?: ReadonlySet<string>): void {
     const scope = keys === undefined ? '' : ' AND work_key IN (SELECT value FROM json_each(?))';
     const args = keys === undefined ? [] : [JSON.stringify([...keys])];
     this.refreshCollections(libraryId, scope, args);
-    this.database
-      .prepare(
-        `UPDATE library_items SET lead = CASE WHEN path IN (
-           SELECT path FROM (
-             SELECT path, ROW_NUMBER() OVER (PARTITION BY work_key ORDER BY sort, path) AS rank
+    this.staleWork(libraryId, keys ?? 'all');
+  }
+
+  private staleWork(libraryId: string, keys: Iterable<string> | 'all'): void {
+    const stale = this.staleWorks.get(libraryId);
+    this.staleWorks.set(
+      libraryId,
+      keys === 'all' || stale === 'all' ? 'all' : new Set([...(stale ?? []), ...keys]),
+    );
+  }
+
+  /**
+   * Brings `library_works` up to date with the rows, as `settleShows` does for the shows: the works a
+   * write touched, or every one the first time a library is read in this process. One row per
+   * list entry (a movie whatever its versions, a file nobody identified on its own) holds what a
+   * list orders, filters and counts by, so it reads those rows instead of grouping the files. The
+   * lead is the work's first file in the order of a list (its title, year and path are the entry's).
+   */
+  private settleWorks(libraryId: string): void {
+    const stale = this.staleWorks.get(libraryId);
+    const everything = !this.settledWorks.has(libraryId) || stale === 'all';
+    if (!everything && (stale === undefined || stale.size === 0)) {
+      return;
+    }
+    const scope = everything ? '' : ' AND work_key IN (SELECT value FROM json_each(?))';
+    const args = everything || stale === undefined ? [] : [JSON.stringify([...stale])];
+    this.database.transaction(() => {
+      this.database
+        .prepare(`DELETE FROM library_works WHERE library_id = ?${scope}`)
+        .run(libraryId, ...args);
+      this.database
+        .prepare(
+          `INSERT INTO library_works (library_id, work_key, lead_path, title, year, sort, n_files,
+             has_review, has_rename, has_unrecognized, has_missing_nfo, has_missing_artwork, multi,
+             collection_key, collection_name, collection_sort, collection_total)
+           SELECT l.library_id, l.work_key, l.path, l.title, l.year, l.sort, a.n_files,
+             a.has_review, a.has_rename, a.has_unrecognized, a.has_missing_nfo, a.has_missing_artwork,
+             a.multi, l.collection_key, l.collection_name, sort_key(l.collection_name), l.collection_total
+           FROM (
+             SELECT library_id, work_key, path, title, year, sort, collection_key, collection_name,
+               collection_total,
+               ROW_NUMBER() OVER (PARTITION BY work_key ORDER BY sort, path) AS rank
              FROM library_items WHERE library_id = ?${scope}
-           ) WHERE rank = 1) THEN 1 ELSE 0 END
-         WHERE library_id = ?${scope}`,
-      )
-      .run(libraryId, ...args, libraryId, ...args);
+           ) l
+           JOIN (
+             SELECT work_key, COUNT(*) AS n_files, MAX(state = 'review') AS has_review,
+               MAX(state = 'rename') AS has_rename, MAX(state = 'unrecognized') AS has_unrecognized,
+               COALESCE(MAX(nfo = 0), 0) AS has_missing_nfo,
+               COALESCE(MAX(poster = 0 OR fanart = 0 OR logo = 0 OR thumb = 0), 0) AS has_missing_artwork,
+               SUM(${SETTLED}) > 1 AS multi
+             FROM library_items WHERE library_id = ?${scope} GROUP BY work_key
+           ) a ON a.work_key = l.work_key
+           WHERE l.rank = 1`,
+        )
+        .run(libraryId, ...args, libraryId, ...args);
+    })();
+    this.staleWorks.delete(libraryId);
+    this.settledWorks.add(libraryId);
   }
 
   /**
@@ -301,6 +352,10 @@ export class LibraryItemStore {
       this.refreshCollections(libraryId, ' AND work_key IN (SELECT value FROM json_each(?))', [
         JSON.stringify(movieIds.map((id) => `m${String(id)}`)),
       ]);
+      this.staleWork(
+        libraryId,
+        movieIds.map((id) => `m${String(id)}`),
+      );
     })();
   }
 
@@ -533,6 +588,7 @@ export class LibraryItemStore {
       for (const table of [
         'library_items',
         'library_shows',
+        'library_works',
         'series_completeness',
         'series_files',
         'collection_overrides',
@@ -627,55 +683,59 @@ export class LibraryItemStore {
       offset: number;
     },
   ): { total: number; groups: number; items: LibraryItem[]; works: LibraryItem[][] } {
-    const queryCondition = "search_key LIKE ? ESCAPE '\\'";
-    // On the files (the groups of a validation) and on the lead row (the list): the collection is
-    // the same for every file of a work, so the list asks it of the lead row rather than of "any
-    // file of the work", which cost a pass over the collected rows for each work.
-    const collection = options.collection
-      ? collectionSql(options.collection, 'library_items')
-      : undefined;
-    const leadCollection = options.collection
-      ? collectionSql(options.collection, 'lead_row')
-      : undefined;
-    const conditions = [
+    this.settleWorks(libraryId);
+    const matching = options.query ? [contains(sortKey(options.query))] : [];
+    // What a single file must meet: with a search, one file has to satisfy every condition at once (the
+    // version whose name matches may not be the one to rename), so the files are asked, once.
+    const fileConditions = [
       ...(options.filter ? [FILTER_SQL[options.filter]] : []),
       ...(options.multi ? [FILTER_SQL['multi-version']] : []),
-      ...(options.query ? [queryCondition] : []),
+      ...(options.query ? ["search_key LIKE ? ESCAPE '\\'"] : []),
     ];
-    const where = ['library_id = ?', ...(collection ? [collection.sql] : []), ...conditions].join(
-      ' AND ',
-    );
-    const matching = options.query ? [contains(sortKey(options.query))] : [];
-    const params: (string | number)[] = [libraryId, ...(collection?.params ?? []), ...matching];
-    // "Several versions" alone keeps nearly every file in play, where `IN` costs more than looking up
-    // each lead row's own files (measured: 37 ms against 50 at 20 000 files).
-    const correlated = options.multi === true && !options.filter && !options.query;
-    // The list's own: the lead row's collection, then the works holding a file that matches (`leadWhere`).
-    const leadParams: (string | number)[] = [
+    // Without one, the flags of the work's row say it: every file of a movie is settled, so "a file
+    // in this state" and "several settled files" are both read there.
+    const collection = options.collection ? workCollectionSql(options.collection) : undefined;
+    const where = [
+      'library_id = ?',
+      ...(collection ? [collection.sql] : []),
+      ...(options.query
+        ? [
+            `work_key IN (SELECT work_key FROM library_items WHERE library_id = ?
+               AND ${fileConditions.join(' AND ')})`,
+          ]
+        : [
+            ...(options.filter ? [WORK_STATE_SQL[options.filter]] : []),
+            ...(options.multi ? ['multi = 1'] : []),
+          ]),
+    ].join(' AND ');
+    const params: (string | number)[] = [
       libraryId,
-      ...(leadCollection?.params ?? []),
-      ...(conditions.length > 0 && !correlated ? [libraryId, ...matching] : []),
+      ...(collection?.params ?? []),
+      ...(options.query ? [libraryId, ...matching] : []),
     ];
-    // `where` over the files, for the groups of a validation; the list itself reads one row per work.
-    const leads = leadWhere(conditions.join(' AND '), leadCollection?.sql, correlated);
-    const order = itemOrder(options.sort ?? 'title', options.dir);
     const total =
       this.database
         .prepare<unknown[], { total: number }>(
-          `SELECT COUNT(*) AS total FROM library_items AS lead_row WHERE ${leads}`,
+          `SELECT COUNT(*) AS total FROM library_works WHERE ${where}`,
         )
-        .get(...leadParams)?.total ?? 0;
-    const groups = this.groupsWhere(where, params);
-    const keys = this.database
-      .prepare<unknown[], { key: string }>(
-        `SELECT work_key AS key FROM library_items AS lead_row WHERE ${leads}
-         ORDER BY ${order} LIMIT ? OFFSET ?`,
+        .get(...params)?.total ?? 0;
+    // `groups` is what a validation settles (a release's episodes count once): it is read for the files
+    // waiting for a person only, and is the total anywhere else, where it means nothing more.
+    const groups =
+      options.filter === 'review' || options.filter === 'unrecognized'
+        ? this.groupsOfFiles(libraryId, options, fileConditions, matching)
+        : total;
+    const found = this.database
+      .prepare<unknown[], { key: string; lead: string }>(
+        `SELECT work_key AS key, lead_path AS lead FROM library_works WHERE ${where}
+         ORDER BY ${workOrder(options.sort ?? 'title', options.dir)} LIMIT ? OFFSET ?`,
       )
-      .all(...leadParams, options.limit, options.offset)
-      .map(({ key }) => key);
+      .all(...params, options.limit, options.offset);
+    const keys = found.map(({ key }) => key);
+    const lead = new Map(found.map((work) => [work.key, work.lead]));
     const rows = this.database
-      .prepare<[string, string], Row & { key: string; lead: number; sort: string }>(
-        `SELECT ${COLUMNS}, work_key AS key, lead, sort FROM library_items
+      .prepare<[string, string], Row & { key: string; sort: string }>(
+        `SELECT ${COLUMNS}, work_key AS key, sort FROM library_items
          WHERE library_id = ? AND work_key IN (SELECT value FROM json_each(?))`,
       )
       .all(libraryId, JSON.stringify(keys))
@@ -683,7 +743,7 @@ export class LibraryItemStore {
       // sorted here, a few rows, rather than by SQLite with a temporary tree.
       .sort(
         (a, b) =>
-          b.lead - a.lead ||
+          Number(b.path === lead.get(b.key)) - Number(a.path === lead.get(a.key)) ||
           (a.sort < b.sort ? -1 : a.sort > b.sort ? 1 : a.path < b.path ? -1 : 1),
       );
     const byKey = new Map<string, LibraryItem[]>();
@@ -692,6 +752,22 @@ export class LibraryItemStore {
     }
     const works = keys.map((key) => byKey.get(key) ?? []).filter((work) => work.length > 0);
     return { total, groups, items: works.flatMap((work) => work.slice(0, 1)), works };
+  }
+
+  /** The files a list of the ones waiting for a person keeps, counted as a validation settles them. */
+  private groupsOfFiles(
+    libraryId: string,
+    options: { collection?: CollectionFilter },
+    fileConditions: readonly string[],
+    matching: readonly string[],
+  ): number {
+    const collection = options.collection
+      ? collectionSql(options.collection, 'library_items')
+      : undefined;
+    return this.groupsWhere(
+      ['library_id = ?', ...(collection ? [collection.sql] : []), ...fileConditions].join(' AND '),
+      [libraryId, ...(collection?.params ?? []), ...matching],
+    );
   }
 
   /**
@@ -743,18 +819,21 @@ export class LibraryItemStore {
 
   /** What each collection filter holds (movies, not files), for the buttons of the page. */
   collectionCounts(libraryId: string): Record<'all' | 'in' | 'out' | 'incomplete', number> {
-    const count = (filter?: CollectionFilter): number =>
-      this.database
-        .prepare<[string], { total: number }>(
-          `SELECT COUNT(*) AS total FROM library_items AS lead_row
-           WHERE ${leadWhere('', filter && collectionSql(filter, 'lead_row').sql)}`,
-        )
-        .get(libraryId)?.total ?? 0;
+    this.settleWorks(libraryId);
+    const row = this.database
+      .prepare<[string], { total: number; inside: number; outside: number; incomplete: number }>(
+        `SELECT COUNT(*) AS total,
+           COALESCE(SUM(collection_key IS NOT NULL), 0) AS inside,
+           COALESCE(SUM(collection_key IS NULL), 0) AS outside,
+           COALESCE(SUM(collection_total IS NOT NULL AND collection_total > ${HELD_WORKS}), 0) AS incomplete
+         FROM library_works WHERE library_id = ?`,
+      )
+      .get(libraryId);
     return {
-      all: count(),
-      in: count('in'),
-      out: count('out'),
-      incomplete: count('incomplete'),
+      all: row?.total ?? 0,
+      in: row?.inside ?? 0,
+      out: row?.outside ?? 0,
+      incomplete: row?.incomplete ?? 0,
     };
   }
 
@@ -797,25 +876,23 @@ export class LibraryItemStore {
       counts['incomplete-versions'] = this.countShows(libraryId, { state: 'incomplete-versions' });
       return counts;
     }
-    // A filter keeps a work when any of its files matches it (what `leadWhere` asks of a list), so
-    // the count is the distinct works among the matching files. Read that way it needs no `EXISTS`
-    // per work, and the states are found by their index: 70 ms cold on 20 000 files, a third of it now.
-    const works = (where: string): number =>
-      this.database
-        .prepare<[string], { total: number }>(
-          `SELECT COUNT(DISTINCT work_key) AS total FROM library_items
-           WHERE library_id = ? AND ${where}`,
-        )
-        .get(libraryId)?.total ?? 0;
-    counts.all =
-      this.database
-        .prepare<[string], { total: number }>(
-          'SELECT COUNT(*) AS total FROM library_items WHERE library_id = ? AND lead = 1',
-        )
-        .get(libraryId)?.total ?? 0;
-    for (const filter of ITEM_FILTERS) {
-      counts[filter] = works(FILTER_SQL[filter]);
-    }
+    // One pass over the rows of the works, each holding the flags of its files.
+    this.settleWorks(libraryId);
+    const row = this.database
+      .prepare<[string], Record<string, number | null>>(
+        `SELECT COUNT(*) AS total, SUM(has_review) AS review, SUM(has_rename) AS rename,
+           SUM(has_unrecognized) AS unrecognized, SUM(has_missing_nfo) AS missing_nfo,
+           SUM(has_missing_artwork) AS missing_artwork, SUM(multi) AS multi
+         FROM library_works WHERE library_id = ?`,
+      )
+      .get(libraryId);
+    counts.all = row?.['total'] ?? 0;
+    counts.review = row?.['review'] ?? 0;
+    counts.rename = row?.['rename'] ?? 0;
+    counts.unrecognized = row?.['unrecognized'] ?? 0;
+    counts['missing-nfo'] = row?.['missing_nfo'] ?? 0;
+    counts['missing-artwork'] = row?.['missing_artwork'] ?? 0;
+    counts['multi-version'] = row?.['multi'] ?? 0;
     // Versions are a matter of shows: a movie is never short of one.
     counts['incomplete-versions'] = 0;
     return counts;
@@ -1122,24 +1199,6 @@ const sortOf = (item: Pick<LibraryItem, 'path' | 'title'>): string =>
 const searchKeyOf = (item: Pick<LibraryItem, 'path' | 'title'>): string =>
   `${sortKey(item.title ?? '')}\n${sortKey(basename(item.path))}`;
 
-/**
- * The condition of a list read on the first file of each work (`lead_row`). A filter keeps the
- * work when **any** of its files matches it: the works holding one are found once (`IN`, which
- * takes `library_id` again as its first parameter, then the filter's), where an `EXISTS` looked up
- * the work's files for each lead row (`correlated`, for the filter that keeps most files). The inner
- * table is not aliased, since `FILTER_SQL` names `library_items`.
- */
-const leadWhere = (rowFilter: string, leadFilter?: string, correlated = false): string =>
-  `library_id = ? AND lead = 1${leadFilter ? ` AND ${leadFilter}` : ''}${
-    !rowFilter
-      ? ''
-      : correlated
-        ? ` AND EXISTS (SELECT 1 FROM library_items
-             WHERE library_items.library_id = lead_row.library_id
-               AND library_items.work_key = lead_row.work_key AND ${rowFilter})`
-        : ` AND work_key IN (SELECT work_key FROM library_items WHERE library_id = ? AND ${rowFilter})`
-  }`;
-
 /** How a list is ordered: by title (the default), by collection, or by year. */
 export const ITEM_SORTS = ['title', 'collection', 'year'] as const;
 export type ItemSort = (typeof ITEM_SORTS)[number];
@@ -1159,15 +1218,15 @@ const SQL_DIRECTION: Record<SortDirection, string> = { asc: 'ASC', desc: 'DESC' 
 
 // A collection's groups follow its name (the direction turns them over), a group's movies their
 // year; movies in none come last either way. A movie with no year comes last in a year order.
-const itemOrder = (sort: ItemSort, direction?: SortDirection): string => {
+const workOrder = (sort: ItemSort, direction?: SortDirection): string => {
   const dir = SQL_DIRECTION[direction ?? DEFAULT_DIRECTION[sort]];
   switch (sort) {
     case 'title':
-      return `sort ${dir}, path ${dir}`;
+      return `sort ${dir}, lead_path ${dir}`;
     case 'year':
-      return `year IS NULL, year ${dir}, sort, path`;
+      return `year IS NULL, year ${dir}, sort, lead_path`;
     case 'collection':
-      return `collection_key IS NULL, sort_key(collection_name) ${dir}, collection_key, year IS NULL, year, sort, path`;
+      return `collection_key IS NULL, collection_sort ${dir}, collection_key, year IS NULL, year, sort, lead_path`;
   }
 };
 
@@ -1250,6 +1309,32 @@ export type StateFilter = (typeof STATE_FILTERS)[number];
 /** What narrows the shows of a series library: those of the items, and the versions that lack. */
 export const SHOW_FILTERS = [...STATE_FILTERS, 'incomplete-versions'] as const;
 export type ShowStateFilter = (typeof SHOW_FILTERS)[number];
+
+/** What a row of `library_works` holds for each state a list is narrowed to. */
+const WORK_STATE_SQL: Record<StateFilter, string> = {
+  review: 'has_review = 1',
+  rename: 'has_rename = 1',
+  unrecognized: 'has_unrecognized = 1',
+  'missing-nfo': 'has_missing_nfo = 1',
+  'missing-artwork': 'has_missing_artwork = 1',
+};
+
+/** The movies of the row's collection that the library holds, counted from `library_works` (one row each). */
+const HELD_WORKS = `(SELECT COUNT(*) FROM library_works held INDEXED BY library_works_collection
+  WHERE held.library_id = library_works.library_id AND held.collection_key = library_works.collection_key)`;
+
+/** `collectionSql` for a row of `library_works`. */
+const workCollectionSql = (filter: CollectionFilter): { sql: string; params: string[] } =>
+  filter === 'in'
+    ? { sql: 'collection_key IS NOT NULL', params: [] }
+    : filter === 'out'
+      ? { sql: 'collection_key IS NULL', params: [] }
+      : filter === 'incomplete'
+        ? {
+            sql: `(collection_total IS NOT NULL AND collection_total > ${HELD_WORKS})`,
+            params: [],
+          }
+        : { sql: 'collection_key = ?', params: [filter.key] };
 
 /** What `library_shows` holds for each filter of the shows (`s` is its row). */
 const SHOW_STATE_SQL: Record<ShowStateFilter, string> = {
