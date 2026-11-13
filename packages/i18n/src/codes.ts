@@ -10,6 +10,7 @@ export const CLI_ERROR_CODES = [
   'submit.not-kinoshelf',
   'submit.rejected',
   'submit.unreachable',
+  'tidy.no-library',
   'undo.batch-already-undone',
   'undo.batch-not-found',
 ] as const;
@@ -27,8 +28,8 @@ export const API_ERROR_CODES = [
   'auth.too-many-attempts',
   'auth.unauthorized',
   'batch.already-undone',
-  'batch.not-found',
   'batch.undo-in-progress',
+  'batch.not-found',
   'events.too-many',
   'execution.not-found',
   'fs.not-a-directory',

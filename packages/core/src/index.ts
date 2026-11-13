@@ -118,6 +118,14 @@ export {
   type CleanupOptions,
   type StaleFile,
 } from './maintenance/stale-temporary.js';
+export {
+  tidyReport,
+  type ForeignFile,
+  type ForeignKind,
+  type OrphanFolder,
+  type TidyLibrary,
+  type TidyReport,
+} from './maintenance/tidy-report.js';
 export { applyMigrations } from './journal/migrations.js';
 export { renderMovieNfo, renderSeriesNfo, renderEpisodeNfo, type NfoOptions } from './nfo/nfo.js';
 export { Database, Statement, type RunResult, type Transaction } from './sqlite/database.js';

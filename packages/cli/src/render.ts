@@ -7,6 +7,7 @@ import type {
   DestinationRoots,
   ErrorInfo,
   StaleFile,
+  TidyReport,
   TransferMode,
   UndoResult,
 } from '@kinoshelf/core';
@@ -292,4 +293,63 @@ export function cleanupToJson(
   files: readonly StaleFile[],
 ): unknown {
   return { roots, olderThanHours, dryRun, files };
+}
+
+export function renderTidy(reports: readonly TidyReport[], t: Translate): string[] {
+  const lines: string[] = [];
+  const totals = { orphans: 0, foreign: 0 };
+  for (const { library, orphanFolders, foreignFiles } of reports) {
+    lines.push(t('tidy.header', { name: library.id, type: library.type, source: library.source }));
+    totals.orphans += orphanFolders.length;
+    totals.foreign += foreignFiles.length;
+    if (orphanFolders.length === 0 && foreignFiles.length === 0) {
+      lines.push(`  ${t('tidy.clean')}`, '');
+      continue;
+    }
+    if (orphanFolders.length > 0) {
+      lines.push(`  ${t('tidy.orphans', { count: orphanFolders.length })}`);
+      for (const folder of orphanFolders) {
+        lines.push(`    · ${folder.path}`);
+        lines.push(
+          `        ${
+            folder.files === 0
+              ? t('tidy.orphan.empty')
+              : t('tidy.orphan', { files: folder.files, size: formatBytes(folder.sizeBytes) })
+          }`,
+        );
+        for (const entry of folder.entries) {
+          lines.push(`          ${entry}`);
+        }
+        if (folder.entries.length < folder.files) {
+          lines.push(`          …`);
+        }
+        if (folder.otherFiles > 0) {
+          lines.push(`        ! ${t('tidy.orphan.other', { count: folder.otherFiles })}`);
+        }
+      }
+    }
+    if (foreignFiles.length > 0) {
+      lines.push(`  ${t('tidy.foreign', { count: foreignFiles.length })}`);
+      for (const file of foreignFiles) {
+        lines.push(`    · ${file.path}`);
+        lines.push(
+          `        ${t(
+            file.counterpartPresent ? 'tidy.foreign.file.present' : 'tidy.foreign.file.missing',
+            {
+              size: formatBytes(file.sizeBytes),
+              counterpart: file.counterpart,
+            },
+          )}`,
+        );
+      }
+    }
+    lines.push('');
+  }
+  lines.push(t('tidy.summary', totals), t('tidy.read-only'));
+  return lines;
+}
+
+/** Codes and parameters, never translated text. */
+export function tidyToJson(reports: readonly TidyReport[]): unknown {
+  return { readOnly: true, libraries: reports };
 }

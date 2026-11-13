@@ -160,6 +160,24 @@ export const en = {
     'The minimum age is {min, plural, one {# hour} other {# hours}}: a younger file may still be being copied.',
   'error.cleanup.no-folder':
     'Give at least one folder to scan, or add a library with a "type" in {path}.',
+  'help.tidy':
+    'Report what clutters a library: folders with no video, and metadata files named after the video (read-only, nothing is changed).',
+  'help.opt.tidy-library': 'id of a library of config.yaml with a type (default: all of them)',
+  'tidy.header': 'Library {name} ({type}): {source}',
+  'tidy.clean': 'Nothing to tidy.',
+  'tidy.orphans': 'Folders with no video ({count}):',
+  'tidy.orphan': '{files, plural, one {# file} other {# files}} · {size}',
+  'tidy.orphan.empty': 'empty',
+  'tidy.orphan.other':
+    '{count, plural, one {# file is neither an NFO, an image nor a subtitle} other {# files are neither an NFO, an image nor a subtitle}}: look before removing',
+  'tidy.foreign': 'Metadata named after the video ({count}):',
+  'tidy.foreign.file.present': '{size} · Kinoshelf writes {counterpart}, already there',
+  'tidy.foreign.file.missing': '{size} · Kinoshelf writes {counterpart}, not there yet',
+  'tidy.summary':
+    '{orphans, plural, one {# folder} other {# folders}} with no video, {foreign, plural, one {# file} other {# files}} named after a video.',
+  'tidy.read-only': 'Read-only report: nothing was changed.',
+  'error.tidy.no-library':
+    'No library with a type in {path}: a report reads the libraries organized in place, not the arrival folders.',
   'help.submit':
     'Queue a file or folder on a running server (for a download client’s “on completion” hook).',
   'help.opt.url': 'address of the server (default: KINOSHELF_URL, else localhost)',
@@ -199,6 +217,7 @@ export const en = {
     'The first key can only be created through a local address (an IP address, localhost, or a name such as nas.local). To use {host}, add it to KINOSHELF_ALLOWED_HOSTS.',
   'error.auth.unauthorized': 'Wrong API key, or your session has expired.',
   'error.batch.already-undone': 'This batch was already undone.',
+  'error.batch.undo-in-progress': 'This batch is already being undone.',
   'error.fs.not-a-directory': '{path} is a file, not a folder.',
   'error.fs.not-absolute': 'A path must be absolute (it starts with /).',
   'error.auth.too-many-attempts':
@@ -217,7 +236,6 @@ export const en = {
   'error.image.not-offered': 'This image is not one TMDB offers for this work.',
   'error.image.url-invalid':
     'This address is not valid: use an http or https address without a user name or password.',
-  'error.batch.undo-in-progress': 'This batch is already being undone.',
   'error.image.url-blocked':
     'This address points to your local network, which Kinoshelf is not allowed to reach. You can allow it in the settings.',
   'error.image.url-unreachable': 'The image could not be downloaded from this address ({status}).',
@@ -1068,6 +1086,10 @@ export const en = {
   'web.history.undo.confirm': 'Confirm the undo',
   'web.history.undo.cancel': 'Cancel',
   'web.history.undo.running': 'Undoing…',
+  'web.history.undo.progress.checking': 'Checking: {done} of {total} files',
+  'web.history.undo.progress.running': 'Undoing: {done} of {total} files',
+  'web.history.undo.progress.finishing': 'Finishing (folders, libraries)…',
+  'web.history.undo.progress.label': 'Undo progress',
   'web.history.undo.result':
     'Batch undone: {undone} restored, {skipped} left in place, {failed} failed.',
   'web.history.show-all': 'Show every analysis',
@@ -1086,10 +1108,6 @@ export const en = {
   'web.history.job.cause.transfer': 'The transfer failed',
   'web.history.job.cause.hint':
     'Nothing was written for this failure. Fix the cause, then send it again.',
-  'web.history.undo.progress.checking': 'Checking: {done} of {total} files',
-  'web.history.undo.progress.running': 'Undoing: {done} of {total} files',
-  'web.history.undo.progress.finishing': 'Finishing (folders, libraries)…',
-  'web.history.undo.progress.label': 'Undo progress',
   'web.history.job.settings': 'Open the settings',
   'web.history.job.tech.show': 'Show the technical detail',
   'web.history.job.tech.hide': 'Hide the technical detail',

@@ -15,6 +15,7 @@ import {
   madeByUs,
   openConfigDatabase,
   SqliteJournal,
+  tidyReport,
   undoBatch,
   undoLastBatch,
   type Config,
@@ -33,9 +34,11 @@ import {
 import {
   analysisToJson,
   cleanupToJson,
+  tidyToJson,
   renderAnalysis,
   renderBatch,
   renderCleanup,
+  renderTidy,
   renderUndo,
 } from './render.js';
 import { resolveSettings, type CommonOptions } from './settings.js';
@@ -278,6 +281,40 @@ async function runCleanup(
   return files.some((file) => file.status === 'failed') ? 1 : 0;
 }
 
+/** Read-only: what clutters the libraries organized in place (an arrival folder has no work to tidy). */
+async function runTidy(
+  options: { library?: string; json?: boolean },
+  context: Context,
+): Promise<number> {
+  const { t, deps } = context;
+  const typed = (context.config.libraries ?? []).flatMap((library) =>
+    library.type ? [{ id: library.id, type: library.type, source: library.source }] : [],
+  );
+  if (typed.length === 0) {
+    throw new CliError('tidy.no-library', { path: join(context.configDir, 'config.yaml') });
+  }
+  const chosen =
+    options.library === undefined ? typed : typed.filter(({ id }) => id === options.library);
+  if (chosen.length === 0) {
+    throw new CliError('config.library-unknown', {
+      id: options.library ?? '',
+      ids: typed.map(({ id }) => id).join(', '),
+    });
+  }
+  const reports = [];
+  for (const library of chosen) {
+    reports.push(await tidyReport(library));
+  }
+  if (options.json) {
+    deps.io.out(JSON.stringify(tidyToJson(reports), null, 2));
+  } else {
+    for (const line of renderTidy(reports, t)) {
+      deps.io.out(line);
+    }
+  }
+  return 0;
+}
+
 function buildProgram(context: Context, exit: { code: number }): Command {
   const { t } = context;
   const program = new Command('kinoshelf')
@@ -361,6 +398,16 @@ function buildProgram(context: Context, exit: { code: number }): Command {
     .exitOverride()
     .action((folders: string[], options: { olderThan?: string; apply?: boolean; json?: boolean }) =>
       act(() => runCleanup(folders, options, context))(),
+    );
+
+  program
+    .command('tidy')
+    .description(t('help.tidy'))
+    .option('--library <id>', t('help.opt.tidy-library'))
+    .option('--json', t('help.opt.json'))
+    .exitOverride()
+    .action((options: { library?: string; json?: boolean }) =>
+      act(() => runTidy(options, context))(),
     );
 
   if (context.deps.standalone) {

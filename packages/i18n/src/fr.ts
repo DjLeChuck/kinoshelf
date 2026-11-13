@@ -167,6 +167,25 @@ export const fr: Record<keyof typeof en, string> = {
     'L’âge minimum est de {min, plural, one {# heure} other {# heures}} : un fichier plus récent est peut-être en cours de copie.',
   'error.cleanup.no-folder':
     'Indiquez au moins un dossier à parcourir, ou ajoutez une bibliothèque avec un « type » dans {path}.',
+  'help.tidy':
+    'Signale ce qui encombre une bibliothèque : dossiers sans vidéo et fichiers de métadonnées nommés d’après la vidéo (lecture seule, rien n’est modifié).',
+  'help.opt.tidy-library':
+    'identifiant d’une bibliothèque de config.yaml qui a un type (par défaut : toutes)',
+  'tidy.header': 'Bibliothèque {name} ({type}) : {source}',
+  'tidy.clean': 'Rien à ranger.',
+  'tidy.orphans': 'Dossiers sans vidéo ({count}) :',
+  'tidy.orphan': '{files, plural, one {# fichier} other {# fichiers}} · {size}',
+  'tidy.orphan.empty': 'vide',
+  'tidy.orphan.other':
+    '{count, plural, one {# fichier n’est ni un NFO, ni une image, ni un sous-titre} other {# fichiers ne sont ni des NFO, ni des images, ni des sous-titres}} : à regarder avant de supprimer',
+  'tidy.foreign': 'Métadonnées nommées d’après la vidéo ({count}) :',
+  'tidy.foreign.file.present': '{size} · Kinoshelf écrit {counterpart}, déjà présent',
+  'tidy.foreign.file.missing': '{size} · Kinoshelf écrit {counterpart}, pas encore là',
+  'tidy.summary':
+    '{orphans, plural, one {# dossier} other {# dossiers}} sans vidéo, {foreign, plural, one {# fichier nommé} other {# fichiers nommés}} d’après une vidéo.',
+  'tidy.read-only': 'Rapport en lecture seule : rien n’a été modifié.',
+  'error.tidy.no-library':
+    'Aucune bibliothèque avec un type dans {path} : un rapport lit les bibliothèques organisées sur place, pas les dossiers d’arrivée.',
   'help.submit':
     'Met un fichier ou un dossier en file d’attente sur un serveur en marche (pour le script de fin de téléchargement d’un client).',
   'help.opt.url': 'adresse du serveur (par défaut : KINOSHELF_URL, sinon localhost)',
@@ -206,6 +225,7 @@ export const fr: Record<keyof typeof en, string> = {
     'La première clé ne peut être créée que par une adresse locale (une adresse IP, localhost ou un nom comme nas.local). Pour utiliser {host}, ajoutez-le à KINOSHELF_ALLOWED_HOSTS.',
   'error.auth.unauthorized': 'Clé d’API incorrecte, ou session expirée.',
   'error.batch.already-undone': 'Ce lot a déjà été annulé.',
+  'error.batch.undo-in-progress': 'Ce lot est déjà en cours d’annulation.',
   'error.fs.not-a-directory': '{path} est un fichier, pas un dossier.',
   'error.fs.not-absolute': 'Un chemin doit être absolu (il commence par /).',
   'error.auth.too-many-attempts':
@@ -225,7 +245,6 @@ export const fr: Record<keyof typeof en, string> = {
     'Cette image est au format {found} mais le fichier écrit est au format {expected}.',
   'error.image.not-offered':
     'Cette image n’est pas l’une de celles que TMDB propose pour cette œuvre.',
-  'error.batch.undo-in-progress': 'Ce lot est déjà en cours d’annulation.',
   'error.image.url-invalid':
     'Cette adresse n’est pas valide : utilisez une adresse http ou https, sans identifiant ni mot de passe.',
   'error.image.url-blocked':
@@ -1100,6 +1119,10 @@ export const fr: Record<keyof typeof en, string> = {
   'web.history.undo.confirm': 'Confirmer l’annulation',
   'web.history.undo.cancel': 'Renoncer',
   'web.history.undo.running': 'Annulation…',
+  'web.history.undo.progress.checking': 'Vérification : {done} fichiers sur {total}',
+  'web.history.undo.progress.running': 'Annulation : {done} fichiers sur {total}',
+  'web.history.undo.progress.finishing': 'Finalisation (dossiers, bibliothèques)…',
+  'web.history.undo.progress.label': 'Avancement de l’annulation',
   'web.history.undo.result':
     'Lot annulé : {undone, plural, one {# restauré} other {# restaurés}}, {skipped, plural, one {# laissé} other {# laissés}} en place, {failed} en échec.',
   'web.history.show-all': 'Afficher toutes les analyses',
@@ -1119,10 +1142,6 @@ export const fr: Record<keyof typeof en, string> = {
   'web.history.job.cause.hint':
     'Rien n’a été écrit pour cet échec. Corrigez la cause, puis renvoyez-le.',
   'web.history.job.settings': 'Ouvrir les réglages',
-  'web.history.undo.progress.checking': 'Vérification : {done} fichiers sur {total}',
-  'web.history.undo.progress.running': 'Annulation : {done} fichiers sur {total}',
-  'web.history.undo.progress.finishing': 'Finalisation (dossiers, bibliothèques)…',
-  'web.history.undo.progress.label': 'Avancement de l’annulation',
   'web.history.job.tech.show': 'Afficher le détail technique',
   'web.history.job.tech.hide': 'Masquer le détail technique',
   'web.history.job.used': 'Réglages utilisés',

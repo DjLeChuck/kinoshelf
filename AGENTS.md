@@ -767,6 +767,14 @@ would need one plugin per client. Watching the raw download folder stays out by 
 - `kinoshelf scan <source>` (read-only report), `process <path>` (dry run unless `--apply`),
   `undo` (dry run unless `--apply`). `--json` prints codes and parameters, never translated text.
   Exit codes: 0 ok, 1 a run or an operation failed, 2 bad usage.
+- `kinoshelf tidy [--library <id>] [--json]` (`core/src/maintenance/tidy-report.ts`) is a **read-only** report on the
+  libraries organized in place (never an arrival folder): the folders holding no video at the depth of a work
+  (a movie's folder; a show's or a season's in a series library; deeper ones, `Subs` or `Extras`, belong to a work
+  that has videos), with what is in them and how many files are neither NFO, image nor subtitle; and, in a movie
+  library only, the metadata another tool named after the video (`<video>.nfo`, `-poster`, `-fanart`, `-clearlogo`),
+  with the name Kinoshelf writes instead and whether it is already there. A folder with a link or an unreadable part
+  below it is skipped (it cannot be called empty of videos). Nothing is removed or renamed yet: the actions (images
+  renamed to the profile's names, the rest sent to `<config>/replaced/`, undoable) are to be built from this report.
 - Settings: flags over `config.yaml` over defaults. Config dir: `--config-dir`, then
   `KINOSHELF_CONFIG_DIR`, then `$XDG_CONFIG_HOME/kinoshelf`; it also holds `kinoshelf.sqlite`
   (journal and TMDB cache). Default mode is `move` when the destination is the source folder,
