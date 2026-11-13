@@ -8,7 +8,7 @@ renames them for a media player (Plex, Jellyfin) and writes their metadata (NFO,
 The core, the CLI, the matching corpus, the REST server, the notifications and the multi-arch Docker
 image are done, and so is getting downloads in (see "Getting downloads in" below). The web UI has four
 entries: Libraries, History, Settings and System (see "System" below). A welcome shows at `/` on the first
-launch (`GET`/`PATCH /api/onboarding`, server migration 009) and the app then opens on Libraries. The
+launch (`GET`/`PATCH /api/onboarding`) and the app then opens on Libraries. The
 libraries (organized in place, arrival folders) are configured in the Settings, with a server-side
 path picker. The Libraries page has a tab per typed library (list read from the snapshot, filters,
 scan progress, the page of an item) and an Arrivals tab (`/arrivals`) where a file is validated:
@@ -167,8 +167,7 @@ nowhere: a custom profile file is to be discussed again.
   `voteRelease` (`pipeline/release.ts`): titles at least `SAME_SERIES_SIMILARITY` alike are one series,
   unless both carry a different country (`The.Office.US`/`UK`). It is held again on the episodes left
   out (`clusterRelease`), so a folder holding several series gives **clusters**: 0 is the one most
-  episodes name, 1 and up the others (`AnalysisEntry.cluster`, `job_entries.release`/`cluster`,
-  migrations 016 and 017). Each cluster is matched and validated as a whole; the UI lists the other
+  episodes name, 1 and up the others (`AnalysisEntry.cluster`, `job_entries.release`/`cluster`). Each cluster is matched and validated as a whole; the UI lists the other
   clusters under the release (`detached`, linked to it). Movies are never grouped. Validating
   (`POST /api/entries/:id/match`) an episode applies the choice to the other pending episodes of its
   cluster (`followers` in the answer); `ignore` does the same. There are
@@ -214,7 +213,7 @@ nowhere: a custom profile file is to be discussed again.
   `PlexSession.token()` renews a day early, one at a time. A media server's 401 renews once and retries
   (`PlexClient.request`). plex.tv refusing the key (401/403/422/498) sets `plexAccount: 'expired'`
   (409 `plex.not-signed-in`); plex.tv being down keeps a still-valid token and is a 502
-  `plex.unreachable`. **The state is in the database** (`plex_auth`, migration 026: a secret that
+  `plex.unreachable`. **The state is in the database** (`plex_auth`: a secret that
   changes every week does not belong in a file people edit), shared with `kinoshelf-server notify`
   which reads it too. `signOut` keeps the device identity (a new sign-in is not one more authorized
   device). A token typed in `apiKey.plex` wins in `Notifier.configure`; signing in removes it.
@@ -342,8 +341,8 @@ other file is an entry of its own, and the episodes of a series are grouped by `
   lowers nothing: it is "Missing episodes". A file whose name gives no size is a version only if it
   shares an episode with another file, else it is in no version and not in the total.
 - The **resolution is read from the name** (`resolutionOf`, `library-items.ts`), else from the picture the
-  probe read (`picture`, server migration 028; `resolutionOfItem`), so a list never reads the disk. The probe
-  (`hdr`, `audioLanguages`, `subtitleLanguages`, server migration 025) fills the details of each
+  probe read (`picture`; `resolutionOfItem`), so a list never reads the disk. The probe
+  (`hdr`, `audioLanguages`, `subtitleLanguages`) fills the details of each
   version; the list reads them from the snapshot (`file`: `null` until probed) and never probes.
   Languages are ISO 639-2 as the file tags them, shown short (`fre` gives `FR`), an unknown code as is.
 - **The web** (`LibraryView`, `ShowsTree`, `ItemPanel`, `ShowPanel`, `EpisodePanel`, `VersionsSection`,
@@ -383,8 +382,8 @@ format follows the Kodi wiki's templates, saved pages are not in the repository)
   Running only some items (`selectItems`, the server's `prepare`) hands them from an episode left out
   to a chosen one whose video lies in the same folder, so a partial selection still writes them.
 - **Journal and undo**: entries have a `kind` (`transfer`, `generated`, `downloaded`;
-  `core:002-journal-kind`). Each entry keeps the destination's size and date as written
-  (`identity`, `core:003-journal-identity`): a file that differs since (a poster the user replaced, an
+  the `kind` column). Each entry keeps the destination's size and date as written
+  (`identity`): a file that differs since (a poster the user replaced, an
   NFO edited by hand or by a player) is kept (`undo.destination-changed`), video included; entries
   journaled before carry none and are trusted. Undo deletes what Kinoshelf made, then prunes only the
   directories it created. A copy or hardlink whose original is gone (or replaced) is kept
@@ -422,10 +421,9 @@ format follows the Kodi wiki's templates, saved pages are not in the repository)
   language filter (the one the dialog uses, so cached once), and takes a textless logo or, last, one in
   any language: a foreign logo beats none, and the dialog can replace it. A work with none at all writes nothing, and a movie written flat gets none (every movie would claim the same file).
   TMDB serves logos in widths of its own, with no `w780`: the profile loader refuses any `size` but
-  `original`. It is tracked like the poster and fanart (`logo` of the items and of the shows, server
-  migration 024, `library.writes.logo` for the column): a work missing only its logo is `incomplete`,
-  so "Refresh" writes it, and it is under `missing-artwork`. Rows from before the migration have
-  `null` until the next scan (a show's, until its files are looked at again).
+  `original`. It is tracked like the poster and fanart (`logo` of the items and of the shows,
+  `library.writes.logo` for the column): a work missing only its logo is `incomplete`,
+  so "Refresh" writes it, and it is under `missing-artwork`.
 - A series NFO also carries `<uniqueid type="tvdb">` (`SeriesDetails.tvdbId`, TMDB's `external_ids`), after
   `tmdb` (the default) and `imdb`; a test holds the tmdb id of the name, `<id>` and the default `<uniqueid>`.
 - **Changing an image** (`artwork.ts`, `artwork-routes.ts`; the web's `ImagesDialog`): the poster,
@@ -439,7 +437,7 @@ format follows the Kodi wiki's templates, saved pages are not in the repository)
     (`fs-ops.ts`) is the only primitive that overwrites, called by `replaceImage`, by undo and by
     `backupAndReplace` (the executor, for the files of a corrected work, see "Libraries and scan": only
     ones Kinoshelf wrote and nobody touched); the planner and `writeAtomic` still refuse to. The old file goes to
-    `<config>/replaced/` (journal entry `replaced`, migration `core:005-journal-backup`), and undo restores
+    `<config>/replaced/` (journal entry `replaced`, column `backup`), and undo restores
     it unless the file changed since (`undo.destination-changed`). Backup and restore keep the file's
     date, or the journal's identity check would fail on the second undo. The NFO is not rewritten: it
     names no image.
@@ -460,7 +458,7 @@ format follows the Kodi wiki's templates, saved pages are not in the repository)
   documentation only gives the `-thumb` name, Plex's could not be read). Without it Plex showed a black
   square and Jellyfin the season's image. An
   episode with no still on TMDB gets none. **Tracked per file** like the NFO (`thumb` of `library_items`,
-  server migration 027, `CompanionKind` `thumb`): an episode whose planned plan still holds the
+  `CompanionKind` `thumb`): an episode whose planned plan still holds the
   download is `incomplete` (so "Refresh" writes it) and under `missing-artwork`. An episode TMDB has
   no still for plans nothing, so it reads as there, as a work without a logo does. The files tell
   the thumbnail from a season poster by the profile's names (`isEpisodeThumb`), not by a stem. The
@@ -478,7 +476,7 @@ format follows the Kodi wiki's templates, saved pages are not in the repository)
     (`EPISODE_KINDS`: one tab, so none is drawn); the panel shows the image in place
     (`.../images/thumb/file`, the first copy found) and "Change the image" / "Add an image".
 - **An image TMDB has none of is "unavailable", not "present" or "missing"** (`PlanItem.unavailable`,
-  `unavailableImages` in `companions.ts`, `library_items.unavailable`, server migration 029): the
+  `unavailableImages` in `companions.ts`, `library_items.unavailable`): the
   planner lists the poster, fanart or logo the profile writes that the details give no path for,
   except one already on the disk (a logo added by hand is simply there). The flag stays as it was
   (nothing is missing, so the item is not `incomplete`), and the list and the page draw a plain
@@ -487,7 +485,7 @@ format follows the Kodi wiki's templates, saved pages are not in the repository)
   show's `unavailable` is their union (`.../shows`), and the list draws a dash where `SeriesFiles` found no
   file (`lacksOnTmdb`; a file on the disk wins). `missing-show-files` (`?incomplete=true`, the count)
   leaves such an image out, since no refresh could write it. A season's poster and an episode's thumbnail
-  are not covered. Rows from before the migration have none until the next scan.
+  are not covered.
 - Not done: no episode `uniqueid`, no `<fileinfo>` (the player reads the file). A movie's collection is written (see "Collections" below).
 
 ## Collections
@@ -500,7 +498,7 @@ section or bulk action (`hasCollections`, `library.collections` of `GET .../item
   `belongs_to_collection`; `MetadataLoader` adds one `/collection/{id}` per saga (overview and `parts`, shared
   by its movies, cached by the provider) and reports it as `LoadedMetadata.collection` (`null`: read, in none, so
   a collection the movie left is forgotten; absent: not read). `analyze`, `Service.planGroup` and `Service.plan`
-  record it (`CollectionStore.record`: `collections`, `movie_collections`, server migration 032). Nothing is
+  record it (`CollectionStore.record`: `collections`, `movie_collections`). Nothing is
   fetched on a listing. A part with no release date or one still to come (a rumoured or planned film)
   is left out of `parts`, hence of the total (`getCollection`): `/collection` gives no status, and the
   library could never hold it. A stored collection takes a part in once a movie of it is read again.
@@ -535,9 +533,8 @@ chips of the states to handle (only those above 0, "All" always, the chosen one 
 none), the removable pills of the traits (versions, collection) and the "2 of 5 movies" status. The panel and the
 chips are the same filter.
 
-- **The search reads the title and the file's name**, never the folders (`search_key`, server migration 033:
-  both folded as `sortKey` does and joined by a newline, written with the row and filled at startup for older
-  ones). A series list searches the show's title (`sort`). `sort_key` stays a SQL function for ordering, but a
+- **The search reads the title and the file's name**, never the folders (`search_key`:
+  both folded as `sortKey` does and joined by a newline, written with the row . A series list searches the show's title (`sort`). `sort_key` stays a SQL function for ordering, but a
   search never calls it: a JS call per row was most of its cost.
 - **"Several versions" is not a state**: `multi=true` of `GET .../items` and `.../shows` combines with `state`
   (`multi-version` stays a key of `counts`, for its count, but is no longer a value of `state`).
@@ -566,8 +563,7 @@ refuses to delete a library an arrival folder points at (`library.in-use`). Ther
 `destination`: `resolveSettings` sends a kind to the first library of its type unless a flag or
 `libraryOverrides` says otherwise (`--library <id>` in the CLI, `--dest*` flags win).
 
-- `libraryOverrides(lib, libraries)` feeds `resolveSettings`; a job carries `library_id` (server
-  migration 010) and keeps its `PlanSettings`. Deleting a library only forgets it: its queued jobs
+- `libraryOverrides(lib, libraries)` feeds `resolveSettings`; a job carries `library_id` and keeps its `PlanSettings`. Deleting a library only forgets it: its queued jobs
   fall back to the defaults. A typed library has one root for both kinds (a stray series in a
   movie library would be laid out in place; the plan shows it).
 - **Scan**: `POST /api/libraries/:id/scan` queues a job on the whole source (409
@@ -598,12 +594,12 @@ refuses to delete a library an arrival folder points at (`library.in-use`). Ther
   per entry (`validations.svelte.ts`), so a row says "Validating… 3/20" whatever panel is open. The destination of an
   arrival is the library of its kind in the folder's `into` (the first of its type for a path sent
   by hand), unless `libraryId` picks another one of the work's kind (422 `library.wrong-type`): it is
-  stored on the file (`job_entries.destination_library_id`, migration 013), not on the job, and the
+  stored on the file (`job_entries.destination_library_id`), not on the job, and the
   file is planned, executed and written to the snapshot with **that library's profile and root**
   (the mode stays the folder's). A job whose files go to several libraries is executed as one plan
   per library under one batch. Nothing is remembered about a work: `libraryId` is for that file (and
   the release mates that follow it), and the next arrival of the same work takes its folder's `into`
-  again (`work_destinations` was dropped, server migration 018). Once a job is stored,
+  again (`work_destinations` is gone). Once a job is stored,
   `Service.planArrivals` plans each file matched with confidence again for the library it goes to
   (the analysis used the global profile); a file left unmatched keeps waiting.
 - **The router reads the query** (`lib/router.svelte.ts`: `router.path` is the path alone, `router.query` the
@@ -612,7 +608,7 @@ refuses to delete a library an arrival folder points at (`library.in-use`). Ther
   shows and `?seasons=<tmdb id>:<season>,…` for the seasons (`listOf`/`listParam`).
 - **Events** (`GET /api/events`): the payload-less topics are `jobs` (queued, started, ended), `progress`, `arrivals` (files waiting for a human changed:
   match, ignore, cancel, a job ending), `history`, `settings`, and `ready` on each (re)connection.
-- **Snapshot** (`library_items`, server migration 012, `library-items.ts`): what a typed library holds,
+- **Snapshot** (`library_items`, `library-items.ts`): what a typed library holds,
   as its last scan saw it (title, year, tmdb id, state, presence of NFO / poster / fanart / logo / thumb, entry id).
   Replaced as a whole when a scan of the whole source ends, then patched by path after a transfer,
   an undo or a manual match, so listing never reads the disk nor asks TMDB. `GET
@@ -624,19 +620,19 @@ refuses to delete a library an arrival folder points at (`library.in-use`). Ther
   `release` and `cluster` (filled by that list only, from `job_entries`; `null` elsewhere): `groupSettling`
   (`lib/library-items.ts`) makes one row per release and series, and the panel says how many files the
   choice covers (the preview shows the series' folder, `folder` of `POST /api/entries/{id}/preview`, rather than one episode). Once validated or ignored, a group stays locked ("Transfer started") until a reload no longer lists it.
-- **`library_shows`** (server migration 034) is the list of shows kept as rows, a cache of `library_items`: one per show, with the
+- **`library_shows`** is the list of shows kept as rows, a cache of `library_items`: one per show, with the
   counts (`rename`, `incomplete`), which states and missing files it holds and whether it has several versions. Every write of
   `LibraryItemStore` names the shows it touches (`changed(library, shows)`; no argument means all) and the next read settles
   them (`settleShows`); a library is rebuilt whole the first time it is read in a process. **A new writer of `library_items`
   must name its shows**, or the list shows stale rows (a test holds it). `series_completeness` and `series_files` are joined at read.
-- **`library_works`** (server migration 035) is the same for a movie library: one row per list entry (a movie whatever its
+- **`library_works`** is the same for a movie library: one row per list entry (a movie whatever its
   versions, or a file nobody identified), with its lead file's title, year and path, the flags of its files, its collection.
   `regroup` names the works a write touches (`staleWork`) and the next read settles them (`settleWorks`); the whole library is
   rebuilt the first time it is read in a process. **A new writer of `library_items` must call `regroup`** (and name its shows,
   above). Without a search a list reads these flags; with one, a single file must meet every condition, so the files are asked.
   `groups` of `GET .../items` is a validation's count and is read from the files for the `review` and `unrecognized` filters
   only; anywhere else it is `total`.
-- **Series** (`completeness.ts`, server migration 014): a row of a series library carries `season`,
+- **Series** (`completeness.ts`): a row of a series library carries `season`,
   `episode` and `episodeEnd` (a file holding `S01E02E03` is one row, `episode` its first and
   `episodeEnd` its last). `GET /api/libraries/:id/shows` lists one row per work (files nobody identified
   are not shows: they stay under the `review` and `unrecognized` filters, and the tree puts them in a
@@ -651,8 +647,7 @@ refuses to delete a library an arrival folder points at (`library.in-use`). Ther
   leaves it so and the page still lists the files (`determined: false`). `counts['missing-episodes']`
   counts shows, not files, and is not a filter of `GET .../items`: it narrows `.../shows?missing=true`.
   The NFO column of an episode is its own `<file>.nfo`. The show's files (`tvshow.nfo`, poster, fanart, logo) and
-  a season's poster are looked for **on the disk** by `SeriesFiles` (`series-files.ts`, server migration
-  015 `series_files`, disposable) once a series library's rows change (scan, transfer, undo, startup), in
+  a season's poster are looked for **on the disk** by `SeriesFiles` (`series-files.ts`, `series_files`, disposable) once a series library's rows change (scan, transfer, undo, startup), in
   one go for the burst, then emit `history`: `GET .../shows` gives `nfo`/`poster`/`fanart`/`logo` per show and
   `GET .../shows/:tmdbId` a `poster` per season, `null` when the profile writes no such file, when no video
   of the show is in place yet (its folder is unknown) or before it was looked at. The planner cannot say it:
@@ -662,8 +657,7 @@ refuses to delete a library an arrival folder points at (`library.in-use`). Ther
   keeps the shows holding a file of that state. The exception is `review` and `unrecognized`: those files belong
   to no show, so their tabs list only the "To validate" node and count it as the node does (`groups`: a release's
   episodes once). A movie library counts files.
-- **Scan one folder again** (`POST /api/libraries/:id/rescan`, body `{ path }`, server migration 023
-  `jobs.rescan`): a movie's folder, a show's or a season's, from the movie page, the show panel and the
+- **Scan one folder again** (`POST /api/libraries/:id/rescan`, body `{ path }`, `jobs.rescan`): a movie's folder, a show's or a season's, from the movie page, the show panel and the
   season row. The path must be strictly inside the source (422 `library.outside`; a file loose in the
   source is read alone). The job is read as a scan of the source would read it (`parserRoot` keeps the
   show's and the library's folder names in the parser's paths) and, when it ends, `LibraryItemStore.replace`
@@ -673,7 +667,7 @@ refuses to delete a library an arrival folder points at (`library.in-use`). Ther
   the path from the files it knows (`rescanPath`): a show whose files lie loose in the source has none,
   and no button. "Send again" of a failed one goes through the same route (`resendRequest`).
 - **Correcting the work of a folder** (`candidate` in the body of `POST /api/libraries/:id/rescan`, server
-  migration 030 `jobs.candidate`; the web's `RematchButton`, on a movie's page and a show's): the
+  `jobs.candidate`; the web's `RematchButton`, on a movie's page and a show's): the
   same scan of one folder, but `analyze` takes the chosen work as the match of every file of its kind
   (`AnalyzeOptions.forced`: no search; an episode is never forced to a movie) and the candidate must be of
   the library's type (422 `library.wrong-type`). Nothing moves: the rows come back `rename`, named after the
@@ -746,7 +740,7 @@ in the same job queue:
   a folder that **only holds finished downloads**. `fs.watch` (inotify) only wakes a scan; the scan
   judges completeness (every file unchanged for `settleSeconds`, no `.!qB`/`.part`-style suffix) and
   submits a release (a folder under the watched one, or a loose file) once, remembered in
-  `watched_files` (migration 008, keyed by path, size and date). `pollSeconds > 0` replaces events
+  `watched_files` (keyed by path, size and date). `pollSeconds > 0` replaces events
   for network shares; if events cannot be had it falls back to a minute-long poll and logs it.
 - A manual **Check now** (`POST /api/watch/scan`, which skips the settling time but never an
   incomplete suffix); the web button is at the top of the Arrivals tab, disabled when nothing is watched.

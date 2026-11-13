@@ -1359,30 +1359,13 @@ describe('the lookups of the item store', () => {
     expect(leadsOf(database, store)).toEqual(['/z/Dune.mkv']);
   });
 
-  it('fills the keys of rows saved before they existed', () => {
-    const database = migrated(new Database(':memory:'));
-    new LibraryItemStore(database).put(film('/a/Élan.mkv', 'Élan', 5));
-    database
-      .prepare('UPDATE library_items SET sort = NULL, work_key = NULL, search_key = NULL')
-      .run();
-
-    new LibraryItemStore(database);
-    expect(database.prepare('SELECT sort, work_key, search_key FROM library_items').get()).toEqual({
-      sort: 'elan',
-      work_key: 'm5',
-      search_key: 'élan'.normalize('NFD').replace(/\p{M}/gu, '') + '\n' + 'elan.mkv',
-    });
-  });
-
-  it('finds rows by the id the web uses, also those saved before it was stored', () => {
+  it('finds rows by the id the web uses', () => {
     const database = migrated(new Database(':memory:'));
     const store = new LibraryItemStore(database);
     for (const path of ['/lib/A/1.mkv', '/lib/A/2.mkv', '/lib/B/1.mkv']) {
       store.put(row(path));
     }
     store.put(row('/lib/A/1.mkv', { libraryId: 'other' }));
-    // A row from before the column existed.
-    database.prepare("UPDATE library_items SET item_id = NULL WHERE path = '/lib/A/2.mkv'").run();
 
     const found = store.byItemIds('shows', [
       itemId('/lib/A/2.mkv'),

@@ -1,14 +1,13 @@
 import type { Database } from '../sqlite/database.js';
 
 /**
- * Ordered schema changes, applied once each. Never edit an entry that has shipped: add a new
- * one. Applied names are tracked in `schema_migrations`, a table of its own, so Kinoshelf
- * modules sharing the one SQLite file do not step on each other (as `PRAGMA user_version`
- * would make them).
+ * Ordered schema changes, applied once each. Applied names are tracked in `schema_migrations`, a
+ * table of its own, so Kinoshelf modules sharing the one SQLite file do not step on each other (as
+ * `PRAGMA user_version` would make them). Never edit an entry that has shipped: add a new one.
  */
 export const CORE_MIGRATIONS: readonly { readonly name: string; readonly sql: string }[] = [
   {
-    name: 'core:001-journal',
+    name: 'core:001-initial',
     sql: `
       CREATE TABLE journal_entries (
         seq INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -19,30 +18,17 @@ export const CORE_MIGRATIONS: readonly { readonly name: string; readonly sql: st
         mode TEXT NOT NULL,
         at TEXT NOT NULL,
         created_directories TEXT NOT NULL,
-        undone_at TEXT
+        undone_at TEXT,
+        -- 'transfer', 'generated', 'downloaded' or 'replaced'
+        kind TEXT NOT NULL DEFAULT 'transfer',
+        -- JSON FileIdentity of the destination as written; NULL when it was not recorded
+        identity TEXT,
+        -- where the file an image replaced was kept; NULL for every other kind
+        backup TEXT
       );
       CREATE INDEX journal_entries_batch ON journal_entries (batch_id);
+      CREATE INDEX journal_entries_destination ON journal_entries (destination);
     `,
-  },
-  {
-    // Rows written before this read as transfers: the column default is what they all were.
-    name: 'core:002-journal-kind',
-    sql: `ALTER TABLE journal_entries ADD COLUMN kind TEXT NOT NULL DEFAULT 'transfer';`,
-  },
-  {
-    // JSON `FileIdentity`; NULL for rows written before, which undo trusts as it always did.
-    name: 'core:003-journal-identity',
-    sql: `ALTER TABLE journal_entries ADD COLUMN identity TEXT;`,
-  },
-  {
-    // Cleaning a folder a move left behind asks, for each file in it, whether Kinoshelf made it.
-    name: 'core:004-journal-destination',
-    sql: `CREATE INDEX journal_entries_destination ON journal_entries (destination);`,
-  },
-  {
-    // Where the file an image replaced was kept; NULL for every other kind.
-    name: 'core:005-journal-backup',
-    sql: `ALTER TABLE journal_entries ADD COLUMN backup TEXT;`,
   },
 ];
 

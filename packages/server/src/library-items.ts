@@ -218,31 +218,6 @@ export class LibraryItemStore {
     database.function('sort_key', { deterministic: true }, (value: unknown) =>
       typeof value === 'string' ? sortKey(value) : null,
     );
-    this.fillSortKeys();
-  }
-
-  /** Rows saved before `sort`, `work_key` and `search_key` existed get theirs, once (migrations 031, 033). */
-  private fillSortKeys(): void {
-    const missing = this.database
-      .prepare<[], KeyRow & { library_id: string }>(
-        `SELECT library_id, path, kind, tmdb_id, title, state FROM library_items WHERE work_key IS NULL OR search_key IS NULL`,
-      )
-      .all();
-    if (missing.length === 0) {
-      return;
-    }
-    const set = this.database.prepare(
-      'UPDATE library_items SET sort = ?, work_key = ?, search_key = ? WHERE library_id = ? AND path = ?',
-    );
-    this.database.transaction(() => {
-      for (const row of missing) {
-        const item = keyedItem(row);
-        set.run(sortOf(item), workKeyOf(item), searchKeyOf(item), row.library_id, row.path);
-      }
-      for (const libraryId of new Set(missing.map((row) => row.library_id))) {
-        this.regroup(libraryId);
-      }
-    })();
   }
 
   /**
@@ -634,7 +609,6 @@ export class LibraryItemStore {
 
   /** The rows with these ids (as the web names them), in path order. */
   byItemIds(libraryId: string, ids: readonly string[]): LibraryItem[] {
-    this.fillItemIds(libraryId);
     return this.database
       .prepare<[string, string], Row>(
         `SELECT ${COLUMNS} FROM library_items
@@ -643,26 +617,6 @@ export class LibraryItemStore {
       )
       .all(libraryId, JSON.stringify(ids))
       .map(toItem);
-  }
-
-  /** Rows saved before `item_id` existed get theirs, once. */
-  private fillItemIds(libraryId: string): void {
-    const missing = this.database
-      .prepare<[string], { path: string }>(
-        'SELECT path FROM library_items WHERE library_id = ? AND item_id IS NULL',
-      )
-      .all(libraryId);
-    if (missing.length === 0) {
-      return;
-    }
-    const set = this.database.prepare(
-      'UPDATE library_items SET item_id = ? WHERE library_id = ? AND path = ?',
-    );
-    this.database.transaction(() => {
-      for (const { path } of missing) {
-        set.run(itemId(path), libraryId, path);
-      }
-    })();
   }
 
   /** The files of one show of a series library, by path. */
@@ -1170,24 +1124,6 @@ const SETTLED_OTHER = "other.state NOT IN ('review', 'unrecognized')";
 /** Whether a file waits for a person to decide what it is. */
 export const isUnsettled = (item: Pick<LibraryItem, 'state'>): boolean =>
   item.state === 'review' || item.state === 'unrecognized';
-
-interface KeyRow {
-  path: string;
-  kind: 'movie' | 'series' | null;
-  tmdb_id: number | null;
-  title: string | null;
-  state: ItemState;
-}
-
-const keyedItem = (
-  row: KeyRow,
-): Pick<LibraryItem, 'path' | 'kind' | 'tmdbId' | 'title' | 'state'> => ({
-  path: row.path,
-  kind: row.kind,
-  tmdbId: row.tmdb_id,
-  title: row.title,
-  state: row.state,
-});
 
 /**
  * What makes one entry of a list: a movie the library identified is one whatever its versions,

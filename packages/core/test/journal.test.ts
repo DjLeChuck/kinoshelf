@@ -2,14 +2,12 @@ import { Database } from '../src/index.js';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
-  applyMigrations,
   MemoryJournal,
   SqliteJournal,
   type Journal,
   type JournalEntry,
   type TransferJournalEntry,
 } from '../src/index.js';
-import { CORE_MIGRATIONS } from '../src/journal/migrations.js';
 import { cleanup, makeDir } from './workspace.js';
 
 afterEach(cleanup);
@@ -211,13 +209,7 @@ describe('SqliteJournal storage', () => {
     new SqliteJournal(sqlite); // opening again must not fail nor wipe anything
 
     const applied = sqlite.prepare('SELECT name FROM schema_migrations').all();
-    expect(applied).toEqual([
-      { name: 'core:001-journal' },
-      { name: 'core:002-journal-kind' },
-      { name: 'core:003-journal-identity' },
-      { name: 'core:004-journal-destination' },
-      { name: 'core:005-journal-backup' },
-    ]);
+    expect(applied).toEqual([{ name: 'core:001-initial' }]);
     expect(new SqliteJournal(sqlite).lastBatchId()).toBe('b1');
   });
 
@@ -229,33 +221,6 @@ describe('SqliteJournal storage', () => {
     journal.record(entry('a', 'b1'));
     expect(journal.lastBatchId()).toBe('b1');
     expect(sqlite.pragma('user_version', { simple: true })).toBe(7);
-  });
-
-  it('reads rows written before the kind column as transfers', () => {
-    const sqlite = new Database(':memory:');
-    // The schema as shipped by core:001, with a row and its migration record.
-    applyMigrations(sqlite, CORE_MIGRATIONS.slice(0, 1));
-    sqlite
-      .prepare(
-        `INSERT INTO journal_entries (id, batch_id, source, destination, mode, at, created_directories)
-         VALUES ('old', 'b0', '/s/a.mkv', '/l/a.mkv', 'hardlink', '2026-01-01T00:00:00.000Z', '["/l"]')`,
-      )
-      .run();
-
-    const journal = new SqliteJournal(sqlite);
-    expect(journal.entriesOf('b0')).toEqual([
-      {
-        kind: 'transfer',
-        id: 'old',
-        batchId: 'b0',
-        source: '/s/a.mkv',
-        destination: '/l/a.mkv',
-        mode: 'hardlink',
-        at: '2026-01-01T00:00:00.000Z',
-        createdDirectories: ['/l'],
-      },
-    ]);
-    expect(journal.batches()[0]).toMatchObject({ operations: 1, modes: ['hardlink'] });
   });
 
   it('refuses a duplicate entry id', () => {

@@ -140,7 +140,7 @@ describe('GET /api/health/report', () => {
     }>();
 
     expect(report.server.node).toBe(process.version);
-    expect(report.database.migrations.applied).toBeGreaterThan(10);
+    expect(report.database.migrations.applied).toBe(2);
     expect(report.database.migrations.last?.name).toMatch(/^(core|server):/);
     expect(report.database.journalEntries).toBe(0);
     expect(report.disks.map((d) => d.path)).toEqual([source, source]);
