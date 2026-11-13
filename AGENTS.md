@@ -594,6 +594,11 @@ refuses to delete a library an arrival folder points at (`library.in-use`). Ther
   `release` and `cluster` (filled by that list only, from `job_entries`; `null` elsewhere): `groupSettling`
   (`lib/library-items.ts`) makes one row per release and series, and the panel says how many files the
   choice covers (the preview shows the series' folder, `folder` of `POST /api/entries/{id}/preview`, rather than one episode). Once validated or ignored, a group stays locked ("Transfer started") until a reload no longer lists it.
+- **`library_shows`** (server migration 034) is the list of shows kept as rows, a cache of `library_items`: one per show, with the
+  counts (`rename`, `incomplete`), which states and missing files it holds and whether it has several versions. Every write of
+  `LibraryItemStore` names the shows it touches (`changed(library, shows)`; no argument means all) and the next read settles
+  them (`settleShows`); a library is rebuilt whole the first time it is read in a process. **A new writer of `library_items`
+  must name its shows**, or the list shows stale rows (a test holds it). `series_completeness` and `series_files` are joined at read.
 - **Series** (`completeness.ts`, server migration 014): a row of a series library carries `season`,
   `episode` and `episodeEnd` (a file holding `S01E02E03` is one row, `episode` its first and
   `episodeEnd` its last). `GET /api/libraries/:id/shows` lists one row per work (files nobody identified

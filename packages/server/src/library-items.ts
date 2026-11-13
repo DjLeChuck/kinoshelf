@@ -202,6 +202,14 @@ export class LibraryItemStore {
     { generation: number; values: Map<string, unknown> }
   >();
 
+  /**
+   * What `library_shows` is behind on: the shows whose rows changed since it was last settled, or
+   * `'all'`. Kept in memory, so a library not yet settled in this process is rebuilt whole on its
+   * first read (`settledShows`): the table is a cache of the rows, never trusted across a restart.
+   */
+  private readonly staleShows = new Map<string, Set<number> | 'all'>();
+  private readonly settledShows = new Set<string>();
+
   constructor(private readonly database: Database) {
     // SQLite's lower() only folds ASCII, so "Ça" would sort after "Z": the key drops accents too.
     database.function('sort_key', { deterministic: true }, (value: unknown) =>
@@ -288,7 +296,7 @@ export class LibraryItemStore {
 
   /** The movies' collections were rewritten (an override, a scan): their rows follow. */
   refreshMovies(libraryId: string, movieIds: readonly number[]): void {
-    this.changed(libraryId);
+    this.changed(libraryId, []);
     this.database.transaction(() => {
       this.refreshCollections(libraryId, ' AND work_key IN (SELECT value FROM json_each(?))', [
         JSON.stringify(movieIds.map((id) => `m${String(id)}`)),
@@ -313,7 +321,6 @@ export class LibraryItemStore {
    * `folder` when one folder was scanned (a file, when that is what was).
    */
   replace(libraryId: string, items: readonly LibraryItem[], folder?: string): void {
-    this.changed(libraryId);
     // A range on the primary key: every path under `folder/` sorts between `folder/` and `folder0`.
     const scope =
       folder === undefined
@@ -322,6 +329,12 @@ export class LibraryItemStore {
             where: ' AND (path = ? OR (path >= ? AND path < ?))',
             args: [folder, `${folder}/`, `${folder}0`],
           };
+    this.changed(
+      libraryId,
+      folder === undefined
+        ? 'all'
+        : [...this.showsAt(libraryId, scope.where, scope.args), ...items.flatMap(showOf)],
+    );
     this.database.transaction(() => {
       const touched = this.workKeysAt(libraryId, scope.where, scope.args);
       // A file that is still there keeps what was probed of it: its size and date say if it changed.
@@ -374,7 +387,7 @@ export class LibraryItemStore {
 
   /** Moves a row to another path, probe included: it is the same file, and its date will tell. */
   rename(libraryId: string, from: string, to: string): void {
-    this.changed(libraryId);
+    this.changed(libraryId, this.showsAt(libraryId, ' AND path IN (?, ?)', [from, to]));
     this.database.transaction(() => {
       const touched = this.workKeysAt(libraryId, ' AND path IN (?, ?)', [from, to]);
       this.database
@@ -431,7 +444,8 @@ export class LibraryItemStore {
   }
 
   setProbe(libraryId: string, path: string, probe: Probe): void {
-    this.changed(libraryId);
+    // The picture size is what tells a show's versions apart.
+    this.changed(libraryId, this.showsAt(libraryId, ' AND path = ?', [path]));
     this.database
       .prepare(
         `UPDATE library_items SET ${PROBE_ASSIGNMENTS}
@@ -487,7 +501,10 @@ export class LibraryItemStore {
   }
 
   put(item: LibraryItem): void {
-    this.changed(item.libraryId);
+    this.changed(item.libraryId, [
+      ...this.showsAt(item.libraryId, ' AND path = ?', [item.path]),
+      ...showOf(item),
+    ]);
     this.database.transaction(() => {
       // The row may change work (a movie matched to another film, a file settled): both are regrouped.
       const touched = this.workKeysAt(item.libraryId, ' AND path = ?', [item.path]);
@@ -515,6 +532,7 @@ export class LibraryItemStore {
     this.database.transaction(() => {
       for (const table of [
         'library_items',
+        'library_shows',
         'series_completeness',
         'series_files',
         'collection_overrides',
@@ -525,7 +543,7 @@ export class LibraryItemStore {
   }
 
   remove(libraryId: string, path: string): void {
-    this.changed(libraryId);
+    this.changed(libraryId, this.showsAt(libraryId, ' AND path = ?', [path]));
     this.database.transaction(() => {
       const touched = this.workKeysAt(libraryId, ' AND path = ?', [path]);
       this.database
@@ -859,8 +877,10 @@ export class LibraryItemStore {
   private ofShows(libraryId: string, tmdbIds: readonly number[]): Map<number, LibraryItem[]> {
     const rows = this.database
       .prepare<[string, string], Row>(
-        `SELECT ${COLUMNS} FROM library_items
-         WHERE library_id = ? AND kind = 'series' AND tmdb_id IN (SELECT value FROM json_each(?))
+        // The index is named: left to choose, SQLite scanned the whole library with a filter on the
+        // ids (8 ms at 20 000 files, against under 1 when each show is looked up).
+        `SELECT ${COLUMNS} FROM library_items INDEXED BY library_items_show
+         WHERE library_id = ? AND tmdb_id IN (SELECT value FROM json_each(?)) AND kind = 'series'
          ORDER BY path`,
       )
       .all(libraryId, JSON.stringify(tmdbIds))
@@ -875,21 +895,87 @@ export class LibraryItemStore {
   }
 
   /**
-   * The shows held in several versions, and those where a version lacks an episode another one
-   * holds. Read from the files of the library: the sets are small, the rule is not SQL's.
-   */
-  private versionedShows(libraryId: string): { multi: number[]; incomplete: number[] } {
-    return this.memo(libraryId, 'versioned', () => this.readVersionedShows(libraryId));
-  }
-
-  /**
    * Every write to a library's rows goes through this store, so a counter per library says whether
    * what was derived from them (the shows held in several versions, the counts) is still true. A
    * list reads those several times (the page, its total, the counts), and each costs a pass over
    * every row.
    */
-  private changed(libraryId: string): void {
+  private changed(libraryId: string, shows: Iterable<number> | 'all' = 'all'): void {
     this.generations.set(libraryId, (this.generations.get(libraryId) ?? 0) + 1);
+    const stale = this.staleShows.get(libraryId);
+    if (shows === 'all' || stale === 'all') {
+      this.staleShows.set(libraryId, 'all');
+    } else {
+      this.staleShows.set(libraryId, new Set([...(stale ?? []), ...shows]));
+    }
+  }
+
+  /** The shows (TMDB ids) of the rows at these paths. */
+  private showsAt(libraryId: string, where: string, args: readonly string[]): number[] {
+    return this.database
+      .prepare<string[], { tmdb_id: number }>(
+        `SELECT DISTINCT tmdb_id FROM library_items
+         WHERE library_id = ? AND kind = 'series' AND tmdb_id IS NOT NULL${where}`,
+      )
+      .all(libraryId, ...args)
+      .map((row) => row.tmdb_id);
+  }
+
+  /**
+   * Brings `library_shows` up to date with the rows: the shows a write named, or every one the first
+   * time a library is read in this process. One row per show holds what a list needs of its files
+   * (the counts, which states and missing files it holds, whether it has several versions), so a
+   * list reads those few hundred rows instead of grouping every episode. The version rules are
+   * `versions.ts`'s, applied to the show's files: they are not SQL's.
+   */
+  private settleShows(libraryId: string): void {
+    const stale = this.staleShows.get(libraryId);
+    const everything = !this.settledShows.has(libraryId) || stale === 'all';
+    if (!everything && (stale === undefined || stale.size === 0)) {
+      return;
+    }
+    const scope = everything ? '' : ' AND tmdb_id IN (SELECT value FROM json_each(?))';
+    const args = everything || stale === undefined ? [] : [JSON.stringify([...stale])];
+    this.database.transaction(() => {
+      this.database
+        .prepare(`DELETE FROM library_shows WHERE library_id = ?${scope}`)
+        .run(libraryId, ...args);
+      this.database
+        .prepare(
+          `INSERT INTO library_shows (library_id, tmdb_id, title, year, sort, seasons, rename, refresh,
+             has_review, has_unrecognized, has_missing_nfo, has_missing_artwork, multi, incomplete_versions)
+           SELECT library_id, tmdb_id, MIN(title), MIN(year), MIN(sort), COUNT(DISTINCT season),
+             SUM(state = 'rename'), SUM(state = 'incomplete'), MAX(state = 'review'),
+             MAX(state = 'unrecognized'), COALESCE(MAX(nfo = 0), 0),
+             COALESCE(MAX(poster = 0 OR fanart = 0 OR logo = 0 OR thumb = 0), 0), 0, 0
+           FROM library_items
+           WHERE library_id = ? AND kind = 'series' AND tmdb_id IS NOT NULL${scope}
+           GROUP BY library_id, tmdb_id`,
+        )
+        .run(libraryId, ...args);
+      const byShow = new Map<number, VersionRow[]>();
+      for (const row of this.database
+        .prepare<string[], Row>(
+          `SELECT ${COLUMNS} FROM library_items
+           WHERE library_id = ? AND kind = 'series' AND tmdb_id IS NOT NULL${scope}`,
+        )
+        .all(libraryId, ...args)) {
+        const item = toItem(row);
+        byShow.set(item.tmdbId ?? 0, [...(byShow.get(item.tmdbId ?? 0) ?? []), versionRowOf(item)]);
+      }
+      const versions = this.database.prepare(
+        'UPDATE library_shows SET multi = ?, incomplete_versions = ? WHERE library_id = ? AND tmdb_id = ?',
+      );
+      for (const [tmdbId, files] of byShow) {
+        const multi = hasSeveralVersions(files);
+        const incomplete = hasIncompleteVersion(files);
+        if (multi || incomplete) {
+          versions.run(multi ? 1 : 0, incomplete ? 1 : 0, libraryId, tmdbId);
+        }
+      }
+    })();
+    this.staleShows.delete(libraryId);
+    this.settledShows.add(libraryId);
   }
 
   private memo<T>(libraryId: string, key: string, compute: () => T): T {
@@ -911,55 +997,19 @@ export class LibraryItemStore {
     return value;
   }
 
-  private readVersionedShows(libraryId: string): { multi: number[]; incomplete: number[] } {
-    const rows = this.database
-      .prepare<[string], Row>(
-        `SELECT ${COLUMNS} FROM library_items
-         WHERE library_id = ? AND kind = 'series' AND tmdb_id IS NOT NULL`,
-      )
-      .all(libraryId)
-      .map(toItem);
-    const byShow = new Map<number, VersionRow[]>();
-    for (const item of rows) {
-      byShow.set(item.tmdbId ?? 0, [...(byShow.get(item.tmdbId ?? 0) ?? []), versionRowOf(item)]);
-    }
-    const shows = [...byShow];
-    return {
-      multi: shows.filter(([, files]) => hasSeveralVersions(files)).map(([id]) => id),
-      incomplete: shows.filter(([, files]) => hasIncompleteVersion(files)).map(([id]) => id),
-    };
-  }
-
   /** The query of the shows, one row each, and its parameters. */
   private groupedShows(
     libraryId: string,
     options: ShowFilter,
   ): { grouped: string; params: (string | number)[] } {
-    // The shows to keep by their versions: held in several, and/or with one lacking an episode.
-    const sets =
-      options.multi || options.state === 'incomplete-versions'
-        ? this.versionedShows(libraryId)
-        : undefined;
-    const versioned: number[][] = [
-      ...(options.multi && sets ? [sets.multi] : []),
-      ...(options.state === 'incomplete-versions' && sets ? [sets.incomplete] : []),
-    ];
+    this.settleShows(libraryId);
+    // What other tables say of a show (what it lacks, its own files) is joined here, for the few
+    // hundred rows of `library_shows`: those tables are written by other stores.
     const where = [
-      "i.library_id = ? AND i.kind = 'series' AND i.tmdb_id IS NOT NULL",
-      ...(options.query ? ["i.sort LIKE ? ESCAPE '\\'"] : []),
-      ...versioned.map(() => 'i.tmdb_id IN (SELECT value FROM json_each(?))'),
-      // The shows holding such a file, found once: a sub-query per row would walk every episode of
-      // the show for each of them. The filter's columns are unqualified, so the inner table's.
-      ...(options.state && options.state !== 'incomplete-versions'
-        ? [
-            `i.tmdb_id IN (SELECT x.tmdb_id FROM library_items x WHERE x.library_id = ?
-               AND x.kind = 'series' AND x.tmdb_id IS NOT NULL AND ${FILTER_SQL[options.state]})`,
-          ]
-        : []),
-    ].join(' AND ');
-    // What is asked of a show as a whole (what its other tables say) is checked once per show, after
-    // the episodes are grouped: joined to every episode first, it was a lookup per file, ~20 000 of them.
-    const after = [
+      's.library_id = ?',
+      ...(options.query ? ["s.sort LIKE ? ESCAPE '\\'"] : []),
+      ...(options.multi ? ['s.multi = 1'] : []),
+      ...(options.state ? [SHOW_STATE_SQL[options.state]] : []),
       ...(options.missing ? ['c.missing > 0'] : []),
       // A season's row only ever carries its poster, so one check covers the show and its seasons.
       ...(options.incomplete ? [LACKS_SHOW_FILES] : []),
@@ -967,81 +1017,22 @@ export class LibraryItemStore {
     const params: (string | number)[] = [
       libraryId,
       ...(options.query ? [contains(sortKey(options.query))] : []),
-      ...versioned.map((ids) => JSON.stringify(ids)),
-      ...(options.state && options.state !== 'incomplete-versions' ? [libraryId] : []),
-      libraryId,
-      libraryId,
       ...(options.incomplete ? [libraryId] : []),
     ];
     const grouped = `
       SELECT s.tmdb_id AS tmdb_id, s.title AS title, s.year AS year, s.sort AS sort,
         s.seasons AS seasons, c.missing AS missing, s.rename AS rename, s.refresh AS refresh,
         f.nfo AS nfo, f.poster AS poster, f.fanart AS fanart, f.logo AS logo
-      FROM (
-        SELECT i.tmdb_id AS tmdb_id, MIN(i.title) AS title, MIN(i.year) AS year,
-          MIN(i.sort) AS sort, COUNT(DISTINCT i.season) AS seasons,
-          SUM(i.state = 'rename') AS rename, SUM(i.state = 'incomplete') AS refresh
-        FROM library_items i
-        WHERE ${where} GROUP BY i.tmdb_id
-      ) s
-      LEFT JOIN series_completeness c ON c.library_id = ? AND c.tmdb_id = s.tmdb_id
-      LEFT JOIN series_files f ON f.library_id = ? AND f.tmdb_id = s.tmdb_id AND f.season = -1
-      ${after.length > 0 ? `WHERE ${after.join(' AND ')}` : ''}`;
+      FROM library_shows s
+      LEFT JOIN series_completeness c ON c.library_id = s.library_id AND c.tmdb_id = s.tmdb_id
+      LEFT JOIN series_files f
+        ON f.library_id = s.library_id AND f.tmdb_id = s.tmdb_id AND f.season = -1
+      WHERE ${where.join(' AND ')}`;
     return { grouped, params };
   }
 
   /** How many shows a filter keeps; the count alone, without reading a page of them. */
   private countShows(libraryId: string, options: ShowFilter): number {
-    const wantsOtherTables = options.missing === true || options.incomplete === true;
-    if (!wantsOtherTables) {
-      // Only the rows say: the same count for every page of the list until a row changes.
-      const key = `shows:${JSON.stringify([options.query, options.state, options.multi])}`;
-      return this.memo(libraryId, key, () => this.countGrouped(libraryId, options));
-    }
-    if (!options.query && !options.state && !options.multi) {
-      // Which shows exist is the rows' (kept); what each lacks is read from its own table, for those
-      // only: grouping the episodes again to count shows would read every one of them.
-      const ids = JSON.stringify(this.showIds(libraryId));
-      const lacking = options.missing
-        ? this.database
-            .prepare<[string, string], { total: number }>(
-              `SELECT COUNT(*) AS total FROM series_completeness c
-               WHERE c.library_id = ? AND c.missing > 0
-                 AND c.tmdb_id IN (SELECT value FROM json_each(?))`,
-            )
-            .get(libraryId, ids)
-        : undefined;
-      if (options.missing && !options.incomplete) {
-        return lacking?.total ?? 0;
-      }
-      if (options.incomplete && !options.missing) {
-        return (
-          this.database
-            .prepare<[string, string], { total: number }>(
-              `SELECT COUNT(*) AS total FROM (SELECT value AS tmdb_id FROM json_each(?)) s
-               WHERE ${LACKS_SHOW_FILES}`,
-            )
-            .get(ids, libraryId)?.total ?? 0
-        );
-      }
-    }
-    return this.countGrouped(libraryId, options);
-  }
-
-  /** The shows of a library (a TMDB id each), as its rows hold them. */
-  private showIds(libraryId: string): number[] {
-    return this.memo(libraryId, 'show-ids', () =>
-      this.database
-        .prepare<[string], { tmdb_id: number }>(
-          `SELECT DISTINCT tmdb_id FROM library_items
-           WHERE library_id = ? AND kind = 'series' AND tmdb_id IS NOT NULL`,
-        )
-        .all(libraryId)
-        .map((row) => row.tmdb_id),
-    );
-  }
-
-  private countGrouped(libraryId: string, options: ShowFilter): number {
     const { grouped, params } = this.groupedShows(libraryId, options);
     return (
       this.database
@@ -1259,6 +1250,20 @@ export type StateFilter = (typeof STATE_FILTERS)[number];
 /** What narrows the shows of a series library: those of the items, and the versions that lack. */
 export const SHOW_FILTERS = [...STATE_FILTERS, 'incomplete-versions'] as const;
 export type ShowStateFilter = (typeof SHOW_FILTERS)[number];
+
+/** What `library_shows` holds for each filter of the shows (`s` is its row). */
+const SHOW_STATE_SQL: Record<ShowStateFilter, string> = {
+  review: 's.has_review = 1',
+  rename: 's.rename > 0',
+  unrecognized: 's.has_unrecognized = 1',
+  'missing-nfo': 's.has_missing_nfo = 1',
+  'missing-artwork': 's.has_missing_artwork = 1',
+  'incomplete-versions': 's.incomplete_versions = 1',
+};
+
+/** The show a series row belongs to, as a list of at most one. */
+const showOf = (item: Pick<LibraryItem, 'kind' | 'tmdbId'>): number[] =>
+  item.kind === 'series' && item.tmdbId !== null ? [item.tmdbId] : [];
 
 const FILTER_SQL: Record<ItemFilter, string> = {
   review: "state = 'review'",

@@ -432,6 +432,32 @@ export const SERVER_MIGRATIONS: readonly { readonly name: string; readonly sql: 
     name: 'server:033-items-search-key',
     sql: 'ALTER TABLE library_items ADD COLUMN search_key TEXT;',
   },
+  {
+    // One row per show of a series library, with what a list needs of its files: the counts, which
+    // states and missing files it holds, whether it is held in several versions. A cache of
+    // `library_items`, rebuilt from it by `LibraryItemStore` (the first read after a start, then the shows
+    // a write touched), so it never holds anything the files do not: nothing to convert.
+    name: 'server:034-library-shows',
+    sql: `
+      CREATE TABLE library_shows (
+        library_id TEXT NOT NULL,
+        tmdb_id INTEGER NOT NULL,
+        title TEXT,
+        year INTEGER,
+        sort TEXT,
+        seasons INTEGER NOT NULL,
+        rename INTEGER NOT NULL,
+        refresh INTEGER NOT NULL,
+        has_review INTEGER NOT NULL,
+        has_unrecognized INTEGER NOT NULL,
+        has_missing_nfo INTEGER NOT NULL,
+        has_missing_artwork INTEGER NOT NULL,
+        multi INTEGER NOT NULL,
+        incomplete_versions INTEGER NOT NULL,
+        PRIMARY KEY (library_id, tmdb_id)
+      ) WITHOUT ROWID;
+      CREATE INDEX library_shows_sort ON library_shows (library_id, sort, tmdb_id);`,
+  },
 ];
 
 /** Opens the single SQLite file of the config directory, shared with the CLI and the cache. */

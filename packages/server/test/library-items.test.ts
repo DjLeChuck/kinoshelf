@@ -990,7 +990,74 @@ describe('the lookups of the item store', () => {
     expect(calls).toBe(0);
   });
 
-  it('counts the shows lacking episodes or files as the grouped query does', () => {
+  it('keeps the rows of its shows as a rebuild from the files would, whatever was written', () => {
+    const database = migrated(new Database(':memory:'));
+    const store = new LibraryItemStore(database);
+    const episode = (path: string, show: number, season: number, number: number, over = {}) =>
+      row(path, {
+        kind: 'series',
+        tmdbId: show,
+        title: `Show ${String(show)}`,
+        season,
+        episode: number,
+        ...over,
+      });
+    const summary = (): unknown[] =>
+      database.prepare('SELECT * FROM library_shows ORDER BY library_id, tmdb_id').all();
+    const rebuilt = (): unknown[] => {
+      (store as unknown as { staleShows: Map<string, string> }).staleShows.set('shows', 'all');
+      store.shows('shows', { limit: 50, offset: 0 });
+      return summary();
+    };
+    const read = (): void => void store.shows('shows', { limit: 50, offset: 0 });
+
+    for (const show of [1, 2, 3]) {
+      store.put(episode(`/s/${String(show)}/a.mkv`, show, 1, 1));
+      store.put(episode(`/s/${String(show)}/b.mkv`, show, 1, 2));
+    }
+    read();
+    // Each kind of write, read after each: a state, a second version, a probe, a move, a removal, a
+    // show changing its id, and a scan of one folder.
+    store.put(episode('/s/1/a.mkv', 1, 1, 1, { state: 'rename', nfo: false }));
+    read();
+    expect(summary()).toEqual(rebuilt());
+    store.put(episode('/s/2/a - 2160p.mkv', 2, 1, 1));
+    read();
+    expect(summary()).toEqual(rebuilt());
+    expect(
+      store.shows('shows', { multi: true, limit: 50, offset: 0 }).items.map((s) => s.tmdbId),
+    ).toEqual([2]);
+    store.setProbe('shows', '/s/2/a - 2160p.mkv', {
+      video: null,
+      audio: null,
+      hdr: null,
+      audioLanguages: [],
+      subtitleLanguages: [],
+      picture: '2160p',
+      size: 1,
+      mtime: 1,
+      probedAt: '2026-11-13T00:00:00.000Z',
+    } as never);
+    read();
+    expect(summary()).toEqual(rebuilt());
+    store.rename('shows', '/s/3/a.mkv', '/s/3/z.mkv');
+    read();
+    expect(summary()).toEqual(rebuilt());
+    store.remove('shows', '/s/3/b.mkv');
+    store.remove('shows', '/s/3/z.mkv');
+    expect(store.shows('shows', { limit: 50, offset: 0 }).items.map((s) => s.tmdbId)).toEqual([
+      1, 2,
+    ]);
+    expect(summary()).toEqual(rebuilt());
+    store.put(episode('/s/1/b.mkv', 7, 1, 2));
+    read();
+    expect(summary()).toEqual(rebuilt());
+    store.replace('shows', [episode('/s/2/a.mkv', 2, 1, 1)], '/s/2');
+    read();
+    expect(summary()).toEqual(rebuilt());
+  });
+
+  it('counts the shows lacking episodes or files', () => {
     const database = migrated(new Database(':memory:'));
     const store = new LibraryItemStore(database);
     for (const id of [1, 2, 3, 4]) {
@@ -1026,16 +1093,9 @@ describe('the lookups of the item store', () => {
     }
     database.prepare(`UPDATE library_items SET unavailable = '["poster"]' WHERE tmdb_id = 3`).run();
 
-    const reference = (options: object): number =>
-      (store as unknown as { countGrouped: (id: string, o: object) => number }).countGrouped(
-        'shows',
-        options,
-      );
     const counts = store.counts('shows', true);
     expect(counts['missing-episodes']).toBe(2);
-    expect(counts['missing-episodes']).toBe(reference({ missing: true }));
     expect(counts['missing-show-files']).toBe(1);
-    expect(counts['missing-show-files']).toBe(reference({ incomplete: true }));
     expect(counts.all).toBe(4);
   });
 
