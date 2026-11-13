@@ -15,6 +15,8 @@ export interface Settings {
     readonly language: string | null;
   };
   readonly locale: 'en' | 'fr' | null;
+  /** What the server uses while no setting says (`KINOSHELF_LOCALE`, then `LANG`). */
+  readonly defaults: { readonly locale: 'en' | 'fr'; readonly metadataLanguage: string };
   /** Signed in with Plex (a token that renews itself), or `expired` once plex.tv refuses it. */
   readonly plexAccount: 'signed-in' | 'expired' | null;
   readonly plex: {

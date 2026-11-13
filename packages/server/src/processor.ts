@@ -1,9 +1,8 @@
-import { detectLocale } from '@kinoshelf/i18n';
 import { stat } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import type { Database } from '@kinoshelf/core';
+import { defaultLanguageOf } from './settings.js';
 import {
-  metadataLanguageFor,
   libraryProfile,
   analyze,
   discoverVideos,
@@ -164,9 +163,12 @@ async function process(deps: ProcessorDeps, job: Job): Promise<ProcessedJob> {
  */
 const shared = new WeakMap<Database, { cache: SqliteHttpCache; pool: RequestPool }>();
 
-/** Language asked of TMDB when no setting names one: the locale as the server detects it (config, then LANG). */
+/**
+ * Language asked of TMDB when no setting names one: `KINOSHELF_METADATA_LANGUAGE`, else the locale
+ * as the server detects it (config, `KINOSHELF_LOCALE`, then LANG).
+ */
 export function defaultMetadataLanguage(deps: ProcessorDeps): string {
-  return metadataLanguageFor(detectLocale(undefined, deps.config.locale, deps.env));
+  return defaultLanguageOf(deps.config.locale, deps.env);
 }
 
 export function makeProvider(deps: ProcessorDeps, language: string): MetadataProvider {

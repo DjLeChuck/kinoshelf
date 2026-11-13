@@ -7,7 +7,9 @@ import {
   type ConfigEdit,
   type Metadata,
   type Naming,
+  metadataLanguageFor,
 } from '@kinoshelf/core';
+import { detectLocale } from '@kinoshelf/i18n';
 import { tmdbKeyFromEnv } from '@kinoshelf/provider-tmdb';
 import { ApiError } from './api-error.js';
 import { redactUrl } from './notify/paths.js';
@@ -65,6 +67,12 @@ const webhookId = (url: string): string =>
 
 type Env = Readonly<Record<string, string | undefined>>;
 
+/** The language asked of TMDB when no setting names one (`KINOSHELF_METADATA_LANGUAGE`, else the locale's). */
+export function defaultLanguageOf(configured: 'en' | 'fr' | undefined, env: Env): string {
+  const named = env.KINOSHELF_METADATA_LANGUAGE?.trim();
+  return named ? named : metadataLanguageFor(detectLocale(undefined, configured, env));
+}
+
 /**
  * What the UI may know of the configuration. Secrets (API keys, tokens, the path of a webhook,
  * its headers) are never sent back: only whether they are set, so a page or a log of the
@@ -80,6 +88,11 @@ export function presentSettings(config: Config, env: Env): unknown {
       language: config.metadataLanguage ?? null,
     },
     locale: config.locale ?? null,
+    // What the server uses while no setting says: the form shows it instead of guessing.
+    defaults: {
+      locale: detectLocale(undefined, undefined, env),
+      metadataLanguage: defaultLanguageOf(undefined, env),
+    },
     plex: plex
       ? {
           url: plex.url,

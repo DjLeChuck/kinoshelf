@@ -1,7 +1,7 @@
 <script lang="ts">
   import { api } from '../lib/api.js';
   import { messageOf } from '../lib/errors.js';
-  import { locale as uiLocale, t } from '../lib/i18n.svelte.js';
+  import { t } from '../lib/i18n.svelte.js';
   import { nullIfBlank, type Settings } from '../lib/settings.js';
   import SettingsSection from './SettingsSection.svelte';
 
@@ -11,7 +11,7 @@
   /* svelte-ignore state_referenced_locally */
   let language = $state(settings.tmdb.language ?? '');
   /* svelte-ignore state_referenced_locally */
-  let locale = $state<'en' | 'fr'>(settings.locale ?? uiLocale.value);
+  let locale = $state<'en' | 'fr'>(settings.locale ?? settings.defaults.locale);
   let key = $state('');
   let testing = $state(false);
   /** What the test said, as text; `undefined` before any test. */
@@ -77,7 +77,7 @@
         id="metadata-language"
         class="input"
         bind:value={language}
-        placeholder={locale === 'fr' ? 'fr' : 'en-US'}
+        placeholder={settings.defaults.metadataLanguage}
       />
       <span class="muted hint">{t('web.settings.general.metadata.hint')}</span>
     </div>

@@ -200,6 +200,10 @@ nowhere: a custom profile file is to be discussed again.
   `source`, the field is disabled with an explanation, and the API refuses the change with a 409
   (`settings.tmdb-key-from-env`, `settings.api-key-from-env`): a value saved and never used is worse
   than a refusal. Do the same for any new variable that shadows a setting.
+  The exception is a **default**: `KINOSHELF_LOCALE` and `KINOSHELF_METADATA_LANGUAGE` only fill in while `locale` /
+  `metadataLanguage` is unset (after them: `LANG`, then `en-US`), so no `source` and no 409. `GET /api/settings`
+  reports what is in use as `defaults`; the onboarding and the settings preselect it, never the browser's language,
+  so a form cannot show a language the server does not use.
 - **The first key** (`POST /api/setup/api-key`, while none exists) is only made through a local host
   name (IP, `localhost`, no dot, `.local`/`.lan`/`.home.arpa`/`.internal`, or
   `KINOSHELF_ALLOWED_HOSTS`): a DNS-rebinding page sends its own domain as both `Origin` and `Host`.

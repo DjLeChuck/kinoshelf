@@ -533,6 +533,7 @@ export const settingsSchema = {
   required: [
     'tmdb',
     'locale',
+    'defaults',
     'plexAccount',
     'plex',
     'jellyfin',
@@ -553,6 +554,14 @@ export const settingsSchema = {
       },
     },
     locale: { type: 'string', enum: ['en', 'fr'], nullable: true },
+    defaults: {
+      type: 'object',
+      required: ['locale', 'metadataLanguage'],
+      properties: {
+        locale: { type: 'string', enum: ['en', 'fr'] },
+        metadataLanguage: { type: 'string' },
+      },
+    },
     plexAccount: { type: 'string', enum: ['signed-in', 'expired'], nullable: true },
     plex: {
       type: 'object',

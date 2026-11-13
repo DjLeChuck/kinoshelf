@@ -11,7 +11,10 @@ const catalogs: Record<Locale, Record<MessageKey, string>> = { en, fr };
 
 export const isLocale = (value: string): value is Locale => value === 'en' || value === 'fr';
 
-/** `--lang`, then the config file, then the environment (`LC_ALL`, `LC_MESSAGES`, `LANG`). */
+/**
+ * `--lang`, then the config file, then `KINOSHELF_LOCALE` (a default, not an override: the settings
+ * still win), then the environment (`LC_ALL`, `LC_MESSAGES`, `LANG`).
+ */
 export function detectLocale(
   flag: string | undefined,
   configured: Locale | undefined,
@@ -22,6 +25,10 @@ export function detectLocale(
   }
   if (configured) {
     return configured;
+  }
+  const named = env.KINOSHELF_LOCALE;
+  if (named !== undefined && isLocale(named)) {
+    return named;
   }
   const posix = env.LC_ALL || env.LC_MESSAGES || env.LANG || '';
   return posix.toLowerCase().startsWith('fr') ? 'fr' : 'en';

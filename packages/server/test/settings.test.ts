@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { loadConfig } from '@kinoshelf/core';
 import { afterEach, describe, expect, it } from 'vitest';
 import { isValidApiKey } from '../src/auth.js';
-import { presentSettings } from '../src/settings.js';
+import { defaultLanguageOf, presentSettings } from '../src/settings.js';
 import { isValidSession } from '../src/sessions.js';
 import {
   cleanup,
@@ -107,6 +107,18 @@ notify:
     const h = await harness();
     const body = (await h.request('GET', '/api/settings')).json<SettingsBody>();
     expect(body).toMatchObject({ tmdb: { configured: false }, plex: null, webhooks: [] });
+  });
+});
+
+describe('defaultLanguageOf', () => {
+  it.each([
+    [undefined, {}, 'en-US'],
+    [undefined, { KINOSHELF_LOCALE: 'fr' }, 'fr'],
+    ['fr', {}, 'fr'],
+    [undefined, { KINOSHELF_LOCALE: 'fr', KINOSHELF_METADATA_LANGUAGE: 'en-GB' }, 'en-GB'],
+    [undefined, { KINOSHELF_METADATA_LANGUAGE: ' ' }, 'en-US'],
+  ] as const)('locale %j, env %j → %s', (configured, env, expected) => {
+    expect(defaultLanguageOf(configured, env)).toBe(expected);
   });
 });
 

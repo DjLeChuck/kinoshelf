@@ -32,7 +32,7 @@
   }: { step: StepId; editing?: boolean; ondone?: () => void } = $props();
 
   let tmdbKey = $state('');
-  /** Starts from the interface's language (the browser's): a Docker server has no LANG to tell. */
+  /** Starts from what the server uses (saved, `KINOSHELF_LOCALE`, `LANG`), the browser's until it answers. */
   let language = $state<'en' | 'fr'>(locale.value);
   let kind = $state<'plex' | 'jellyfin'>('plex');
   let url = $state('');
@@ -54,14 +54,17 @@
 
   onMount(() => {
     // The destination step shows the naming examples, which only the server knows.
-    if (step === 'destination' || editing)
+    if (step === 'destination' || step === 'tmdb' || editing)
       void prefill().catch((error: unknown) => (failure = error));
   });
 
   /** Starts the fields from what is saved. A secret is never sent back: a blank one stays as it is. */
   async function prefill(): Promise<void> {
-    if (step === 'destination' || step === 'server') {
+    if (step === 'destination' || step === 'server' || step === 'tmdb') {
       settings = await api.get<Settings>('/api/settings');
+    }
+    if (step === 'tmdb' && settings) {
+      language = settings.locale ?? settings.defaults.locale;
     }
     if (step === 'server' && settings) {
       const server = settings.plex ?? settings.jellyfin;

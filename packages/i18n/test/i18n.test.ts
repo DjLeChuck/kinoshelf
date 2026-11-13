@@ -159,6 +159,9 @@ describe('detectLocale', () => {
     [undefined, undefined, { LANG: 'de_DE.UTF-8' }, 'en'],
     [undefined, undefined, {}, 'en'],
     ['klingon', undefined, { LANG: 'fr_FR.UTF-8' }, 'fr'],
+    [undefined, undefined, { KINOSHELF_LOCALE: 'fr', LANG: 'en_US.UTF-8' }, 'fr'],
+    [undefined, 'en', { KINOSHELF_LOCALE: 'fr' }, 'en'],
+    [undefined, undefined, { KINOSHELF_LOCALE: 'de', LANG: 'fr_FR.UTF-8' }, 'fr'],
   ] as const)('flag %j, config %j, env %j → %s', (flag, configured, env, expected) => {
     expect(detectLocale(flag, configured, env)).toBe(expected);
   });

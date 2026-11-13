@@ -30,6 +30,7 @@ services:
       PGID: 1000
       # TMDB_API_KEY: <your TMDB key>
       # KINOSHELF_API_KEY: <at least 32 random characters>
+      # KINOSHELF_LOCALE: fr # the container has no LANG: English unless you say so here or in Settings
     volumes:
       - ./config:/config
       - /srv/media:/media # downloads and library on the same file system

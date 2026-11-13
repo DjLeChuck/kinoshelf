@@ -365,6 +365,11 @@ export interface paths {
                             };
                             /** @enum {string|null} */
                             locale: "en" | "fr" | null;
+                            defaults: {
+                                /** @enum {string} */
+                                locale: "en" | "fr";
+                                metadataLanguage: string;
+                            };
                             /** @enum {string|null} */
                             plexAccount: "signed-in" | "expired" | null;
                             plex: {
@@ -538,6 +543,11 @@ export interface paths {
                             };
                             /** @enum {string|null} */
                             locale: "en" | "fr" | null;
+                            defaults: {
+                                /** @enum {string} */
+                                locale: "en" | "fr";
+                                metadataLanguage: string;
+                            };
                             /** @enum {string|null} */
                             plexAccount: "signed-in" | "expired" | null;
                             plex: {
