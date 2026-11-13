@@ -240,8 +240,8 @@ nowhere: a custom profile file is to be discussed again.
 ## System
 
 The System page (`/system`) is where the server is **observed**; the Settings stay where it is configured.
-Its tabs are Logs and TMDB (`?tab=tmdb`); the rest (health, diagnostic archive) is planned in the
-private notes and must not show as an empty tab or a "soon" badge before it is built.
+Its tabs are Health (the default, `/system`), Logs (`?tab=logs`) and TMDB (`?tab=tmdb`); the rest (the diagnostic
+archive) is planned in the private notes and must not show as an empty tab or a "soon" badge before it is built.
 
 - **The log** (`logs.ts`, `log-routes.ts`; `SystemLogs.svelte`): the destination of Fastify's pino logger. `LogStore`
   keeps the last 5000 lines in memory (what the page lists) and writes `<config>/logs/kinoshelf.log`, rotated at
@@ -269,6 +269,23 @@ private notes and must not show as an empty tab or a "soon" badge before it is b
   `tmdb` (warn while retried, error when given up) and kept in memory for "Latest errors" (since the start).
   `GET /api/tmdb/usage?period=24h|7d|30d` (chart slots per hour, or per UTC day) and `DELETE /api/tmdb/cache`.
   The tab's period is `?range=` (the logs' `period` is another filter in the same URL).
+- **Health** (`health.ts`, `health-report.ts`, `health-routes.ts`; `SystemHealth.svelte`, `lib/health.ts`): eight cards
+  (server, ffprobe, database, disk space, queue, folder watching, Plex / Jellyfin, webhooks), each `ok`, `warn`, `danger`
+  or `off` (nothing set up: neither good nor wrong), a cause per problem and a link to the Settings section that fixes it.
+  **Two reads, on purpose.** `GET /api/health` is the verdict, `{ errors }`, light enough for the badge of the System
+  entry (red, `shell.healthErrors`): `Health.problems()` lists **errors only** (database unreadable, a library or watched
+  folder unreachable, a Plex sign-in plex.tv refused) and does no `statfs`, no `ffprobe`; `Health.check()` emits the
+  payload-less `health` event only when the count changes, and runs every minute (a share that goes away says nothing)
+  and on each `settings` event. `GET /api/health/report` is what the page reads (disk space, `ffprobe -version`, the
+  database file's size, queue counts) and adds the **warnings** (`ffprobe-missing`, `disk-low` under 5 %,
+  `webhook-failing`, `media-refresh-failed`): a warning never turns the badge red. A problem is `{ area, code, params,
+severity }`, `area` being its card and `code` translated by the web (`web.health.problem.<code>`).
+  Data comes from the modules that own it: `FolderWatcher.status()` (`lastScanAt`, `nextScanAt`, `intervalSeconds`: the
+  10-minute safety pass, or `pollSeconds`; also `GET /api/watch`), `Notifier.recent()` (the last 20 deliveries since
+  the start, in memory: webhooks with their `attempts`, a Plex or Jellyfin refresh with its `failed` folders) and
+  `migrationState` (`schema-info.ts`, read from `schema_migrations`: the count and the last one applied, which on a
+  fresh database may be a core one). Plex shows "connected" and whether it was signed in with an account, never an
+  expiry date (the token renews on demand).
 - Not done: the "connection lost" banner (the event stream does not tell the page it is down).
 
 ## History
