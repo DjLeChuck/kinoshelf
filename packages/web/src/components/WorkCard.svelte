@@ -16,6 +16,7 @@
     poster,
     backdrop,
     logo,
+    preview,
     onedit,
     still,
     children,
@@ -28,6 +29,8 @@
     poster?: string | undefined;
     backdrop?: string | undefined;
     logo?: string | undefined;
+    /** The images drawn from TMDB because no file is in place yet: what a refresh will write. */
+    preview?: { poster?: boolean; backdrop?: boolean } | undefined;
     /** Absent when the images cannot be changed: they are then only shown. */
     onedit?: ((type: ImageKind) => void) | undefined;
     /** The banner's place taken by the caller's own (an episode's 16:9 thumbnail). */
@@ -50,12 +53,18 @@
             onedit('fanart');
           }}
         >
-          {#if backdrop}<img src={backdrop} alt="" loading="lazy" />{/if}
+          {#if backdrop}<img
+              class:preview={preview?.backdrop}
+              src={backdrop}
+              alt=""
+              loading="lazy"
+            />{/if}
+          {#if preview?.backdrop}<span class="preview-tag">{t('web.images.preview')}</span>{/if}
           <span class="veil" aria-hidden="true"></span>
           <span class="pill" aria-hidden="true">{t('web.images.change-fanart')}</span>
         </button>
       {:else if backdrop}
-        <img class="plain" src={backdrop} alt="" loading="lazy" />
+        <img class="plain" class:preview={preview?.backdrop} src={backdrop} alt="" loading="lazy" />
       {/if}
       {#if backdrop || logo}
         <span class="shade" aria-hidden="true"></span>
@@ -99,11 +108,26 @@
           onedit('poster');
         }}
       >
-        {#if poster}<img class="poster" src={poster} alt="" width="92" height="138" />{/if}
+        {#if poster}<img
+            class="poster"
+            class:preview={preview?.poster}
+            src={poster}
+            alt=""
+            width="92"
+            height="138"
+          />{/if}
+        {#if preview?.poster}<span class="preview-tag">{t('web.images.preview')}</span>{/if}
         <span class="veil" aria-hidden="true">{t('web.images.change-poster')}</span>
       </button>
     {:else if poster}
-      <img class="poster" src={poster} alt="" width="92" height="138" />
+      <img
+        class="poster"
+        class:preview={preview?.poster}
+        src={poster}
+        alt=""
+        width="92"
+        height="138"
+      />
     {/if}
     <div>
       {#if kicker}<p class="kicker muted">{kicker}</p>{/if}
@@ -266,7 +290,34 @@
     background: rgb(20 22 27 / 0.85);
   }
 
+  /* Not on the disk yet: TMDB's image, drawn as what will be written. */
+  img.preview {
+    opacity: 0.55;
+    outline: 1px dashed var(--border, rgb(128 128 128 / 0.6));
+    outline-offset: -1px;
+  }
+
+  .preview-tag {
+    position: absolute;
+    left: 6px;
+    bottom: 6px;
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 11px;
+    background: rgb(20 22 27 / 0.85);
+    color: #fff;
+    pointer-events: none;
+  }
+
+  /* The banner's bottom left is the logo's: its tag goes to the top left, the pill's side being the right. */
+  .stage .preview-tag {
+    top: 10px;
+    bottom: auto;
+    left: 10px;
+  }
+
   .poster-button {
+    position: relative;
     flex: none;
     width: 92px;
     height: 138px;

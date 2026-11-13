@@ -1039,6 +1039,7 @@ export const fr: Record<keyof typeof en, string> = {
   'web.images.change-logo': 'Changer le logo',
   'web.images.change-thumb': 'Changer l’image',
   'web.images.add-thumb': 'Ajouter une image',
+  'web.images.preview': 'Aperçu TMDB',
   'web.images.add-logo': 'Ajouter un logo',
   'web.history.title': 'Historique',
   'web.history.intro':

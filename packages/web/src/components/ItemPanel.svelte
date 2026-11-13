@@ -97,6 +97,11 @@
         : undefined
       : imageUrl('w500', detail?.logoPath),
   );
+  // Drawn from TMDB with no file in place, on a page that says what a refresh will write.
+  const preview = $derived({
+    poster: editable && !detail?.images?.poster && poster !== undefined,
+    backdrop: editable && !detail?.images?.fanart && backdrop !== undefined,
+  });
   // The image dialog, open on the tab of the image clicked.
   let imagesTab = $state<ImageKind | undefined>(undefined);
   let imagesNotice = $state<string | undefined>(undefined);
@@ -179,6 +184,7 @@
     {poster}
     {backdrop}
     {logo}
+    {preview}
     onedit={editable ? edit : undefined}
   >
     {#if imagesNotice}<p class="alert" role="status">{imagesNotice}</p>{/if}

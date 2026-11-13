@@ -51,6 +51,10 @@
   const backdrop = $derived(
     images?.fanart ? workImageUrl(work, 'fanart', shown) : imageUrl('w780', detail?.backdropPath),
   );
+  const preview = $derived({
+    poster: images != null && !images.poster && poster !== undefined,
+    backdrop: images != null && !images.fanart && backdrop !== undefined,
+  });
   const logo = $derived(
     editable
       ? images?.logo
@@ -104,6 +108,7 @@
   {poster}
   {backdrop}
   {logo}
+  {preview}
   onedit={editable ? edit : undefined}
 >
   {#if detail === undefined}

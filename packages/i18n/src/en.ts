@@ -1007,6 +1007,7 @@ export const en = {
   'web.images.change-logo': 'Change the logo',
   'web.images.change-thumb': 'Change the image',
   'web.images.add-thumb': 'Add an image',
+  'web.images.preview': 'Preview from TMDB',
   'web.images.add-logo': 'Add a logo',
   'web.history.title': 'History',
   'web.history.intro':
