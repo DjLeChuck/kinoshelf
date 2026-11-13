@@ -236,7 +236,8 @@
           <br />{extrasSummary}
         {/if}
       </p>
-      {#if rows.length > 0}
+      <!-- The preview below lists the same files with what would happen to each: showing both reads as a duplicate. -->
+      {#if rows.length > 0 && !preview}
         <ChangeList {rows} />
         {#if batch.extras.length > 0}
           <p class="muted hint">{t('web.history.extras.hint')}</p>
@@ -253,7 +254,7 @@
     {#if preview}
       <section aria-labelledby="undo-title" aria-live="polite">
         <h3 id="undo-title">{t('web.history.undo.preview')}</h3>
-        <p class="muted">{t('web.history.undo.hint')}</p>
+        <p class="muted hint">{t('web.history.undo.hint')}</p>
         <ChangeList rows={undoRows} />
       </section>
     {/if}
@@ -335,7 +336,7 @@
 
   .summary,
   .hint {
-    margin: 0 0 8px;
+    margin: 0 0 12px;
   }
 
   summary {
