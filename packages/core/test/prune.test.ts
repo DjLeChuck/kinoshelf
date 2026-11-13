@@ -208,8 +208,11 @@ describe('an episode matched again to another show', () => {
     expect(await exists(old)).toBe(false);
   });
 
-  it('keeps the NFO of an owner who changed it since, and carries it along', async () => {
-    const { moved } = await matchedAgain(true);
-    expect(await readFile(moved, 'utf8')).toContain('The Bear');
+  it('keeps the NFO of an owner who changed it since where it was, and writes the new one', async () => {
+    const { root, stale, moved } = await matchedAgain(true);
+    expect(await readFile(moved, 'utf8')).toContain('Foundation');
+    // Not deleted and not carried along: it is the owner's, and so is the folder that holds it.
+    expect(await readFile(stale, 'utf8')).toContain('The Bear');
+    expect(await exists(join(root, 'The Bear (2022)'))).toBe(true);
   });
 });

@@ -18,7 +18,7 @@ import type { Conflict, DestinationRoots, Plan, PlanItem } from '../types/plan.j
 import type { Profile } from '../types/profile.js';
 import type { Candidate, EpisodeInfo } from '../types/provider.js';
 import { companionOperations, unavailableImages } from './companions.js';
-import { DEFAULT_SIDECAR_EXTENSIONS, findSidecars, type Sidecar } from './sidecars.js';
+import { DEFAULT_SIDECAR_EXTENSIONS, findSidecars } from './sidecars.js';
 import { MAX_VERSION_LEVEL, versionLabel, versionLabels } from './version.js';
 
 /** A matched file, ready to be planned. `parsed.path` is the source file. */
@@ -406,25 +406,16 @@ async function planItem(
   }
 
   const generated = companionOperations(input, place, companionOptions);
-  const written = new Set(
-    generated.flatMap((op) => (op.type === 'write-file' ? [op.destination.toLowerCase()] : [])),
+  // The profile writes this item's NFO, so Kinoshelf's is the one players read: a `.nfo` beside the
+  // video (another tool's, or one edited by hand) stays where it is, never deleted, never overwritten.
+  // Without one (`metadata: none`, a movie written flat) the file is all that is left of what it
+  // said, and goes along with the video as before.
+  const writesNfo = generated.some(
+    (operation) => operation.type === 'write-file' && operation.destination.endsWith('.nfo'),
   );
-  const sidecars: Sidecar[] = [];
-  for (const sidecar of await findSidecars(
-    source,
-    options.sidecarExtensions ?? DEFAULT_SIDECAR_EXTENSIONS,
-    listings,
-  )) {
-    // Only when the plan writes its replacement: without one (a profile that writes no NFO, no
-    // details) the file is all that is left of what it said, and goes along as before.
-    const replaced =
-      sidecar.suffix.toLowerCase().endsWith('.nfo') &&
-      written.has(join(root, ...target.folders, `${target.stem}${sidecar.suffix}`).toLowerCase()) &&
-      (await options.madeByUs?.(sidecar.path)) === true;
-    if (!replaced) {
-      sidecars.push(sidecar);
-    }
-  }
+  const sidecars = (
+    await findSidecars(source, options.sidecarExtensions ?? DEFAULT_SIDECAR_EXTENSIONS, listings)
+  ).filter((sidecar) => !(writesNfo && sidecar.suffix.toLowerCase().endsWith('.nfo')));
   const operations: Operation[] = [
     { type: 'transfer', mode, role: 'main', source, destination },
     ...sidecars.map((sidecar): Operation => ({
@@ -435,8 +426,7 @@ async function planItem(
       destination: join(root, ...target.folders, `${target.stem}${sidecar.suffix}`),
     })),
   ];
-  // A `.nfo` the user already had follows the video as a sidecar: it wins over a generated one
-  // (the destination is the same, and nothing is overwritten).
+  // A sidecar that stays on its destination (a subtitle already there) is not written over.
   const taken = new Set(operations.map((operation) => operation.destination.toLowerCase()));
   operations.push(
     ...generated.filter((operation) => !taken.has(operation.destination.toLowerCase())),

@@ -382,10 +382,14 @@ format follows the Kodi wiki's templates, saved pages are not in the repository)
   A profile that writes nothing makes no extra call. An item without details is still renamed.
 - **Never overwritten, same as videos.** `write-file` and `download` publish with `link`; an
   existing file is `skipped` (`destination.exists`) in the item's results and never fails the item,
-  nor sends the video back to the queue. A `.nfo` beside a video travels with it as a sidecar and
-  wins over the generated one, unless Kinoshelf wrote it and nobody touched it since
-  (`madeByUs`, from the journal's size and date) and the plan writes the NFO of the video's new place:
-  an episode matched again to another show would otherwise carry the old show's text along. A movie written flat (no folder) gets no fixed-name file
+  nor sends the video back to the queue. When the plan writes an item's NFO, a `.nfo` beside the video
+  (another tool's, one edited by hand, or one Kinoshelf wrote) does **not** travel with it: it stays where it
+  is, never deleted and never overwritten, and Kinoshelf's is the one players read. Two NFO side by side were
+  the alternative (a movie's `<video>.nfo` next to `movie.nfo`, and Kodi and Jellyfin read `<video>.nfo` first),
+  and the owner's NFO winning would leave a library half-written. Subtitles always travel. Without an NFO
+  written (`metadata: none`, a movie written flat) the file is all that is left of what it said and travels as
+  before. A folder that keeps such a file is never pruned: `kinoshelf tidy` reports it. Not built: a line in the
+  preview saying which NFO stays behind. A movie written flat (no folder) gets no fixed-name file
   (`movie.nfo`, `poster.jpg`, `clearlogo.png`), which every movie would share.
 - **Show-level files** (`tvshow.nfo`, the show's poster, fanart and logo, a season's poster) come with
   every episode, marked `shared`; the planner keeps the first one of the batch (`shareCompanions`).

@@ -764,10 +764,10 @@ filesystem: { forbidden: posix, replacement: '', maxSegmentBytes: 255 }
     expect(nfo?.type === 'write-file' && nfo.content.match(/<episodedetails>/g)).toHaveLength(2);
   });
 
-  it('lets an NFO the user already had win over the generated one', async () => {
+  it('leaves an NFO that was already there where it is, and writes its own', async () => {
     const [src, lib] = [await makeDir(), await makeDir()];
     const source = await put(join(src, 'Dune.2021.mkv'));
-    await put(join(src, 'Dune.2021.nfo'));
+    const foreign = await put(join(src, 'Dune.2021.nfo'));
     const profile = {
       ...kodi(),
       nfo: { format: 'kodi' as const, movie: '{file}.nfo', episode: '{file}.nfo' },
@@ -779,8 +779,30 @@ filesystem: { forbidden: posix, replacement: '', maxSegmentBytes: 255 }
       profile,
     );
 
-    const nfos = (items[0]?.operations ?? []).filter((op) => op.destination.endsWith('.nfo'));
-    expect(nfos.map((op) => op.type)).toEqual(['transfer']);
+    const ops = items[0]?.operations ?? [];
+    expect(ops.some((op) => op.type === 'transfer' && op.source === foreign)).toBe(false);
+    expect(
+      ops.filter((op) => op.type === 'write-file' && op.destination.endsWith('.nfo')),
+    ).toHaveLength(1);
+  });
+
+  it('does not carry a movie’s `<video>.nfo` along when `movie.nfo` is written, but keeps its subtitles', async () => {
+    const [src, lib] = [await makeDir(), await makeDir()];
+    const source = await put(join(src, 'Dune.2021.mkv'));
+    const foreign = await put(join(src, 'Dune.2021.nfo'));
+    const subtitle = await put(join(src, 'Dune.2021.fr.srt'));
+
+    const { items } = await planWith(
+      [{ parsed: parsedMovie(source), candidate: dune, details: duneDetails }],
+      lib,
+    );
+
+    const ops = items[0]?.operations ?? [];
+    expect(ops.some((op) => op.type === 'transfer' && op.source === foreign)).toBe(false);
+    expect(ops.some((op) => op.type === 'transfer' && op.source === subtitle)).toBe(true);
+    expect(ops.some((op) => op.type === 'write-file' && op.destination.endsWith('movie.nfo'))).toBe(
+      true,
+    );
   });
 
   it('keeps a movie written flat from sharing a fixed file name', async () => {
@@ -1130,16 +1152,16 @@ describe('createPlan: an episode matched again to another show', () => {
     ).toHaveLength(1);
   });
 
-  it('carries along an NFO somebody else wrote, as before', async () => {
+  it('leaves an NFO somebody else wrote where it is: Kinoshelf writes its own', async () => {
     const { lib, old, input } = await wronglyNamed();
 
     const { items } = await plan(input, lib, { madeByUs: () => Promise.resolve(false) });
 
     const ops = items[0]?.operations ?? [];
-    expect(ops.filter((op) => op.type === 'transfer' && op.source === old)).toHaveLength(1);
-    expect(ops.filter((op) => op.type === 'write-file' && op.destination === target(lib))).toEqual(
-      [],
-    );
+    expect(ops.filter((op) => op.type === 'transfer' && op.source === old)).toEqual([]);
+    expect(
+      ops.filter((op) => op.type === 'write-file' && op.destination === target(lib)),
+    ).toHaveLength(1);
   });
 
   it('keeps carrying it when nothing would replace it, so a profile without NFO loses none', async () => {
