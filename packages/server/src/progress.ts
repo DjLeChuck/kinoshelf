@@ -22,6 +22,16 @@ export interface TransferProgress {
   readonly current: string | null;
 }
 
+/** What a client shows of an undo (or its check) while it runs: entries settled out of those to revert. */
+export interface UndoProgress {
+  readonly done: number;
+  readonly total: number;
+  /** The last file settled (where it was). */
+  readonly current: string | null;
+  /** A check reads the disk but changes nothing. */
+  readonly dryRun: boolean;
+}
+
 interface State {
   phase: ScanPhase;
   found: number;
@@ -42,6 +52,7 @@ export const NOTIFY_INTERVAL_MS = 500;
 export class ProgressTracker {
   private readonly states = new Map<string, State>();
   private readonly transfers = new Map<string, TransferProgress>();
+  private readonly undos = new Map<string, UndoProgress>();
   private lastNotified = 0;
   private timer: NodeJS.Timeout | undefined;
 
@@ -114,6 +125,37 @@ export class ProgressTracker {
 
   transferOf(executionId: string): TransferProgress | undefined {
     return this.transfers.get(executionId);
+  }
+
+  /** An undo (or its check) of a batch begins. */
+  startUndo(batchId: string, total: number, dryRun: boolean): void {
+    this.undos.set(batchId, { done: 0, total, current: null, dryRun });
+    this.changed();
+  }
+
+  undoing(batchId: string, done: number, total: number, current: string): void {
+    const state = this.undos.get(batchId);
+    if (state) {
+      this.undos.set(batchId, { ...state, done, total, current: current || null });
+      this.changed();
+    }
+  }
+
+  /** A check ending must not wipe the state of an undo that began meanwhile, nor the reverse. */
+  finishUndo(batchId: string, dryRun: boolean): void {
+    if (this.undos.get(batchId)?.dryRun === dryRun) {
+      this.undos.delete(batchId);
+    }
+    this.changed();
+  }
+
+  undoOf(batchId: string): UndoProgress | undefined {
+    return this.undos.get(batchId);
+  }
+
+  /** Whether a real undo of this batch is running: a second one would revert the same files twice. */
+  isUndoing(batchId: string): boolean {
+    return this.undos.get(batchId)?.dryRun === false;
   }
 
   /** The transfer going on, whichever job it belongs to: the queue runs one task at a time. */

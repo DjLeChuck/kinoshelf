@@ -28,6 +28,7 @@ export const API_ERROR_CODES = [
   'auth.unauthorized',
   'batch.already-undone',
   'batch.not-found',
+  'batch.undo-in-progress',
   'events.too-many',
   'execution.not-found',
   'fs.not-a-directory',

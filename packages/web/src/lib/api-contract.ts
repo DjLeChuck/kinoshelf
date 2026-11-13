@@ -4,7 +4,7 @@
 // exported or run.
 import type { paths } from './api-schema.js';
 import type { Arrival, ArrivalPage, Preview } from './arrivals.js';
-import type { Activity, BatchDetail, JobDetail, UndoReport } from './history.js';
+import type { Activity, BatchDetail, JobDetail, UndoProgress, UndoReport } from './history.js';
 import type { AddressPreview, ImageListing } from './images.js';
 import type { PlexPin, PlexServer } from './plex.js';
 import type { Settings } from './settings.js';
@@ -50,6 +50,7 @@ export type Contract = [
   Expect<Fits<Posted<'/api/libraries/{id}/shows/{tmdbId}/images/preview', 200>, AddressPreview>>,
   Expect<Fits<Got<'/api/logs'>, LogPage>>,
   Expect<Fits<Got<'/api/batches/{id}'>, BatchDetail>>,
+  Expect<Fits<Got<'/api/batches/{id}/undo'>['progress'], UndoProgress | null>>,
   Expect<Fits<Posted<'/api/libraries/{id}/execute', 200>, RunReport>>,
   Expect<Fits<Posted<'/api/entries/{id}/preview', 200>, Preview>>,
   Expect<Fits<Posted<'/api/batches/{id}/undo', 200>, UndoReport>>,

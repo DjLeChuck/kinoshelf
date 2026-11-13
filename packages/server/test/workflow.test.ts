@@ -702,6 +702,21 @@ describe('POST /api/batches/{id}/undo', () => {
     expect((await entriesOf(h, alien.id))[0]).toMatchObject({ resolution: 'done', batchId: two });
   });
 
+  it('says how far an undo has got, and nothing once it is over', async () => {
+    const h = await harness();
+    const { jobId } = await analyzed(h);
+    const { batchId } = await transfer(h, jobId);
+    const read = async (): Promise<unknown> =>
+      (await h.request('GET', `/api/batches/${batchId}/undo`)).json();
+
+    expect(await read()).toEqual({ progress: null });
+    // A check leaves nothing behind either.
+    await h.request('POST', `/api/batches/${batchId}/undo`, { dryRun: true });
+    expect(await read()).toEqual({ progress: null });
+    await h.request('POST', `/api/batches/${batchId}/undo`);
+    expect(await read()).toEqual({ progress: null });
+  });
+
   it('refuses a batch already undone with 409, and answers 404 for an unknown one', async () => {
     const h = await harness();
     const { jobId } = await analyzed(h);

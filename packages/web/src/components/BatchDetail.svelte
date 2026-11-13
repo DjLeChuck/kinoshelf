@@ -1,8 +1,9 @@
 <script lang="ts">
+  import { onDestroy } from 'svelte';
   import { describeError } from '@kinoshelf/i18n';
   import { api } from '../lib/api.js';
   import { messageOf } from '../lib/errors.js';
-  import { refetchOn } from '../lib/events.svelte.js';
+  import { onTopics, refetchOn } from '../lib/events.svelte.js';
   import { locale, t } from '../lib/i18n.svelte.js';
   import {
     STATUS_CHIP,
@@ -14,6 +15,7 @@
     type BatchDetail,
     type BatchExtra,
     type BatchItem,
+    type UndoProgress,
     type UndoReport,
   } from '../lib/history.js';
   import JobDetail from './JobDetail.svelte';
@@ -35,9 +37,35 @@
   let failure = $state<unknown>(undefined);
   let preview = $state<UndoReport | undefined>(undefined);
   let busy = $state(false);
+  // Read apart from the batch, which lists every file: this is a few numbers held in memory.
+  let running = $state<UndoProgress | null>(null);
+  // Also locked when the undo was started elsewhere (another tab, before a reload): the server refuses a second one.
+  const locked = $derived(busy || running?.dryRun === false);
+  const percent = $derived(
+    running && running.total > 0 ? Math.round((running.done / running.total) * 100) : undefined,
+  );
 
   // The parent keys this component on the batch, so `id` does not change during its life.
   refetchOn(['history', 'ready'], () => void load());
+
+  async function loadProgress(): Promise<void> {
+    try {
+      running = (await api.get<{ progress: UndoProgress | null }>(`/api/batches/${id}/undo`))
+        .progress;
+    } catch {
+      // The numbers are a courtesy: the request itself says how it ended.
+    }
+  }
+
+  // Only while an undo is going on (here, or started from another tab and found on arrival), so
+  // the scans' events do not make every open batch ask.
+  const stopProgress = onTopics(['progress', 'ready'], () => {
+    if (busy || running) {
+      void loadProgress();
+    }
+  });
+  onDestroy(stopProgress);
+  void loadProgress();
 
   async function load(): Promise<void> {
     try {
@@ -152,6 +180,7 @@
       failure = error;
     } finally {
       busy = false;
+      running = null;
     }
   }
 
@@ -167,6 +196,7 @@
       failure = error;
     } finally {
       busy = false;
+      running = null;
     }
   }
 </script>
@@ -237,21 +267,43 @@
     {:else if batch.status === 'undone'}
       <p class="muted">{t('web.history.already-undone')}</p>
     {:else if canUndo(batch)}
+      {#if running}
+        <div class="running" role="status" aria-live="polite">
+          {#if percent === undefined}
+            <progress aria-label={t('web.history.undo.progress.label')}></progress>
+          {:else}
+            <progress max="100" value={percent} aria-label={t('web.history.undo.progress.label')}
+              >{percent}%</progress
+            >
+          {/if}
+          <p class="muted">
+            {#if running.total > 0 && running.done >= running.total}
+              {t('web.history.undo.progress.finishing')}
+            {:else}
+              {t(`web.history.undo.progress.${running.dryRun ? 'checking' : 'running'}`, {
+                done: running.done,
+                total: running.total,
+              })}
+            {/if}
+          </p>
+          {#if running.current}<p class="muted mono current">{running.current}</p>{/if}
+        </div>
+      {/if}
       <footer>
         {#if preview}
           <button
             type="button"
             class="btn btn-primary"
-            disabled={busy}
+            disabled={locked}
             onclick={() => void confirm()}
           >
-            {busy ? t('web.history.undo.running') : t('web.history.undo.confirm')}
+            {locked ? t('web.history.undo.running') : t('web.history.undo.confirm')}
           </button>
-          <button type="button" class="btn" disabled={busy} onclick={() => (preview = undefined)}>
+          <button type="button" class="btn" disabled={locked} onclick={() => (preview = undefined)}>
             {t('web.history.undo.cancel')}
           </button>
         {:else}
-          <button type="button" class="btn" disabled={busy} onclick={() => void check()}>
+          <button type="button" class="btn" disabled={locked} onclick={() => void check()}>
             {busy ? t('web.history.undo.checking') : t('web.history.undo')}
           </button>
         {/if}
@@ -294,6 +346,25 @@
 
   details[open] summary {
     margin-bottom: 8px;
+  }
+
+  .running {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 12px;
+  }
+
+  .running p {
+    margin: 0;
+  }
+
+  .running progress {
+    width: 100%;
+  }
+
+  .current {
+    overflow-wrap: anywhere;
   }
 
   footer {

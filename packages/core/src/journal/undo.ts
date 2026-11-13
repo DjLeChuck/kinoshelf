@@ -150,7 +150,11 @@ async function pruneDirectories(entries: readonly JournalEntry[]): Promise<void>
 export async function undoBatch(
   journal: Journal,
   batchId: string,
-  options: { readonly dryRun?: boolean } = {},
+  options: {
+    readonly dryRun?: boolean;
+    /** Told after each entry, and once at the start with `done` 0: a big batch is long to revert. */
+    readonly onProgress?: (done: number, total: number, current: string) => void;
+  } = {},
 ): Promise<UndoResult | null> {
   const journaled = journal.entriesOf(batchId);
   if (journaled.length === 0 || journal.isUndone(batchId)) {
@@ -161,10 +165,11 @@ export async function undoBatch(
   // What an earlier, unfinished undo already reverted stays as it is now.
   const reverted = journal.undoneEntryIds(batchId);
   const entries: UndoEntryResult[] = [];
-  for (const entry of [...journaled].reverse()) {
-    if (!reverted.has(entry.id)) {
-      entries.push(await revert(entry, dryRun));
-    }
+  const pending = [...journaled].reverse().filter((entry) => !reverted.has(entry.id));
+  options.onProgress?.(0, pending.length, '');
+  for (const entry of pending) {
+    entries.push(await revert(entry, dryRun));
+    options.onProgress?.(entries.length, pending.length, entry.destination);
   }
 
   if (!dryRun) {

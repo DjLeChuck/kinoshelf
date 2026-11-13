@@ -27,6 +27,7 @@ import {
   paging,
   previewSchema,
   sizeSchema,
+  undoProgressSchema,
   undoSchema,
   type Paging,
   MAX_SELECTION,
@@ -569,13 +570,46 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
     },
     async (request) => {
       const dryRun = request.body?.dryRun ?? false;
-      const report = await service.undo(request.params.id, { dryRun });
+      const { id } = request.params;
+      if (!dryRun && ctx.progress.isUndoing(id)) {
+        throw new ApiError(409, 'batch.undo-in-progress');
+      }
+      // The count is announced by the first `onProgress` (before any file), once the journal is read.
+      const report = await service
+        .undo(id, {
+          dryRun,
+          onProgress: (done, total, current) => {
+            if (done === 0) {
+              ctx.progress.startUndo(id, total, dryRun);
+            } else {
+              ctx.progress.undoing(id, done, total, current);
+            }
+          },
+        })
+        .finally(() => {
+          ctx.progress.finishUndo(id, dryRun);
+        });
       if (!dryRun) {
         events.emit('history', 'arrivals');
         ctx.reverted?.(report);
       }
       return report;
     },
+  );
+
+  api.get<{ Params: { id: string } }>(
+    '/api/batches/:id/undo',
+    {
+      schema: {
+        summary: 'How far an undo, or its check, has got',
+        description:
+          'In memory, so cheap to read: `progress` is `null` when none runs for this batch. ' +
+          'The `progress` event says when to read it again.',
+        params: idParams,
+        response: { 200: undoProgressSchema, 401: errorSchema },
+      },
+    },
+    (request) => ({ progress: ctx.progress.undoOf(request.params.id) ?? null }),
   );
 
   api.post(

@@ -690,6 +690,21 @@ describe('executePlan: replacing what Kinoshelf wrote', () => {
     expect(await readFile(nfoAt(lib), 'utf8')).toBe('old');
   });
 
+  it('reports an undo entry by entry, from the count to the last file', async () => {
+    const { lib, journal, again, backupDir } = await written();
+    const batch = await executePlan(again(true), { journal, backupDir, newId: counter('b') });
+
+    const seen: [number, number, string][] = [];
+    await undoBatch(journal, batch.batchId, {
+      onProgress: (done, total, current) => seen.push([done, total, current]),
+    });
+
+    expect(seen).toEqual([
+      [0, 1, ''],
+      [1, 1, nfoAt(lib)],
+    ]);
+  });
+
   it('leaves a file somebody edited since, as it never overwrites', async () => {
     const { lib, journal, again, backupDir } = await written();
     await put(nfoAt(lib), 'edited by hand');

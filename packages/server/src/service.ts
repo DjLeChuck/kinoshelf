@@ -998,7 +998,13 @@ export class Service {
    * Any batch that was not undone yet can be, not only the last: each entry is checked against
    * the disk as it is, so a later batch is never damaged (see `undoBatch`).
    */
-  async undo(batchId: string, options: { dryRun: boolean }): Promise<UndoReport> {
+  async undo(
+    batchId: string,
+    options: {
+      dryRun: boolean;
+      onProgress?: (done: number, total: number, current: string) => void;
+    },
+  ): Promise<UndoReport> {
     const { journal, entries } = this.deps;
     if (journal.entriesOf(batchId).length === 0) {
       throw new ApiError(404, 'batch.not-found');
@@ -1006,7 +1012,10 @@ export class Service {
     if (journal.isUndone(batchId)) {
       throw new ApiError(409, 'batch.already-undone');
     }
-    const result = await undoBatch(journal, batchId, { dryRun: options.dryRun });
+    const result = await undoBatch(journal, batchId, {
+      dryRun: options.dryRun,
+      ...(options.onProgress && { onProgress: options.onProgress }),
+    });
     if (!result) {
       throw new ApiError(404, 'batch.not-found');
     }

@@ -80,6 +80,14 @@ export interface BatchDetail extends BatchSummary {
   readonly extras: readonly BatchExtra[];
 }
 
+/** How far an undo (or its check) has got, while it runs. */
+export interface UndoProgress {
+  readonly done: number;
+  readonly total: number;
+  readonly current: string | null;
+  readonly dryRun: boolean;
+}
+
 export interface UndoReport {
   readonly batchId: string;
   readonly dryRun: boolean;

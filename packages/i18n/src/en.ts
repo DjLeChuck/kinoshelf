@@ -217,6 +217,7 @@ export const en = {
   'error.image.not-offered': 'This image is not one TMDB offers for this work.',
   'error.image.url-invalid':
     'This address is not valid: use an http or https address without a user name or password.',
+  'error.batch.undo-in-progress': 'This batch is already being undone.',
   'error.image.url-blocked':
     'This address points to your local network, which Kinoshelf is not allowed to reach. You can allow it in the settings.',
   'error.image.url-unreachable': 'The image could not be downloaded from this address ({status}).',
@@ -1085,6 +1086,10 @@ export const en = {
   'web.history.job.cause.transfer': 'The transfer failed',
   'web.history.job.cause.hint':
     'Nothing was written for this failure. Fix the cause, then send it again.',
+  'web.history.undo.progress.checking': 'Checking: {done} of {total} files',
+  'web.history.undo.progress.running': 'Undoing: {done} of {total} files',
+  'web.history.undo.progress.finishing': 'Finishing (folders, libraries)…',
+  'web.history.undo.progress.label': 'Undo progress',
   'web.history.job.settings': 'Open the settings',
   'web.history.job.tech.show': 'Show the technical detail',
   'web.history.job.tech.hide': 'Hide the technical detail',

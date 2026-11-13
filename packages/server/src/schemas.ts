@@ -351,6 +351,24 @@ export const executionReportSchema = {
   },
 } as const;
 
+export const undoProgressSchema = {
+  type: 'object',
+  required: ['progress'],
+  properties: {
+    progress: {
+      type: 'object',
+      nullable: true,
+      required: ['done', 'total', 'current', 'dryRun'],
+      properties: {
+        done: { type: 'integer' },
+        total: { type: 'integer' },
+        current: { type: 'string', nullable: true },
+        dryRun: { type: 'boolean' },
+      },
+    },
+  },
+} as const;
+
 export const undoSchema = {
   type: 'object',
   required: ['batchId', 'dryRun', 'entries'],

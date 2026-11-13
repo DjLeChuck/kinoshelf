@@ -315,6 +315,12 @@ the job: cause, frozen settings, "Send again"). A batch made by the CLI has no j
   Arrivals, or sit in an organized library) is `routine`: left out of the default view, listed with
   `?all=true` (the "Show every analysis" box), and still in the database until the daily purge
   (`purge.ts`) forgets it. The journal is never purged, so any batch stays undoable.
+- **An undo says how far it has got** (`ProgressTracker.startUndo`/`undoing`, `undoBatch`'s `onProgress`): in memory
+  like a scan's progress, announced by the payload-less `progress` event (twice a second at most), read apart from the
+  batch by `GET /api/batches/{id}/undo` (`{ progress: null }` when none runs; the batch itself lists every file, so it
+  is not refetched per tick). A check (`dryRun`) reports the same way. A second real undo of a batch already being
+  undone is a 409 `batch.undo-in-progress`, and the page, reloaded or opened in another tab, finds the bar and locks
+  the buttons. The final steps (pruning folders, the library snapshot) are one "Finishing…" line: they are not counted.
 - Nothing scans on its own: a job comes from a click (scan, `POST /api/jobs`), from the watcher (one per
   release found) or from `kinoshelf submit`.
 - The selected line is in the path (`/history/<id>`, a batch or a job id); `/jobs/:id` no longer exists.

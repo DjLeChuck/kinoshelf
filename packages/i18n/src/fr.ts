@@ -225,6 +225,7 @@ export const fr: Record<keyof typeof en, string> = {
     'Cette image est au format {found} mais le fichier écrit est au format {expected}.',
   'error.image.not-offered':
     'Cette image n’est pas l’une de celles que TMDB propose pour cette œuvre.',
+  'error.batch.undo-in-progress': 'Ce lot est déjà en cours d’annulation.',
   'error.image.url-invalid':
     'Cette adresse n’est pas valide : utilisez une adresse http ou https, sans identifiant ni mot de passe.',
   'error.image.url-blocked':
@@ -1118,6 +1119,10 @@ export const fr: Record<keyof typeof en, string> = {
   'web.history.job.cause.hint':
     'Rien n’a été écrit pour cet échec. Corrigez la cause, puis renvoyez-le.',
   'web.history.job.settings': 'Ouvrir les réglages',
+  'web.history.undo.progress.checking': 'Vérification : {done} fichiers sur {total}',
+  'web.history.undo.progress.running': 'Annulation : {done} fichiers sur {total}',
+  'web.history.undo.progress.finishing': 'Finalisation (dossiers, bibliothèques)…',
+  'web.history.undo.progress.label': 'Avancement de l’annulation',
   'web.history.job.tech.show': 'Afficher le détail technique',
   'web.history.job.tech.hide': 'Masquer le détail technique',
   'web.history.job.used': 'Réglages utilisés',

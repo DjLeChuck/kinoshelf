@@ -10,6 +10,28 @@ afterEach(() => {
 });
 
 describe('ProgressTracker', () => {
+  it('follows an undo, and a check ending does not wipe a real undo', () => {
+    const tracker = new ProgressTracker(() => undefined);
+    expect(tracker.undoOf('b')).toBeUndefined();
+    tracker.startUndo('b', 20, false);
+    expect(tracker.isUndoing('b')).toBe(true);
+    tracker.undoing('b', 5, 20, '/lib/a.mkv');
+    expect(tracker.undoOf('b')).toEqual({
+      done: 5,
+      total: 20,
+      current: '/lib/a.mkv',
+      dryRun: false,
+    });
+    tracker.finishUndo('b', true);
+    expect(tracker.undoOf('b')).toBeDefined();
+    tracker.finishUndo('b', false);
+    expect(tracker.undoOf('b')).toBeUndefined();
+    expect(tracker.isUndoing('b')).toBe(false);
+    // A check is not an undo: a second real one may start while it runs.
+    tracker.startUndo('b', 3, true);
+    expect(tracker.isUndoing('b')).toBe(false);
+  });
+
   it('follows an analysis through its phases, then forgets it', () => {
     const tracker = new ProgressTracker(() => undefined);
     expect(tracker.of('j')).toBeUndefined();
