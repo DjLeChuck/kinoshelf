@@ -248,9 +248,9 @@ nowhere: a custom profile file is to be discussed again.
 ## System
 
 The System page (`/system`) is where the server is **observed**; the Settings stay where it is configured.
-Its tabs are Health (the default, `/system`), Logs (`?tab=logs`), TMDB (`?tab=tmdb`) and Diagnostic (`?tab=diagnostic`);
-what is planned in the private notes (maintenance, security) must not show as an empty tab or a "soon" badge before it
-is built.
+Its tabs are Health (the default, `/system`), Logs (`?tab=logs`), TMDB (`?tab=tmdb`), Maintenance (`?tab=maintenance`) and
+Diagnostic (`?tab=diagnostic`); what is planned in the private notes (security) must not show as an empty tab or a "soon"
+badge before it is built.
 
 - **The log** (`logs.ts`, `log-routes.ts`; `SystemLogs.svelte`): the destination of Fastify's pino logger. `LogStore`
   keeps the last 5000 lines in memory (what the page lists) and writes `<config>/logs/kinoshelf.log`, rotated at
@@ -306,6 +306,14 @@ severity }`, `area` being its card and `code` translated by the web (`web.health
   archive for it. File and folder names are in it (the log, the libraries): the page says so. `GET /api/diagnostic` gives
   the versions and the same configuration for the page's preview. The download is a plain link (like the log's), so there
   is no "preparing" state; the issue link opens GitHub's form with the versions in its body.
+- **Maintenance** (`SystemMaintenance.svelte`, `MaintenanceLibrary.svelte`, `MaintenanceDialog.svelte`, `lib/maintenance.ts`): one block
+  per library organized in place, over `POST`/`GET /api/maintenance/tidy` (see "CLI and i18n"). "Analyse" is a `dryRun` task and its
+  report (folders to take out with their twin, `approximate` ones marked "To check", folders left with the reason, images to rename
+  or set aside) stays until the next one; "Tidy…" opens a confirmation that says nothing is deleted, that the History undoes it and that
+  another tool still managing the folder would write its files again, then runs the real task and links its batches (`/history/<id>`).
+  The tasks are in the server's memory: a page opened later finds the bar, or the report. The page reads them on `progress` only while
+  one runs (or was just started). The checkbox "also handle `<film>.nfo`" reads the report again with `nfo: true`. Not built: a warning in
+  the rename preview that a `<film>.nfo` stays where it is.
 - **Decided not to build**: a "connection lost" banner on the logs (the event stream does not tell the page it is down). A
   dropped stream reconnects by itself and every view reloads on `ready`; it is not worth an indicator of its own.
 
@@ -804,8 +812,7 @@ would need one plugin per client. Watching the raw download folder stays out by 
   (`ProgressTracker.announce`), and `history` when a batch was made. 409 `library.scan-in-progress` while a scan of the
   library is queued or running, 409 `maintenance.in-progress` for a second task of it, 404/409 `library.not-found`/
   `library.not-typed`. A renamed image is told to the snapshot (`written`); an undo does not tell it, so the list shows the
-  old flag until the next scan. History lists the files of such a batch (`extras` kind `removed`, "Set aside"). No web
-  client reads the routes yet: the Maintenance tab of the System page is the next step, and it must not show before.
+  old flag until the next scan. History lists the files of such a batch (`extras` kind `removed`, "Set aside"). The Maintenance tab of the System page reads them.
   **A rule for new work: nothing that can last runs in a request**, a read of the disk included; it is a task with progress.
 - Settings: flags over `config.yaml` over defaults. Config dir: `--config-dir`, then
   `KINOSHELF_CONFIG_DIR`, then `$XDG_CONFIG_HOME/kinoshelf`; it also holds `kinoshelf.sqlite`

@@ -368,6 +368,73 @@ export const en = {
     'The issue form asks how to reproduce the problem and reminds you to attach the archive.',
   'web.diagnostic.issue.newtab': '(new tab)',
   'web.diagnostic.issue.versions': 'To copy into the issue if you do not attach the archive:',
+  'web.system.tab.maintenance': 'Maintenance',
+  'web.maintenance.intro':
+    'Tidy a library that another tool has already dressed: folders left with no video, and metadata named after the video. Analysing changes nothing. Nothing is ever deleted: what is taken out is kept in the configuration folder and the History undoes it.',
+  'web.maintenance.none': 'No library is organized in place yet. Add one in the settings.',
+  'web.maintenance.scanning': 'A scan of this library is running: wait for it to end.',
+  'web.maintenance.analyse': 'Analyse',
+  'web.maintenance.analyse.again': 'Analyse again',
+  'web.maintenance.analysing': 'Analysing…',
+  'web.maintenance.nfo': 'Also handle the <film>.nfo files',
+  'web.maintenance.nfo.hint':
+    'Some players read <film>.nfo before movie.nfo: check on yours that movie.nfo alone is read before enabling this.',
+  'web.maintenance.nfo.left':
+    '{count, plural, one {# <film>.nfo file is left as it is} other {# <film>.nfo files are left as they are}}: tick the box above to set them aside too.',
+  'web.maintenance.report': 'Analysis',
+  'web.maintenance.result': 'Done on {date}.',
+  'web.maintenance.nothing': 'Nothing to tidy.',
+  'web.maintenance.folders.todo':
+    '{count, plural, one {# folder to take out} other {# folders to take out}}',
+  'web.maintenance.folders.done':
+    '{count, plural, one {# folder taken out} other {# folders taken out}}',
+  'web.maintenance.renames.todo':
+    '{count, plural, one {# image to rename} other {# images to rename}}',
+  'web.maintenance.renames.done': '{count, plural, one {# image renamed} other {# images renamed}}',
+  'web.maintenance.removals.todo':
+    '{count, plural, one {# file to set aside} other {# files to set aside}}',
+  'web.maintenance.removals.done':
+    '{count, plural, one {# file set aside} other {# files set aside}}',
+  'web.maintenance.files.todo':
+    '{count, plural, one {# file named after the video to handle} other {# files named after the video to handle}}',
+  'web.maintenance.files.done':
+    '{count, plural, one {# file named after the video handled} other {# files named after the video handled}}',
+  'web.maintenance.failed': '{count, plural, one {# failure} other {# failures}}',
+  'web.maintenance.left':
+    '{count, plural, one {# folder left where it is} other {# folders left where they are}}',
+  'web.maintenance.folder.empty': 'empty',
+  'web.maintenance.folder.twin': 'same work as {twin}',
+  'web.maintenance.folder.approximate': 'To check',
+  'web.maintenance.approximate.hint':
+    '{count, plural, one {# twin was found by title and year, not by name} other {# twins were found by title and year, not by name}}: make sure the folder marked “To check” really is the same work.',
+  'web.maintenance.reason.other-files': 'holds files that are neither NFO, image nor subtitle',
+  'web.maintenance.reason.no-twin': 'no folder with a video bears the same name',
+  'web.maintenance.reason.changed': 'changed while the analysis ran',
+  'web.maintenance.file.rename': '{name} becomes {counterpart}',
+  'web.maintenance.file.remove': '{name} is set aside, {counterpart} is already there',
+  'web.maintenance.run': 'Tidy…',
+  'web.maintenance.progress.label': 'Tidy-up progress',
+  'web.maintenance.progress.reading': 'Reading the library…',
+  'web.maintenance.progress.folders': 'Folders: {done} of {total}',
+  'web.maintenance.progress.files': 'Files: {done} of {total}',
+  'web.maintenance.batch.link': 'See the batch in the History',
+  'web.maintenance.batch.hint': 'The History undoes it, files and folders included.',
+  'web.maintenance.confirm.title': 'Tidy {name}?',
+  'web.maintenance.confirm.close': 'Close',
+  'web.maintenance.confirm.cancel': 'Cancel',
+  'web.maintenance.confirm.run': 'Tidy the library',
+  'web.maintenance.confirm.folders':
+    '{count, plural, one {# folder taken out} other {# folders taken out}}',
+  'web.maintenance.confirm.renames':
+    '{count, plural, one {# image renamed} other {# images renamed}}',
+  'web.maintenance.confirm.removals':
+    '{count, plural, one {# file set aside} other {# files set aside}}',
+  'web.maintenance.confirm.kept':
+    'Nothing is deleted: what is taken out is kept in the configuration folder (replaced).',
+  'web.maintenance.confirm.undo':
+    'Each action is a batch of the History, which puts everything back.',
+  'web.maintenance.confirm.tool':
+    'If another tool still manages this folder, it will write its files again: stop it first.',
   'web.system.tab.diagnostic': 'Diagnostic',
   'web.diagnostic.issue.reminder':
     'Please attach the diagnostic archive (System, Diagnostic) and describe what you expected and what happened.',

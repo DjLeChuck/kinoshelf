@@ -3,12 +3,13 @@
   import SystemDiagnostic from '../components/SystemDiagnostic.svelte';
   import SystemHealth from '../components/SystemHealth.svelte';
   import SystemLogs from '../components/SystemLogs.svelte';
+  import SystemMaintenance from '../components/SystemMaintenance.svelte';
   import SystemTmdb from '../components/SystemTmdb.svelte';
   import { t } from '../lib/i18n.svelte.js';
   import { router } from '../lib/router.svelte.js';
   import { oneOf } from '../lib/routes.js';
 
-  const TABS = ['health', 'logs', 'tmdb', 'diagnostic'] as const;
+  const TABS = ['health', 'logs', 'tmdb', 'maintenance', 'diagnostic'] as const;
   const tab = $derived(oneOf(router.query.get('tab'), TABS) ?? 'health');
 </script>
 
@@ -38,6 +39,8 @@
       <SystemHealth />
     {:else if tab === 'tmdb'}
       <SystemTmdb />
+    {:else if tab === 'maintenance'}
+      <SystemMaintenance />
     {:else if tab === 'diagnostic'}
       <SystemDiagnostic />
     {:else}

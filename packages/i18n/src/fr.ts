@@ -388,6 +388,77 @@ export const fr: Record<keyof typeof en, string> = {
     'Le modèle d’issue demande comment reproduire le problème et rappelle de joindre l’archive.',
   'web.diagnostic.issue.newtab': '(nouvel onglet)',
   'web.diagnostic.issue.versions': 'À recopier dans l’issue si vous ne joignez pas l’archive :',
+  'web.system.tab.maintenance': 'Maintenance',
+  'web.maintenance.intro':
+    'Nettoyez une bibliothèque déjà habillée par un autre outil : dossiers restés sans vidéo et métadonnées nommées d’après la vidéo. Analyser ne change rien. Rien n’est jamais supprimé : ce qui est retiré est gardé dans le dossier de configuration et l’Historique l’annule.',
+  'web.maintenance.none':
+    'Aucune bibliothèque n’est encore organisée sur place. Ajoutez-en une dans les réglages.',
+  'web.maintenance.scanning':
+    'Un scan de cette bibliothèque est en cours : attendez qu’il se termine.',
+  'web.maintenance.analyse': 'Analyser',
+  'web.maintenance.analyse.again': 'Analyser à nouveau',
+  'web.maintenance.analysing': 'Analyse en cours…',
+  'web.maintenance.nfo': 'Traiter aussi les fichiers <film>.nfo',
+  'web.maintenance.nfo.hint':
+    'Certains lecteurs lisent <film>.nfo avant movie.nfo : vérifiez sur le vôtre que movie.nfo seul est bien lu avant de l’activer.',
+  'web.maintenance.nfo.left':
+    '{count, plural, one {# fichier <film>.nfo est laissé tel quel} other {# fichiers <film>.nfo sont laissés tels quels}} : cochez la case ci-dessus pour les mettre de côté aussi.',
+  'web.maintenance.report': 'Analyse',
+  'web.maintenance.result': 'Terminé le {date}.',
+  'web.maintenance.nothing': 'Rien à nettoyer.',
+  'web.maintenance.folders.todo':
+    '{count, plural, one {# dossier à sortir} other {# dossiers à sortir}}',
+  'web.maintenance.folders.done':
+    '{count, plural, one {# dossier sorti} other {# dossiers sortis}}',
+  'web.maintenance.renames.todo':
+    '{count, plural, one {# image à renommer} other {# images à renommer}}',
+  'web.maintenance.renames.done':
+    '{count, plural, one {# image renommée} other {# images renommées}}',
+  'web.maintenance.removals.todo':
+    '{count, plural, one {# fichier à mettre de côté} other {# fichiers à mettre de côté}}',
+  'web.maintenance.removals.done':
+    '{count, plural, one {# fichier mis de côté} other {# fichiers mis de côté}}',
+  'web.maintenance.files.todo':
+    '{count, plural, one {# fichier nommé d’après la vidéo à traiter} other {# fichiers nommés d’après la vidéo à traiter}}',
+  'web.maintenance.files.done':
+    '{count, plural, one {# fichier nommé d’après la vidéo traité} other {# fichiers nommés d’après la vidéo traités}}',
+  'web.maintenance.failed': '{count, plural, one {# échec} other {# échecs}}',
+  'web.maintenance.left':
+    '{count, plural, one {# dossier laissé où il est} other {# dossiers laissés où ils sont}}',
+  'web.maintenance.folder.empty': 'vide',
+  'web.maintenance.folder.twin': 'même œuvre que {twin}',
+  'web.maintenance.folder.approximate': 'À vérifier',
+  'web.maintenance.approximate.hint':
+    '{count, plural, one {# jumeau a été trouvé par le titre et l’année, non par le nom} other {# jumeaux ont été trouvés par le titre et l’année, non par le nom}} : assurez-vous que le dossier marqué « À vérifier » est bien la même œuvre.',
+  'web.maintenance.reason.other-files':
+    'contient des fichiers qui ne sont ni NFO, ni images, ni sous-titres',
+  'web.maintenance.reason.no-twin': 'aucun dossier avec une vidéo ne porte le même nom',
+  'web.maintenance.reason.changed': 'modifié pendant l’analyse',
+  'web.maintenance.file.rename': '{name} devient {counterpart}',
+  'web.maintenance.file.remove': '{name} est mis de côté, {counterpart} est déjà là',
+  'web.maintenance.run': 'Nettoyer…',
+  'web.maintenance.progress.label': 'Progression du nettoyage',
+  'web.maintenance.progress.reading': 'Lecture de la bibliothèque…',
+  'web.maintenance.progress.folders': 'Dossiers : {done} sur {total}',
+  'web.maintenance.progress.files': 'Fichiers : {done} sur {total}',
+  'web.maintenance.batch.link': 'Voir le lot dans l’Historique',
+  'web.maintenance.batch.hint': 'L’Historique l’annule, fichiers et dossiers compris.',
+  'web.maintenance.confirm.title': 'Nettoyer {name} ?',
+  'web.maintenance.confirm.close': 'Fermer',
+  'web.maintenance.confirm.cancel': 'Annuler',
+  'web.maintenance.confirm.run': 'Nettoyer la bibliothèque',
+  'web.maintenance.confirm.folders':
+    '{count, plural, one {# dossier sorti} other {# dossiers sortis}}',
+  'web.maintenance.confirm.renames':
+    '{count, plural, one {# image renommée} other {# images renommées}}',
+  'web.maintenance.confirm.removals':
+    '{count, plural, one {# fichier mis de côté} other {# fichiers mis de côté}}',
+  'web.maintenance.confirm.kept':
+    'Rien n’est supprimé : ce qui est retiré est gardé dans le dossier de configuration (replaced).',
+  'web.maintenance.confirm.undo':
+    'Chaque action est un lot de l’Historique, qui remet tout en place.',
+  'web.maintenance.confirm.tool':
+    'Si un autre outil gère encore ce dossier, il réécrira ses fichiers : arrêtez-le d’abord.',
   'web.system.tab.diagnostic': 'Diagnostic',
   'web.diagnostic.issue.reminder':
     'Merci de joindre l’archive de diagnostic (Système, Diagnostic) et de décrire ce que vous attendiez et ce qui s’est passé.',
