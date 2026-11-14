@@ -21,6 +21,8 @@ put() {
 
 # Movies, matched with confidence.
 put "The.Matrix.1999.1080p.BluRay.x264-SEED" "The.Matrix.1999.1080p.BluRay.x264-SEED.mkv"
+# A second film of the same saga, so a collection holds two movies of its four on TMDB.
+put "The.Matrix.Reloaded.2003.1080p.BluRay.x264-SEED" "The.Matrix.Reloaded.2003.1080p.BluRay.x264-SEED.mkv"
 put "Dune.2021.1080p.WEB-DL.DDP5.1.H.264-SEED" "Dune.2021.1080p.WEB-DL.DDP5.1.H.264-SEED.mkv"
 
 # Two qualities of one movie: both arrive named with their picture size (versions).
