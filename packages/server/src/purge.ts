@@ -129,3 +129,33 @@ export function forgetReplacedScans(
     ),
   )();
 }
+
+/**
+ * What the History hides as routine: an analysis that finished and made no transfer. It stays in
+ * the database until the daily purge; this is the same thing at once, whatever its age. Never one
+ * that a person still has something to do with (a file waiting in Arrivals), never one a library's
+ * list reads (`library_items.scan_job_id`: its rows point at the job's files), never a job with a
+ * transfer (the batch's detail embeds it) and never a failed one (the History lists it).
+ */
+const ROUTINE_JOBS = `
+  SELECT j.id FROM jobs j
+  WHERE j.status = 'done'
+    AND NOT EXISTS (SELECT 1 FROM executions x WHERE x.job_id = j.id)
+    AND NOT EXISTS (SELECT 1 FROM library_items i WHERE i.scan_job_id = j.id)
+    AND NOT EXISTS (
+      SELECT 1 FROM job_entries e
+      WHERE e.job_id = j.id AND ${unsettledEntry('e')}
+    )`;
+
+/** How many analyses `forgetRoutineJobs` would forget, for the dialog that asks first. */
+export function countRoutineJobs(database: Database): number {
+  return (
+    database.prepare<[], { n: number }>(`SELECT COUNT(*) AS n FROM (${ROUTINE_JOBS})`).get()?.n ?? 0
+  );
+}
+
+export function forgetRoutineJobs(database: Database): PurgeResult {
+  return database.transaction(() =>
+    forget(database, database.prepare<[], { id: string }>(ROUTINE_JOBS).all()),
+  )();
+}

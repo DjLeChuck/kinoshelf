@@ -86,3 +86,16 @@ test('keeps a report across a reload', async ({ page }) => {
   await expect(films.getByText('1 folder to take out').first()).toBeVisible();
   await expect(films.getByRole('button', { name: 'Tidy…' })).toBeVisible();
 });
+
+test('the backup card leads to the retention settings, scrolled to its section', async ({
+  page,
+}) => {
+  await signIn(page);
+  await page.goto('/system?tab=maintenance');
+  await page.getByRole('link', { name: 'Change in the Settings' }).click();
+
+  // An anchor must not be taken for part of the path (that was a 404).
+  await expect(page).toHaveURL(/\/settings#retention$/);
+  await expect(page.getByRole('heading', { name: 'Retention' })).toBeInViewport();
+  await expect(page.getByLabel('Database backups to keep')).toHaveValue('3');
+});

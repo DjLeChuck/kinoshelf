@@ -331,6 +331,13 @@ export const fr: Record<keyof typeof en, string> = {
     'Ce dossier n’est pas dans la bibliothèque (ou c’est la bibliothèque elle-même : analysez plutôt la bibliothèque).',
   'error.library.transfer-in-progress':
     'Un transfert contient déjà certains de ces éléments. Attendez qu’il se termine avant de les relancer.',
+  'error.maintenance.busy':
+    'Un scan ou un transfert est en cours : la base ne peut pas être compactée maintenant. Réessayez quand il sera terminé.',
+  'error.maintenance.database-task-running':
+    'Une sauvegarde ou un compactage de la base est déjà en cours.',
+  'error.maintenance.vacuum-failed':
+    'La base n’a pas pu être compactée (un autre processus l’utilise peut-être). Réessayez dans un instant.',
+  'error.maintenance.backup-failed': 'La sauvegarde de la base a échoué : {reason}',
   'error.maintenance.in-progress': 'Un nettoyage de cette bibliothèque est déjà en cours.',
   'error.library.scan-in-progress':
     'Une analyse de cette bibliothèque est déjà en attente ou en cours.',
@@ -393,6 +400,52 @@ export const fr: Record<keyof typeof en, string> = {
   'web.diagnostic.issue.newtab': '(nouvel onglet)',
   'web.diagnostic.issue.versions': 'À recopier dans l’issue si vous ne joignez pas l’archive :',
   'web.system.tab.maintenance': 'Maintenance',
+  'web.maintenance.actions.title': 'Base et fichiers du serveur',
+  'web.maintenance.action.confirm.title': 'Confirmer : {title}',
+  'web.maintenance.action.confirm.cancel': 'Annuler',
+  'web.maintenance.action.confirm.close': 'Fermer',
+  'web.maintenance.action.does': 'Ce que fait cette action',
+  'web.maintenance.action.running': 'En cours…',
+  'web.maintenance.purge.title': 'Purger les analyses masquées',
+  'web.maintenance.purge.text': 'Ne touche ni aux fichiers ni à l’historique.',
+  'web.maintenance.purge.does':
+    'Oublie tout de suite les analyses terminées qui n’ont rien déplacé, sans attendre la purge quotidienne. Celles dont des fichiers attendent encore dans les Arrivées, ou que la liste d’une bibliothèque lit, restent.',
+  'web.maintenance.purge.state':
+    '{count, plural, =0 {Aucune analyse masquée.} one {# analyse masquée.} other {# analyses masquées.}}',
+  'web.maintenance.purge.button': 'Purger',
+  'web.maintenance.purge.done':
+    '{count, plural, =0 {Rien à oublier.} one {# analyse oubliée.} other {# analyses oubliées.}}',
+  'web.maintenance.caches.title': 'Vider les caches',
+  'web.maintenance.caches.text': 'Ne touche pas au journal.',
+  'web.maintenance.caches.does':
+    'Oublie les réponses de TMDB gardées : les prochaines analyses refont leurs requêtes auprès de TMDB.',
+  'web.maintenance.caches.state':
+    '{count, plural, =0 {Le cache TMDB est vide.} one {# réponse TMDB gardée} other {# réponses TMDB gardées}} · {size}',
+  'web.maintenance.caches.button': 'Vider',
+  'web.maintenance.caches.done':
+    '{count, plural, =0 {Le cache était vide.} one {# réponse oubliée.} other {# réponses oubliées.}}',
+  'web.maintenance.backup.title': 'Sauvegarder la base du journal',
+  'web.maintenance.backup.text': 'La donnée à ne pas perdre. Ne modifie rien.',
+  'web.maintenance.backup.does':
+    'Copie la base (journal, historique, listes) dans le dossier backups/ de la configuration, sans arrêter le serveur, puis supprime les plus anciennes sauvegardes au-delà du nombre gardé.',
+  'web.maintenance.backup.state':
+    '{count, plural, =0 {Aucune sauvegarde.} one {# sauvegarde} other {# sauvegardes}} · {keep} gardées au plus',
+  'web.maintenance.backup.last': ' · la dernière le {date} ({size})',
+  'web.maintenance.backup.button': 'Sauvegarder',
+  'web.maintenance.backup.done':
+    'Sauvegarde faite : {name} ({size}).{removed, plural, =0 {} one { Une ancienne supprimée.} other { # anciennes supprimées.}}',
+  'web.maintenance.backup.settings': 'Modifier dans les Réglages',
+  'web.maintenance.vacuum.title': 'Compacter la base (VACUUM)',
+  'web.maintenance.vacuum.text': 'Récupère de l’espace, ne change aucune donnée.',
+  'web.maintenance.vacuum.does':
+    'Réécrit le fichier de la base pour en récupérer l’espace libre. Le serveur ne répond plus pendant quelques secondes ; l’action est refusée tant qu’un scan ou un transfert tourne.',
+  'web.maintenance.vacuum.state': 'La base fait {size}.',
+  'web.maintenance.vacuum.button': 'Compacter',
+  'web.maintenance.vacuum.done': 'Base compactée : {before}, puis {after}.',
+  'web.maintenance.action.progress': 'Progression',
+  'web.maintenance.page.intro':
+    'Chaque action dit ce qu’elle fait et ce qu’elle ne touche pas, et demande confirmation avant de commencer.',
+  'web.maintenance.tidy.title': 'Nettoyer les dossiers d’une bibliothèque',
   'web.maintenance.intro':
     'Nettoyez une bibliothèque déjà habillée par un autre outil : dossiers restés sans vidéo et métadonnées nommées d’après la vidéo. Analyser ne change rien. Rien n’est jamais supprimé : ce qui est retiré est gardé dans le dossier de configuration et l’Historique l’annule.',
   'web.maintenance.none':
@@ -1415,6 +1468,17 @@ export const fr: Record<keyof typeof en, string> = {
   'web.libraries.profile': 'Noms et métadonnées',
   'web.history.job.used.naming': 'Noms',
   'web.history.job.used.metadata': 'Fichiers de métadonnées',
+  'web.settings.retention.title': 'Conservation',
+  'web.settings.retention.intro':
+    'Ce que l’onglet Maintenance du Système garde. Ces valeurs ne changent rien tant qu’une action n’est pas lancée.',
+  'web.settings.retention.backups': 'Sauvegardes de la base à garder',
+  'web.settings.retention.backups.hint':
+    'Après chaque sauvegarde, les plus anciennes au-delà de ce nombre sont supprimées. 3 par défaut.',
+  'web.settings.retention.replaced': 'Jours avant de vider le dossier des fichiers mis de côté',
+  'web.settings.retention.replaced.hint':
+    'Vider ne supprime que les fichiers mis de côté depuis plus longtemps que cela. 30 jours par défaut, 0 pour tous.',
+  'web.settings.invalid.retention':
+    'Indiquez un nombre entier de sauvegardes (au moins 1) et de jours (0 ou plus).',
   'web.settings.processing.title': 'Réglages par défaut',
   'web.settings.processing.intro':
     'Utilisés par les bibliothèques qui n’ont pas les leurs, et pour un dossier hors bibliothèque (un chemin soumis, ou scan et process en ligne de commande).',

@@ -314,6 +314,13 @@ export const en = {
     'This folder is not inside the library (or is the library itself: scan the library instead).',
   'error.library.transfer-in-progress':
     'A transfer already holds some of these items. Wait for it to end before running them again.',
+  'error.maintenance.busy':
+    'A scan or a transfer is running: the database cannot be compacted now. Try again when it ends.',
+  'error.maintenance.database-task-running':
+    'A backup or a compaction of the database is already running.',
+  'error.maintenance.vacuum-failed':
+    'The database could not be compacted (another process may be using it). Try again in a moment.',
+  'error.maintenance.backup-failed': 'The database backup failed: {reason}',
   'error.maintenance.in-progress': 'A tidy-up of this library is already running.',
   'error.library.scan-in-progress': 'A scan of this library is already queued or running.',
   'error.library.source-taken': 'The library “{name}” already reads this folder.',
@@ -372,6 +379,52 @@ export const en = {
   'web.diagnostic.issue.newtab': '(new tab)',
   'web.diagnostic.issue.versions': 'To copy into the issue if you do not attach the archive:',
   'web.system.tab.maintenance': 'Maintenance',
+  'web.maintenance.actions.title': 'The server’s database and files',
+  'web.maintenance.action.confirm.title': 'Confirm: {title}',
+  'web.maintenance.action.confirm.cancel': 'Cancel',
+  'web.maintenance.action.confirm.close': 'Close',
+  'web.maintenance.action.does': 'What this action does',
+  'web.maintenance.action.running': 'Working…',
+  'web.maintenance.purge.title': 'Purge hidden analyses',
+  'web.maintenance.purge.text': 'Touches neither the files nor the History.',
+  'web.maintenance.purge.does':
+    'Forgets at once the finished analyses that moved nothing, without waiting for the daily purge. Those whose files still wait in Arrivals, or that a library’s list reads, stay.',
+  'web.maintenance.purge.state':
+    '{count, plural, =0 {No hidden analysis.} one {# hidden analysis.} other {# hidden analyses.}}',
+  'web.maintenance.purge.button': 'Purge',
+  'web.maintenance.purge.done':
+    '{count, plural, =0 {Nothing to forget.} one {# analysis forgotten.} other {# analyses forgotten.}}',
+  'web.maintenance.caches.title': 'Clear the caches',
+  'web.maintenance.caches.text': 'Does not touch the journal.',
+  'web.maintenance.caches.does':
+    'Forgets the TMDB answers kept: the next analyses send their requests to TMDB again.',
+  'web.maintenance.caches.state':
+    '{count, plural, =0 {The TMDB cache is empty.} one {# TMDB answer kept} other {# TMDB answers kept}} · {size}',
+  'web.maintenance.caches.button': 'Clear',
+  'web.maintenance.caches.done':
+    '{count, plural, =0 {The cache was empty.} one {# answer forgotten.} other {# answers forgotten.}}',
+  'web.maintenance.backup.title': 'Back up the journal database',
+  'web.maintenance.backup.text': 'The data you must not lose. Changes nothing.',
+  'web.maintenance.backup.does':
+    'Copies the database (journal, history, lists) to the configuration’s backups/ folder without stopping the server, then deletes the oldest backups beyond the number kept.',
+  'web.maintenance.backup.state':
+    '{count, plural, =0 {No backup.} one {# backup} other {# backups}} · {keep} kept at most',
+  'web.maintenance.backup.last': ' · the latest on {date} ({size})',
+  'web.maintenance.backup.button': 'Back up',
+  'web.maintenance.backup.done':
+    'Backup made: {name} ({size}).{removed, plural, =0 {} one { One older one deleted.} other { # older ones deleted.}}',
+  'web.maintenance.backup.settings': 'Change in the Settings',
+  'web.maintenance.vacuum.title': 'Compact the database (VACUUM)',
+  'web.maintenance.vacuum.text': 'Gets space back, changes no data.',
+  'web.maintenance.vacuum.does':
+    'Rewrites the database file to get its free space back. The server does not answer for a few seconds; the action is refused while a scan or a transfer runs.',
+  'web.maintenance.vacuum.state': 'The database is {size}.',
+  'web.maintenance.vacuum.button': 'Compact',
+  'web.maintenance.vacuum.done': 'Database compacted: {before}, then {after}.',
+  'web.maintenance.action.progress': 'Progress',
+  'web.maintenance.page.intro':
+    'Each action says what it does and what it leaves alone, and asks for confirmation before it starts.',
+  'web.maintenance.tidy.title': 'Tidy a library’s folders',
   'web.maintenance.intro':
     'Tidy a library that another tool has already dressed: folders left with no video, and metadata named after the video. Analysing changes nothing. Nothing is ever deleted: what is taken out is kept in the configuration folder and the History undoes it.',
   'web.maintenance.none': 'No library is organized in place yet. Add one in the settings.',
@@ -1374,6 +1427,17 @@ export const en = {
   'web.libraries.profile': 'Names and metadata',
   'web.history.job.used.naming': 'Names',
   'web.history.job.used.metadata': 'Metadata files',
+  'web.settings.retention.title': 'Retention',
+  'web.settings.retention.intro':
+    'What the System page’s Maintenance tab keeps. These values change nothing until an action is run.',
+  'web.settings.retention.backups': 'Database backups to keep',
+  'web.settings.retention.backups.hint':
+    'After each backup, the oldest ones beyond this number are deleted. 3 by default.',
+  'web.settings.retention.replaced': 'Days before the set-aside files are emptied',
+  'web.settings.retention.replaced.hint':
+    'Emptying only deletes the files set aside longer ago than this. 30 days by default, 0 for all.',
+  'web.settings.invalid.retention':
+    'Enter a whole number of backups (at least 1) and of days (0 or more).',
   'web.settings.processing.title': 'Default settings',
   'web.settings.processing.intro':
     'Used by libraries that do not set their own, and for a folder outside any library (a path you submit, or scan and process on the command line).',

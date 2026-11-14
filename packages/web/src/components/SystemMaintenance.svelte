@@ -7,6 +7,7 @@
   import { libraryApi } from '../lib/libraries.js';
   import type { TidyRequest, TidyTask } from '../lib/maintenance.js';
   import { resource } from '../lib/resource.svelte.js';
+  import MaintenanceActions from './MaintenanceActions.svelte';
   import MaintenanceLibrary from './MaintenanceLibrary.svelte';
 
   // Only the libraries organized in place: an arrival folder is never tidied.
@@ -48,24 +49,31 @@
 </script>
 
 <div class="maintenance">
-  <p class="alert alert-info intro">{t('web.maintenance.intro')}</p>
+  <p class="muted intro">{t('web.maintenance.page.intro')}</p>
 
-  {#if loaded.failure}
-    <p class="alert alert-danger" role="alert">{messageOf(t, loaded.failure)}</p>
-  {/if}
-  {#if tasks.failure}
-    <p class="alert alert-danger" role="alert">{messageOf(t, tasks.failure)}</p>
-  {/if}
+  <MaintenanceActions />
 
-  {#if loaded.value === undefined && !loaded.failure}
-    <p class="muted" role="status">{t('web.loading')}</p>
-  {:else if libraries.length === 0}
-    <p class="muted">{t('web.maintenance.none')}</p>
-  {:else}
-    {#each libraries as library (library.id)}
-      <MaintenanceLibrary {library} task={taskOf(library.id)} onstart={start} />
-    {/each}
-  {/if}
+  <section class="block" aria-labelledby="maintenance-tidy">
+    <h2 id="maintenance-tidy">{t('web.maintenance.tidy.title')}</h2>
+    <p class="muted intro">{t('web.maintenance.intro')}</p>
+
+    {#if loaded.failure}
+      <p class="alert alert-danger" role="alert">{messageOf(t, loaded.failure)}</p>
+    {/if}
+    {#if tasks.failure}
+      <p class="alert alert-danger" role="alert">{messageOf(t, tasks.failure)}</p>
+    {/if}
+
+    {#if loaded.value === undefined && !loaded.failure}
+      <p class="muted" role="status">{t('web.loading')}</p>
+    {:else if libraries.length === 0}
+      <p class="muted">{t('web.maintenance.none')}</p>
+    {:else}
+      {#each libraries as library (library.id)}
+        <MaintenanceLibrary {library} task={taskOf(library.id)} onstart={start} />
+      {/each}
+    {/if}
+  </section>
 </div>
 
 <style>
@@ -77,6 +85,17 @@
 
   p {
     margin: 0;
+  }
+
+  .block {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  h2 {
+    margin: 0;
+    font-size: 18px;
   }
 
   .intro {

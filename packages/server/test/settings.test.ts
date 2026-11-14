@@ -31,6 +31,7 @@ interface SettingsBody {
     detectPictureSize: boolean;
     allowLocalImageUrls: boolean;
   };
+  retention: { backupKeep: number; replacedRetentionDays: number };
   apiKey: { source: string | null };
 }
 
@@ -321,6 +322,27 @@ describe('PATCH /api/settings', () => {
     await h.patch({ processing: { allowLocalImageUrls: null } });
     expect(await read()).toBe(false);
     expect(await h.file()).not.toMatch(/allowLocalImageUrls/);
+  });
+
+  it('keeps 3 backups and empties what is 30 days old unless told otherwise, and bounds them', async () => {
+    const h = await withConfig(`${librariesYaml('/media')}locale: en\n`);
+    expect((await h.get()).retention).toEqual({ backupKeep: 3, replacedRetentionDays: 30 });
+
+    await h.patch({ retention: { backupKeep: 10, replacedRetentionDays: 0 } });
+    expect((await h.get()).retention).toEqual({ backupKeep: 10, replacedRetentionDays: 0 });
+    expect(await h.file()).toMatch(/backupKeep: 10/);
+
+    for (const retention of [
+      { backupKeep: 0 },
+      { replacedRetentionDays: -1 },
+      { backupKeep: 1.5 },
+    ]) {
+      expect((await h.patch({ retention })).statusCode).toBe(400);
+    }
+
+    await h.patch({ retention: { backupKeep: null, replacedRetentionDays: null } });
+    expect((await h.get()).retention).toEqual({ backupKeep: 3, replacedRetentionDays: 30 });
+    expect(await h.file()).not.toMatch(/backupKeep|replacedRetentionDays/);
   });
 
   it('lets the processor see a changed setting on its next job', async () => {

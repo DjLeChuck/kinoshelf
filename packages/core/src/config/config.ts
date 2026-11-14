@@ -136,6 +136,10 @@ const configSchema = z
     watch: watchSchema.optional(),
     /** Server: days after which a finished job, all its files settled, is forgotten. 0 keeps all. */
     retentionDays: z.number().int().min(0).optional(),
+    /** Server: how many backups of the database the Maintenance tab keeps (default 3). */
+    backupKeep: z.number().int().min(1).optional(),
+    /** Server: days after which "Empty replaced/" forgets a file set aside (default 30, 0 = all). */
+    replacedRetentionDays: z.number().int().min(0).optional(),
     /** Server: libraries (organized in place) and arrival folders, see `librarySchema`. */
     libraries: z.array(librarySchema).optional(),
   })

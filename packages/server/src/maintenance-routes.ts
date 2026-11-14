@@ -3,6 +3,7 @@ import {
   removeOrphanFolders,
   tidyForeignFiles,
   type Config,
+  type Database,
   type Journal,
   type LibraryConfig,
   type TidiedFolder,
@@ -13,6 +14,9 @@ import { ApiError } from './api-error.js';
 import type { EventBus } from './events.js';
 import type { JobStore } from './jobs.js';
 import type { LibrarySnapshot } from './library-items.js';
+import type { DatabaseTasks } from './database-tasks.js';
+import { countRoutineJobs, forgetRoutineJobs } from './purge.js';
+import type { TmdbUsage } from './tmdb-usage.js';
 import { failureOf, type MatchFailure } from './matches.js';
 import type { ProgressTracker } from './progress.js';
 import { errorSchema } from './schemas.js';
@@ -21,6 +25,10 @@ export interface MaintenanceDeps {
   readonly config: () => Config;
   readonly jobs: JobStore;
   readonly journal: Journal;
+  readonly database: Database;
+  readonly tmdbUsage: TmdbUsage;
+  readonly databaseTasks: DatabaseTasks;
+  readonly backupKeep: () => number;
   readonly snapshot: LibrarySnapshot;
   readonly events: EventBus;
   readonly progress: ProgressTracker;
@@ -28,12 +36,49 @@ export interface MaintenanceDeps {
   readonly configDir: string;
 }
 
+const backupFileSchema = {
+  type: 'object',
+  required: ['name', 'bytes', 'at'],
+  properties: {
+    name: { type: 'string' },
+    bytes: { type: 'integer' },
+    at: { type: 'string', format: 'date-time' },
+  },
+} as const;
+
 const errorInfo = {
   type: 'object',
   required: ['code'],
   properties: {
     code: { type: 'string' },
     params: { type: 'object', additionalProperties: { type: ['string', 'number'] } },
+  },
+} as const;
+
+const databaseTaskSchema = {
+  type: 'object',
+  required: ['kind', 'status', 'done', 'total', 'startedAt', 'endedAt', 'backup', 'size', 'error'],
+  properties: {
+    kind: { enum: ['backup', 'vacuum'] },
+    status: { enum: ['running', 'done', 'failed'] },
+    done: { type: 'integer', description: 'Pages copied by a backup.' },
+    total: { type: 'integer' },
+    startedAt: { type: 'string', format: 'date-time' },
+    endedAt: { type: ['string', 'null'], format: 'date-time' },
+    backup: {
+      type: ['object', 'null'],
+      required: ['file', 'removed'],
+      properties: {
+        file: backupFileSchema,
+        removed: { type: 'integer', description: 'Older backups the rotation removed.' },
+      },
+    },
+    size: {
+      type: ['object', 'null'],
+      required: ['before', 'after'],
+      properties: { before: { type: 'integer' }, after: { type: 'integer' } },
+    },
+    error: { anyOf: [errorInfo, { type: 'null' }] },
   },
 } as const;
 
@@ -207,6 +252,119 @@ export function registerMaintenanceRoutes(api: FastifyInstance, deps: Maintenanc
       }
     }
   };
+
+  api.get(
+    '/api/maintenance',
+    {
+      schema: {
+        summary: 'What the maintenance actions would act on',
+        description:
+          'The figures the Maintenance tab shows on its cards: the analyses the History hides ' +
+          '(`hiddenAnalyses`) and the TMDB answers kept in the cache.',
+        response: {
+          200: {
+            type: 'object',
+            required: [
+              'hiddenAnalyses',
+              'tmdbCache',
+              'databaseBytes',
+              'backups',
+              'backupKeep',
+              'databaseTasks',
+            ],
+            properties: {
+              hiddenAnalyses: { type: 'integer' },
+              databaseBytes: { type: 'integer', description: 'The size of the database file.' },
+              backups: { type: 'array', items: backupFileSchema, description: 'Newest first.' },
+              backupKeep: { type: 'integer', description: 'How many backups are kept.' },
+              databaseTasks: {
+                type: 'array',
+                description: 'The latest backup and the latest compaction, since the start.',
+                items: databaseTaskSchema,
+              },
+              tmdbCache: {
+                type: 'object',
+                required: ['entries', 'bytes'],
+                properties: { entries: { type: 'integer' }, bytes: { type: 'integer' } },
+              },
+            },
+          },
+          401: errorSchema,
+        },
+      },
+    },
+    async () => ({
+      hiddenAnalyses: countRoutineJobs(deps.database),
+      tmdbCache: deps.tmdbUsage.cacheStats(),
+      databaseBytes:
+        Number(deps.database.pragma('page_count', { simple: true })) *
+        Number(deps.database.pragma('page_size', { simple: true })),
+      backups: await deps.databaseTasks.backups(),
+      backupKeep: deps.backupKeep(),
+      databaseTasks: deps.databaseTasks.tasks(),
+    }),
+  );
+
+  api.post(
+    '/api/maintenance/backup',
+    {
+      schema: {
+        summary: 'Back up the database',
+        description:
+          'Starts a task and answers 202 at once; `GET /api/maintenance` tells how it goes (follow ' +
+          'the `progress` event). Copies the database, journal included, to ' +
+          '`<config>/backups/kinoshelf-YYYYMMDD-HHMM.sqlite` without stopping the server, then ' +
+          'removes the oldest copies beyond `retention.backupKeep`. Nothing else is touched. 409 ' +
+          '`maintenance.database-task-running` while a backup or a compaction runs.',
+        response: { 202: databaseTaskSchema, 401: errorSchema, 409: errorSchema },
+      },
+    },
+    (_request, reply) => reply.code(202).send(deps.databaseTasks.startBackup()),
+  );
+
+  api.post(
+    '/api/maintenance/vacuum',
+    {
+      schema: {
+        summary: 'Compact the database',
+        description:
+          'Starts a task and answers 202 at once; `GET /api/maintenance` tells how it goes. ' +
+          'Runs `VACUUM`: the file shrinks, no data changes. It holds the server for its ' +
+          'duration, so 409 `maintenance.busy` while a scan or a transfer runs, and 409 ' +
+          '`maintenance.database-task-running` while a backup or a compaction runs.',
+        response: { 202: databaseTaskSchema, 401: errorSchema, 409: errorSchema },
+      },
+    },
+    (_request, reply) => reply.code(202).send(deps.databaseTasks.startVacuum()),
+  );
+
+  api.post(
+    '/api/maintenance/purge-hidden',
+    {
+      schema: {
+        summary: 'Forget the analyses the History hides',
+        description:
+          'Forgets at once the analyses that finished and moved nothing, without waiting for the ' +
+          'daily purge. Files, batches and the journal are not touched, nor are the analyses whose ' +
+          'files still wait in Arrivals or that a library list reads. Short: answers 200.',
+        response: {
+          200: {
+            type: 'object',
+            required: ['removed'],
+            properties: { removed: { type: 'integer' } },
+          },
+          401: errorSchema,
+        },
+      },
+    },
+    () => {
+      const { jobs } = forgetRoutineJobs(deps.database);
+      if (jobs > 0) {
+        deps.events.emit('history');
+      }
+      return { removed: jobs };
+    },
+  );
 
   api.get(
     '/api/maintenance/tidy',

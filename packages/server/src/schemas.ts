@@ -540,6 +540,7 @@ export const settingsSchema = {
     'webhooks',
     'watch',
     'processing',
+    'retention',
     'apiKey',
     'namingExamples',
   ],
@@ -627,6 +628,15 @@ export const settingsSchema = {
         threshold: { type: 'number', nullable: true },
         detectPictureSize: { type: 'boolean' },
         allowLocalImageUrls: { type: 'boolean' },
+      },
+    },
+    retention: {
+      type: 'object',
+      description: 'What the Maintenance tab keeps: the values in use.',
+      required: ['backupKeep', 'replacedRetentionDays'],
+      properties: {
+        backupKeep: { type: 'integer' },
+        replacedRetentionDays: { type: 'integer' },
       },
     },
     namingExamples: {
@@ -733,6 +743,16 @@ export const settingsPatchSchema = {
         detectPictureSize: nullable({ type: 'boolean' }),
         // Off unless turned on: `null` goes back to that default.
         allowLocalImageUrls: nullable({ type: 'boolean' }),
+      },
+    },
+    retention: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        // 3 unless set: `null` goes back to that default.
+        backupKeep: nullable({ type: 'integer', minimum: 1, maximum: 100 }),
+        // 30 unless set, 0 for every file set aside.
+        replacedRetentionDays: nullable({ type: 'integer', minimum: 0, maximum: 3650 }),
       },
     },
   },

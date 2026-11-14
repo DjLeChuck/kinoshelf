@@ -414,6 +414,11 @@ export interface paths {
                                 detectPictureSize: boolean;
                                 allowLocalImageUrls: boolean;
                             };
+                            /** @description What the Maintenance tab keeps: the values in use. */
+                            retention: {
+                                backupKeep: number;
+                                replacedRetentionDays: number;
+                            };
                             /** @description A movie and an episode path as each naming would write them. */
                             namingExamples: {
                                 "with-id": {
@@ -524,6 +529,10 @@ export interface paths {
                             detectPictureSize?: boolean | null;
                             allowLocalImageUrls?: boolean | null;
                         };
+                        retention?: {
+                            backupKeep?: number | null;
+                            replacedRetentionDays?: number | null;
+                        };
                     };
                 };
             };
@@ -591,6 +600,11 @@ export interface paths {
                                 threshold: number | null;
                                 detectPictureSize: boolean;
                                 allowLocalImageUrls: boolean;
+                            };
+                            /** @description What the Maintenance tab keeps: the values in use. */
+                            retention: {
+                                backupKeep: number;
+                                replacedRetentionDays: number;
                             };
                             /** @description A movie and an episode path as each naming would write them. */
                             namingExamples: {
@@ -6493,6 +6507,375 @@ export interface paths {
                 };
             };
         };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/maintenance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * What the maintenance actions would act on
+         * @description The figures the Maintenance tab shows on its cards: the analyses the History hides (`hiddenAnalyses`) and the TMDB answers kept in the cache.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            hiddenAnalyses: number;
+                            /** @description The size of the database file. */
+                            databaseBytes: number;
+                            /** @description Newest first. */
+                            backups: {
+                                name: string;
+                                bytes: number;
+                                /** Format: date-time */
+                                at: string;
+                            }[];
+                            /** @description How many backups are kept. */
+                            backupKeep: number;
+                            /** @description The latest backup and the latest compaction, since the start. */
+                            databaseTasks: {
+                                /** @enum {unknown} */
+                                kind: "backup" | "vacuum";
+                                /** @enum {unknown} */
+                                status: "running" | "done" | "failed";
+                                /** @description Pages copied by a backup. */
+                                done: number;
+                                total: number;
+                                /** Format: date-time */
+                                startedAt: string;
+                                /** Format: date-time */
+                                endedAt: string | null;
+                                backup: {
+                                    file: {
+                                        name: string;
+                                        bytes: number;
+                                        /** Format: date-time */
+                                        at: string;
+                                    };
+                                    /** @description Older backups the rotation removed. */
+                                    removed: number;
+                                } | null;
+                                size: {
+                                    before: number;
+                                    after: number;
+                                } | null;
+                                error: {
+                                    code: string;
+                                    params?: {
+                                        [key: string]: string | number;
+                                    };
+                                } | null;
+                            }[];
+                            tmdbCache: {
+                                entries: number;
+                                bytes: number;
+                            };
+                        };
+                    };
+                };
+                /** @description Default Response */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/maintenance/backup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Back up the database
+         * @description Starts a task and answers 202 at once; `GET /api/maintenance` tells how it goes (follow the `progress` event). Copies the database, journal included, to `<config>/backups/kinoshelf-YYYYMMDD-HHMM.sqlite` without stopping the server, then removes the oldest copies beyond `retention.backupKeep`. Nothing else is touched. 409 `maintenance.database-task-running` while a backup or a compaction runs.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                202: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {unknown} */
+                            kind: "backup" | "vacuum";
+                            /** @enum {unknown} */
+                            status: "running" | "done" | "failed";
+                            /** @description Pages copied by a backup. */
+                            done: number;
+                            total: number;
+                            /** Format: date-time */
+                            startedAt: string;
+                            /** Format: date-time */
+                            endedAt: string | null;
+                            backup: {
+                                file: {
+                                    name: string;
+                                    bytes: number;
+                                    /** Format: date-time */
+                                    at: string;
+                                };
+                                /** @description Older backups the rotation removed. */
+                                removed: number;
+                            } | null;
+                            size: {
+                                before: number;
+                                after: number;
+                            } | null;
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            } | null;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Default Response */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/maintenance/vacuum": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Compact the database
+         * @description Starts a task and answers 202 at once; `GET /api/maintenance` tells how it goes. Runs `VACUUM`: the file shrinks, no data changes. It holds the server for its duration, so 409 `maintenance.busy` while a scan or a transfer runs, and 409 `maintenance.database-task-running` while a backup or a compaction runs.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                202: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {unknown} */
+                            kind: "backup" | "vacuum";
+                            /** @enum {unknown} */
+                            status: "running" | "done" | "failed";
+                            /** @description Pages copied by a backup. */
+                            done: number;
+                            total: number;
+                            /** Format: date-time */
+                            startedAt: string;
+                            /** Format: date-time */
+                            endedAt: string | null;
+                            backup: {
+                                file: {
+                                    name: string;
+                                    bytes: number;
+                                    /** Format: date-time */
+                                    at: string;
+                                };
+                                /** @description Older backups the rotation removed. */
+                                removed: number;
+                            } | null;
+                            size: {
+                                before: number;
+                                after: number;
+                            } | null;
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            } | null;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Default Response */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/maintenance/purge-hidden": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Forget the analyses the History hides
+         * @description Forgets at once the analyses that finished and moved nothing, without waiting for the daily purge. Files, batches and the journal are not touched, nor are the analyses whose files still wait in Arrivals or that a library list reads. Short: answers 200.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            removed: number;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;

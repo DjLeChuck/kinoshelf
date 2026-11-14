@@ -1,6 +1,9 @@
-import { readFile, rm, stat } from 'node:fs/promises';
+import { mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
+import { Database } from '@kinoshelf/core';
+import { DatabaseTasks } from '../src/database-tasks.js';
+import { ProgressTracker } from '../src/progress.js';
 import { cleanup, harness, makeDir, put, type Harness } from './harness.js';
 
 afterEach(cleanup);
@@ -194,5 +197,125 @@ describe('POST /api/maintenance/tidy: a run', () => {
 
     expect(task.status).toBe('failed');
     expect(task.error?.code).toBe('discover.not-found');
+  });
+});
+
+describe('GET /api/maintenance and POST /api/maintenance/purge-hidden', () => {
+  it('counts the hidden analyses, forgets them on request, and says what the TMDB cache holds', async () => {
+    const { h } = await setup();
+    h.database
+      .prepare(
+        "INSERT INTO jobs (id, path, status, created_at, finished_at) VALUES ('j1', '/x', 'done', 'a', 'b')",
+      )
+      .run();
+
+    const before = (await h.request('GET', '/api/maintenance')).json<{
+      hiddenAnalyses: number;
+      tmdbCache: { entries: number; bytes: number };
+    }>();
+    expect(before.hiddenAnalyses).toBe(1);
+    expect(typeof before.tmdbCache.entries).toBe('number');
+    expect(typeof before.tmdbCache.bytes).toBe('number');
+
+    const purged = await h.request('POST', '/api/maintenance/purge-hidden');
+    expect(purged.statusCode).toBe(200);
+    expect(purged.json()).toEqual({ removed: 1 });
+    expect(
+      (await h.request('GET', '/api/maintenance')).json<{ hiddenAnalyses: number }>()
+        .hiddenAnalyses,
+    ).toBe(0);
+  });
+});
+
+interface DbTask {
+  kind: string;
+  status: string;
+  backup: { file: { name: string; bytes: number }; removed: number } | null;
+  size: { before: number; after: number } | null;
+  error: { code: string } | null;
+}
+
+async function databaseTask(h: Harness, kind: 'backup' | 'vacuum'): Promise<DbTask> {
+  for (;;) {
+    const { databaseTasks } = (await h.request('GET', '/api/maintenance')).json<{
+      databaseTasks: DbTask[];
+    }>();
+    const task = databaseTasks.find((candidate) => candidate.kind === kind);
+    if (task && task.status !== 'running') {
+      return task;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 5));
+  }
+}
+
+describe('database backup and compaction', () => {
+  it('backs the database up to a file that holds the same data, and keeps only the newest ones', async () => {
+    const { h, configDir } = await setup();
+    h.database
+      .prepare(
+        "INSERT INTO jobs (id, path, status, created_at, finished_at) VALUES ('kept', '/x', 'done', 'a', 'b')",
+      )
+      .run();
+    // Older copies than any made now, so the rotation has something to remove.
+    const dir = join(configDir, 'backups');
+    await mkdir(dir, { recursive: true });
+    for (const day of ['20200101', '20200102', '20200103']) {
+      await writeFile(join(dir, `kinoshelf-${day}-0000.sqlite`), 'old');
+    }
+    await h.request('PATCH', '/api/settings', { retention: { backupKeep: 2 } });
+
+    const started = await h.request('POST', '/api/maintenance/backup');
+    expect(started.statusCode).toBe(202);
+    const task = await databaseTask(h, 'backup');
+
+    expect(task.status).toBe('done');
+    expect(task.backup?.removed).toBe(2);
+    expect(await readdir(dir)).toHaveLength(2);
+    expect(await readdir(dir)).toContain('kinoshelf-20200103-0000.sqlite');
+    const copy = new Database(join(dir, task.backup?.file.name ?? ''));
+    expect(copy.prepare("SELECT id FROM jobs WHERE id = 'kept'").get()).toEqual({ id: 'kept' });
+    copy.close();
+    expect(
+      (await h.request('GET', '/api/maintenance')).json<{ backups: unknown[] }>().backups,
+    ).toHaveLength(2);
+  });
+
+  it('compacts the database without changing its data, and refuses a second task meanwhile', async () => {
+    const { h } = await setup();
+    h.database
+      .prepare(
+        "INSERT INTO jobs (id, path, status, created_at, finished_at) VALUES ('kept', '/x', 'done', 'a', 'b')",
+      )
+      .run();
+
+    // Pages freed by a deletion: what a compaction gives back.
+    h.database.exec(
+      'CREATE TABLE bulk (x BLOB); INSERT INTO bulk SELECT zeroblob(4000) FROM (WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < 300) SELECT i FROM n); DROP TABLE bulk;',
+    );
+
+    expect((await h.request('POST', '/api/maintenance/vacuum')).statusCode).toBe(202);
+    const refused = await h.request('POST', '/api/maintenance/backup');
+    expect(refused.statusCode).toBe(409);
+    expect(refused.json()).toEqual({ error: { code: 'maintenance.database-task-running' } });
+
+    const task = await databaseTask(h, 'vacuum');
+    expect(task.status).toBe('done');
+    expect(task.size?.after).toBeLessThan(task.size?.before ?? 0);
+    expect(h.database.prepare("SELECT id FROM jobs WHERE id = 'kept'").get()).toEqual({
+      id: 'kept',
+    });
+  });
+
+  it('refuses to compact while a scan or a transfer runs', () => {
+    const tasks = new DatabaseTasks({
+      database: new Database(':memory:'),
+      configDir: '/nowhere',
+      progress: new ProgressTracker(() => undefined),
+      busy: () => true,
+      keep: () => 3,
+    });
+    expect(() => tasks.startVacuum()).toThrow(
+      expect.objectContaining({ code: 'maintenance.busy' }),
+    );
   });
 });

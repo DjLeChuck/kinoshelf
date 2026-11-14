@@ -20,6 +20,8 @@ import { JobStore } from './jobs.js';
 import { registerLogRoutes } from './log-routes.js';
 import { UndoTasks } from './undo-tasks.js';
 import { registerMaintenanceRoutes } from './maintenance-routes.js';
+import { DatabaseTasks } from './database-tasks.js';
+import { DEFAULT_BACKUP_KEEP } from './settings.js';
 import { registerTmdbRoutes } from './tmdb-routes.js';
 import { tmdbUsageOf } from './tmdb-usage.js';
 import { LOG_LEVELS, LogStore, type LogLevel } from './logs.js';
@@ -725,10 +727,21 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
       report,
     });
     registerTmdbRoutes(api, tmdbUsage);
+    const databaseTasks = new DatabaseTasks({
+      database: options.database,
+      configDir: options.configDir,
+      progress,
+      busy: () => runner.busy,
+      keep: () => configStore.config.backupKeep ?? DEFAULT_BACKUP_KEEP,
+    });
     registerMaintenanceRoutes(api, {
       config: () => configStore.config,
       jobs,
       journal,
+      database: options.database,
+      tmdbUsage,
+      databaseTasks,
+      backupKeep: () => configStore.config.backupKeep ?? DEFAULT_BACKUP_KEEP,
       snapshot,
       events,
       progress,

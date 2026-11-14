@@ -1,4 +1,5 @@
 import {
+  backup,
   DatabaseSync,
   type SQLInputValue,
   type SQLOutputValue,
@@ -166,6 +167,23 @@ export class Database {
     run.immediate = make('BEGIN IMMEDIATE');
     run.exclusive = make('BEGIN EXCLUSIVE');
     return run;
+  }
+
+  /**
+   * Copies the database, page by page, to a new file: it yields to the event loop between batches
+   * (unlike `VACUUM INTO`, which holds it for the whole copy), so the server answers meanwhile, and
+   * a writer is never blocked for long. `onProgress` gets the pages left and the total.
+   */
+  async backup(
+    destination: string,
+    onProgress?: (remainingPages: number, totalPages: number) => void,
+  ): Promise<void> {
+    await backup(this.#database, destination, {
+      rate: 256,
+      progress: ({ remainingPages, totalPages }) => {
+        onProgress?.(remainingPages, totalPages);
+      },
+    });
   }
 
   close(): this {

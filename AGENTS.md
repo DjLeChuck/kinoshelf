@@ -315,6 +315,18 @@ severity }`, `area` being its card and `code` translated by the web (`web.health
   one runs (or was just started). The checkbox "also handle `<film>.nfo`" reads the report again with `nfo: true`. **Decided not to build**: a
   warning in the rename preview that a `<film>.nfo` stays where it is (it would touch the core, the server, the contract, the
   preview and the CLI for one piece of information; the Maintenance tab counts those files).
+- **Maintenance actions** (`MaintenanceActions.svelte`, `ActionCard`, `ActionDialog`, `database-tasks.ts`; `GET /api/maintenance`
+  gives the figures the cards show): a grid of cards above the tidy-up, each saying what it does and what it leaves alone, and asking
+  before it starts. "Purge hidden analyses" (`POST /api/maintenance/purge-hidden`, `forgetRoutineJobs`) forgets at once the
+  analyses the History hides, **never** one with a transfer, a failure, a file still waiting in Arrivals or a row of a library's
+  list (`library_items.scan_job_id`). "Clear the caches" is `DELETE /api/tmdb/cache`, one implementation. "Back up the database"
+  (`POST /api/maintenance/backup`) copies the SQLite file page by page (`Database.backup`, yielding to the event loop) to
+  `<config>/backups/kinoshelf-YYYYMMDD-HHMM.sqlite` (UTC), through a `.partial` file, then removes the oldest beyond
+  `backupKeep` (**Settings › Retention**, 3 by default), only after the new one is safe. "Compact" (`POST /api/maintenance/vacuum`)
+  is `VACUUM`, which cannot be cut up and holds the event loop: refused while a scan or a transfer runs (409 `maintenance.busy`),
+  started after the 202 left. One of the two at a time (409 `maintenance.database-task-running`); both are tasks in memory
+  announced by `progress`. `replacedRetentionDays` (30 by default) is set in the same section and read by the "Empty replaced/"
+  action, not built yet.
 - **Decided not to build**: a "connection lost" banner on the logs (the event stream does not tell the page it is down). A
   dropped stream reconnects by itself and every view reloads on `ready`; it is not worth an indicator of its own.
 

@@ -49,10 +49,15 @@ export interface Settings {
     readonly detectPictureSize: boolean;
     readonly allowLocalImageUrls: boolean;
   };
+  /** What the Maintenance tab keeps: the values in use. */
+  readonly retention: { readonly backupKeep: number; readonly replacedRetentionDays: number };
   readonly apiKey: { readonly source: 'env' | 'database' | null };
   /** A movie and an episode path as each naming writes them. */
   readonly namingExamples: Readonly<Record<Naming, NamingExample>>;
 }
+
+export const DEFAULT_BACKUP_KEEP = 3;
+export const DEFAULT_REPLACED_RETENTION_DAYS = 30;
 
 /** The web does not import the core: these mirror its `Naming` and `Metadata`. */
 export type Naming = 'with-id' | 'no-id';

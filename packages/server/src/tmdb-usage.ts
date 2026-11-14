@@ -282,6 +282,11 @@ export class TmdbUsage implements UsageSink {
     };
   }
 
+  /** What the cache holds, for the Maintenance tab. */
+  cacheStats(): { entries: number; bytes: number } {
+    return this.cache.stats();
+  }
+
   /** Forgets every stored answer: the next analyses ask TMDB again. */
   clearCache(): number {
     return this.cache.clear();

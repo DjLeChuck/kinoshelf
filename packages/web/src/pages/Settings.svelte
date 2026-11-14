@@ -5,6 +5,7 @@
   import SettingsLibraries from '../components/SettingsLibraries.svelte';
   import SettingsWatch from '../components/SettingsWatch.svelte';
   import SettingsProcessing from '../components/SettingsProcessing.svelte';
+  import SettingsRetention from '../components/SettingsRetention.svelte';
   import SettingsServer from '../components/SettingsServer.svelte';
   import SettingsWebhooks from '../components/SettingsWebhooks.svelte';
   import { tick, untrack } from 'svelte';
@@ -20,6 +21,7 @@
     { id: 'libraries', label: 'web.settings.libraries.title' },
     { id: 'watch', label: 'web.settings.watch.title' },
     { id: 'processing', label: 'web.settings.processing.title' },
+    { id: 'retention', label: 'web.settings.retention.title' },
     { id: 'plex', label: 'web.settings.plex.title' },
     { id: 'jellyfin', label: 'web.settings.jellyfin.title' },
     { id: 'webhooks', label: 'web.settings.webhooks.title' },
@@ -82,6 +84,7 @@
       </div>
       <div id="watch"><SettingsWatch {settings} {save} /></div>
       <div id="processing"><SettingsProcessing {settings} {save} /></div>
+      <div id="retention"><SettingsRetention {settings} {save} /></div>
       <div id="plex"><SettingsServer kind="plex" {settings} {save} /></div>
       <div id="jellyfin"><SettingsServer kind="jellyfin" {settings} {save} /></div>
       <div id="webhooks"><SettingsWebhooks {settings} {save} /></div>

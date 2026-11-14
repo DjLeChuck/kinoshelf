@@ -1,5 +1,38 @@
 import type { ErrorBody } from './arrivals.js';
 
+/** What the maintenance cards read (`GET /api/maintenance`). */
+export interface MaintenanceFigures {
+  /** Analyses the History hides: what "Purge hidden analyses" forgets. */
+  readonly hiddenAnalyses: number;
+  readonly tmdbCache: { readonly entries: number; readonly bytes: number };
+  /** The size of the database file. */
+  readonly databaseBytes: number;
+  /** The backups in the config folder, newest first. */
+  readonly backups: readonly BackupFile[];
+  readonly backupKeep: number;
+  /** The latest backup and the latest compaction, since the server started. */
+  readonly databaseTasks: readonly DatabaseTask[];
+}
+
+export interface BackupFile {
+  readonly name: string;
+  readonly bytes: number;
+  readonly at: string;
+}
+
+export interface DatabaseTask {
+  readonly kind: 'backup' | 'vacuum';
+  readonly status: 'running' | 'done' | 'failed';
+  /** Pages copied by a backup. */
+  readonly done: number;
+  readonly total: number;
+  readonly startedAt: string;
+  readonly endedAt: string | null;
+  readonly backup: { readonly file: BackupFile; readonly removed: number } | null;
+  readonly size: { readonly before: number; readonly after: number } | null;
+  readonly error: ErrorBody | null;
+}
+
 /** One folder the tidy-up looked at (`folders.items` of a task). */
 export interface TidyFolder {
   readonly path: string;

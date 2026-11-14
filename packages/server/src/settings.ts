@@ -59,7 +59,16 @@ export interface SettingsPatch {
     detectPictureSize?: Nullable<boolean>;
     allowLocalImageUrls?: Nullable<boolean>;
   };
+  /** What the Maintenance tab keeps; `null` goes back to the default. */
+  retention?: {
+    backupKeep?: Nullable<number>;
+    replacedRetentionDays?: Nullable<number>;
+  };
 }
+
+/** What the Maintenance tab keeps when the settings do not say. */
+export const DEFAULT_BACKUP_KEEP = 3;
+export const DEFAULT_REPLACED_RETENTION_DAYS = 30;
 
 /** A stable handle for a webhook, so the UI can name one without being told its secret URL. */
 const webhookId = (url: string): string =>
@@ -132,6 +141,11 @@ export function presentSettings(config: Config, env: Env): unknown {
       detectPictureSize: config.detectPictureSize ?? true,
       allowLocalImageUrls: config.allowLocalImageUrls ?? false,
     },
+    // The values in use: the form shows them rather than an empty field.
+    retention: {
+      backupKeep: config.backupKeep ?? DEFAULT_BACKUP_KEEP,
+      replacedRetentionDays: config.replacedRetentionDays ?? DEFAULT_REPLACED_RETENTION_DAYS,
+    },
   };
 }
 
@@ -154,7 +168,7 @@ function merged(
 /** Turns a request into the edits of `config.yaml`, against the configuration as it is now. */
 export function editsFor(patch: SettingsPatch, config: Config): ConfigEdit[] {
   const edits: ConfigEdit[] = [];
-  const { tmdb, plex, jellyfin, webhooks, watch, processing } = patch;
+  const { tmdb, plex, jellyfin, webhooks, watch, processing, retention } = patch;
 
   if (tmdb?.apiKey !== undefined) {
     edits.push(set(['apiKey', 'tmdb'], tmdb.apiKey));
@@ -208,7 +222,7 @@ export function editsFor(patch: SettingsPatch, config: Config): ConfigEdit[] {
     edits.push(set(['watch'], watch === null ? null : merged(config.watch, watch)));
   }
 
-  for (const [key, value] of Object.entries(processing ?? {})) {
+  for (const [key, value] of Object.entries({ ...processing, ...retention })) {
     edits.push(set([key], value));
   }
   return edits;

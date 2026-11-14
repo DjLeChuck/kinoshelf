@@ -5,7 +5,12 @@ import { SqliteJournal } from '@kinoshelf/core';
 import { SqliteHttpCache } from '@kinoshelf/provider-tmdb';
 import { buildApp } from '../src/app.js';
 import { migrated } from '../src/database.js';
-import { forgetReplacedScans, purgeHistory } from '../src/purge.js';
+import {
+  countRoutineJobs,
+  forgetReplacedScans,
+  forgetRoutineJobs,
+  purgeHistory,
+} from '../src/purge.js';
 import { cleanup, harness, makeDir, put, track } from './harness.js';
 
 afterEach(cleanup);
@@ -343,5 +348,52 @@ describe('the purge of a running server', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+describe('forgetRoutineJobs', () => {
+  it('forgets a finished analysis that moved nothing, whatever its age, and counts it first', () => {
+    const { database, job, entry, jobsLeft, count } = setup();
+    job('fresh', 'done', 0);
+    entry('fresh', 'compliant', null);
+    entry('fresh', 'unrecognized', 'ignored');
+
+    expect(countRoutineJobs(database)).toBe(1);
+    expect(forgetRoutineJobs(database)).toEqual({ jobs: 1, entries: 2, executions: 0 });
+    expect(jobsLeft()).toEqual([]);
+    expect(count('job_entries')).toBe(0);
+  });
+
+  it('keeps a job with a transfer: the batch’s detail embeds it', () => {
+    const { database, job, execution, jobsLeft } = setup();
+    job('moved', 'done', 60);
+    execution('moved', 'done');
+    expect(countRoutineJobs(database)).toBe(0);
+    expect(forgetRoutineJobs(database).jobs).toBe(0);
+    expect(jobsLeft()).toEqual(['moved']);
+  });
+
+  it('keeps a job whose file still waits for a person', () => {
+    const { database, job, entry, jobsLeft } = setup();
+    job('waiting', 'done', 60);
+    entry('waiting', 'to-rename', null);
+    expect(forgetRoutineJobs(database).jobs).toBe(0);
+    expect(jobsLeft()).toEqual(['waiting']);
+  });
+
+  it('keeps a failed job, a running one, and the scan a library list reads', () => {
+    const { database, job, entry, jobsLeft } = setup();
+    job('failed', 'failed', 60);
+    job('running', 'running', 0);
+    job('scan', 'done', 1);
+    entry('scan', 'compliant', null);
+    database
+      .prepare(
+        "INSERT INTO library_items (library_id, path, state, scanned_at, scan_job_id) VALUES ('films', '/f', 'ok', 'x', 'scan')",
+      )
+      .run();
+
+    expect(forgetRoutineJobs(database).jobs).toBe(0);
+    expect(jobsLeft()).toEqual(['failed', 'running', 'scan']);
   });
 });
