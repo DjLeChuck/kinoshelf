@@ -1,4 +1,4 @@
-import { lstat } from 'node:fs/promises';
+import { chmod, lstat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, harness, makeDir, put } from './helpers.js';
@@ -116,5 +116,87 @@ describe('tidy', () => {
     expect(await h.cli('--lang', 'fr', 'tidy')).toBe(0);
 
     expect(h.out.join('\n')).toContain('Rapport en lecture seule : rien n’a été modifié.');
+  });
+});
+
+describe('tidy --folders', () => {
+  /** The leftover folder of a former tool, next to the renamed one. */
+  async function withTwin() {
+    const ctx = await setup();
+    await put(join(ctx.films, 'Dune (2021) - 1080p', 'Dune (2021)-poster.jpg'), 'poster');
+    return ctx;
+  }
+
+  it('is a dry run without --apply: it says what would go and what stays, and moves nothing', async () => {
+    const { h, films } = await withTwin();
+
+    expect(await h.cli('tidy', '--folders')).toBe(0);
+
+    const text = h.out.join('\n');
+    expect(text).toContain('would take out · 1 file · same work as Dune (2021)');
+    expect(text).toContain('no folder with a video bears the same name');
+    expect(text).toContain('Dry run: nothing was moved');
+    expect(text).toContain('1 folder to take out');
+    expect(text).not.toContain('select');
+    expect(await exists(join(films, 'Dune (2021) - 1080p', 'Dune (2021)-poster.jpg'))).toBe(true);
+  });
+
+  it('takes the folder out with --apply, names the batch, and undo brings it back', async () => {
+    const { h, films } = await withTwin();
+
+    expect(await h.cli('tidy', '--folders', '--apply')).toBe(0);
+
+    const text = h.out.join('\n');
+    expect(text).toContain('taken out · 1 file');
+    const batch = /kinoshelf undo (\S+) --apply/.exec(text)?.[1];
+    expect(batch).toBeDefined();
+    expect(await exists(join(films, 'Dune (2021) - 1080p'))).toBe(false);
+    expect(await exists(join(films, 'Alien (1979)', 'movie.nfo'))).toBe(true);
+
+    h.out.length = 0;
+    expect(await h.cli('undo', batch ?? '', '--apply')).toBe(0);
+    expect(await exists(join(films, 'Dune (2021) - 1080p', 'Dune (2021)-poster.jpg'))).toBe(true);
+  });
+});
+
+describe('tidy dry runs', () => {
+  it('open no database: they work on a config folder that cannot be written', async () => {
+    const { h } = await setup();
+    await chmod(h.configDir, 0o500);
+    try {
+      expect(await h.cli('tidy', '--folders')).toBe(0);
+      expect(await h.cli('tidy', '--files')).toBe(0);
+    } finally {
+      await chmod(h.configDir, 0o700);
+    }
+    expect(await exists(join(h.configDir, 'kinoshelf.sqlite'))).toBe(false);
+  });
+});
+
+describe('tidy --files', () => {
+  it('is a dry run without --apply, and leaves the NFO unless --with-nfo is given', async () => {
+    const { h, dune } = await setup();
+
+    expect(await h.cli('tidy', '--files')).toBe(0);
+
+    const text = h.out.join('\n');
+    expect(text).toContain('would rename to poster.jpg');
+    expect(text).toContain('add --with-nfo to handle NFO files');
+    expect(text).toContain('Dry run: nothing was changed');
+    expect(await exists(join(dune, 'Dune (2021)-poster.jpg'))).toBe(true);
+  });
+
+  it('renames the poster with --apply and undo puts it back', async () => {
+    const { h, dune } = await setup();
+
+    expect(await h.cli('tidy', '--files', '--apply')).toBe(0);
+
+    const batch = /kinoshelf undo (\S+) --apply/.exec(h.out.join('\n'))?.[1];
+    expect(await exists(join(dune, 'poster.jpg'))).toBe(true);
+    expect(await exists(join(dune, 'Dune (2021).nfo'))).toBe(true);
+
+    expect(await h.cli('undo', batch ?? '', '--apply')).toBe(0);
+    expect(await exists(join(dune, 'Dune (2021)-poster.jpg'))).toBe(true);
+    expect(await exists(join(dune, 'poster.jpg'))).toBe(false);
   });
 });

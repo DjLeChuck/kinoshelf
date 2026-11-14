@@ -37,7 +37,11 @@ export class MemoryJournal implements Journal {
 
   madeFileIdentity(path: string): FileIdentity | undefined {
     return this.entries.findLast(
-      (e) => !e.undone && e.entry.kind !== 'transfer' && e.entry.destination === path,
+      (e) =>
+        !e.undone &&
+        e.entry.kind !== 'transfer' &&
+        e.entry.kind !== 'removed' &&
+        e.entry.destination === path,
     )?.entry.identity;
   }
 

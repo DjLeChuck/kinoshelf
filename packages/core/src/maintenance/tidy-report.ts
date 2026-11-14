@@ -74,7 +74,7 @@ function isSystemFolder(name: string): boolean {
 const isVideoName = (name: string): boolean =>
   VIDEO_EXTENSIONS.includes(extname(name).slice(1).toLowerCase());
 
-interface Folder {
+export interface Folder {
   readonly path: string;
   readonly files: string[];
   readonly folders: Folder[];
@@ -84,7 +84,7 @@ interface Folder {
   videos: number;
 }
 
-async function readTree(path: string, isRoot: boolean): Promise<Folder> {
+export async function readTree(path: string, isRoot: boolean): Promise<Folder> {
   const folder: Folder = { path, files: [], folders: [], opaque: false, videos: 0 };
   let entries;
   try {

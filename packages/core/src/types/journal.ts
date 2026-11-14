@@ -58,7 +58,19 @@ export interface ReplacedJournalEntry extends JournalEntryBase {
   readonly backup: string;
 }
 
-export type JournalEntry = TransferJournalEntry | CreatedJournalEntry | ReplacedJournalEntry;
+/**
+ * A file the user's tidy-up took out of a library: it was moved to `backup` (never deleted), so
+ * undo can put it back at `destination`, its original place. `source` is empty.
+ */
+export interface RemovedJournalEntry extends JournalEntryBase {
+  readonly kind: 'removed';
+  readonly mode?: undefined;
+  /** Where the file is kept, in Kinoshelf's own data folder. */
+  readonly backup: string;
+}
+
+export type JournalEntry =
+  TransferJournalEntry | CreatedJournalEntry | ReplacedJournalEntry | RemovedJournalEntry;
 
 /** What a list of batches shows; `entriesOf` gives the operations. */
 export interface JournalBatch {

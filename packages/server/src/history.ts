@@ -221,7 +221,11 @@ export class History {
         ...failures,
       ],
       extras: journaled.flatMap((entry): BatchExtra[] =>
-        entry.kind === 'transfer' ? [] : [{ kind: entry.kind, destination: entry.destination }],
+        // Files a tidy-up took out are not metadata written: the page that lists them comes with
+        // the web surface of the cleanup.
+        entry.kind === 'transfer' || entry.kind === 'removed'
+          ? []
+          : [{ kind: entry.kind, destination: entry.destination }],
       ),
     };
   }

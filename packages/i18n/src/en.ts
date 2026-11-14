@@ -176,6 +176,52 @@ export const en = {
   'tidy.summary':
     '{orphans, plural, one {# folder} other {# folders}} with no video, {foreign, plural, one {# file} other {# files}} named after a video.',
   'tidy.read-only': 'Read-only report: nothing was changed.',
+  'help.opt.tidy-folders':
+    'take the folders with no video out of the libraries, kept aside and undoable (a dry run unless --apply)',
+  'tidy.folders.header': 'Library {name}: folders with no video',
+  'tidy.folders.none': 'No folder to take out.',
+  'tidy.folders.would-remove':
+    'would take out · {files, plural, one {# file} other {# files}} · same work as {twin}',
+  'tidy.folders.removed':
+    'taken out · {files, plural, one {# file} other {# files}} · same work as {twin}',
+  'tidy.folders.would-remove-empty': 'would take out · empty',
+  'tidy.folders.removed-empty': 'taken out · empty',
+  'tidy.folders.approximate': 'the twin was found by title and year, not by name: check it',
+  'tidy.folders.failed': 'failed after {moved, plural, one {# file} other {# files}} moved',
+  'tidy.folders.skipped.other-files':
+    'left: it holds files that are neither an NFO, an image nor a subtitle',
+  'tidy.folders.skipped.no-twin':
+    'left: no folder with a video bears the same name, it may be all that is left of a work',
+  'tidy.folders.skipped.changed': 'left: it changed while being read',
+  'tidy.folders.summary':
+    '{removed, plural, one {# folder} other {# folders}} taken out, {skipped} left, {failed} failed.',
+  'tidy.folders.summary.dry-run':
+    '{removed, plural, one {# folder} other {# folders}} to take out, {skipped} left, {failed} failed.',
+  'tidy.folders.batch':
+    'Batch {batch}: kept in {backup}. Undo with: kinoshelf undo {batch} --apply',
+  'tidy.folders.dry-run': 'Dry run: nothing was moved. Add --apply to take them out.',
+  'help.opt.tidy-files':
+    'rename the metadata named after the video to Kinoshelf’s names, or take it aside when those exist; undoable (a dry run unless --apply)',
+  'help.opt.tidy-with-nfo':
+    'with --files, also take aside the <video>.nfo files that sit beside a movie.nfo',
+  'tidy.files.header': 'Library {name}: metadata named after the video',
+  'tidy.files.none': 'No file to handle.',
+  'tidy.files.rename.would-do': 'would rename to {counterpart}',
+  'tidy.files.rename.done': 'renamed to {counterpart}',
+  'tidy.files.remove.would-do': 'would take aside · {counterpart} is already there',
+  'tidy.files.remove.done': 'taken aside · {counterpart} is already there',
+  'tidy.files.skipped.ours': 'left: Kinoshelf wrote it',
+  'tidy.files.skipped.format': 'left: it would have to change format to take {counterpart}’s name',
+  'tidy.files.skipped.no-counterpart': 'left: there is no movie.nfo beside it',
+  'tidy.files.skipped.versions':
+    'left: the folder holds several videos, it may be a version’s own NFO',
+  'tidy.files.skipped.nfo-not-requested': 'left: add --with-nfo to handle NFO files',
+  'tidy.files.skipped.changed': 'left: it changed while being read',
+  'tidy.files.summary':
+    '{renamed} renamed, {removed} taken aside, {skipped} left, {failed} failed.',
+  'tidy.files.summary.dry-run':
+    '{renamed} renamed, {removed} taken aside, {skipped} left, {failed} failed (dry run).',
+  'tidy.files.dry-run': 'Dry run: nothing was changed. Add --apply to do it.',
   'error.tidy.no-library':
     'No library with a type in {path}: a report reads the libraries organized in place, not the arrival folders.',
   'help.submit':

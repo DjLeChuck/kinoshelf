@@ -778,8 +778,22 @@ would need one plugin per client. Watching the raw download folder stays out by 
   that has videos), with what is in them and how many files are neither NFO, image nor subtitle; and, in a movie
   library only, the metadata another tool named after the video (`<video>.nfo`, `-poster`, `-fanart`, `-clearlogo`),
   with the name Kinoshelf writes instead and whether it is already there. A folder with a link or an unreadable part
-  below it is skipped (it cannot be called empty of videos). Nothing is removed or renamed yet: the actions (images
-  renamed to the profile's names, the rest sent to `<config>/replaced/`, undoable) are to be built from this report.
+  below it is skipped (it cannot be called empty of videos). `--folders` takes those folders out
+  (`maintenance/tidy-orphans.ts`, a dry run unless `--apply`): the report is read again, and a folder goes only if it
+  holds nothing but NFO, images and subtitles, a sibling holding a video bears the same name (`twinKey`: case,
+  accents, punctuation, an id tag, a trailing `- 1080p` and leading zeros do not count; failing that, an
+  _approximate_ twin of the same year whose title opens this one's, shown as such: `Saw II - Unrated (2005)` beside
+  `Saw II (2005)`, the longest title winning and a tie finding none; no twin may be a share not
+  mounted), and it is still without a video when its files move. Nothing is deleted: each file goes to
+  `<config>/replaced/` as a `removed` journal entry, one batch per library, and `kinoshelf undo` puts files and
+  folders back (not over a file that took the place since). A folder holding no file at all goes with no twin and no entry
+  (nothing to keep). History lists such a batch without its files for now.
+  A dry run opens no database (the config folder may be read-only), so it cannot know the journal's files:
+  `--apply` is where the `ours` check applies. `--files` (`tidy-foreign.ts`, movie libraries) deals with metadata named after the video: an image whose
+  Kinoshelf name is absent is renamed to it (a journaled `move` in place), one whose name is there is taken aside
+  like a folder's files; never across formats (`-poster.png` to `poster.jpg`), never a file the journal made. A
+  `<video>.nfo` is only taken aside with `--with-nfo`, beside a `movie.nfo` and in a folder of one video (Kodi and
+  Jellyfin read `<video>.nfo` first: to be checked on the real players before it becomes the default).
 - Settings: flags over `config.yaml` over defaults. Config dir: `--config-dir`, then
   `KINOSHELF_CONFIG_DIR`, then `$XDG_CONFIG_HOME/kinoshelf`; it also holds `kinoshelf.sqlite`
   (journal and TMDB cache). Default mode is `move` when the destination is the source folder,

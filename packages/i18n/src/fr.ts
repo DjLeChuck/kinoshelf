@@ -184,6 +184,54 @@ export const fr: Record<keyof typeof en, string> = {
   'tidy.summary':
     '{orphans, plural, one {# dossier} other {# dossiers}} sans vidéo, {foreign, plural, one {# fichier nommé} other {# fichiers nommés}} d’après une vidéo.',
   'tidy.read-only': 'Rapport en lecture seule : rien n’a été modifié.',
+  'help.opt.tidy-folders':
+    'sort les dossiers sans vidéo des bibliothèques, mis de côté et annulables (simulation sans --apply)',
+  'tidy.folders.header': 'Bibliothèque {name} : dossiers sans vidéo',
+  'tidy.folders.none': 'Aucun dossier à sortir.',
+  'tidy.folders.would-remove':
+    'serait sorti · {files, plural, one {# fichier} other {# fichiers}} · même œuvre que {twin}',
+  'tidy.folders.removed':
+    'sorti · {files, plural, one {# fichier} other {# fichiers}} · même œuvre que {twin}',
+  'tidy.folders.would-remove-empty': 'serait sorti · vide',
+  'tidy.folders.removed-empty': 'sorti · vide',
+  'tidy.folders.approximate':
+    'le jumeau a été trouvé par le titre et l’année, pas par le nom : à vérifier',
+  'tidy.folders.failed':
+    'échec après {moved, plural, one {# fichier déplacé} other {# fichiers déplacés}}',
+  'tidy.folders.skipped.other-files':
+    'laissé : il contient des fichiers qui ne sont ni un NFO, ni une image, ni un sous-titre',
+  'tidy.folders.skipped.no-twin':
+    'laissé : aucun dossier avec une vidéo ne porte le même nom, il est peut-être tout ce qui reste d’une œuvre',
+  'tidy.folders.skipped.changed': 'laissé : il a changé pendant la lecture',
+  'tidy.folders.summary':
+    '{removed, plural, one {# dossier} other {# dossiers}} sorti(s), {skipped} laissé(s), {failed} en échec.',
+  'tidy.folders.summary.dry-run':
+    '{removed, plural, one {# dossier} other {# dossiers}} à sortir, {skipped} laissé(s), {failed} en échec.',
+  'tidy.folders.batch':
+    'Lot {batch} : conservé dans {backup}. Pour annuler : kinoshelf undo {batch} --apply',
+  'tidy.folders.dry-run': 'Simulation : rien n’a été déplacé. Ajoutez --apply pour les sortir.',
+  'help.opt.tidy-files':
+    'renomme les métadonnées nommées d’après la vidéo avec les noms de Kinoshelf, ou les met de côté quand ceux-ci existent ; annulable (simulation sans --apply)',
+  'help.opt.tidy-with-nfo': 'avec --files, met aussi de côté les <vidéo>.nfo à côté d’un movie.nfo',
+  'tidy.files.header': 'Bibliothèque {name} : métadonnées nommées d’après la vidéo',
+  'tidy.files.none': 'Aucun fichier à traiter.',
+  'tidy.files.rename.would-do': 'serait renommé en {counterpart}',
+  'tidy.files.rename.done': 'renommé en {counterpart}',
+  'tidy.files.remove.would-do': 'serait mis de côté · {counterpart} est déjà là',
+  'tidy.files.remove.done': 'mis de côté · {counterpart} est déjà là',
+  'tidy.files.skipped.ours': 'laissé : Kinoshelf l’a écrit',
+  'tidy.files.skipped.format':
+    'laissé : il faudrait changer son format pour prendre le nom {counterpart}',
+  'tidy.files.skipped.no-counterpart': 'laissé : il n’y a pas de movie.nfo à côté',
+  'tidy.files.skipped.versions':
+    'laissé : le dossier contient plusieurs vidéos, ce peut être le NFO d’une version',
+  'tidy.files.skipped.nfo-not-requested': 'laissé : ajoutez --with-nfo pour traiter les NFO',
+  'tidy.files.skipped.changed': 'laissé : il a changé pendant la lecture',
+  'tidy.files.summary':
+    '{renamed} renommé(s), {removed} mis de côté, {skipped} laissé(s), {failed} en échec.',
+  'tidy.files.summary.dry-run':
+    '{renamed} renommé(s), {removed} mis de côté, {skipped} laissé(s), {failed} en échec (simulation).',
+  'tidy.files.dry-run': 'Simulation : rien n’a été modifié. Ajoutez --apply pour le faire.',
   'error.tidy.no-library':
     'Aucune bibliothèque avec un type dans {path} : un rapport lit les bibliothèques organisées sur place, pas les dossiers d’arrivée.',
   'help.submit':

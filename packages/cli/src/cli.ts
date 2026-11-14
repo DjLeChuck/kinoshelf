@@ -14,7 +14,10 @@ import {
   loadConfig,
   madeByUs,
   openConfigDatabase,
+  MemoryJournal,
   SqliteJournal,
+  removeOrphanFolders,
+  tidyForeignFiles,
   tidyReport,
   undoBatch,
   undoLastBatch,
@@ -34,7 +37,11 @@ import {
 import {
   analysisToJson,
   cleanupToJson,
+  tidyFilesToJson,
+  tidyFoldersToJson,
+  renderTidyFiles,
   tidyToJson,
+  renderTidyFolders,
   renderAnalysis,
   renderBatch,
   renderCleanup,
@@ -281,9 +288,19 @@ async function runCleanup(
   return files.some((file) => file.status === 'failed') ? 1 : 0;
 }
 
-/** Read-only: what clutters the libraries organized in place (an arrival folder has no work to tidy). */
+/**
+ * A report on what clutters the libraries organized in place (an arrival folder has no work to
+ * tidy); with `--folders`, the folders with no video are taken out, a dry run unless `--apply`.
+ */
 async function runTidy(
-  options: { library?: string; json?: boolean },
+  options: {
+    library?: string;
+    json?: boolean;
+    folders?: boolean;
+    files?: boolean;
+    withNfo?: boolean;
+    apply?: boolean;
+  },
   context: Context,
 ): Promise<number> {
   const { t, deps } = context;
@@ -301,6 +318,17 @@ async function runTidy(
       ids: typed.map(({ id }) => id).join(', '),
     });
   }
+  if (options.folders || options.files) {
+    // Both can be asked at once: two batches per library, each undone on its own.
+    const codes = [];
+    if (options.folders) {
+      codes.push(await runTidyFolders(chosen, options, context));
+    }
+    if (options.files) {
+      codes.push(await runTidyFiles(chosen, options, context));
+    }
+    return Math.max(...codes);
+  }
   const reports = [];
   for (const library of chosen) {
     reports.push(await tidyReport(library));
@@ -313,6 +341,90 @@ async function runTidy(
     }
   }
   return 0;
+}
+
+async function runTidyFolders(
+  libraries: readonly { id: string; type: 'movie' | 'series'; source: string }[],
+  options: { json?: boolean; apply?: boolean },
+  context: Context,
+): Promise<number> {
+  const { t, deps } = context;
+  const dryRun = options.apply !== true;
+  const backupDir = join(context.configDir, 'replaced');
+  // A dry run writes nothing, the config folder included (it may be mounted read-only, and opening
+  // the database would apply migrations): the journal is only needed to record what is done.
+  const database = dryRun ? undefined : await openDatabase(context);
+  try {
+    const journal = database ? new SqliteJournal(database) : new MemoryJournal();
+    const runs = [];
+    for (const library of libraries) {
+      const { batchId, folders } = await removeOrphanFolders(library, {
+        journal,
+        backupDir,
+        dryRun,
+      });
+      runs.push({ library, batchId, folders });
+    }
+    if (options.json) {
+      deps.io.out(JSON.stringify(tidyFoldersToJson(runs, dryRun), null, 2));
+      return runs.some((run) => run.folders.some((f) => f.status === 'failed')) ? 1 : 0;
+    }
+    const { lines, failed } = renderTidyFolders(
+      runs,
+      new Map(runs.map((run) => [run.library.id, run.batchId])),
+      { dryRun, backupDir },
+      t,
+    );
+    lines.forEach((line) => {
+      deps.io.out(line);
+    });
+    return failed > 0 ? 1 : 0;
+  } finally {
+    database?.close();
+  }
+}
+
+async function runTidyFiles(
+  libraries: readonly { id: string; type: 'movie' | 'series'; source: string }[],
+  options: { json?: boolean; apply?: boolean; withNfo?: boolean },
+  context: Context,
+): Promise<number> {
+  const { t, deps } = context;
+  const dryRun = options.apply !== true;
+  const backupDir = join(context.configDir, 'replaced');
+  // A dry run writes nothing, the config folder included (it may be mounted read-only, and opening
+  // the database would apply migrations): the journal is only needed to record what is done.
+  const database = dryRun ? undefined : await openDatabase(context);
+  try {
+    const journal = database ? new SqliteJournal(database) : new MemoryJournal();
+    const runs = [];
+    // Foreign metadata is a movie library's matter: a series' NFO and images are named after the video by design.
+    for (const library of libraries.filter(({ type }) => type === 'movie')) {
+      const { batchId, files } = await tidyForeignFiles(library, {
+        journal,
+        backupDir,
+        dryRun,
+        includeNfo: options.withNfo === true,
+      });
+      runs.push({ library, batchId, files });
+    }
+    if (options.json) {
+      deps.io.out(JSON.stringify(tidyFilesToJson(runs, dryRun), null, 2));
+      return runs.some((run) => run.files.some((f) => f.status === 'failed')) ? 1 : 0;
+    }
+    const { lines, failed } = renderTidyFiles(
+      runs,
+      new Map(runs.map((run) => [run.library.id, run.batchId])),
+      { dryRun, backupDir },
+      t,
+    );
+    lines.forEach((line) => {
+      deps.io.out(line);
+    });
+    return failed > 0 ? 1 : 0;
+  } finally {
+    database?.close();
+  }
 }
 
 function buildProgram(context: Context, exit: { code: number }): Command {
@@ -404,10 +516,21 @@ function buildProgram(context: Context, exit: { code: number }): Command {
     .command('tidy')
     .description(t('help.tidy'))
     .option('--library <id>', t('help.opt.tidy-library'))
+    .option('--folders', t('help.opt.tidy-folders'))
+    .option('--files', t('help.opt.tidy-files'))
+    .option('--with-nfo', t('help.opt.tidy-with-nfo'))
+    .option('--apply', t('help.opt.apply'))
     .option('--json', t('help.opt.json'))
     .exitOverride()
-    .action((options: { library?: string; json?: boolean }) =>
-      act(() => runTidy(options, context))(),
+    .action(
+      (options: {
+        library?: string;
+        json?: boolean;
+        folders?: boolean;
+        files?: boolean;
+        withNfo?: boolean;
+        apply?: boolean;
+      }) => act(() => runTidy(options, context))(),
     );
 
   if (context.deps.standalone) {

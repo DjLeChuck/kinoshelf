@@ -53,7 +53,7 @@ export class SqliteJournal implements Journal {
         entry.at,
         JSON.stringify(entry.createdDirectories),
         entry.identity ? JSON.stringify(entry.identity) : null,
-        entry.kind === 'replaced' ? entry.backup : null,
+        entry.kind === 'replaced' || entry.kind === 'removed' ? entry.backup : null,
       );
   }
 
@@ -100,6 +100,9 @@ export class SqliteJournal implements Journal {
         }
         if (row.kind === 'replaced' && row.backup !== null) {
           return { ...common, kind: 'replaced', backup: row.backup };
+        }
+        if (row.kind === 'removed' && row.backup !== null) {
+          return { ...common, kind: 'removed', backup: row.backup };
         }
         return { ...common, kind: row.kind === 'downloaded' ? 'downloaded' : 'generated' };
       });

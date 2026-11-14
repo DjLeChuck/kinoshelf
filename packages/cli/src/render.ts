@@ -1,4 +1,4 @@
-import { relative } from 'node:path';
+import { basename, relative } from 'node:path';
 import type {
   Analysis,
   AnalysisEntry,
@@ -7,6 +7,8 @@ import type {
   DestinationRoots,
   ErrorInfo,
   StaleFile,
+  TidiedFolder,
+  TidiedForeignFile,
   TidyReport,
   TransferMode,
   UndoResult,
@@ -352,4 +354,132 @@ export function renderTidy(reports: readonly TidyReport[], t: Translate): string
 /** Codes and parameters, never translated text. */
 export function tidyToJson(reports: readonly TidyReport[]): unknown {
   return { readOnly: true, libraries: reports };
+}
+
+export interface TidyFoldersRun {
+  readonly library: { readonly id: string };
+  readonly folders: readonly TidiedFolder[];
+}
+
+export function renderTidyFolders(
+  runs: readonly TidyFoldersRun[],
+  batches: ReadonlyMap<string, string | null>,
+  options: { dryRun: boolean; backupDir: string },
+  t: Translate,
+): { lines: string[]; failed: number } {
+  const lines: string[] = [];
+  const count = { removed: 0, skipped: 0, failed: 0 };
+  for (const { library, folders } of runs) {
+    lines.push(t('tidy.folders.header', { name: library.id }));
+    if (folders.length === 0) {
+      lines.push(`  ${t('tidy.folders.none')}`);
+    }
+    for (const folder of folders) {
+      lines.push(`    · ${folder.path}`);
+      if (folder.status === 'skipped') {
+        count.skipped++;
+        lines.push(`        ${t(`tidy.folders.skipped.${folder.reason ?? 'changed'}`)}`);
+      } else if (folder.status === 'failed') {
+        count.failed++;
+        lines.push(`        ${t('tidy.folders.failed', { moved: folder.moved ?? 0 })}`);
+        if (folder.error) {
+          lines.push(`        ${describeError(t, folder.error)}`);
+        }
+      } else {
+        count.removed++;
+        lines.push(
+          `        ${t(
+            `tidy.folders.${folder.status === 'removed' ? 'removed' : 'would-remove'}${folder.empty ? '-empty' : ''}`,
+            {
+              files: folder.files,
+              twin: basename(folder.twin ?? ''),
+            },
+          )}`,
+        );
+        if (folder.approximate) {
+          lines.push(`        ! ${t('tidy.folders.approximate')}`);
+        }
+      }
+    }
+    const batch = batches.get(library.id);
+    if (batch) {
+      lines.push(`  ${t('tidy.folders.batch', { batch, backup: options.backupDir })}`);
+    }
+    lines.push('');
+  }
+  lines.push(t(options.dryRun ? 'tidy.folders.summary.dry-run' : 'tidy.folders.summary', count));
+  if (options.dryRun) {
+    lines.push(t('tidy.folders.dry-run'));
+  }
+  return { lines, failed: count.failed };
+}
+
+/** Codes and parameters, never translated text. */
+export function tidyFoldersToJson(
+  runs: readonly (TidyFoldersRun & { readonly batchId: string | null })[],
+  dryRun: boolean,
+): unknown {
+  return {
+    dryRun,
+    libraries: runs.map(({ library, batchId, folders }) => ({ id: library.id, batchId, folders })),
+  };
+}
+
+export interface TidyFilesRun {
+  readonly library: { readonly id: string };
+  readonly files: readonly TidiedForeignFile[];
+}
+
+export function renderTidyFiles(
+  runs: readonly TidyFilesRun[],
+  batches: ReadonlyMap<string, string | null>,
+  options: { dryRun: boolean; backupDir: string },
+  t: Translate,
+): { lines: string[]; failed: number } {
+  const lines: string[] = [];
+  const count = { renamed: 0, removed: 0, skipped: 0, failed: 0 };
+  for (const { library, files } of runs) {
+    lines.push(t('tidy.files.header', { name: library.id }));
+    if (files.length === 0) {
+      lines.push(`  ${t('tidy.files.none')}`);
+    }
+    for (const file of files) {
+      lines.push(`    · ${file.path}`);
+      if (file.status === 'skipped') {
+        count.skipped++;
+        lines.push(`        ${t(`tidy.files.skipped.${file.reason ?? 'changed'}`)}`);
+      } else if (file.status === 'failed') {
+        count.failed++;
+        if (file.error) {
+          lines.push(`        ${describeError(t, file.error)}`);
+        }
+      } else {
+        count[file.action === 'rename' ? 'renamed' : 'removed']++;
+        lines.push(
+          `        ${t(`tidy.files.${file.action ?? 'remove'}.${file.status}`, { counterpart: file.counterpart })}`,
+        );
+      }
+    }
+    const batch = batches.get(library.id);
+    if (batch) {
+      lines.push(`  ${t('tidy.folders.batch', { batch, backup: options.backupDir })}`);
+    }
+    lines.push('');
+  }
+  lines.push(t(options.dryRun ? 'tidy.files.summary.dry-run' : 'tidy.files.summary', count));
+  if (options.dryRun) {
+    lines.push(t('tidy.files.dry-run'));
+  }
+  return { lines, failed: count.failed };
+}
+
+/** Codes and parameters, never translated text. */
+export function tidyFilesToJson(
+  runs: readonly (TidyFilesRun & { readonly batchId: string | null })[],
+  dryRun: boolean,
+): unknown {
+  return {
+    dryRun,
+    libraries: runs.map(({ library, batchId, files }) => ({ id: library.id, batchId, files })),
+  };
 }

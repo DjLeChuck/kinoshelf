@@ -119,6 +119,21 @@ export {
   type StaleFile,
 } from './maintenance/stale-temporary.js';
 export {
+  tidyForeignFiles,
+  type ForeignSkipReason,
+  type TidiedForeignFile,
+  type TidyForeignOptions,
+  type TidyForeignResult,
+} from './maintenance/tidy-foreign.js';
+export {
+  removeOrphanFolders,
+  twinKey,
+  type OrphanSkipReason,
+  type TidiedFolder,
+  type TidyOrphansOptions,
+  type TidyOrphansResult,
+} from './maintenance/tidy-orphans.js';
+export {
   tidyReport,
   type ForeignFile,
   type ForeignKind,

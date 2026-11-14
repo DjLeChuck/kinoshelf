@@ -1781,7 +1781,7 @@ export class LibrarySnapshot {
         continue;
       }
       // A replaced image is back as it was, still there: only a new one is gone.
-      if (entry.kind !== 'replaced') {
+      if (entry.kind !== 'replaced' && entry.kind !== 'removed') {
         this.mark(library, entry.destination, 'gone');
       }
     }

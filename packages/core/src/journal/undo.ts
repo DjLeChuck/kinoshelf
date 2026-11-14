@@ -31,6 +31,9 @@ async function revert(entry: JournalEntry, dryRun: boolean): Promise<UndoEntryRe
     error: { code, params: { path } },
   });
 
+  if (entry.kind === 'removed') {
+    return restoreRemoved(entry, dryRun);
+  }
   if (!(await exists(entry.destination))) {
     return skipped('undo.destination-missing', entry.destination);
   }
@@ -93,6 +96,34 @@ async function revert(entry: JournalEntry, dryRun: boolean): Promise<UndoEntryRe
       // Copy or hardlink: the source is untouched, only the new name goes away.
       await unlink(entry.destination);
     }
+    return { entry, status: 'undone' };
+  } catch (error) {
+    return { entry, status: 'failed', error: describeFsError(error, entry.destination).info };
+  }
+}
+
+/** A file a tidy-up took out comes back where it was, unless something has taken its place since. */
+async function restoreRemoved(
+  entry: JournalEntry & { readonly kind: 'removed' },
+  dryRun: boolean,
+): Promise<UndoEntryResult> {
+  const skipped = (code: ErrorCode, path: string): UndoEntryResult => ({
+    entry,
+    status: 'skipped',
+    error: { code, params: { path } },
+  });
+  if (!(await exists(entry.backup))) {
+    return skipped('undo.backup-missing', entry.backup);
+  }
+  if (await exists(entry.destination)) {
+    return skipped('undo.source-exists', entry.destination);
+  }
+  if (dryRun) {
+    return { entry, status: 'undone' };
+  }
+  try {
+    await ensureDirectory(dirname(entry.destination));
+    await moveFile(entry.backup, entry.destination);
     return { entry, status: 'undone' };
   } catch (error) {
     return { entry, status: 'failed', error: describeFsError(error, entry.destination).info };
