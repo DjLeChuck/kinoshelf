@@ -92,6 +92,11 @@ nowhere: a custom profile file is to be discussed again.
 
 - The parser is [guessit-js](https://github.com/opensubtitles/guessit-js) (LGPL-3.0) behind the
   `Parser` interface. Never modify or vendor it (LGPL/MIT compatibility).
+- **Forbidden characters** (`sanitize.ts`): `buildProfile` always sets Windows-style rules with nothing as the replacement,
+  so forbidden characters are removed, except a colon that opens a subtitle (`: ` or `:` with text after it), written
+  `-` as tinyMediaManager, Radarr and Plex do (`Avatar : La Voie de l’eau` is `Avatar - La Voie de l’eau`). There is
+  no setting. The rule is skipped for a replacement other than nothing, which only a custom profile file could set
+  (`loadProfileFile`, wired nowhere). A library organized before this shows its colon titles as to rename.
 - Profile template syntax: `{title}`, `{year}`, `{tmdb}`, `{season:02}`; `\{` and `\}` are literal
   braces (`'{title} ({year}) \{tmdb-{tmdb}\}'`). Templates containing a backslash must use **single
   quotes** in a profile YAML file (a double-quoted `"\{"` is a YAML error); the loader rejects that

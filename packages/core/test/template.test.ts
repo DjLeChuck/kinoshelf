@@ -53,7 +53,7 @@ describe('parseTemplate / renderTemplate', () => {
   });
 
   it('removes forbidden characters from values, not from literal text', () => {
-    expect(render('{title}', { title: 'Mission: Impossible?' })).toEqual(['Mission Impossible']);
+    expect(render('{title}', { title: 'Mission: Impossible?' })).toEqual(['Mission - Impossible']);
     expect(
       render(
         '{title}',
@@ -64,6 +64,26 @@ describe('parseTemplate / renderTemplate', () => {
         },
       ),
     ).toEqual(['Mission - Impossible']);
+  });
+
+  it('writes a subtitle colon as a dash, as tMM, Radarr and Plex do, and only then', () => {
+    expect(render('{title}', { title: 'Avatar : La Voie de l’eau' })).toEqual([
+      'Avatar - La Voie de l’eau',
+    ]);
+    expect(render('{title}', { title: 'Kill Bill:  Vol. 1' })).toEqual(['Kill Bill - Vol. 1']);
+    // No space after it: nothing to read as a subtitle, so it goes with the other characters.
+    expect(render('{title}', { title: 'Apollo 13:30' })).toEqual(['Apollo 1330']);
+    expect(render('{title}', { title: 'Alien: ' })).toEqual(['Alien']);
+  });
+
+  it('leaves a profile that sets its own replacement in charge of the colon too', () => {
+    expect(
+      render(
+        '{title}',
+        { title: 'Mission: Impossible' },
+        { ...context, rules: { forbidden: 'windows', replacement: '_', maxSegmentBytes: 255 } },
+      ),
+    ).toEqual(['Mission_ Impossible']);
   });
 
   it('keeps colons on POSIX filesystems but still strips slashes', () => {

@@ -175,7 +175,7 @@ describe('createPlan: names', () => {
       [{ parsed: parsedMovie(source), candidate: movie(1, 'Mission: Impossible?', 1996) }],
       lib,
     );
-    expect(destinationOf(result.items[0])).toContain('Mission Impossible (1996) {tmdb-1}');
+    expect(destinationOf(result.items[0])).toContain('Mission - Impossible (1996) {tmdb-1}');
   });
 });
 

@@ -5,9 +5,25 @@ const FORBIDDEN = {
   posix: /[/\u0000]/g,
 } as const;
 
-/** Cleans a substituted value so it can never introduce a path separator or forbidden char. */
+/**
+ * Cleans a substituted value so it can never introduce a path separator or forbidden char.
+ *
+ * With the default replacement (nothing) on a Windows-style filesystem, a colon that opens a
+ * subtitle (`Avatar : La Voie de l’eau`, `Mission: Impossible`) becomes ` - `, as tinyMediaManager,
+ * Radarr and Plex write it, instead of vanishing and gluing the words (`Avatar La Voie de l’eau`).
+ * A colon with no space after it (`12:30`) is removed with the other forbidden characters. A
+ * replacement of one's own (only a custom profile file can set one: `buildProfile` never does) is
+ * used for every character, the colon included.
+ */
 export function sanitizeValue(value: string, rules: FilesystemRules): string {
-  return value.replace(FORBIDDEN[rules.forbidden], rules.replacement).replace(/\s+/g, ' ').trim();
+  const subtitled =
+    rules.forbidden === 'windows' && rules.replacement === ''
+      ? value.replace(/\s*:\s+(?=\S)/g, ' - ')
+      : value;
+  return subtitled
+    .replace(FORBIDDEN[rules.forbidden], rules.replacement)
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 /**
