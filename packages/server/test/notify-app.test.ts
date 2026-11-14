@@ -230,7 +230,7 @@ describe('when an image is replaced', () => {
 
     // Undoing the batch takes the image back: the media servers look again, too.
     const { batchId } = response.json<{ batchId: string }>();
-    expect((await h.request('POST', `/api/batches/${batchId}/undo`)).statusCode).toBe(200);
+    expect((await h.undo(batchId)).statusCode).toBe(200);
     await h.app.notifier.idle();
     expect(plexRefreshes(plex).map((r) => r.url)).toEqual([refresh, refresh]);
     expect(jellyfin.received.filter((r) => r.method === 'POST')).toHaveLength(2);
@@ -243,7 +243,7 @@ describe('when an image is replaced', () => {
     const batch = (await h.request('GET', '/api/history')).json<{ items: { id: string }[] }>()
       .items[0];
     expect(batch).toBeDefined();
-    await h.request('POST', `/api/batches/${batch?.id ?? ''}/undo`);
+    await h.undo(batch?.id ?? '');
     await h.app.notifier.idle();
     // The NFO the transfer wrote went with its folder: nothing is left to look at.
     expect(plexRefreshes(plex)).toHaveLength(before);

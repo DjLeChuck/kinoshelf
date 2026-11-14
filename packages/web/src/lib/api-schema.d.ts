@@ -7777,8 +7777,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * How far an undo, or its check, has got
-         * @description In memory, so cheap to read: `progress` is `null` when none runs for this batch. The `progress` event says when to read it again.
+         * How an undo, or its check, is going
+         * @description The latest task of this batch, in memory (a restart forgets it): `undo` is `null` when none was started. The `progress` event says when to read it again.
          */
         get: {
             parameters: {
@@ -7798,11 +7798,37 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            progress: {
+                            undo: {
+                                /** @enum {string} */
+                                status: "running" | "done" | "failed";
+                                dryRun: boolean;
                                 done: number;
                                 total: number;
                                 current: string | null;
-                                dryRun: boolean;
+                                report: {
+                                    batchId: string;
+                                    dryRun: boolean;
+                                    entries: {
+                                        source: string;
+                                        destination: string;
+                                        /** @enum {string} */
+                                        mode: "copy" | "hardlink" | "move";
+                                        /** @enum {string} */
+                                        status: "undone" | "skipped" | "failed";
+                                        error: {
+                                            code: string;
+                                            params?: {
+                                                [key: string]: string | number;
+                                            };
+                                        } | null;
+                                    }[];
+                                } | null;
+                                error: {
+                                    code: string;
+                                    params?: {
+                                        [key: string]: string | number;
+                                    };
+                                } | null;
                             } | null;
                         };
                     };
@@ -7827,8 +7853,8 @@ export interface paths {
         };
         put?: never;
         /**
-         * Undo a batch
-         * @description Any batch not undone yet can be, not only the last (a move goes back where it came from). Each file is checked as it is now: whatever a later batch moved on or took the place of is skipped and reported, never forced.
+         * Start undoing a batch
+         * @description Starts a task and answers 202 at once (reverting a big batch on a share takes minutes): `GET /api/batches/{id}/undo` says how far it has got and gives the report. Any batch not undone yet can be, not only the last (a move goes back where it came from). Each file is checked as it is now: whatever a later batch moved on or took the place of is skipped and reported, never forced. `dryRun` only checks. 409 `batch.undo-in-progress` while a task of this batch runs, 409 `batch.already-undone`.
          */
         post: {
             parameters: {
@@ -7849,28 +7875,42 @@ export interface paths {
             };
             responses: {
                 /** @description Default Response */
-                200: {
+                202: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
                         "application/json": {
-                            batchId: string;
+                            /** @enum {string} */
+                            status: "running" | "done" | "failed";
                             dryRun: boolean;
-                            entries: {
-                                source: string;
-                                destination: string;
-                                /** @enum {string} */
-                                mode: "copy" | "hardlink" | "move";
-                                /** @enum {string} */
-                                status: "undone" | "skipped" | "failed";
-                                error: {
-                                    code: string;
-                                    params?: {
-                                        [key: string]: string | number;
-                                    };
-                                } | null;
-                            }[];
+                            done: number;
+                            total: number;
+                            current: string | null;
+                            report: {
+                                batchId: string;
+                                dryRun: boolean;
+                                entries: {
+                                    source: string;
+                                    destination: string;
+                                    /** @enum {string} */
+                                    mode: "copy" | "hardlink" | "move";
+                                    /** @enum {string} */
+                                    status: "undone" | "skipped" | "failed";
+                                    error: {
+                                        code: string;
+                                        params?: {
+                                            [key: string]: string | number;
+                                        };
+                                    } | null;
+                                }[];
+                            } | null;
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            } | null;
                         };
                     };
                 };

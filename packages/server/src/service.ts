@@ -998,6 +998,17 @@ export class Service {
    * Any batch that was not undone yet can be, not only the last: each entry is checked against
    * the disk as it is, so a later batch is never damaged (see `undoBatch`).
    */
+  /** What an undo needs before it starts: a batch that exists and is not undone (cheap, so asked up front). */
+  assertUndoable(batchId: string): void {
+    const { journal } = this.deps;
+    if (journal.entriesOf(batchId).length === 0) {
+      throw new ApiError(404, 'batch.not-found');
+    }
+    if (journal.isUndone(batchId)) {
+      throw new ApiError(409, 'batch.already-undone');
+    }
+  }
+
   async undo(
     batchId: string,
     options: {

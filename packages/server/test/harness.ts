@@ -94,6 +94,11 @@ export interface Harness {
    * synchronous: the file with its `followers`. A request refused up front keeps its status.
    */
   readonly match: (entryId: string, body: object) => Promise<MatchAnswer>;
+  /**
+   * Undoes (or checks) a batch and waits for the task to end, answering as the route did when it
+   * was synchronous: the report. A request refused up front keeps its status.
+   */
+  readonly undo: (batchId: string | null | undefined, body?: object) => Promise<MatchAnswer>;
 }
 
 /** What `Harness.match` answers: the status and the body, read as a response's. */
@@ -156,6 +161,24 @@ export async function harness(
     apiKey,
     destination,
     request,
+    undo: async (batchId, body) => {
+      const started = await request('POST', `/api/batches/${String(batchId)}/undo`, body);
+      if (started.statusCode !== 202) {
+        return started;
+      }
+      for (;;) {
+        const { undo } = (await request('GET', `/api/batches/${String(batchId)}/undo`)).json<{
+          undo: { status: string; report: object | null; error: object | null } | null;
+        }>();
+        if (undo?.status === 'done') {
+          return { statusCode: 200, json: (() => undo.report) as MatchAnswer['json'] };
+        }
+        if (undo?.status === 'failed') {
+          return { statusCode: 500, json: (() => ({ error: undo.error })) as MatchAnswer['json'] };
+        }
+        await new Promise((resolve) => setTimeout(resolve, 5));
+      }
+    },
     match: async (entryId, body) => {
       const started = await request('POST', `/api/entries/${entryId}/match`, body);
       if (started.statusCode !== 202) {

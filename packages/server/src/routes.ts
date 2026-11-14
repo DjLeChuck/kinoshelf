@@ -11,6 +11,7 @@ import type { Execution, ExecutionStore } from './executions.js';
 import type { History } from './history.js';
 import type { Job, JobStore } from './jobs.js';
 import type { ProgressTracker } from './progress.js';
+import type { UndoTasks } from './undo-tasks.js';
 import type { JobRunner } from './runner.js';
 import {
   activitySchema,
@@ -27,8 +28,8 @@ import {
   paging,
   previewSchema,
   sizeSchema,
-  undoProgressSchema,
-  undoSchema,
+  undoStateSchema,
+  undoTaskSchema,
   type Paging,
   MAX_SELECTION,
 } from './schemas.js';
@@ -47,6 +48,7 @@ export interface RouteContext {
   readonly events: EventBus;
   readonly history: History;
   readonly progress: ProgressTracker;
+  readonly undos: UndoTasks;
 }
 
 function presentPlan(item: PlanItem | null) {
@@ -558,42 +560,38 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
     {
       preValidation: emptyBodyByDefault,
       schema: {
-        summary: 'Undo a batch',
+        summary: 'Start undoing a batch',
         description:
-          'Any batch not undone yet can be, not only the last (a move goes back where it came ' +
-          'from). Each file is checked as it is now: whatever a later batch moved on or took ' +
-          'the place of is skipped and reported, never forced.',
+          'Starts a task and answers 202 at once (reverting a big batch on a share takes minutes): ' +
+          '`GET /api/batches/{id}/undo` says how far it has got and gives the report. Any batch ' +
+          'not undone yet can be, not only the last (a move goes back where it came from). Each ' +
+          'file is checked as it is now: whatever a later batch moved on or took the place of is ' +
+          'skipped and reported, never forced. `dryRun` only checks. 409 `batch.undo-in-progress` ' +
+          'while a task of this batch runs, 409 `batch.already-undone`.',
         params: idParams,
         body: dryRunBody,
-        response: { 200: undoSchema, 401: errorSchema, 404: errorSchema, 409: errorSchema },
+        response: { 202: undoTaskSchema, 401: errorSchema, 404: errorSchema, 409: errorSchema },
       },
     },
-    async (request) => {
+    (request, reply) => {
       const dryRun = request.body?.dryRun ?? false;
       const { id } = request.params;
-      if (!dryRun && ctx.progress.isUndoing(id)) {
+      if (ctx.undos.isRunning(id)) {
         throw new ApiError(409, 'batch.undo-in-progress');
       }
-      // The count is announced by the first `onProgress` (before any file), once the journal is read.
-      const report = await service
-        .undo(id, {
-          dryRun,
-          onProgress: (done, total, current) => {
-            if (done === 0) {
-              ctx.progress.startUndo(id, total, dryRun);
-            } else {
-              ctx.progress.undoing(id, done, total, current);
-            }
-          },
-        })
-        .finally(() => {
-          ctx.progress.finishUndo(id, dryRun);
-        });
-      if (!dryRun) {
-        events.emit('history', 'arrivals');
-        ctx.reverted?.(report);
-      }
-      return report;
+      service.assertUndoable(id);
+      const task = ctx.undos.start(
+        id,
+        dryRun,
+        (onProgress) => service.undo(id, { dryRun, onProgress }),
+        (ended) => {
+          if (!dryRun && ended.report) {
+            events.emit('history', 'arrivals');
+            ctx.reverted?.(ended.report);
+          }
+        },
+      );
+      return reply.code(202).send(task);
     },
   );
 
@@ -601,15 +599,15 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
     '/api/batches/:id/undo',
     {
       schema: {
-        summary: 'How far an undo, or its check, has got',
+        summary: 'How an undo, or its check, is going',
         description:
-          'In memory, so cheap to read: `progress` is `null` when none runs for this batch. ' +
-          'The `progress` event says when to read it again.',
+          'The latest task of this batch, in memory (a restart forgets it): `undo` is `null` when ' +
+          'none was started. The `progress` event says when to read it again.',
         params: idParams,
-        response: { 200: undoProgressSchema, 401: errorSchema },
+        response: { 200: undoStateSchema, 401: errorSchema },
       },
     },
-    (request) => ({ progress: ctx.progress.undoOf(request.params.id) ?? null }),
+    (request) => ({ undo: ctx.undos.of(request.params.id) ?? null }),
   );
 
   api.post(

@@ -167,7 +167,7 @@ describe('the images of a movie', () => {
       ])
     ).json<{ batchId: string }>();
 
-    const undo = await h.request('POST', `/api/batches/${batchId}/undo`, {});
+    const undo = await h.undo(batchId, {});
     expect(undo.statusCode).toBe(200);
     expect((await readFile(join(dir, 'poster.jpg'))).equals(OLD_POSTER)).toBe(true);
     await expect(readFile(join(dir, 'clearlogo.png'))).rejects.toThrow();
@@ -184,7 +184,7 @@ describe('the images of a movie', () => {
     ).json<{ batchId: string }>();
     await put(join(dir, 'poster.jpg'), 'mine, replaced by hand');
 
-    await h.request('POST', `/api/batches/${batchId}/undo`, {});
+    await h.undo(batchId, {});
     expect(await readFile(join(dir, 'poster.jpg'), 'utf8')).toBe('mine, replaced by hand');
   });
 
@@ -565,7 +565,7 @@ describe('the image of an episode', () => {
     expect(items.map((item) => item.thumb)).toEqual([true, true]);
 
     const { batchId } = response.json<{ batchId: string }>();
-    expect((await h.request('POST', `/api/batches/${batchId}/undo`)).statusCode).toBe(200);
+    expect((await h.undo(batchId)).statusCode).toBe(200);
     expect((await readFile(hdImage)).equals(OLD_POSTER)).toBe(true);
     await expect(readFile(uhdImage)).rejects.toThrow();
   });

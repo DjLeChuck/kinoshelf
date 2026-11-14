@@ -84,7 +84,7 @@ describe('GET /api/history', () => {
       error: null,
     });
 
-    await h.request('POST', `/api/batches/${batchId}/undo`);
+    await h.undo(batchId);
     expect((await list(h))[0]?.status).toBe('undone');
   });
 

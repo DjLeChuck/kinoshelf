@@ -351,25 +351,7 @@ export const executionReportSchema = {
   },
 } as const;
 
-export const undoProgressSchema = {
-  type: 'object',
-  required: ['progress'],
-  properties: {
-    progress: {
-      type: 'object',
-      nullable: true,
-      required: ['done', 'total', 'current', 'dryRun'],
-      properties: {
-        done: { type: 'integer' },
-        total: { type: 'integer' },
-        current: { type: 'string', nullable: true },
-        dryRun: { type: 'boolean' },
-      },
-    },
-  },
-} as const;
-
-export const undoSchema = {
+const undoSchema = {
   type: 'object',
   required: ['batchId', 'dryRun', 'entries'],
   properties: {
@@ -1344,4 +1326,24 @@ export const selectionRunSchema = {
     executions: { type: 'array', items: executionSchema },
     skipped: selectionReportSchema.properties.skipped,
   },
+} as const;
+
+export const undoTaskSchema = {
+  type: 'object',
+  required: ['status', 'dryRun', 'done', 'total', 'current', 'report', 'error'],
+  properties: {
+    status: { type: 'string', enum: ['running', 'done', 'failed'] },
+    dryRun: { type: 'boolean' },
+    done: { type: 'integer' },
+    total: { type: 'integer' },
+    current: { type: 'string', nullable: true },
+    report: { ...undoSchema, nullable: true },
+    error: { ...errorInfo, nullable: true },
+  },
+} as const;
+
+export const undoStateSchema = {
+  type: 'object',
+  required: ['undo'],
+  properties: { undo: { ...undoTaskSchema, nullable: true } },
 } as const;

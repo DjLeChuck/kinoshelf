@@ -15,8 +15,8 @@
     type BatchDetail,
     type BatchExtra,
     type BatchItem,
-    type UndoProgress,
     type UndoReport,
+    type UndoTask,
   } from '../lib/history.js';
   import JobDetail from './JobDetail.svelte';
   import { baseName } from '../lib/paths.js';
@@ -35,12 +35,18 @@
 
   let batch = $state<BatchDetail | undefined>(undefined);
   let failure = $state<unknown>(undefined);
+  // How a task failed: a code the server stored, not an error thrown by a request.
+  let undoFailure = $state<ErrorBody | undefined>(undefined);
   let preview = $state<UndoReport | undefined>(undefined);
-  let busy = $state(false);
-  // Read apart from the batch, which lists every file: this is a few numbers held in memory.
-  let running = $state<UndoProgress | null>(null);
+  // The latest undo or check of this batch, read apart from the batch (which lists every file): a
+  // few numbers held in memory by the server, and the report once it ends.
+  let undo = $state<UndoTask | null>(null);
+  // Between the click and the first answer of the server.
+  let starting = $state(false);
+  const running = $derived(undo?.status === 'running' ? undo : null);
   // Also locked when the undo was started elsewhere (another tab, before a reload): the server refuses a second one.
-  const locked = $derived(busy || running?.dryRun === false);
+  const locked = $derived(starting || running !== null);
+  const busy = $derived(starting || running?.dryRun === true);
   const percent = $derived(
     running && running.total > 0 ? Math.round((running.done / running.total) * 100) : undefined,
   );
@@ -48,24 +54,45 @@
   // The parent keys this component on the batch, so `id` does not change during its life.
   refetchOn(['history', 'ready'], () => void load());
 
-  async function loadProgress(): Promise<void> {
+  // True from the click (or from a task found running) until its end has been shown: only a task
+  // seen running is news when it ends, one already over when the page opens is not.
+  let watching = false;
+  async function loadUndo(): Promise<void> {
     try {
-      running = (await api.get<{ progress: UndoProgress | null }>(`/api/batches/${id}/undo`))
-        .progress;
+      undo = (await api.get<{ undo: UndoTask | null }>(`/api/batches/${id}/undo`)).undo;
     } catch {
-      // The numbers are a courtesy: the request itself says how it ended.
+      return;
+    }
+    if (undo?.status === 'running') {
+      watching = true;
+    } else if (undo !== null && watching) {
+      watching = false;
+      await settle(undo);
+    }
+  }
+
+  /** What a task that ended means for the page: the preview of a check, the end of an undo. */
+  async function settle(task: UndoTask): Promise<void> {
+    if (task.report === null) {
+      undoFailure = task.error ?? { code: 'internal.unexpected' };
+    } else if (task.dryRun) {
+      preview = task.report;
+    } else {
+      preview = undefined;
+      ondone(t('web.history.undo.result', tally(task.report)));
+      await load();
     }
   }
 
   // Only while an undo is going on (here, or started from another tab and found on arrival), so
   // the scans' events do not make every open batch ask.
   const stopProgress = onTopics(['progress', 'ready'], () => {
-    if (busy || running) {
-      void loadProgress();
+    if (starting || watching) {
+      void loadUndo();
     }
   });
   onDestroy(stopProgress);
-  void loadProgress();
+  void loadUndo();
 
   async function load(): Promise<void> {
     try {
@@ -171,34 +198,25 @@
       .join(' · '),
   );
 
-  async function check(): Promise<void> {
-    busy = true;
+  async function start(dryRun: boolean): Promise<void> {
+    starting = true;
     failure = undefined;
+    undoFailure = undefined;
+    // Before the request: the task may end, and announce it, before the answer comes back.
+    watching = true;
     try {
-      preview = await api.post<UndoReport>(`/api/batches/${id}/undo`, { dryRun: true });
+      undo = await api.post<UndoTask>(`/api/batches/${id}/undo`, { dryRun });
+      await loadUndo();
     } catch (error) {
+      watching = false;
       failure = error;
     } finally {
-      busy = false;
-      running = null;
+      starting = false;
     }
   }
 
-  async function confirm(): Promise<void> {
-    busy = true;
-    failure = undefined;
-    try {
-      const report = await api.post<UndoReport>(`/api/batches/${id}/undo`, { dryRun: false });
-      preview = undefined;
-      ondone(t('web.history.undo.result', tally(report)));
-      await load();
-    } catch (error) {
-      failure = error;
-    } finally {
-      busy = false;
-      running = null;
-    }
-  }
+  const check = (): Promise<void> => start(true);
+  const confirm = (): Promise<void> => start(false);
 </script>
 
 {#if failure && !batch}
@@ -264,6 +282,9 @@
 
     {#if failure}
       <p class="alert alert-danger" role="alert">{messageOf(t, failure)}</p>
+    {/if}
+    {#if undoFailure}
+      <p class="alert alert-danger" role="alert">{describe(undoFailure)}</p>
     {/if}
 
     {#if batch.status === 'failed'}

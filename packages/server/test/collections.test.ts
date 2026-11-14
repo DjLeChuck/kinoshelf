@@ -200,7 +200,7 @@ describe('PUT /api/libraries/:id/collection', () => {
     const { nfo, choose, h } = await organized();
     const { batchId } = (await choose('none')).json<{ batchId: string }>();
     expect(await readFile(nfo, 'utf8')).not.toContain('<set');
-    const undone = await h.request('POST', `/api/batches/${batchId}/undo`, { dryRun: false });
+    const undone = await h.undo(batchId, { dryRun: false });
     expect(undone.statusCode).toBe(200);
     expect(await readFile(nfo, 'utf8')).toContain('<set tmdbcolid="726871">');
   });

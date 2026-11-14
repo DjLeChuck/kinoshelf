@@ -18,6 +18,7 @@ import { History } from './history.js';
 import { registerImageRoutes } from './images.js';
 import { JobStore } from './jobs.js';
 import { registerLogRoutes } from './log-routes.js';
+import { UndoTasks } from './undo-tasks.js';
 import { registerMaintenanceRoutes } from './maintenance-routes.js';
 import { registerTmdbRoutes } from './tmdb-routes.js';
 import { tmdbUsageOf } from './tmdb-usage.js';
@@ -194,6 +195,9 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
   // A topic of its own: `jobs` makes every list reload, which a scan must not do twice a second.
   const progress = new ProgressTracker(() => {
     events.emit('progress');
+  });
+  const undos = new UndoTasks(() => {
+    progress.announce();
   });
   const entries = new EntryStore(options.database);
   const executions = new ExecutionStore(options.database);
@@ -701,6 +705,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
       events,
       history,
       progress,
+      undos,
     });
     done();
   });

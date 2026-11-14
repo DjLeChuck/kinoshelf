@@ -80,14 +80,6 @@ export interface BatchDetail extends BatchSummary {
   readonly extras: readonly BatchExtra[];
 }
 
-/** How far an undo (or its check) has got, while it runs. */
-export interface UndoProgress {
-  readonly done: number;
-  readonly total: number;
-  readonly current: string | null;
-  readonly dryRun: boolean;
-}
-
 export interface UndoReport {
   readonly batchId: string;
   readonly dryRun: boolean;
@@ -98,6 +90,17 @@ export interface UndoReport {
     readonly status: 'undone' | 'skipped' | 'failed';
     readonly error: ErrorBody | null;
   }[];
+}
+
+/** The latest undo (or check) of a batch: how far it has got while it runs, its report once it ends. */
+export interface UndoTask {
+  readonly status: 'running' | 'done' | 'failed';
+  readonly dryRun: boolean;
+  readonly done: number;
+  readonly total: number;
+  readonly current: string | null;
+  readonly report: UndoReport | null;
+  readonly error: ErrorBody | null;
 }
 
 export const STATUS_CHIP: Record<BatchStatus | JobStatus, string> = {

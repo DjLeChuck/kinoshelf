@@ -125,9 +125,7 @@ describe('POST /api/maintenance/tidy: a run', () => {
     expect(detail.extras).toMatchObject([{ kind: 'removed' }]);
 
     for (const batch of [files, folders]) {
-      expect((await h.request('POST', `/api/batches/${batch ?? ''}/undo`, {})).statusCode).toBe(
-        200,
-      );
+      expect((await h.undo(batch ?? '', {})).statusCode).toBe(200);
     }
     expect(
       await readFile(join(source, 'Dune (2021) - 1080p', 'Dune (2021)-fanart.jpg'), 'utf8'),

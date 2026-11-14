@@ -100,7 +100,7 @@ describe('the snapshot of a library', () => {
     expect(store.get('films', alien)).toMatchObject({ state: 'incomplete', nfo: true });
 
     const batchId = batchOf(h, execution.id);
-    expect((await h.request('POST', `/api/batches/${batchId}/undo`)).statusCode).toBe(200);
+    expect((await h.undo(batchId)).statusCode).toBe(200);
 
     expect(store.get('films', moved)).toBeUndefined();
     expect(store.get('films', dune)).toMatchObject({ state: 'rename', nfo: false });
@@ -159,7 +159,7 @@ describe('the snapshot of a library', () => {
     // The download was deleted after seeding: the copy in the library is the only one left.
     await rm(download);
     const batchId = batchOf(h, execution.id);
-    expect((await h.request('POST', `/api/batches/${batchId}/undo`)).statusCode).toBe(200);
+    expect((await h.undo(batchId)).statusCode).toBe(200);
     expect(store.all('films').map(({ path }) => path)).toEqual([copied?.path]);
   });
 

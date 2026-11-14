@@ -69,7 +69,7 @@ describe('POST /api/libraries/:id/execute with version', () => {
       items: { kind: string; id: string }[];
     }>();
     expect(history.items).toHaveLength(1);
-    const undo = await h.request('POST', `/api/batches/${history.items[0]?.id}/undo`, {});
+    const undo = await h.undo(history.items[0]?.id, {});
     expect(undo.statusCode).toBe(200);
     expect(await folderOf(root)).toEqual([`${FOLDER} [1080p].mkv`]);
   });

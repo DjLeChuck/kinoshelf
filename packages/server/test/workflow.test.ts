@@ -654,11 +654,11 @@ describe('POST /api/batches/{id}/undo', () => {
     const { jobId, dune } = await analyzed(h);
     const { batchId } = await transfer(h, jobId);
 
-    const dry = await h.request('POST', `/api/batches/${batchId}/undo`, { dryRun: true });
+    const dry = await h.undo(batchId, { dryRun: true });
     expect(dry.json<{ entries: { status: string }[] }>().entries[0]?.status).toBe('undone');
     expect((await stat(duneTarget(h))).isFile()).toBe(true);
 
-    const undone = await h.request('POST', `/api/batches/${batchId}/undo`);
+    const undone = await h.undo(batchId);
     expect(undone.statusCode).toBe(200);
     await expect(stat(duneTarget(h))).rejects.toThrow();
 
@@ -691,7 +691,7 @@ describe('POST /api/batches/{id}/undo', () => {
     );
 
     // The first batch, although the second is the last one.
-    expect((await h.request('POST', `/api/batches/${one.batchId}/undo`)).statusCode).toBe(200);
+    expect((await h.undo(one.batchId)).statusCode).toBe(200);
     await expect(stat(duneTarget(h))).rejects.toThrow();
     expect((await stat(alienTarget)).isFile()).toBe(true);
 
@@ -702,19 +702,27 @@ describe('POST /api/batches/{id}/undo', () => {
     expect((await entriesOf(h, alien.id))[0]).toMatchObject({ resolution: 'done', batchId: two });
   });
 
-  it('says how far an undo has got, and nothing once it is over', async () => {
+  it('answers 202 at once, then says how the undo went, and keeps the report of the last one', async () => {
     const h = await harness();
     const { jobId } = await analyzed(h);
     const { batchId } = await transfer(h, jobId);
-    const read = async (): Promise<unknown> =>
+    const read = async (): Promise<{ undo: { status: string; dryRun: boolean } | null }> =>
       (await h.request('GET', `/api/batches/${batchId}/undo`)).json();
 
-    expect(await read()).toEqual({ progress: null });
-    // A check leaves nothing behind either.
-    await h.request('POST', `/api/batches/${batchId}/undo`, { dryRun: true });
-    expect(await read()).toEqual({ progress: null });
-    await h.request('POST', `/api/batches/${batchId}/undo`);
-    expect(await read()).toEqual({ progress: null });
+    expect(await read()).toEqual({ undo: null });
+
+    const started = await h.request('POST', `/api/batches/${batchId}/undo`, { dryRun: true });
+    expect(started.statusCode).toBe(202);
+    expect(started.json()).toMatchObject({ status: 'running', dryRun: true, report: null });
+    // A second request while it runs is refused, a check included.
+    expect((await h.request('POST', `/api/batches/${batchId}/undo`)).statusCode).toBe(409);
+    while ((await read()).undo?.status === 'running') {
+      await new Promise((resolve) => setTimeout(resolve, 5));
+    }
+    expect((await read()).undo).toMatchObject({ status: 'done', dryRun: true });
+
+    await h.undo(batchId);
+    expect((await read()).undo).toMatchObject({ status: 'done', dryRun: false });
   });
 
   it('refuses a batch already undone with 409, and answers 404 for an unknown one', async () => {
@@ -722,10 +730,10 @@ describe('POST /api/batches/{id}/undo', () => {
     const { jobId } = await analyzed(h);
     const { batchId } = await transfer(h, jobId);
 
-    expect((await h.request('POST', `/api/batches/${batchId}/undo`)).statusCode).toBe(200);
-    const again = await h.request('POST', `/api/batches/${batchId}/undo`);
+    expect((await h.undo(batchId)).statusCode).toBe(200);
+    const again = await h.undo(batchId);
     expect(again.statusCode).toBe(409);
     expect(again.json()).toEqual({ error: { code: 'batch.already-undone' } });
-    expect((await h.request('POST', '/api/batches/nope/undo')).statusCode).toBe(404);
+    expect((await h.undo('nope')).statusCode).toBe(404);
   });
 });
