@@ -1688,6 +1688,8 @@ export class LibrarySnapshot {
       this.arrived(done);
       return;
     }
+    // What the batch wrote beside a movie's videos, to tell the versions it left out of the plan.
+    const wrote: string[] = [];
     for (const { entry, results } of done) {
       const row = this.deps.store.get(library.id, entry.path);
       const main = results.find(
@@ -1696,6 +1698,11 @@ export class LibrarySnapshot {
       if (!row || (main && main.status !== 'done')) {
         continue;
       }
+      wrote.push(
+        ...results
+          .filter((r) => r.operation.type !== 'transfer' && r.status !== 'failed')
+          .map((r) => r.operation.destination),
+      );
       const written = new Set<Writable>(
         results
           .filter((r) => r.operation.type !== 'transfer' && r.status !== 'failed')
@@ -1703,6 +1710,13 @@ export class LibrarySnapshot {
       );
       const path = main ? main.operation.destination : row.path;
       this.settle(row, path, written, 'present');
+    }
+    // A plan writes `movie.nfo` and the images once, on the first version of its batch: they are
+    // there for the others too (the rows already moved, so the folder is where to look).
+    if (library.type === 'movie') {
+      for (const destination of wrote) {
+        this.mark(library, destination, 'present');
+      }
     }
   }
 

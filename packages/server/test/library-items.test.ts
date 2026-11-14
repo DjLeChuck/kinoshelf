@@ -107,6 +107,41 @@ describe('the snapshot of a library', () => {
     expect(store.get('films', alien)).toMatchObject({ state: 'incomplete', nfo: false });
   });
 
+  it('gives every version of a film the NFO that a batch wrote once, for the first of them', async () => {
+    const root = await makeDir();
+    // Two sizes of one film, both to rename: the plan writes `movie.nfo` on the first one only.
+    const small = await put(join(root, 'Dune (2021) - 1080p.mkv'), 'dune');
+    const big = await put(join(root, 'Dune (2021) - 2160p.mkv'), 'dune in 4k');
+    const h = await harness({
+      config: {
+        libraries: [
+          {
+            id: 'films',
+            name: 'Films',
+            source: root,
+            type: 'movie',
+            naming: 'no-id',
+            metadata: 'nfo',
+          },
+        ],
+      },
+    });
+    const store = new LibraryItemStore(h.database);
+    const scan = await h.request('POST', '/api/libraries/films/scan');
+    await h.app.jobs.idle();
+    await h.request('POST', `/api/plans/${scan.json<{ id: string }>().id}/execute`);
+    await h.app.jobs.idle();
+
+    const rows = store.all('films');
+    expect(rows.map((row) => row.path).sort()).toEqual([
+      join(root, 'Dune (2021)', 'Dune (2021) - 1080p.mkv'),
+      join(root, 'Dune (2021)', 'Dune (2021) - 2160p.mkv'),
+    ]);
+    // `movie.nfo` is in the folder for both, whichever one the plan wrote it on.
+    expect(rows.map((row) => row.nfo)).toEqual([true, true]);
+    expect([small, big]).toHaveLength(2);
+  });
+
   it('follows the work a human chose for a file nobody recognized', async () => {
     const { h, store, mystery } = await scanned();
     const row = store.get('films', mystery);
