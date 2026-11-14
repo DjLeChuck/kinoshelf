@@ -194,6 +194,9 @@ export const imagesSchema = z.object({
   logos: imageList,
 });
 
+/** `/collection/{id}/images`: no logos. */
+export const collectionImagesSchema = z.object({ posters: imageList, backdrops: imageList });
+
 export const collectionSchema = z.object({
   id: z.number().int(),
   name: z.string(),

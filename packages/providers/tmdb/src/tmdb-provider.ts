@@ -14,10 +14,12 @@ import {
   type SeriesCandidate,
   type ImageCandidate,
   type WorkImages,
+  type CollectionImages,
 } from '@kinoshelf/core';
 import { movieRating, pickCertification } from './certification.js';
 import { TmdbClient, type TmdbClientOptions } from './client.js';
 import {
+  collectionImagesSchema,
   collectionSchema,
   movieAlternativeTitlesSchema,
   movieFullDetailsSchema,
@@ -357,6 +359,17 @@ export class TmdbProvider implements MetadataProvider {
       fanart: imageCandidates(r.backdrops),
       logo: imageCandidates(r.logos),
     };
+  }
+
+  async listCollectionImages(id: ExternalId): Promise<CollectionImages | null> {
+    this.requireOwn(id);
+    const r = await this.client.get(
+      `/3/collection/${String(id.id)}/images`,
+      {},
+      collectionImagesSchema,
+      { ttlMs: DETAIL_TTL_MS, nullOn404: true },
+    );
+    return r ? { poster: imageCandidates(r.posters), fanart: imageCandidates(r.backdrops) } : null;
   }
 
   async listEpisodeImages(

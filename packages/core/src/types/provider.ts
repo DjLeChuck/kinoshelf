@@ -1,4 +1,5 @@
 import type {
+  CollectionImages,
   ImageCandidate,
   ImageSize,
   Rating,
@@ -104,6 +105,11 @@ export interface MetadataProvider {
     season: number,
     episode: number,
   ): Promise<readonly ImageCandidate[] | null>;
+  /**
+   * The posters and backgrounds offered for a collection, in every language and the provider's
+   * order; `null` if the collection is unknown. Only lists: nothing is downloaded.
+   */
+  listCollectionImages(id: ExternalId): Promise<CollectionImages | null>;
   /** URL of an image given its provider path. Pure: no request is made. */
   imageUrl(path: string, size: ImageSize): string;
 }

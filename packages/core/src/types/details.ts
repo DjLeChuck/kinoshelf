@@ -130,5 +130,8 @@ export interface ImageCandidate {
   readonly rating?: Rating;
 }
 
+/** What a collection owns: a poster and a background (no logo, no thumbnail). */
+export type CollectionImages = Readonly<Record<'poster' | 'fanart', readonly ImageCandidate[]>>;
+
 /** Every image the provider offers for a work, by kind, in the provider's order. */
 export type WorkImages = Readonly<Record<WorkImageKind, readonly ImageCandidate[]>>;

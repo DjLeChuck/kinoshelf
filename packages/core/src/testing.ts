@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import type {
   Candidate,
+  CollectionImages,
   CollectionInfo,
   MovieCollection,
   ExternalId,
@@ -177,6 +178,20 @@ export class FakeProvider implements MetadataProvider {
       poster: [one('/poster.jpg', 'en'), one('/poster2.jpg')],
       fanart: [one('/backdrop.jpg'), one('/backdrop2.jpg', 'en')],
       logo: [one('/logo.png', 'en')],
+    });
+  }
+
+  listCollectionImages(id: ExternalId): Promise<CollectionImages | null> {
+    this.calls.push({ method: 'listCollectionImages', id });
+    const one = (path: string, language?: string): ImageCandidate => ({
+      path,
+      ...(language && { language }),
+      width: 1000,
+      height: 1500,
+    });
+    return Promise.resolve({
+      poster: [one('/collectionposter.jpg', 'en'), one('/collectionposter2.jpg')],
+      fanart: [one('/collectionbackdrop.jpg')],
     });
   }
 
