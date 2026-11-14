@@ -311,6 +311,7 @@ export const en = {
     'This folder is not inside the library (or is the library itself: scan the library instead).',
   'error.library.transfer-in-progress':
     'A transfer already holds some of these items. Wait for it to end before running them again.',
+  'error.maintenance.in-progress': 'A tidy-up of this library is already running.',
   'error.library.scan-in-progress': 'A scan of this library is already queued or running.',
   'error.library.source-taken': 'The library “{name}” already reads this folder.',
   'error.library.wrong-type': 'The library “{name}” does not hold this kind of work.',
@@ -1107,6 +1108,11 @@ export const en = {
     '{count, plural, one {# image downloaded} other {# images downloaded}}',
   'web.history.extras.count.replaced':
     '{count, plural, one {# image replaced} other {# images replaced}}',
+  'web.history.extras.count.removed':
+    '{count, plural, one {# file set aside} other {# files set aside}}',
+  'web.history.extra.removed': 'Set aside',
+  'web.history.extras.hint.removed':
+    'Files set aside by a tidy-up: they are kept in Kinoshelf’s configuration folder, and undoing the batch puts them back.',
   'web.history.items': 'Files',
   'web.history.extras': 'Metadata written',
   'web.history.extras.hint':

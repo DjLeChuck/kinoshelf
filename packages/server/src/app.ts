@@ -18,6 +18,7 @@ import { History } from './history.js';
 import { registerImageRoutes } from './images.js';
 import { JobStore } from './jobs.js';
 import { registerLogRoutes } from './log-routes.js';
+import { registerMaintenanceRoutes } from './maintenance-routes.js';
 import { registerTmdbRoutes } from './tmdb-routes.js';
 import { tmdbUsageOf } from './tmdb-usage.js';
 import { LOG_LEVELS, LogStore, type LogLevel } from './logs.js';
@@ -660,6 +661,15 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
       report,
     });
     registerTmdbRoutes(api, tmdbUsage);
+    registerMaintenanceRoutes(api, {
+      config: () => configStore.config,
+      jobs,
+      journal,
+      snapshot,
+      events,
+      progress,
+      configDir: options.configDir,
+    });
     registerLogRoutes(api, {
       logs,
       level: {

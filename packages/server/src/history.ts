@@ -40,8 +40,11 @@ export interface BatchOperation {
 }
 
 export interface BatchExtra {
-  /** `generated` is an NFO written by Kinoshelf, `downloaded` an image, `replaced` an image chosen by the user over another. */
-  readonly kind: 'generated' | 'downloaded' | 'replaced';
+  /**
+   * `generated` is an NFO written by Kinoshelf, `downloaded` an image, `replaced` an image chosen by
+   * the user over another, `removed` a file a tidy-up set aside (kept, and put back by an undo).
+   */
+  readonly kind: 'generated' | 'downloaded' | 'replaced' | 'removed';
   readonly destination: string;
 }
 
@@ -221,11 +224,7 @@ export class History {
         ...failures,
       ],
       extras: journaled.flatMap((entry): BatchExtra[] =>
-        // Files a tidy-up took out are not metadata written: the page that lists them comes with
-        // the web surface of the cleanup.
-        entry.kind === 'transfer' || entry.kind === 'removed'
-          ? []
-          : [{ kind: entry.kind, destination: entry.destination }],
+        entry.kind === 'transfer' ? [] : [{ kind: entry.kind, destination: entry.destination }],
       ),
     };
   }

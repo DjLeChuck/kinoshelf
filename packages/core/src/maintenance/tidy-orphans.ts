@@ -38,6 +38,8 @@ export interface TidyOrphansOptions {
   readonly backupDir: string;
   readonly dryRun: boolean;
   readonly batchId?: string;
+  /** Told once the tree is read (`done` 0), then after each folder: a big library is long to settle. */
+  readonly onProgress?: (done: number, total: number, current: string) => void;
 }
 
 export interface TidyOrphansResult {
@@ -155,8 +157,11 @@ export async function removeOrphanFolders(
   const batchId = options.batchId ?? randomUUID();
   const folders: TidiedFolder[] = [];
   let moved = 0;
+  const total = report.orphanFolders.length;
+  options.onProgress?.(0, total, '');
 
   for (const orphan of report.orphanFolders) {
+    options.onProgress?.(folders.length, total, orphan.path);
     const skip = (reason: OrphanSkipReason, twin?: string): void => {
       folders.push({
         path: orphan.path,

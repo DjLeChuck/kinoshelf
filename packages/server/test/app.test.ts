@@ -69,6 +69,7 @@ describe('GET /api/openapi.json', () => {
       '/api/logs',
       '/api/logs/download',
       '/api/logs/level',
+      '/api/maintenance/tidy',
       '/api/notifications/test',
       '/api/onboarding',
       '/api/plans/{id}/execute',

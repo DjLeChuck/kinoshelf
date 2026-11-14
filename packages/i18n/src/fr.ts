@@ -327,6 +327,7 @@ export const fr: Record<keyof typeof en, string> = {
     'Ce dossier n’est pas dans la bibliothèque (ou c’est la bibliothèque elle-même : analysez plutôt la bibliothèque).',
   'error.library.transfer-in-progress':
     'Un transfert contient déjà certains de ces éléments. Attendez qu’il se termine avant de les relancer.',
+  'error.maintenance.in-progress': 'Un nettoyage de cette bibliothèque est déjà en cours.',
   'error.library.scan-in-progress':
     'Une analyse de cette bibliothèque est déjà en attente ou en cours.',
   'error.library.source-taken': 'La bibliothèque « {name} » lit déjà ce dossier.',
@@ -1142,6 +1143,11 @@ export const fr: Record<keyof typeof en, string> = {
     '{count, plural, one {# image téléchargée} other {# images téléchargées}}',
   'web.history.extras.count.replaced':
     '{count, plural, one {# image remplacée} other {# images remplacées}}',
+  'web.history.extras.count.removed':
+    '{count, plural, one {# fichier mis de côté} other {# fichiers mis de côté}}',
+  'web.history.extra.removed': 'Mis de côté',
+  'web.history.extras.hint.removed':
+    'Fichiers mis de côté par un nettoyage : ils sont conservés dans le dossier de configuration de Kinoshelf, et annuler le lot les remet en place.',
   'web.history.items': 'Fichiers',
   'web.history.extras': 'Métadonnées écrites',
   'web.history.extras.hint':

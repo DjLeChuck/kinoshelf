@@ -193,6 +193,11 @@ export class ProgressTracker {
   }
 
   /** Leading and trailing: the first change is told at once, the ones after it once per interval. */
+  /** Anything else running in the background (a tidy-up) tells the clients it moved through here. */
+  announce(): void {
+    this.changed();
+  }
+
   private changed(): void {
     const wait = this.lastNotified + NOTIFY_INTERVAL_MS - this.now();
     if (wait <= 0) {

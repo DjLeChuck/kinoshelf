@@ -45,6 +45,8 @@ export interface TidyForeignOptions {
    */
   readonly includeNfo?: boolean;
   readonly batchId?: string;
+  /** Told once the tree is read (`done` 0), then after each file: a big library is long to settle. */
+  readonly onProgress?: (done: number, total: number, current: string) => void;
 }
 
 export interface TidyForeignResult {
@@ -74,8 +76,11 @@ export async function tidyForeignFiles(
   const batchId = options.batchId ?? randomUUID();
   const files: TidiedForeignFile[] = [];
   let changed = 0;
+  const total = report.foreignFiles.length;
+  options.onProgress?.(0, total, '');
 
   for (const found of report.foreignFiles) {
+    options.onProgress?.(files.length, total, found.path);
     const base = { path: found.path, kind: found.kind, counterpart: found.counterpart } as const;
     const skip = (reason: ForeignSkipReason): void => {
       files.push({ ...base, status: 'skipped', reason });

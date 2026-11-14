@@ -66,6 +66,7 @@ export const API_ERROR_CODES = [
   'library.not-typed',
   'library.scan-in-progress',
   'library.transfer-in-progress',
+  'maintenance.in-progress',
   'library.source-taken',
   'library.wrong-type',
   'plex.not-signed-in',

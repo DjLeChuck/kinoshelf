@@ -164,7 +164,7 @@
     failed: batch?.items.filter(({ status }) => status === 'failed').length ?? 0,
   });
   const extrasSummary = $derived(
-    (['generated', 'downloaded', 'replaced'] as const)
+    (['generated', 'downloaded', 'replaced', 'removed'] as const)
       .map((kind) => ({ kind, count: batch?.extras.filter((e) => e.kind === kind).length ?? 0 }))
       .filter(({ count }) => count > 0)
       .map(({ kind, count }) => t(`web.history.extras.count.${kind}`, { count }))
@@ -239,7 +239,10 @@
       <!-- The preview below lists the same files with what would happen to each: showing both reads as a duplicate. -->
       {#if rows.length > 0 && !preview}
         <ChangeList {rows} />
-        {#if batch.extras.length > 0}
+        {#if batch.extras.some((extra) => extra.kind === 'removed')}
+          <p class="muted hint">{t('web.history.extras.hint.removed')}</p>
+        {/if}
+        {#if batch.extras.some((extra) => extra.kind !== 'removed')}
           <p class="muted hint">{t('web.history.extras.hint')}</p>
         {/if}
       {/if}

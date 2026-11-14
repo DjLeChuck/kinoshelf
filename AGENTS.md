@@ -794,6 +794,18 @@ would need one plugin per client. Watching the raw download folder stays out by 
   like a folder's files; never across formats (`-poster.png` to `poster.jpg`), never a file the journal made. A
   `<video>.nfo` is only taken aside with `--with-nfo`, beside a `movie.nfo` and in a folder of one video (Kodi and
   Jellyfin read `<video>.nfo` first: to be checked on the real players before it becomes the default).
+- The same tidy-up is in the API (`maintenance-routes.ts`), and **never inside a request**: reading a big library on a share
+  and moving hundreds of folders take minutes. `POST /api/maintenance/tidy` (`{ library, folders?, files?, nfo?, dryRun? }`)
+  starts a task and answers 202; `GET /api/maintenance/tidy` lists the tasks, one per library (the latest, in memory,
+  forgotten by a restart): `status` running/done/failed, `phase` reading/folders/files with `done`/`total`/`current`, and
+  once it ends `folders`/`files` (`{ batch, items }`, the batch being the History's, one each, undone from there) or the
+  `error`. A report is a task too (`dryRun`: the same tree is read). Tasks announce themselves through the `progress` event
+  (`ProgressTracker.announce`), and `history` when a batch was made. 409 `library.scan-in-progress` while a scan of the
+  library is queued or running, 409 `maintenance.in-progress` for a second task of it, 404/409 `library.not-found`/
+  `library.not-typed`. A renamed image is told to the snapshot (`written`); an undo does not tell it, so the list shows the
+  old flag until the next scan. History lists the files of such a batch (`extras` kind `removed`, "Set aside"). No web
+  client reads the routes yet: the Maintenance tab of the System page is the next step, and it must not show before.
+  **A rule for new work: nothing that can last runs in a request**, a read of the disk included; it is a task with progress.
 - Settings: flags over `config.yaml` over defaults. Config dir: `--config-dir`, then
   `KINOSHELF_CONFIG_DIR`, then `$XDG_CONFIG_HOME/kinoshelf`; it also holds `kinoshelf.sqlite`
   (journal and TMDB cache). Default mode is `move` when the destination is the source folder,

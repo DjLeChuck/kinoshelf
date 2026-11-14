@@ -5597,6 +5597,306 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/maintenance/tidy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The tidy-ups, running or last done
+         * @description One task per library (the latest, kept in memory until the server restarts), with how far it has got while it runs and its result once it ends. Follow the `progress` event.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            tasks: {
+                                library: string;
+                                dryRun: boolean;
+                                /** @enum {unknown} */
+                                status: "running" | "done" | "failed";
+                                /**
+                                 * @description `reading` while the library is being read: no total is known yet.
+                                 * @enum {unknown}
+                                 */
+                                phase: "reading" | "folders" | "files";
+                                done: number;
+                                total: number;
+                                current: string | null;
+                                /** Format: date-time */
+                                startedAt: string;
+                                /** Format: date-time */
+                                endedAt: string | null;
+                                folders: {
+                                    /** @description The batch of the History to undo, `null` when nothing was moved. */
+                                    batch: string | null;
+                                    items: {
+                                        path: string;
+                                        /** @description The sibling folder holding the video this one duplicates. */
+                                        twin?: string;
+                                        /** @description The twin was found by title and year, not by name: worth a look. */
+                                        approximate?: boolean;
+                                        /** @description Holds no file at all: it goes without a twin. */
+                                        empty?: boolean;
+                                        /** @enum {unknown} */
+                                        status: "would-remove" | "removed" | "skipped" | "failed";
+                                        /** @enum {unknown} */
+                                        reason?: "other-files" | "no-twin" | "changed";
+                                        files: number;
+                                        moved?: number;
+                                        error?: {
+                                            code: string;
+                                            params?: {
+                                                [key: string]: string | number;
+                                            };
+                                        };
+                                    }[];
+                                } | null;
+                                files: {
+                                    /** @description The batch of the History to undo, `null` when nothing was moved. */
+                                    batch: string | null;
+                                    items: {
+                                        path: string;
+                                        /** @enum {unknown} */
+                                        kind: "nfo" | "poster" | "fanart" | "logo";
+                                        /** @description The name Kinoshelf writes for the same thing. */
+                                        counterpart: string;
+                                        /** @enum {unknown} */
+                                        action?: "rename" | "remove";
+                                        /** @enum {unknown} */
+                                        status: "would-do" | "done" | "skipped" | "failed";
+                                        /** @enum {unknown} */
+                                        reason?: "ours" | "format" | "no-counterpart" | "versions" | "nfo-not-requested" | "changed";
+                                        error?: {
+                                            code: string;
+                                            params?: {
+                                                [key: string]: string | number;
+                                            };
+                                        };
+                                    }[];
+                                } | null;
+                                error: {
+                                    code: string;
+                                    params?: {
+                                        [key: string]: string | number;
+                                    };
+                                } | null;
+                            }[];
+                        };
+                    };
+                };
+                /** @description Default Response */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        /**
+         * Start tidying a library
+         * @description Starts a task and answers 202 at once, `GET /api/maintenance/tidy` tells how it goes. `dryRun` only reports what it would do (the folders holding no video, taken out once a sibling with a video is the same work; in a movie library the metadata named after the video, renamed to Kinoshelf’s names or set aside when those exist). Otherwise `folders` takes the folders out, `files` handles the metadata, `nfo` adding the `<video>.nfo` files. Nothing is deleted: every file is kept in the config folder, and each action is a batch of the History that `POST /api/batches/{id}/undo` reverts. 409 `library.scan-in-progress` while a scan of the library is queued or running, 409 `maintenance.in-progress` while a tidy-up of it runs.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        library: string;
+                        /** @default true */
+                        folders?: boolean;
+                        /** @default true */
+                        files?: boolean;
+                        /** @default false */
+                        nfo?: boolean;
+                        /** @default false */
+                        dryRun?: boolean;
+                    };
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                202: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            library: string;
+                            dryRun: boolean;
+                            /** @enum {unknown} */
+                            status: "running" | "done" | "failed";
+                            /**
+                             * @description `reading` while the library is being read: no total is known yet.
+                             * @enum {unknown}
+                             */
+                            phase: "reading" | "folders" | "files";
+                            done: number;
+                            total: number;
+                            current: string | null;
+                            /** Format: date-time */
+                            startedAt: string;
+                            /** Format: date-time */
+                            endedAt: string | null;
+                            folders: {
+                                /** @description The batch of the History to undo, `null` when nothing was moved. */
+                                batch: string | null;
+                                items: {
+                                    path: string;
+                                    /** @description The sibling folder holding the video this one duplicates. */
+                                    twin?: string;
+                                    /** @description The twin was found by title and year, not by name: worth a look. */
+                                    approximate?: boolean;
+                                    /** @description Holds no file at all: it goes without a twin. */
+                                    empty?: boolean;
+                                    /** @enum {unknown} */
+                                    status: "would-remove" | "removed" | "skipped" | "failed";
+                                    /** @enum {unknown} */
+                                    reason?: "other-files" | "no-twin" | "changed";
+                                    files: number;
+                                    moved?: number;
+                                    error?: {
+                                        code: string;
+                                        params?: {
+                                            [key: string]: string | number;
+                                        };
+                                    };
+                                }[];
+                            } | null;
+                            files: {
+                                /** @description The batch of the History to undo, `null` when nothing was moved. */
+                                batch: string | null;
+                                items: {
+                                    path: string;
+                                    /** @enum {unknown} */
+                                    kind: "nfo" | "poster" | "fanart" | "logo";
+                                    /** @description The name Kinoshelf writes for the same thing. */
+                                    counterpart: string;
+                                    /** @enum {unknown} */
+                                    action?: "rename" | "remove";
+                                    /** @enum {unknown} */
+                                    status: "would-do" | "done" | "skipped" | "failed";
+                                    /** @enum {unknown} */
+                                    reason?: "ours" | "format" | "no-counterpart" | "versions" | "nfo-not-requested" | "changed";
+                                    error?: {
+                                        code: string;
+                                        params?: {
+                                            [key: string]: string | number;
+                                        };
+                                    };
+                                }[];
+                            } | null;
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            } | null;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Default Response */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Default Response */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Default Response */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/logs": {
         parameters: {
             query?: never;
@@ -7407,7 +7707,7 @@ export interface paths {
                             } | null;
                             extras: {
                                 /** @enum {string} */
-                                kind: "generated" | "downloaded" | "replaced";
+                                kind: "generated" | "downloaded" | "replaced" | "removed";
                                 destination: string;
                             }[];
                             items: {
