@@ -66,8 +66,23 @@ describe('the query of a page', () => {
     expect(splitTarget('/libraries/films?state=review')).toEqual({
       path: '/libraries/films',
       search: '?state=review',
+      hash: '',
     });
-    expect(splitTarget('/arrivals')).toEqual({ path: '/arrivals', search: '' });
+    expect(splitTarget('/arrivals')).toEqual({ path: '/arrivals', search: '', hash: '' });
+  });
+
+  it('keeps the anchor out of the path, or a link such as /settings#plex would match no page', () => {
+    expect(splitTarget('/settings#retention')).toEqual({
+      path: '/settings',
+      search: '',
+      hash: '#retention',
+    });
+    expect(splitTarget('/system?tab=logs#top')).toEqual({
+      path: '/system',
+      search: '?tab=logs',
+      hash: '#top',
+    });
+    expect(matchRoute(splitTarget('/settings#retention').path)?.id).toBe('settings');
   });
 
   it('keeps matching its page', () => {

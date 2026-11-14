@@ -7,9 +7,11 @@
   import SettingsProcessing from '../components/SettingsProcessing.svelte';
   import SettingsServer from '../components/SettingsServer.svelte';
   import SettingsWebhooks from '../components/SettingsWebhooks.svelte';
+  import { tick, untrack } from 'svelte';
   import { api } from '../lib/api.js';
   import { messageOf } from '../lib/errors.js';
   import { t } from '../lib/i18n.svelte.js';
+  import { router } from '../lib/router.svelte.js';
   import { DEFAULT_METADATA, DEFAULT_NAMING, type Settings } from '../lib/settings.js';
 
   /** In page order: the nav lists them, and each wraps its section so a click can reach it. */
@@ -35,6 +37,17 @@
       failure = error;
     }
   }
+
+  // The sections come once the settings are loaded, so the browser cannot scroll to an anchor
+  // (`/settings#retention`, from a link of the System page) by itself.
+  // Read once, when they arrive: the menu then changes the anchor as the reader scrolls, and
+  // following it here would pull the page back.
+  $effect(() => {
+    const anchor = untrack(() => router.hash).slice(1);
+    if (settings && anchor !== '') {
+      void tick().then(() => document.getElementById(anchor)?.scrollIntoView());
+    }
+  });
 
   // Loaded once. A refetch on every `settings` event would replace the page under a form being
   // edited, and our own saves already bring back the new state.

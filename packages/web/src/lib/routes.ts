@@ -34,10 +34,18 @@ export function matchRoute(path: string): RouteDefinition | undefined {
   return ROUTES.find(({ path: base }) => clean === base || clean.startsWith(`${base}/`));
 }
 
-/** A link target cut into what the router keeps apart: the path, and the `?query` (with its `?`). */
-export function splitTarget(to: string): { path: string; search: string } {
-  const at = to.indexOf('?');
-  return at === -1 ? { path: to, search: '' } : { path: to.slice(0, at), search: to.slice(at) };
+/**
+ * A link target cut into what the router keeps apart: the path, the `?query` (with its `?`) and
+ * the `#anchor` (with its `#`). The anchor must not stay in the path, or no route would match it.
+ */
+export function splitTarget(to: string): { path: string; search: string; hash: string } {
+  const hashAt = to.indexOf('#');
+  const hash = hashAt === -1 ? '' : to.slice(hashAt);
+  const rest = hashAt === -1 ? to : to.slice(0, hashAt);
+  const at = rest.indexOf('?');
+  return at === -1
+    ? { path: rest, search: '', hash }
+    : { path: rest.slice(0, at), search: rest.slice(at), hash };
 }
 
 /** `search` with these parameters set, or dropped when `undefined`; others are kept. */

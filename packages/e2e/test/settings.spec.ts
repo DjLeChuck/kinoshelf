@@ -189,3 +189,30 @@ test('jumps to a section from the side menu and follows the scroll', async ({ pa
     'true',
   );
 });
+
+test('puts the section in the address as it is reached, and opens on the one in a link', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 1000 });
+  const menu = page.getByRole('navigation', { name: 'On this page' });
+
+  await menu.getByRole('button', { name: 'Webhooks' }).click();
+  await expect(page).toHaveURL(/\/settings#webhooks$/);
+  // The smooth scroll of the click must be over, or Home is swallowed by it.
+  await expect
+    .poll(async () => {
+      const before = await page.evaluate('window.scrollY');
+      await page.waitForTimeout(200);
+      return before === (await page.evaluate('window.scrollY'));
+    })
+    .toBe(true);
+
+  await page.keyboard.press('Home');
+  await expect(page).toHaveURL(/\/settings#general$/);
+
+  // A link to a section lands on it and keeps its anchor, whatever the page highlights on the way.
+  await page.goto('/settings#plex');
+  await expect(page.getByRole('heading', { name: 'Plex server', exact: true })).toBeInViewport();
+  await expect(page).toHaveURL(/\/settings#plex$/);
+  await expect(menu.locator('[aria-current]')).toHaveCount(1);
+});

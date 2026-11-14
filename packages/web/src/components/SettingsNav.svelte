@@ -1,6 +1,7 @@
 <script lang="ts">
   import { SvelteSet } from 'svelte/reactivity';
   import { t } from '../lib/i18n.svelte.js';
+  import { router } from '../lib/router.svelte.js';
 
   let { sections }: { sections: readonly { id: string; label: string }[] } = $props();
 
@@ -9,6 +10,9 @@
   // bring the chosen one to the top, must not take the highlight. The reader's own scrolling
   // (wheel, touch, keys) hands it back to the scroll position.
   let pinned = false;
+  // The address follows the section once the reader has moved the page or clicked the menu: not
+  // while the page scrolls itself to the anchor it was opened on, or it would overwrite it.
+  let moved = false;
 
   // The section in the upper part of the screen is the one being read. A short last section never
   // gets there, so the end of the page selects it.
@@ -48,6 +52,7 @@
     };
     const unpin = (): void => {
       pinned = false;
+      moved = true;
     };
     window.addEventListener('scroll', atEnd, { passive: true });
     for (const event of ['wheel', 'touchmove', 'keydown'] as const) {
@@ -62,9 +67,21 @@
     };
   });
 
+  // A section reached is an anchor of the address (`/settings#webhooks`), so the link can be shared
+  // and a reload comes back to it. Replaced in place: scrolling must not fill the history.
+  $effect(() => {
+    if (active !== undefined && moved) {
+      router.navigate(`${router.path}${window.location.search}#${active}`, {
+        replace: true,
+        scroll: false,
+      });
+    }
+  });
+
   function go(id: string): void {
     active = id;
     pinned = true;
+    moved = true;
     const smooth = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     document
       .getElementById(id)
