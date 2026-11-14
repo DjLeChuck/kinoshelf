@@ -312,8 +312,9 @@ severity }`, `area` being its card and `code` translated by the web (`web.health
   or set aside) stays until the next one; "Tidy…" opens a confirmation that says nothing is deleted, that the History undoes it and that
   another tool still managing the folder would write its files again, then runs the real task and links its batches (`/history/<id>`).
   The tasks are in the server's memory: a page opened later finds the bar, or the report. The page reads them on `progress` only while
-  one runs (or was just started). The checkbox "also handle `<film>.nfo`" reads the report again with `nfo: true`. Not built: a warning in
-  the rename preview that a `<film>.nfo` stays where it is.
+  one runs (or was just started). The checkbox "also handle `<film>.nfo`" reads the report again with `nfo: true`. **Decided not to build**: a
+  warning in the rename preview that a `<film>.nfo` stays where it is (it would touch the core, the server, the contract, the
+  preview and the CLI for one piece of information; the Maintenance tab counts those files).
 - **Decided not to build**: a "connection lost" banner on the logs (the event stream does not tell the page it is down). A
   dropped stream reconnects by itself and every view reloads on `ready`; it is not worth an indicator of its own.
 
@@ -402,8 +403,8 @@ format follows the Kodi wiki's templates, saved pages are not in the repository)
   the alternative (a movie's `<video>.nfo` next to `movie.nfo`, and Kodi and Jellyfin read `<video>.nfo` first),
   and the owner's NFO winning would leave a library half-written. Subtitles always travel. Without an NFO
   written (`metadata: none`, a movie written flat) the file is all that is left of what it said and travels as
-  before. A folder that keeps such a file is never pruned: `kinoshelf tidy` reports it. Not built: a line in the
-  preview saying which NFO stays behind. A movie written flat (no folder) gets no fixed-name file
+  before. A folder that keeps such a file is never pruned: `kinoshelf tidy` reports it. **Decided not to build**: a line
+  in the preview saying which NFO stays behind (`kinoshelf tidy` and the Maintenance tab report them). A movie written flat (no folder) gets no fixed-name file
   (`movie.nfo`, `poster.jpg`, `clearlogo.png`), which every movie would share.
 - **Show-level files** (`tvshow.nfo`, the show's poster, fanart and logo, a season's poster) come with
   every episode, marked `shared`; the planner keeps the first one of the batch (`shareCompanions`).
