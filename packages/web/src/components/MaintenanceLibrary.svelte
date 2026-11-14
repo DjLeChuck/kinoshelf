@@ -1,10 +1,12 @@
 <script lang="ts">
+  import type { Snippet } from 'svelte';
   import { describeError } from '@kinoshelf/i18n';
   import { messageOf } from '../lib/errors.js';
   import { formatDate } from '../lib/history.js';
   import { locale, t } from '../lib/i18n.svelte.js';
   import type { Library } from '../lib/libraries.js';
   import {
+    groupFolders,
     hasWork,
     tallyOf,
     type TidyFile,
@@ -98,6 +100,43 @@
       counterpart: file.counterpart,
     });
 </script>
+
+{#snippet todoRow(folder: TidyFolder)}
+  <span class="name" title={folder.path}>{baseName(folder.path)}</span>
+  {#if folder.empty}
+    <span class="muted">{t('web.maintenance.folder.empty')}</span>
+  {:else if folder.twin}
+    <span class="muted twin" title={folder.twin}
+      >{t('web.maintenance.folder.twin', { twin: baseName(folder.twin) })}</span
+    >
+  {/if}
+  {#if folder.approximate}
+    <span class="chip chip-warn">{t('web.maintenance.folder.approximate')}</span>
+  {/if}
+{/snippet}
+
+{#snippet leftRow(folder: TidyFolder)}
+  <span class="name" title={folder.path}>{baseName(folder.path)}</span>
+  {#if folder.reason}
+    <span class="muted">{t(`web.maintenance.reason.${folder.reason}`)}</span>
+  {/if}
+{/snippet}
+
+<!-- A show's seasons under the show's name; the folders loose in the library (movies) as a plain list. -->
+{#snippet grouped(folders: readonly TidyFolder[], row: Snippet<[TidyFolder]>)}
+  <ul class="groups">
+    {#each groupFolders(folders, library.source) as group (group.parent)}
+      <li>
+        {#if group.parent}<span class="show">{group.parent}</span>{/if}
+        <ul class="rows">
+          {#each group.folders as folder (folder.path)}
+            <li>{@render row(folder)}</li>
+          {/each}
+        </ul>
+      </li>
+    {/each}
+  </ul>
+{/snippet}
 
 <article class="card" aria-labelledby={`maintenance-${library.id}`}>
   <header>
@@ -209,39 +248,14 @@
               {t('web.maintenance.approximate.hint', { count: tally.approximate })}
             </p>
           {/if}
-          <ul class="rows">
-            {#each todoFolders as folder (folder.path)}
-              <li>
-                <span class="name" title={folder.path}>{baseName(folder.path)}</span>
-                {#if folder.empty}
-                  <span class="muted">{t('web.maintenance.folder.empty')}</span>
-                {:else if folder.twin}
-                  <span class="muted twin" title={folder.twin}
-                    >{t('web.maintenance.folder.twin', { twin: baseName(folder.twin) })}</span
-                  >
-                {/if}
-                {#if folder.approximate}
-                  <span class="chip chip-warn">{t('web.maintenance.folder.approximate')}</span>
-                {/if}
-              </li>
-            {/each}
-          </ul>
+          {@render grouped(todoFolders, todoRow)}
         </details>
       {/if}
 
       {#if leftFolders.length > 0}
         <details>
           <summary>{t('web.maintenance.left', { count: leftFolders.length })}</summary>
-          <ul class="rows">
-            {#each leftFolders as folder (folder.path)}
-              <li>
-                <span class="name" title={folder.path}>{baseName(folder.path)}</span>
-                {#if folder.reason}
-                  <span class="muted">{t(`web.maintenance.reason.${folder.reason}`)}</span>
-                {/if}
-              </li>
-            {/each}
-          </ul>
+          {@render grouped(leftFolders, leftRow)}
         </details>
       {/if}
 
@@ -415,6 +429,29 @@
 
   .stamp {
     margin-right: 0.4em;
+  }
+
+  .groups {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin: 6px 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .show {
+    font-weight: 600;
+    overflow-wrap: anywhere;
+  }
+
+  .groups .rows {
+    margin-top: 2px;
+    padding-left: 16px;
+  }
+
+  progress {
+    accent-color: var(--accent);
   }
 
   .name {

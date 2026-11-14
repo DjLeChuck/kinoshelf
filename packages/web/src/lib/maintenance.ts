@@ -113,3 +113,35 @@ export function tallyOf(task: TidyTask): TidyTally {
 /** Something would be moved: only then is there anything to confirm. */
 export const hasWork = (tally: TidyTally): boolean =>
   tally.folders + tally.renames + tally.removals > 0;
+
+/** Folders that share a parent: a show's seasons, or the folders loose in the library (`parent` empty). */
+export interface FolderGroup {
+  /** The parent folder, relative to the library's source (`Show (2020)`), `''` for a folder directly in it. */
+  readonly parent: string;
+  readonly folders: readonly TidyFolder[];
+}
+
+/**
+ * Folders grouped under their parent, so a series library reads `Show` then its `Season 1`,
+ * `Season 2` instead of a column of identical names. Groups and folders are by name, the loose
+ * folders (a movie library) first.
+ */
+export function groupFolders(folders: readonly TidyFolder[], source: string): FolderGroup[] {
+  const root = source.replace(/\/+$/, '');
+  const groups = new Map<string, TidyFolder[]>();
+  for (const folder of folders) {
+    const relative = folder.path.startsWith(`${root}/`)
+      ? folder.path.slice(root.length + 1)
+      : folder.path;
+    const cut = relative.lastIndexOf('/');
+    const parent = cut < 0 ? '' : relative.slice(0, cut);
+    groups.set(parent, [...(groups.get(parent) ?? []), folder]);
+  }
+  const byName = (a: string, b: string): number => a.localeCompare(b, undefined, { numeric: true });
+  return [...groups]
+    .sort(([a], [b]) => byName(a, b))
+    .map(([parent, items]) => ({
+      parent,
+      folders: [...items].sort((a, b) => byName(a.path, b.path)),
+    }));
+}

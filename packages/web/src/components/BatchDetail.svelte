@@ -386,6 +386,7 @@
 
   .running progress {
     width: 100%;
+    accent-color: var(--accent);
   }
 
   .current {
