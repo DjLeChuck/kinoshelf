@@ -232,6 +232,45 @@ export const SERVER_MIGRATIONS: readonly { readonly name: string; readonly sql: 
         name TEXT,
         PRIMARY KEY (library_id, movie_id)
       );
+
+      -- The image the owner chose for a collection, kept in Kinoshelf's data (the file is named by
+      -- the column file, in the collection-images folder): a refresh from TMDB never touches it.
+      CREATE TABLE collection_images (
+        library_id TEXT NOT NULL,
+        key TEXT NOT NULL,
+        type TEXT NOT NULL,
+        file TEXT NOT NULL,
+        format TEXT NOT NULL,
+        hash TEXT NOT NULL,
+        source TEXT NOT NULL,
+        source_url TEXT,
+        source_language TEXT,
+        source_label TEXT,
+        chosen_at TEXT NOT NULL,
+        PRIMARY KEY (library_id, key, type)
+      );
+
+      -- Where each chosen image stands on each media server; no row means nothing sent yet.
+      CREATE TABLE collection_sync (
+        library_id TEXT NOT NULL,
+        key TEXT NOT NULL,
+        type TEXT NOT NULL,
+        server TEXT NOT NULL,
+        state TEXT NOT NULL,
+        hash TEXT,
+        at TEXT,
+        message TEXT,
+        PRIMARY KEY (library_id, key, type, server)
+      );
+
+      -- The id a server gave a collection, so it is not searched for at every send.
+      CREATE TABLE collection_remote (
+        library_id TEXT NOT NULL,
+        key TEXT NOT NULL,
+        server TEXT NOT NULL,
+        remote_id TEXT NOT NULL,
+        PRIMARY KEY (library_id, key, server)
+      );
     `,
   },
 ];

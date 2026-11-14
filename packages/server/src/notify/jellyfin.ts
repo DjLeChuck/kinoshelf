@@ -1,3 +1,12 @@
+import {
+  foldTitle,
+  pickCollection,
+  type CollectionImage,
+  type CollectionImageServer,
+  type CollectionImageType,
+  type CollectionTarget,
+  type FoundCollection,
+} from './collection-images.js';
 import type { DeliveryResult } from './delivery.js';
 import type { HttpRequest } from './formats.js';
 import { isInside, mapPath, type PathMapping } from './paths.js';
@@ -46,6 +55,23 @@ export function parseLibraries(json: string): JellyfinLibrary[] {
   });
 }
 
+/** The `Items` of a Jellyfin answer: their id and name. */
+export function parseItems(json: string): { id: string; name: string }[] {
+  const parsed: unknown = JSON.parse(json);
+  const items = (typeof parsed === 'object' && parsed !== null ? parsed : {}) as {
+    Items?: unknown;
+  };
+  return (Array.isArray(items.Items) ? (items.Items as unknown[]) : []).flatMap((item) => {
+    const entry = (typeof item === 'object' && item !== null ? item : {}) as Record<
+      string,
+      unknown
+    >;
+    return typeof entry.Id === 'string' && typeof entry.Name === 'string'
+      ? [{ id: entry.Id, name: entry.Name }]
+      : [];
+  });
+}
+
 /**
  * Tells Jellyfin which paths were created (`POST /Library/Media/Updated`), which is lighter than a
  * full scan; past a few folders one `POST /Library/Refresh` is cheaper. The key goes in the
@@ -55,7 +81,8 @@ export function parseLibraries(json: string): JellyfinLibrary[] {
  * would go unnoticed. Each path is therefore checked against the libraries first (of the right
  * type, a movie going to a movie library), and reported when none holds it.
  */
-export class JellyfinClient {
+export class JellyfinClient implements CollectionImageServer {
+  readonly kind = 'jellyfin';
   private libraries: { at: number; list: JellyfinLibrary[] } | undefined;
 
   constructor(
@@ -68,6 +95,79 @@ export class JellyfinClient {
   /** Used by the test endpoint: can Jellyfin be reached, and does it accept the key? */
   check(): Promise<DeliveryResult> {
     return this.send(this.request('GET', '/Library/VirtualFolders'));
+  }
+
+  /**
+   * A collection is a `BoxSet`, which Jellyfin keeps in a library of its own rather than in the
+   * movie library, so it is searched by name across the server. `SearchTerm` is a fuzzy match: the
+   * name is compared again here, and two of the same name are told apart by their movies.
+   */
+  async find(target: CollectionTarget): Promise<FoundCollection> {
+    const query = new URLSearchParams({
+      IncludeItemTypes: 'BoxSet',
+      Recursive: 'true',
+      SearchTerm: target.name,
+    });
+    const listed = await this.send(this.request('GET', `/Items?${query.toString()}`));
+    if (!listed.ok || listed.text === undefined) {
+      return { status: 'error', error: listed.error ?? `HTTP ${String(listed.status)}` };
+    }
+    const name = foldTitle(target.name);
+    const found = parseItems(listed.text);
+    const named = found.filter((item) => foldTitle(item.name) === name);
+    if (named.length === 0) {
+      // Said once, so "Jellyfin has none" and "it has one under another name" can be told apart.
+      this.log.info(
+        `Jellyfin: no box set named "${target.name}" (the search found ${
+          found.length === 0 ? 'none' : found.map((item) => `"${item.name}"`).join(', ')
+        })`,
+      );
+      return { status: 'missing' };
+    }
+    const candidates = await Promise.all(
+      named.map(async ({ id }) => {
+        if (named.length === 1) {
+          return { id, titles: [] as string[] };
+        }
+        const children = await this.send(
+          this.request('GET', `/Items?${new URLSearchParams({ ParentId: id }).toString()}`),
+        );
+        return {
+          id,
+          titles: children.text === undefined ? [] : parseItems(children.text).map((i) => i.name),
+        };
+      }),
+    );
+    const id = pickCollection(candidates, target.titles);
+    return id === undefined ? { status: 'missing' } : { status: 'found', id };
+  }
+
+  /**
+   * Jellyfin takes the image as base64 text with the image's own `Content-Type`. A backdrop is
+   * *added* to the ones there, so the first one is deleted beforehand: the new one takes its place.
+   * A later "replace all images" refresh of the collection's metadata fetches Jellyfin's own again
+   * and drops this one: Kinoshelf does not see it, the image is sent again by hand.
+   */
+  async upload(
+    id: string,
+    type: CollectionImageType,
+    image: CollectionImage,
+  ): Promise<DeliveryResult> {
+    if (type === 'fanart') {
+      // Nothing to delete is an answer too: only the upload's counts.
+      await this.send(this.request('DELETE', `/Items/${encodeURIComponent(id)}/Images/Backdrop/0`));
+    }
+    return this.send({
+      ...this.request(
+        'POST',
+        `/Items/${encodeURIComponent(id)}/Images/${type === 'poster' ? 'Primary' : 'Backdrop'}`,
+        Buffer.from(image.bytes).toString('base64'),
+      ),
+      headers: {
+        Authorization: `MediaBrowser Token="${this.options.apiKey}"`,
+        'content-type': image.mime,
+      },
+    });
   }
 
   async refresh(targets: readonly RefreshTarget[]): Promise<RefreshReport> {
@@ -126,7 +226,7 @@ export class JellyfinClient {
     return this.libraries.list;
   }
 
-  private request(method: 'GET' | 'POST', path: string, body?: string): HttpRequest {
+  private request(method: HttpRequest['method'], path: string, body?: string): HttpRequest {
     return {
       method,
       url: `${this.options.url.replace(/\/+$/, '')}${path}`,

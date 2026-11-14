@@ -4,10 +4,11 @@ import type { Notification } from './message.js';
 export type WebhookConfig = NonNullable<NotifyConfig['webhooks']>[number];
 
 export interface HttpRequest {
-  readonly method: 'GET' | 'POST';
+  readonly method: 'GET' | 'POST' | 'PUT' | 'DELETE';
   readonly url: string;
   readonly headers: Readonly<Record<string, string>>;
-  readonly body?: string;
+  /** Text, or the bytes of an image. */
+  readonly body?: string | Uint8Array;
 }
 
 const JSON_HEADERS = { 'content-type': 'application/json' } as const;

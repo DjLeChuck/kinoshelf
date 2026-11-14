@@ -6,9 +6,12 @@
   let {
     group,
     detail,
+    expanded = false,
   }: {
     group: RowGroup;
     detail?: Snippet<[ChangeRow]> | undefined;
+    /** The files behind "+N files" are shown: a list of one row has room for them. */
+    expanded?: boolean;
   } = $props();
 
   // One row alone is not worth a fold: a movie reads as a line, a show as a line that opens.
@@ -45,7 +48,7 @@
   </div>
   {#if row.note}<p class="note">{row.note}</p>{/if}
   {#if detail && row.detailCount > 0}
-    <details class="more" open={row.problem}>
+    <details class="more" open={row.problem || expanded}>
       <summary>{t('web.changes.companions', { count: row.detailCount })}</summary>
       <div class="detail">{@render detail(row)}</div>
     </details>

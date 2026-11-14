@@ -26,6 +26,7 @@ export const LOG_COMPONENTS = [
   'watcher',
   'tmdb',
   'notify',
+  'collections',
 ] as const;
 export type LogComponent = (typeof LOG_COMPONENTS)[number];
 

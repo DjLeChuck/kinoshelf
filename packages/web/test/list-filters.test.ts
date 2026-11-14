@@ -1,13 +1,10 @@
 import { createTranslator } from '@kinoshelf/i18n';
 import { describe, expect, it } from 'vitest';
-import type { ItemCollection } from '../src/lib/collections.js';
 import {
   activeCount,
   activePills,
   ariaSortOf,
   directionToAsk,
-  groupHeading,
-  headingLabel,
   nextSort,
   nothingToHandle,
   pillLabel,
@@ -66,34 +63,32 @@ describe('visibleChips', () => {
 describe('activeCount and activePills', () => {
   it('counts the state, the versions and the collection', () => {
     expect(activeCount(none)).toBe(0);
-    expect(activeCount({ state: 'rename', multi: true, collection: 'in' })).toBe(3);
-    expect(activeCount({ state: undefined, multi: false, collection: 't:1' })).toBe(1);
+    expect(activeCount({ state: 'rename', multi: true, collection: 'tmdb:1' })).toBe(3);
+    expect(activeCount({ state: undefined, multi: false, collection: 'tmdb:1' })).toBe(1);
   });
 
   it('gives a pill to each trait, none to the state', () => {
     expect(activePills({ ...none, state: 'rename' })).toEqual([]);
-    expect(activePills({ state: 'rename', multi: true, collection: 'incomplete' })).toEqual([
+    expect(activePills({ state: 'rename', multi: true, collection: 'tmdb:1' })).toEqual([
       { id: 'multi' },
-      { id: 'collection', key: 'incomplete' },
+      { id: 'collection', key: 'tmdb:1' },
     ]);
   });
 
   it('names a pill after its trait, or after the one collection', () => {
     const t = createTranslator('fr');
     expect(pillLabel({ id: 'multi' }, t, '')).toBe('Plusieurs versions');
-    expect(pillLabel({ id: 'collection', key: 'incomplete' }, t, '')).toBe('Collection incomplète');
-    expect(pillLabel({ id: 'collection', key: 't:603' }, t, 'Matrix - Saga')).toBe(
+    expect(pillLabel({ id: 'collection', key: 'tmdb:603' }, t, 'Matrix - Saga')).toBe(
       'Collection : Matrix - Saga',
     );
   });
 });
 
 describe('the sort of a column', () => {
-  const movies: readonly SortColumn[] = ['title', 'year', 'collection'];
+  const movies: readonly SortColumn[] = ['title', 'year'];
   const title = { sort: 'title', dir: 'asc' } as const;
 
-  it('starts upwards for a title or a collection, downwards for a year or what is missing', () => {
-    expect(nextSort(title, 'collection')).toEqual({ sort: 'collection', dir: 'asc' });
+  it('starts upwards for a title, downwards for a year or what is missing', () => {
     expect(nextSort(title, 'year')).toEqual({ sort: 'year', dir: 'desc' });
     expect(nextSort(title, 'missing')).toEqual({ sort: 'missing', dir: 'desc' });
   });
@@ -134,50 +129,5 @@ describe('the sort of a column', () => {
     expect(ariaSortOf(state, 'year')).toBe('ascending');
     expect(ariaSortOf({ sort: 'year', dir: 'desc' }, 'year')).toBe('descending');
     expect(ariaSortOf(state, 'title')).toBeUndefined();
-  });
-});
-
-describe('the groups of a list sorted by collection', () => {
-  const coll = (over: Partial<ItemCollection>): ItemCollection => ({
-    key: 't:1',
-    name: 'Dragons - Saga',
-    custom: false,
-    held: 2,
-    total: 3,
-    ...over,
-  });
-  const items = [
-    { collection: coll({}) },
-    { collection: coll({}) },
-    { collection: coll({ key: 'c:Marvel', name: 'Marvel', custom: true, total: null }) },
-    { collection: null },
-    { collection: null },
-  ];
-  const t = createTranslator('fr');
-  const headings = (sort: SortColumn): (string | undefined)[] =>
-    items.map((_, index) => {
-      const heading = groupHeading(items, index, sort);
-      return heading && headingLabel(heading, t);
-    });
-
-  it('opens a group at each change of collection, the first row included', () => {
-    expect(headings('collection')).toEqual([
-      'Dragons - Saga · 2 sur 3',
-      undefined,
-      'Marvel',
-      'Sans collection',
-      undefined,
-    ]);
-  });
-
-  it('opens none under another sort', () => {
-    expect(headings('title').every((heading) => heading === undefined)).toBe(true);
-  });
-
-  it('is in English in English', () => {
-    const heading = groupHeading(items, 0, 'collection');
-    expect(heading && headingLabel(heading, createTranslator('en'))).toBe(
-      'Dragons - Saga · 2 of 3',
-    );
   });
 });

@@ -1,7 +1,6 @@
 <script lang="ts">
   import { tick } from 'svelte';
   import { t } from '../lib/i18n.svelte.js';
-  import { COLLECTION_FILTERS, type CollectionFilter } from '../lib/collections.js';
   import type { Counts, ShowFilter } from '../lib/library-items.js';
 
   let {
@@ -11,12 +10,9 @@
     counts,
     chosen,
     multi,
-    collection,
-    collectionCounts,
     badge,
     onstate,
     onmulti,
-    oncollection,
     onreset,
   }: {
     /** The search box. */
@@ -28,14 +24,10 @@
     /** The state chosen, if any. */
     chosen: ShowFilter | undefined;
     multi: boolean;
-    collection: CollectionFilter | undefined;
-    /** Movies per collection filter; `undefined`: this library has no collections to filter by. */
-    collectionCounts: Readonly<Record<'all' | 'in' | 'out' | 'incomplete', number>> | undefined;
     /** How many filters are on (the state, the versions, the collection). */
     badge: number;
     onstate: (next: ShowFilter | undefined) => void;
     onmulti: (next: boolean) => void;
-    oncollection: (next: CollectionFilter | undefined) => void;
     onreset: () => void;
   } = $props();
 
@@ -65,8 +57,6 @@
       void close(true);
     }
   }
-
-  const COLLECTION_OPTIONS = [undefined, ...COLLECTION_FILTERS] as const;
 </script>
 
 <svelte:window onpointerdown={away} onkeydown={key} />
@@ -159,27 +149,6 @@
           <span>{t('web.library.filter.multi-version')}</span>
           <span class="count">{counts['multi-version']}</span>
         </button>
-        {#if collectionCounts}
-          <fieldset>
-            <legend>{t('web.collection.filter.label')}</legend>
-            {#each COLLECTION_OPTIONS as option (option ?? 'all')}
-              <label class="row">
-                <span class="choice">
-                  <input
-                    type="radio"
-                    name="{panelId}-collection"
-                    checked={collection === option}
-                    onchange={() => {
-                      oncollection(option);
-                    }}
-                  />
-                  {t(`web.collection.filter.${option ?? 'all'}`)}
-                </span>
-                <span class="count">{collectionCounts[option ?? 'all']}</span>
-              </label>
-            {/each}
-          </fieldset>
-        {/if}
       </section>
 
       <footer>
@@ -291,8 +260,7 @@
     border-top: 1px solid var(--border);
   }
 
-  h3,
-  legend {
+  h3 {
     margin: 0 0 4px;
     padding: 0;
     color: var(--muted);
@@ -303,21 +271,6 @@
   h3 {
     letter-spacing: 0.04em;
     text-transform: uppercase;
-  }
-
-  legend {
-    margin-top: 8px;
-    font-size: 13px;
-  }
-
-  fieldset {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    min-width: 0;
-    margin: 0;
-    padding: 0;
-    border: 0;
   }
 
   .row {
@@ -342,8 +295,7 @@
     background: var(--surface-2);
   }
 
-  .row[aria-pressed='true'],
-  .row:has(input:checked) {
+  .row[aria-pressed='true'] {
     border-color: var(--accent);
     background: var(--surface-2);
   }
@@ -351,17 +303,6 @@
   .row:disabled {
     color: var(--muted);
     cursor: default;
-  }
-
-  .row:has(input:focus-visible) {
-    outline: 2px solid var(--accent);
-    outline-offset: 2px;
-  }
-
-  .choice {
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
   }
 
   .count {

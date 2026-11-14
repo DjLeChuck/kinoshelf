@@ -299,8 +299,8 @@ export class LibraryItemStore {
   }
 
   /**
-   * Files each movie under its effective collection (`collection_key`: `t:<id>` for the
-   * provider's, `c:<name>` for the owner's, none for a movie in none), from what the provider
+   * Files each movie under its effective collection (`collection_key`: `tmdb:<id>` for the
+   * provider's, `custom:<normalized name>` for the owner's, none for a movie in none), from what the provider
    * said and what the owner decided. Stored on the row so a list can filter and order by it; the
    * count of what the library holds is read, not stored (it moves with every other row).
    */
@@ -311,8 +311,8 @@ export class LibraryItemStore {
          SET collection_key = x.key, collection_name = x.name, collection_total = x.total
          FROM (
            SELECT li.path AS path,
-             CASE o.mode WHEN 'none' THEN NULL WHEN 'custom' THEN 'c:' || o.name
-               ELSE CASE WHEN mc.collection_id IS NULL THEN NULL ELSE 't:' || mc.collection_id END
+             CASE o.mode WHEN 'none' THEN NULL WHEN 'custom' THEN 'custom:' || sort_key(trim(o.name))
+               ELSE CASE WHEN mc.collection_id IS NULL THEN NULL ELSE 'tmdb:' || mc.collection_id END
              END AS key,
              CASE o.mode WHEN 'none' THEN NULL WHEN 'custom' THEN o.name ELSE c.name END AS name,
              CASE WHEN o.mode IS NULL AND c.id IS NOT NULL
@@ -642,7 +642,8 @@ export class LibraryItemStore {
       filter?: StateFilter;
       /** Only the works held in several versions; combines with `filter`. */
       multi?: boolean;
-      collection?: CollectionFilter;
+      /** Only the movies filed under this collection (`tmdb:<id>` or `custom:<name>`). */
+      collection?: string;
       sort?: ItemSort;
       dir?: SortDirection;
       query?: string;
@@ -661,10 +662,9 @@ export class LibraryItemStore {
     ];
     // Without one, the flags of the work's row say it: every file of a movie is settled, so "a file
     // in this state" and "several settled files" are both read there.
-    const collection = options.collection ? workCollectionSql(options.collection) : undefined;
     const where = [
       'library_id = ?',
-      ...(collection ? [collection.sql] : []),
+      ...(options.collection === undefined ? [] : ['collection_key = ?']),
       ...(options.query
         ? [
             `work_key IN (SELECT work_key FROM library_items WHERE library_id = ?
@@ -677,7 +677,7 @@ export class LibraryItemStore {
     ].join(' AND ');
     const params: (string | number)[] = [
       libraryId,
-      ...(collection?.params ?? []),
+      ...(options.collection === undefined ? [] : [options.collection]),
       ...(options.query ? [libraryId, ...matching] : []),
     ];
     const total =
@@ -724,16 +724,18 @@ export class LibraryItemStore {
   /** The files a list of the ones waiting for a person keeps, counted as a validation settles them. */
   private groupsOfFiles(
     libraryId: string,
-    options: { collection?: CollectionFilter },
+    options: { collection?: string },
     fileConditions: readonly string[],
     matching: readonly string[],
   ): number {
-    const collection = options.collection
-      ? collectionSql(options.collection, 'library_items')
-      : undefined;
+    const collection = options.collection;
     return this.groupsWhere(
-      ['library_id = ?', ...(collection ? [collection.sql] : []), ...fileConditions].join(' AND '),
-      [libraryId, ...(collection?.params ?? []), ...matching],
+      [
+        'library_id = ?',
+        ...(collection === undefined ? [] : ['collection_key = ?']),
+        ...fileConditions,
+      ].join(' AND '),
+      [libraryId, ...(collection === undefined ? [] : [collection]), ...matching],
     );
   }
 
@@ -784,24 +786,18 @@ export class LibraryItemStore {
     );
   }
 
-  /** What each collection filter holds (movies, not files), for the buttons of the page. */
-  collectionCounts(libraryId: string): Record<'all' | 'in' | 'out' | 'incomplete', number> {
+  /** The movies of every collection of a library, one row per movie whatever its versions. */
+  collectionWorks(libraryId: string): CollectionWork[] {
     this.settleWorks(libraryId);
-    const row = this.database
-      .prepare<[string], { total: number; inside: number; outside: number; incomplete: number }>(
-        `SELECT COUNT(*) AS total,
-           COALESCE(SUM(collection_key IS NOT NULL), 0) AS inside,
-           COALESCE(SUM(collection_key IS NULL), 0) AS outside,
-           COALESCE(SUM(collection_total IS NOT NULL AND collection_total > ${HELD_WORKS}), 0) AS incomplete
-         FROM library_works WHERE library_id = ?`,
+    return this.database
+      .prepare<[string], CollectionWork>(
+        `SELECT collection_key AS key, collection_name AS name, collection_total AS total,
+           work_key AS workKey, title, year, lead_path AS leadPath
+         FROM library_works
+         WHERE library_id = ? AND collection_key IS NOT NULL
+         ORDER BY collection_sort, collection_key, year IS NULL, year, sort, lead_path`,
       )
-      .get(libraryId);
-    return {
-      all: row?.total ?? 0,
-      in: row?.inside ?? 0,
-      out: row?.outside ?? 0,
-      incomplete: row?.incomplete ?? 0,
-    };
+      .all(libraryId);
   }
 
   /** What each filter holds, for the tabs of the page. */
@@ -1148,25 +1144,23 @@ const sortOf = (item: Pick<LibraryItem, 'path' | 'title'>): string =>
 const searchKeyOf = (item: Pick<LibraryItem, 'path' | 'title'>): string =>
   `${sortKey(item.title ?? '')}\n${sortKey(basename(item.path))}`;
 
-/** How a list is ordered: by title (the default), by collection, or by year. */
-export const ITEM_SORTS = ['title', 'collection', 'year'] as const;
+/** How a list is ordered: by title (the default), or by year. */
+export const ITEM_SORTS = ['title', 'year'] as const;
 export type ItemSort = (typeof ITEM_SORTS)[number];
 
 export const SORT_DIRECTIONS = ['asc', 'desc'] as const;
 export type SortDirection = (typeof SORT_DIRECTIONS)[number];
 
-/** A column's first click: Title and Collection read upwards, Year and Missing the largest first. */
+/** A column's first click: Title reads upwards, Year and Missing the largest first. */
 export const DEFAULT_DIRECTION: Record<ItemSort | ShowSort, SortDirection> = {
   title: 'asc',
-  collection: 'asc',
   year: 'desc',
   missing: 'desc',
 };
 
 const SQL_DIRECTION: Record<SortDirection, string> = { asc: 'ASC', desc: 'DESC' };
 
-// A collection's groups follow its name (the direction turns them over), a group's movies their
-// year; movies in none come last either way. A movie with no year comes last in a year order.
+// A movie with no year comes last in a year order.
 const workOrder = (sort: ItemSort, direction?: SortDirection): string => {
   const dir = SQL_DIRECTION[direction ?? DEFAULT_DIRECTION[sort]];
   switch (sort) {
@@ -1174,8 +1168,6 @@ const workOrder = (sort: ItemSort, direction?: SortDirection): string => {
       return `sort ${dir}, lead_path ${dir}`;
     case 'year':
       return `year IS NULL, year ${dir}, sort, lead_path`;
-    case 'collection':
-      return `collection_key IS NULL, collection_sort ${dir}, collection_key, year IS NULL, year, sort, lead_path`;
   }
 };
 
@@ -1204,26 +1196,19 @@ const heldOf = (outer: string): string =>
   WHERE held.library_id = ${outer}.library_id
     AND held.collection_key = ${outer}.collection_key)`;
 
-/**
- * What narrows a list by collection: movies in one, in none, in one the library holds only a
- * part of, or in a given one (`t:<id>` for the provider's, `c:<name>` for the owner's).
- */
-export type CollectionFilter = 'in' | 'out' | 'incomplete' | { readonly key: string };
-
-const collectionSql = (
-  filter: CollectionFilter,
-  outer: string,
-): { sql: string; params: string[] } =>
-  filter === 'in'
-    ? { sql: 'collection_key IS NOT NULL', params: [] }
-    : filter === 'out'
-      ? { sql: 'collection_key IS NULL', params: [] }
-      : filter === 'incomplete'
-        ? {
-            sql: `(collection_total IS NOT NULL AND collection_total > ${heldOf(outer)})`,
-            params: [],
-          }
-        : { sql: 'collection_key = ?', params: [filter.key] };
+/** A movie of the library and the collection it is filed under. */
+export interface CollectionWork {
+  readonly key: string;
+  readonly name: string;
+  /** The provider's count of the collection's movies; `null` for the owner's own. */
+  readonly total: number | null;
+  /** `m<TMDB id>` for an identified movie. */
+  readonly workKey: string;
+  readonly title: string | null;
+  readonly year: number | null;
+  /** The first version's path: its `itemId` is the movie's page. */
+  readonly leadPath: string;
+}
 
 /** A movie's effective collection, with how much of it the library holds. */
 export interface RowCollection {
@@ -1267,23 +1252,6 @@ const WORK_STATE_SQL: Record<StateFilter, string> = {
   'missing-nfo': 'has_missing_nfo = 1',
   'missing-artwork': 'has_missing_artwork = 1',
 };
-
-/** The movies of the row's collection that the library holds, counted from `library_works` (one row each). */
-const HELD_WORKS = `(SELECT COUNT(*) FROM library_works held INDEXED BY library_works_collection
-  WHERE held.library_id = library_works.library_id AND held.collection_key = library_works.collection_key)`;
-
-/** `collectionSql` for a row of `library_works`. */
-const workCollectionSql = (filter: CollectionFilter): { sql: string; params: string[] } =>
-  filter === 'in'
-    ? { sql: 'collection_key IS NOT NULL', params: [] }
-    : filter === 'out'
-      ? { sql: 'collection_key IS NULL', params: [] }
-      : filter === 'incomplete'
-        ? {
-            sql: `(collection_total IS NOT NULL AND collection_total > ${HELD_WORKS})`,
-            params: [],
-          }
-        : { sql: 'collection_key = ?', params: [filter.key] };
 
 /** What `library_shows` holds for each filter of the shows (`s` is its row). */
 const SHOW_STATE_SQL: Record<ShowStateFilter, string> = {
@@ -1495,6 +1463,9 @@ export function resolutionOf(path: string): string | null {
 /** The picture size of a file: its name's when it gives one, else what the probe read of it. */
 export const resolutionOfItem = (item: Pick<LibraryItem, 'path' | 'picture'>): string | null =>
   resolutionOf(item.path) ?? item.picture;
+
+/** The key of an owner's own collection: its name, trimmed and folded as `refreshCollections` does. */
+export const customCollectionKey = (name: string): string => `custom:${sortKey(name.trim())}`;
 
 /** Stable for a path, short enough for a URL; the page asks for one item by it. */
 export const itemId = (path: string): string =>

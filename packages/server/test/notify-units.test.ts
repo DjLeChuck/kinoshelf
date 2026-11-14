@@ -72,7 +72,8 @@ describe('buildRequest', () => {
     url,
     ...(format && { format }),
   });
-  const json = (body: string | undefined) => JSON.parse(body ?? '') as Record<string, unknown>;
+  const json = (body: string | Uint8Array | undefined) =>
+    JSON.parse(typeof body === 'string' ? body : '') as Record<string, unknown>;
 
   it('posts Kinoshelf’s own JSON by default', () => {
     const request = buildRequest(target(undefined), failed);
@@ -426,7 +427,7 @@ describe('JellyfinClient', () => {
     method: string;
     url: string;
     headers: Readonly<Record<string, string>>;
-    body?: string;
+    body?: string | Uint8Array;
   }
 
   /** A Jellyfin that lists its libraries (the real ones) and answers the refresh with `status`. */
@@ -487,7 +488,7 @@ describe('JellyfinClient', () => {
       url: 'http://jf:8096/Library/Media/Updated',
       headers: { Authorization: 'MediaBrowser Token="KEY"', 'content-type': 'application/json' },
     });
-    expect(JSON.parse(posts(calls)[0]?.body ?? '')).toEqual({
+    expect(JSON.parse(String(posts(calls)[0]?.body ?? ''))).toEqual({
       Updates: [
         { Path: '/data/movies/Dune (2021)', UpdateType: 'Created' },
         { Path: '/data/movies/Alien (1979)', UpdateType: 'Created' },
@@ -514,9 +515,9 @@ describe('JellyfinClient', () => {
     ]);
     expect(report.skipped).toEqual(['/data/movies/Show/Season 01']);
     expect(
-      (JSON.parse(posts(calls)[0]?.body ?? '') as { Updates: { Path: string }[] }).Updates.map(
-        (u) => u.Path,
-      ),
+      (
+        JSON.parse(String(posts(calls)[0]?.body ?? '')) as { Updates: { Path: string }[] }
+      ).Updates.map((u) => u.Path),
     ).toEqual(['/data/movies/Dune (2021)', '/data/tv-shows/Show/Season 01']);
   });
 

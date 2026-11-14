@@ -25,14 +25,19 @@
     type ItemsPage,
     type ShowFilter,
   } from '../lib/library-items.js';
-  import { canFile, nameOfKey, nfoCount, pillOf, type ItemSort } from '../lib/collections.js';
+  import {
+    canFile,
+    collectionsApi,
+    nfoCount,
+    viewOf,
+    type CollectionsPage,
+    type ItemSort,
+  } from '../lib/collections.js';
   import {
     activeCount,
     activePills,
     ariaSortOf,
     directionToAsk,
-    groupHeading,
-    headingLabel,
     nextSort,
     sortFromQuery,
     sortToQuery,
@@ -45,6 +50,7 @@
   import ListToolbar from './ListToolbar.svelte';
   import SortButton from './SortButton.svelte';
   import CollectionDialog from './CollectionDialog.svelte';
+  import CollectionsView from './CollectionsView.svelte';
   import ItemPanel from './ItemPanel.svelte';
   import RunDialog from './RunDialog.svelte';
   import Link from './Link.svelte';
@@ -89,6 +95,8 @@
   let picked = $state<readonly string[]>([]);
   let running = $state<'rename' | 'refresh' | undefined>(undefined);
   let filing = $state(false);
+  /** Bumped when a change reaches the open page without going through it (a bulk filing). */
+  let panelVersion = $state(0);
 
   /** A row can be ticked to be renamed or refreshed, or (a library with collections) to be filed. */
   const selectable = (
@@ -123,22 +131,15 @@
   // a link keeps them, and so does a reload.
   const filter = $derived(oneOf(router.query.get('state'), states));
   const multi = $derived(router.query.get('multi') === '1');
+  // Films | Collections (`?vue=collections&collection=<key>`): a movie library that writes NFO has
+  // both. In the Collections view `collection` is the one selected, not a filter of the list.
+  const hasCollections = $derived(!isSeries && page?.library.collections === true);
+  const view = $derived(hasCollections ? viewOf(router.query.get('vue')) : 'films');
   const collectionFilter = $derived(
-    isSeries ? undefined : (router.query.get('collection') ?? undefined),
-  );
-  // The column and the filters appear once there is a collection to show (or one is being looked at):
-  // a library with none would only carry empty controls. Filing a movie stays offered.
-  const showsCollections = $derived(
-    !isSeries &&
-      page?.library.collections === true &&
-      (page.collectionCounts.in > 0 ||
-        collectionFilter !== undefined ||
-        router.query.get('sort') === 'collection'),
+    isSeries || view === 'collections' ? undefined : (router.query.get('collection') ?? undefined),
   );
   const columns = $derived<readonly SortColumn[]>(
-    isSeries
-      ? ['title', 'year', 'missing']
-      : ['title', 'year', ...(showsCollections ? (['collection'] as const) : [])],
+    isSeries ? ['title', 'year', 'missing'] : ['title', 'year'],
   );
   const order = $derived(
     sortFromQuery({ sort: router.query.get('sort'), dir: router.query.get('dir') }, columns),
@@ -161,15 +162,6 @@
       total: page.counts.all,
     });
   });
-
-  /** The cells of a row, for the line that opens a group to span them all. */
-  const columnCount = $derived(
-    4 +
-      (showsCollections ? 1 : 0) +
-      (page?.library.writes.nfo ? 1 : 0) +
-      (page?.library.writes.artwork ? 2 : 0) +
-      (page?.library.writes.logo ? 1 : 0),
-  );
 
   const sortBy = (column: SortColumn): void => {
     router.setQuery(sortToQuery(nextSort(order, column)));
@@ -211,6 +203,15 @@
   const scanning = $derived(page?.scan != null || library.scanning);
   const percent = $derived(scanPercent(page?.scan?.progress ?? null));
 
+  /** The collections of the library: how many, for the selector, and their names, for the pill. */
+  let collections = $state<CollectionsPage | undefined>(undefined);
+  const collectionName = $derived(
+    collectionFilter === undefined
+      ? ''
+      : (collections?.collections.find((one) => one.key === collectionFilter)?.name ??
+          collectionFilter.slice(collectionFilter.indexOf(':') + 1)),
+  );
+
   let latest = 0;
   async function load(): Promise<void> {
     const ticket = ++latest;
@@ -228,6 +229,9 @@
       if (ticket === latest) {
         page = answer;
         failure = undefined;
+      }
+      if (answer.library.collections && ticket === latest) {
+        collections = await collectionsApi.list(library.id).catch(() => collections);
       }
     } catch (error) {
       if (ticket === latest) {
@@ -301,7 +305,37 @@
 <div class="stack">
   <div class="head">
     <div class="identity">
-      <h2>{library.name}</h2>
+      <div class="titlebar">
+        <h2>{library.name}</h2>
+        {#if hasCollections}
+          <div class="segments" role="radiogroup" aria-label={t('web.collections.view.label')}>
+            <label class="segment" class:on={view === 'films'}>
+              <input
+                type="radio"
+                name="library-view"
+                checked={view === 'films'}
+                onchange={() => {
+                  router.setQuery({ vue: undefined, collection: undefined });
+                }}
+              />
+              {t('web.collections.view.films')}
+              <span class="count">{page?.counts.all ?? ''}</span>
+            </label>
+            <label class="segment" class:on={view === 'collections'}>
+              <input
+                type="radio"
+                name="library-view"
+                checked={view === 'collections'}
+                onchange={() => {
+                  router.setQuery({ vue: 'collections', collection: undefined });
+                }}
+              />
+              {t('web.collections.view.collections')}
+              <span class="count">{collections?.collections.length ?? ''}</span>
+            </label>
+          </div>
+        {/if}
+      </div>
       <p class="muted meta">
         <span class="mono path">{library.source}</span>
         {#if page?.scannedAt}
@@ -369,6 +403,8 @@
       <h3>{t('web.library.never.title')}</h3>
       <p class="muted">{t('web.library.never.body')}</p>
     </section>
+  {:else if view === 'collections'}
+    <CollectionsView {library} />
   {:else}
     <ListToolbar
       {query}
@@ -380,8 +416,6 @@
       counts={page.counts}
       chosen={filter}
       {multi}
-      collection={collectionFilter}
-      collectionCounts={showsCollections ? page.collectionCounts : undefined}
       {badge}
       onstate={(next: ShowFilter | undefined) => {
         router.setQuery({ state: next });
@@ -389,16 +423,13 @@
       onmulti={(next: boolean) => {
         router.setQuery({ multi: next ? '1' : undefined });
       }}
-      oncollection={(next: string | undefined) => {
-        router.setQuery({ collection: next });
-      }}
       onreset={reset}
     />
     <ListFilterRow
       {chips}
       {filters}
       {pills}
-      collectionName={collectionFilter ? nameOfKey(collectionFilter, page.items) : ''}
+      {collectionName}
       {result}
       onstate={(next: ShowFilter | undefined) => {
         router.setQuery({ state: next });
@@ -415,7 +446,7 @@
         query={searched}
         {filter}
         {multi}
-        sort={order.sort as 'title' | 'year' | 'missing'}
+        sort={order.sort}
         dir={directionToAsk(order)}
         {busy}
         onshown={(count: number | undefined) => {
@@ -501,6 +532,8 @@
               notice = message;
               picked = [];
               filing = false;
+              // The open page may be one of the movies filed: it reads its collection again.
+              panelVersion += 1;
               void load();
             }}
           />
@@ -528,19 +561,6 @@
                     onsort={sortBy}
                   />
                 </th>
-                {#if showsCollections}
-                  <th
-                    aria-sort={ariaSortOf(order, 'collection')}
-                    title={t('web.collection.sort.hint')}
-                  >
-                    <SortButton
-                      column="collection"
-                      current={order}
-                      label={t('web.collection.col')}
-                      onsort={sortBy}
-                    />
-                  </th>
-                {/if}
                 <th>{t('web.library.col.versions')}</th>
                 {#if page.library.writes.nfo}<th>NFO</th>{/if}
                 {#if page.library.writes.artwork}
@@ -551,13 +571,7 @@
               </tr>
             </thead>
             <tbody>
-              {#each page.items as item, index (item.id)}
-                {@const heading = groupHeading(page.items, index, order.sort)}
-                {#if heading}
-                  <tr class="heading">
-                    <td colspan={columnCount}>{headingLabel(heading, t)}</td>
-                  </tr>
-                {/if}
+              {#each page.items as item (item.id)}
                 <tr class:current={open?.id === item.id}>
                   <td class="narrow">
                     {#if selectable(item)}
@@ -598,29 +612,6 @@
                       >{/if}
                   </td>
                   <td>{item.year ?? ''}</td>
-                  {#if showsCollections}
-                    <td class="collection">
-                      {#if item.collection}
-                        {@const pill = pillOf(item.collection)}
-                        {@const named = item.collection}
-                        <button
-                          type="button"
-                          class="link collection-name"
-                          aria-label={t('web.collection.filter.by', { name: named.name })}
-                          onclick={() => {
-                            router.setQuery({ collection: named.key });
-                          }}>{named.name}</button
-                        >
-                        <span class="chip chip-{pill.kind}"
-                          >{pill.text ?? t('web.collection.custom')}</span
-                        >
-                      {:else}
-                        <span class="muted" aria-hidden="true">—</span><span class="sr-only"
-                          >{t('web.collection.none')}</span
-                        >
-                      {/if}
-                    </td>
-                  {/if}
                   <td><VersionBadges versions={item.versions} /></td>
                   {#if page.library.writes.nfo}<td><Presence value={item.nfo} /></td>{/if}
                   {#if page.library.writes.artwork}
@@ -661,7 +652,7 @@
 
         <div class="side">
           {#if open}
-            {#key open.id}
+            {#key `${open.id}:${String(panelVersion)}`}
               <ItemPanel
                 libraryId={library.id}
                 source={library.source}
@@ -746,6 +737,18 @@
 
   h2 {
     font-size: 18px;
+  }
+
+  .titlebar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 16px;
+  }
+
+  .segment .count {
+    margin-left: 8px;
+    font-weight: 600;
   }
 
   p {
@@ -835,33 +838,6 @@
 
   tr.current {
     background: var(--surface-2);
-  }
-
-  /* Sorted by collection, a line names each saga (and how much of it is held) above its movies. */
-  tr.heading > td {
-    padding-top: 16px;
-    border-bottom: 1px solid var(--border-strong);
-    color: var(--muted);
-    font-size: 12px;
-    font-weight: 600;
-  }
-
-  .collection {
-    min-width: 0;
-  }
-
-  .collection > * {
-    vertical-align: middle;
-  }
-
-  .collection-name {
-    max-width: 18ch;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    text-decoration: underline;
-    text-decoration-color: var(--border-strong);
-    text-underline-offset: 3px;
   }
 
   /* An inset shadow, not a border: a border on a row of a collapsed table is not drawn everywhere. */

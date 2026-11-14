@@ -1,7 +1,23 @@
 import { XMLParser } from 'fast-xml-parser';
 import type { DeliveryResult } from './delivery.js';
 import type { HttpRequest } from './formats.js';
+import {
+  foldTitle,
+  pickCollection,
+  type CollectionImage,
+  type CollectionImageServer,
+  type CollectionImageType,
+  type CollectionTarget,
+  type FoundCollection,
+} from './collection-images.js';
 import { isInside, mapPath, type PathMapping } from './paths.js';
+
+/** What a call adds to a plain read. */
+interface RequestInit {
+  readonly method?: HttpRequest['method'];
+  readonly body?: Uint8Array;
+  readonly headers?: Record<string, string>;
+}
 
 export type Send = (request: HttpRequest) => Promise<DeliveryResult>;
 
@@ -31,7 +47,7 @@ export interface PlexSection {
 const parser = new XMLParser({
   ignoreAttributes: false,
   attributeNamePrefix: '@_',
-  isArray: (name) => name === 'Directory' || name === 'Location',
+  isArray: (name) => name === 'Directory' || name === 'Location' || name === 'Video',
 });
 
 const asRecord = (value: unknown): Record<string, unknown> =>
@@ -50,6 +66,28 @@ export function parseSections(xml: string): PlexSection[] {
       locations: locations.map((location) => String(asRecord(location)['@_path'])),
     };
   });
+}
+
+/** An XML attribute as text: the parser reads a number as one. */
+const attribute = (value: unknown): string =>
+  typeof value === 'string' || typeof value === 'number' ? String(value) : '';
+
+/** The collections of `GET /library/sections/{key}/collections`: Plex's own key and the title. */
+export function parseCollections(xml: string): { id: string; title: string }[] {
+  const container = asRecord(asRecord(parser.parse(xml) as unknown).MediaContainer);
+  const directories = Array.isArray(container.Directory) ? (container.Directory as unknown[]) : [];
+  return directories.flatMap((directory) => {
+    const entry = asRecord(directory);
+    const id = attribute(entry['@_ratingKey']);
+    return id === '' ? [] : [{ id, title: attribute(entry['@_title']) }];
+  });
+}
+
+/** The titles of a collection's movies (`GET /library/collections/{key}/children`). */
+export function parseChildren(xml: string): string[] {
+  const container = asRecord(asRecord(parser.parse(xml) as unknown).MediaContainer);
+  const videos = Array.isArray(container.Video) ? (container.Video as unknown[]) : [];
+  return videos.map((video) => attribute(asRecord(video)['@_title']));
 }
 
 /** Above this many folders one scan of the whole library is cheaper than as many partial ones. */
@@ -80,8 +118,11 @@ export interface PlexOptions {
  * goes to a movie library) whose folder holds the path, the deepest folder winning: two libraries
  * may share one, as an "optimized versions" folder does.
  */
-export class PlexClient {
+export class PlexClient implements CollectionImageServer {
+  readonly kind = 'plex';
   private sections: { at: number; list: PlexSection[] } | undefined;
+  /** Why the libraries could not be listed last time, so a caller can say it rather than "none holds it". */
+  private listError: string | undefined;
 
   constructor(
     private readonly options: PlexOptions,
@@ -96,6 +137,60 @@ export class PlexClient {
     return result.ok && result.text !== undefined
       ? { ...result, sections: parseSections(result.text).length }
       : result;
+  }
+
+  /**
+   * The collection by its name, in the section holding the library's folder. Two of the same
+   * name (it happens) are told apart by the movies they hold.
+   */
+  async find(target: CollectionTarget): Promise<FoundCollection> {
+    const path = mapPath(target.libraryPath, this.options.paths);
+    if (path === undefined) {
+      return { status: 'error', error: 'no path mapping' };
+    }
+    const section = await this.sectionFor(path, 'movie');
+    if (section === undefined) {
+      return {
+        status: 'error',
+        error:
+          this.listError === undefined
+            ? 'no movie library holds the folder'
+            : `could not list the libraries (${this.listError})`,
+      };
+    }
+    const listed = await this.request(`/library/sections/${section}/collections`);
+    if (!listed.ok || listed.text === undefined) {
+      return { status: 'error', error: listed.error ?? `HTTP ${String(listed.status)}` };
+    }
+    const name = foldTitle(target.name);
+    const named = parseCollections(listed.text).filter(({ title }) => foldTitle(title) === name);
+    if (named.length === 0) {
+      return { status: 'missing' };
+    }
+    const candidates = await Promise.all(
+      named.map(async ({ id }) => {
+        // A lone collection of that name needs no telling apart.
+        if (named.length === 1) {
+          return { id, titles: [] as string[] };
+        }
+        const children = await this.request(`/library/collections/${id}/children`);
+        return { id, titles: children.text === undefined ? [] : parseChildren(children.text) };
+      }),
+    );
+    const id = pickCollection(candidates, target.titles);
+    return id === undefined ? { status: 'missing' } : { status: 'found', id };
+  }
+
+  /**
+   * Uploads the image as the collection's poster or background. Plex makes an uploaded image the
+   * selected one (python-plexapi relies on that too), so there is no second call to choose it.
+   */
+  upload(id: string, type: CollectionImageType, image: CollectionImage): Promise<DeliveryResult> {
+    return this.request(`/library/metadata/${id}/${type === 'poster' ? 'posters' : 'arts'}`, {
+      method: 'POST',
+      body: image.bytes,
+      headers: { 'Content-Type': image.mime },
+    });
   }
 
   async refresh(targets: readonly RefreshTarget[]): Promise<RefreshReport> {
@@ -168,9 +263,11 @@ export class PlexClient {
     }
     const result = await this.request('/library/sections');
     if (!result.ok || result.text === undefined) {
-      this.log.warn(`Plex: could not list the libraries (${result.error ?? result.status})`);
+      this.listError = result.error ?? `HTTP ${String(result.status)}`;
+      this.log.warn(`Plex: could not list the libraries (${this.listError})`);
       return [];
     }
+    this.listError = undefined;
     this.sections = { at: this.now(), list: parseSections(result.text) };
     return this.sections.list;
   }
@@ -179,25 +276,28 @@ export class PlexClient {
    * One call to the server. A refused token is renewed and the call made again, once: a media
    * server may drop a token plex.tv still counts good (it was revoked, or the server restarted).
    */
-  private async request(path: string): Promise<DeliveryResult> {
+  private async request(path: string, init: RequestInit = {}): Promise<DeliveryResult> {
     const source = this.options.token;
     const first = typeof source === 'string' ? source : await source.token();
     if (first === undefined) {
       return { ok: false, attempts: 0, error: 'not signed in' };
     }
-    const result = await this.send(this.get(path, first));
+    const result = await this.send(this.get(path, first, init));
     if (result.status !== 401 || typeof source === 'string') {
       return result;
     }
     const renewed = await source.renew();
-    return renewed === undefined || renewed === first ? result : this.send(this.get(path, renewed));
+    return renewed === undefined || renewed === first
+      ? result
+      : this.send(this.get(path, renewed, init));
   }
 
-  private get(path: string, token: string): HttpRequest {
+  private get(path: string, token: string, init: RequestInit): HttpRequest {
     return {
-      method: 'GET',
+      method: init.method ?? 'GET',
       url: `${this.options.url.replace(/\/+$/, '')}${path}`,
-      headers: { 'X-Plex-Token': token, Accept: 'application/xml' },
+      headers: { 'X-Plex-Token': token, Accept: 'application/xml', ...init.headers },
+      ...(init.body !== undefined && { body: init.body }),
     };
   }
 }

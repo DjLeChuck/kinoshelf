@@ -34,18 +34,19 @@ const saga: MetadataProvider = {
 interface Item {
   id: string;
   title: string;
-  collection: {
+}
+interface ItemsBody {
+  library: { collections: boolean };
+  items: Item[];
+}
+interface CollectionsBody {
+  collections: {
     key: string;
     name: string;
     custom: boolean;
     held: number;
     total: number | null;
-  } | null;
-}
-interface ItemsBody {
-  library: { collections: boolean };
-  collectionCounts: { all: number; in: number; out: number; incomplete: number };
-  items: Item[];
+  }[];
 }
 
 async function setup(metadata: 'none' | 'nfo' = 'nfo') {
@@ -69,8 +70,11 @@ async function setup(metadata: 'none' | 'nfo' = 'nfo') {
   };
   const list = async (query = '') =>
     (await h.request('GET', `/api/libraries/films/items${query}`)).json<ItemsBody>();
+  const collections = async () =>
+    (await h.request('GET', '/api/libraries/films/collections')).json<CollectionsBody>()
+      .collections;
   await scan();
-  return { h, root, scan, list };
+  return { h, root, scan, list, collections };
 }
 
 /** Organizes the film, so its NFO exists and Kinoshelf wrote it. */
@@ -89,55 +93,41 @@ async function organized() {
   return { ...ctx, nfo, choose };
 }
 
-describe('the collection of a movie in the list', () => {
-  it('is the one TMDB names, with how much of it the library holds', async () => {
-    const { list } = await setup();
-    const body = await list();
-    expect(body.library.collections).toBe(true);
-    const dune = body.items.find((item) => item.title === 'Dune');
-    expect(dune?.collection).toEqual({
-      key: `t:${String(COLLECTION.id)}`,
-      name: 'Dune - Saga',
-      custom: false,
-      held: 1,
-      total: 2,
-    });
-    expect(body.items.find((item) => item.title === 'Alien')?.collection).toBeNull();
-    expect(body.collectionCounts).toEqual({ all: 2, in: 1, out: 1, incomplete: 1 });
+describe('the collections of a library', () => {
+  it('are the ones TMDB names, with how much of each the library holds', async () => {
+    const { list, collections } = await setup();
+    expect((await list()).library.collections).toBe(true);
+    expect(await collections()).toMatchObject([
+      {
+        key: `tmdb:${String(COLLECTION.id)}`,
+        name: 'Dune - Saga',
+        custom: false,
+        held: 1,
+        total: 2,
+      },
+    ]);
   });
 
-  it('filters by collection and orders by it, movies in none last', async () => {
+  it('narrow the list of movies by key, which can be ordered by title or year', async () => {
     const { list } = await setup();
-    expect((await list('?collection=in')).items.map((i) => i.title)).toEqual(['Dune']);
-    expect((await list('?collection=out')).items.map((i) => i.title)).toEqual(['Alien']);
-    expect((await list('?collection=incomplete')).items.map((i) => i.title)).toEqual(['Dune']);
-    expect((await list('?collection=t:726871')).items.map((i) => i.title)).toEqual(['Dune']);
-    expect((await list('?collection=t:1')).items).toEqual([]);
-    expect((await list('?sort=collection')).items.map((i) => i.title)).toEqual(['Dune', 'Alien']);
+    expect((await list('?collection=tmdb:726871')).items.map((i) => i.title)).toEqual(['Dune']);
+    expect((await list('?collection=tmdb:1')).items).toEqual([]);
     expect((await list('?sort=title')).items.map((i) => i.title)).toEqual(['Alien', 'Dune']);
     expect((await list('?sort=year')).items.map((i) => i.title)).toEqual(['Dune', 'Alien']);
-  });
-
-  it('turns an order over with `dir`, movies in none staying last', async () => {
-    const { list } = await setup();
     expect((await list('?sort=title&dir=desc')).items.map((i) => i.title)).toEqual([
       'Dune',
       'Alien',
     ]);
     expect((await list('?sort=year&dir=asc')).items.map((i) => i.title)).toEqual(['Alien', 'Dune']);
-    expect((await list('?sort=collection&dir=desc')).items.map((i) => i.title)).toEqual([
-      'Dune',
-      'Alien',
-    ]);
   });
 
-  it('does not exist in a library that writes no NFO', async () => {
-    const { list } = await setup('none');
-    const body = await list('?collection=in&sort=collection');
-    expect(body.library.collections).toBe(false);
-    expect(body.collectionCounts).toEqual({ all: 0, in: 0, out: 0, incomplete: 0 });
-    expect(body.items.every((item) => item.collection === null)).toBe(true);
-    expect(body.items).toHaveLength(2);
+  it('do not exist in a library that writes no NFO', async () => {
+    const { h, list } = await setup('none');
+    expect((await list('?collection=tmdb:726871')).library.collections).toBe(false);
+    expect((await list('?collection=tmdb:726871')).items).toHaveLength(2);
+    const refused = await h.request('GET', '/api/libraries/films/collections');
+    expect(refused.statusCode).toBe(409);
+    expect(refused.json<{ error: { code: string } }>().error.code).toBe('library.no-collections');
   });
 });
 
@@ -151,7 +141,7 @@ describe('PUT /api/libraries/:id/collection', () => {
   });
 
   it("files the movie under the owner's own collection, in the NFO and in the list", async () => {
-    const { nfo, choose, list } = await organized();
+    const { nfo, choose, collections } = await organized();
     const answer = await choose('custom', ' Univers Arrakis ');
     expect(answer.statusCode).toBe(200);
     expect(answer.json()).toMatchObject({ movies: 1, rewritten: 1, kept: 0 });
@@ -159,28 +149,32 @@ describe('PUT /api/libraries/:id/collection', () => {
     const xml = await readFile(nfo, 'utf8');
     expect(xml).toContain('<set>\n        <name>Univers Arrakis</name>\n    </set>');
     expect(xml).not.toContain('tmdbcolid');
-    const dune = (await list()).items.find((item) => item.title === 'Dune');
-    expect(dune?.collection).toMatchObject({ key: 'c:Univers Arrakis', custom: true, total: null });
-    expect((await list('?collection=incomplete')).items).toEqual([]);
+    expect(await collections()).toEqual([
+      expect.objectContaining({
+        key: 'custom:univers arrakis',
+        name: 'Univers Arrakis',
+        custom: true,
+        total: null,
+      }),
+    ]);
   });
 
   it('removes the movie from every collection, then brings TMDB’s back', async () => {
-    const { nfo, choose, list } = await organized();
+    const { nfo, choose, collections } = await organized();
     await choose('none');
     expect(await readFile(nfo, 'utf8')).not.toContain('<set');
-    expect((await list('?collection=out')).items.map((i) => i.title)).toContain('Dune');
+    expect(await collections()).toEqual([]);
 
     await choose('tmdb');
     expect(await readFile(nfo, 'utf8')).toContain('<set tmdbcolid="726871">');
-    expect((await list('?collection=in')).items.map((i) => i.title)).toEqual(['Dune']);
+    expect((await collections()).map((c) => c.key)).toEqual(['tmdb:726871']);
   });
 
   it('survives a new scan, which reads TMDB again', async () => {
-    const { choose, scan, list } = await organized();
+    const { choose, scan, collections } = await organized();
     await choose('none');
     await scan();
-    const dune = (await list()).items.find((item) => item.title === 'Dune');
-    expect(dune?.collection).toBeNull();
+    expect(await collections()).toEqual([]);
   });
 
   it('is followed by an NFO written after a scan, when the first one is gone', async () => {
@@ -261,7 +255,6 @@ describe('several movies and several versions', () => {
     const body = (await h.request('GET', '/api/libraries/films/items')).json<ItemsBody>();
     // The two versions are one movie, filed once.
     expect(body.items).toHaveLength(2);
-    expect(body.items.find((item) => item.title === 'Dune')?.collection?.held).toBe(1);
 
     // "Refresh" writes the missing NFO: one `movie.nfo` shared by the versions.
     await h.request('POST', '/api/libraries/films/execute', { items: body.items.map((i) => i.id) });
@@ -280,10 +273,11 @@ describe('several movies and several versions', () => {
       '<name>Films de sable</name>',
     );
     const after = (
-      await h.request('GET', '/api/libraries/films/items?sort=collection')
-    ).json<ItemsBody>();
-    expect(after.items.map((item) => item.collection?.held)).toEqual([2, 2]);
-    expect(after.collectionCounts).toMatchObject({ in: 2, out: 0, incomplete: 0 });
+      await h.request('GET', '/api/libraries/films/collections')
+    ).json<CollectionsBody>();
+    expect(after.collections).toEqual([
+      expect.objectContaining({ key: 'custom:films de sable', held: 2, total: null }),
+    ]);
   });
 });
 

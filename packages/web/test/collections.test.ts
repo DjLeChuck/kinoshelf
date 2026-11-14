@@ -5,7 +5,6 @@ import {
   draftOf,
   isChanged,
   isValid,
-  nameOfKey,
   nfoCount,
   pillOf,
   setPreview,
@@ -14,7 +13,7 @@ import {
 import { itemsUrl } from '../src/lib/library-items.js';
 
 const coll = (over: Partial<ItemCollection> = {}): ItemCollection => ({
-  key: 't:1',
+  key: 'tmdb:1',
   name: 'Dragons - Saga',
   custom: false,
   held: 2,
@@ -41,13 +40,6 @@ describe('canFile', () => {
     expect(canFile({ kind: 'movie', tmdbId: 1, state: 'review' })).toBe(false);
     expect(canFile({ kind: 'movie', tmdbId: null, state: 'ok' })).toBe(false);
     expect(canFile({ kind: 'series', tmdbId: 1, state: 'ok' })).toBe(false);
-  });
-});
-
-describe('nameOfKey', () => {
-  it('reads the name from a row that has the collection, else from the key', () => {
-    expect(nameOfKey('t:1', [{ collection: coll() }])).toBe('Dragons - Saga');
-    expect(nameOfKey('c:Univers Marvel', [])).toBe('Univers Marvel');
   });
 });
 
@@ -103,13 +95,13 @@ describe('setPreview', () => {
 });
 
 describe('itemsUrl with collections', () => {
-  it('asks for a collection filter and a sort, the default sort being implied', () => {
-    expect(itemsUrl('films', { collection: 'incomplete', sort: 'collection', limit: 50 })).toBe(
-      '/api/libraries/films/items?collection=incomplete&sort=collection&limit=50',
+  it('asks for the movies of one collection, the default sort being implied', () => {
+    expect(itemsUrl('films', { collection: 'tmdb:1', sort: 'year', limit: 50 })).toBe(
+      '/api/libraries/films/items?collection=tmdb%3A1&sort=year&limit=50',
     );
-    expect(itemsUrl('films', { collection: 'c:Univers Marvel', sort: 'title', limit: 50 })).toBe(
-      '/api/libraries/films/items?collection=c%3AUnivers%20Marvel&limit=50',
-    );
+    expect(
+      itemsUrl('films', { collection: 'custom:univers marvel', sort: 'title', limit: 50 }),
+    ).toBe('/api/libraries/films/items?collection=custom%3Aunivers%20marvel&limit=50');
   });
 });
 

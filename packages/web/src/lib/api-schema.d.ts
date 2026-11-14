@@ -1429,6 +1429,924 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/libraries/{id}/collections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The collections of a movie library, with their images and where they stand
+         * @description The effective collections (the owner’s choices taken in): TMDB’s `tmdb:<id>` and the owner’s own `custom:<name>`, each with the movies it holds and TMDB lists, the image chosen for its poster and background, and for each media server that is set up the state of each image: `default` (nothing chosen), `pending` (to send, or changed since), `sent`, `missing` (the server has no such collection yet) or `error`. 409 `library.no-collections` for a library that writes no NFO.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    key: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            servers: ("plex" | "jellyfin")[];
+                            /** @description Collections with an image to send. */
+                            pending: number;
+                            collections: {
+                                /** @description `tmdb:<id>` or `custom:<normalized name>`. */
+                                key: string;
+                                name: string;
+                                custom: boolean;
+                                tmdbId: number | null;
+                                /** @description Movies of it the library holds. */
+                                held: number;
+                                /** @description Movies TMDB lists. */
+                                total: number | null;
+                                films: {
+                                    tmdbId: number | null;
+                                    title: string;
+                                    year: number | null;
+                                    present: boolean;
+                                    itemId: string | null;
+                                }[];
+                                images: {
+                                    poster: {
+                                        /** @enum {string} */
+                                        type: "poster" | "fanart";
+                                        /** @enum {string} */
+                                        format: "jpeg" | "png";
+                                        /** @description SHA-256 of the image. */
+                                        hash: string;
+                                        source: {
+                                            /** @enum {string} */
+                                            type: "tmdb" | "film" | "url";
+                                            url: string | null;
+                                            language: string | null;
+                                            /** @description The movie’s title for `film`. */
+                                            label: string | null;
+                                        };
+                                        chosenAt: string;
+                                    } | null;
+                                    fanart: {
+                                        /** @enum {string} */
+                                        type: "poster" | "fanart";
+                                        /** @enum {string} */
+                                        format: "jpeg" | "png";
+                                        /** @description SHA-256 of the image. */
+                                        hash: string;
+                                        source: {
+                                            /** @enum {string} */
+                                            type: "tmdb" | "film" | "url";
+                                            url: string | null;
+                                            language: string | null;
+                                            /** @description The movie’s title for `film`. */
+                                            label: string | null;
+                                        };
+                                        chosenAt: string;
+                                    } | null;
+                                };
+                                /** @description Only the servers that are set up. */
+                                servers: {
+                                    /** @enum {string} */
+                                    kind: "plex" | "jellyfin";
+                                    states: {
+                                        poster: {
+                                            /** @enum {string} */
+                                            state: "default" | "pending" | "sent" | "missing" | "error";
+                                            at: string | null;
+                                            message: string | null;
+                                        };
+                                        fanart: {
+                                            /** @enum {string} */
+                                            state: "default" | "pending" | "sent" | "missing" | "error";
+                                            at: string | null;
+                                            message: string | null;
+                                        };
+                                    };
+                                }[];
+                                /** @enum {string} */
+                                status: "pending" | "error" | "missing" | "sent" | "chosen" | "default";
+                            }[];
+                        };
+                    };
+                };
+                /** @description Default Response */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Default Response */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Default Response */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/libraries/{id}/collections/{key}/images": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The images one can choose from for a collection
+         * @description TMDB’s posters and backgrounds in every language (`null` for the owner’s own collection, which TMDB does not know) and the poster and background in place for each movie of it the library holds.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    key: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            tmdb: {
+                                poster: {
+                                    path: string;
+                                    language: string | null;
+                                    width: number;
+                                    height: number;
+                                    rating: number | null;
+                                    votes: number;
+                                }[];
+                                fanart: {
+                                    path: string;
+                                    language: string | null;
+                                    width: number;
+                                    height: number;
+                                    rating: number | null;
+                                    votes: number;
+                                }[];
+                            } | null;
+                            films: {
+                                itemId: string;
+                                title: string;
+                                year: number | null;
+                                poster: boolean;
+                                fanart: boolean;
+                            }[];
+                        };
+                    };
+                };
+                /** @description Default Response */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Default Response */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Default Response */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/libraries/{id}/collections/{key}/images/{type}/file": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The image chosen for a collection */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    key: string;
+                    type: "poster" | "fanart";
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": string;
+                    };
+                };
+                /** @description Default Response */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Default Response */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Default Response */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/libraries/{id}/collections/{key}/images/{type}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Chooses the image of a collection
+         * @description `source` `tmdb` with one of the provider’s paths (`GET …/images`), `film` with the `itemId` of one of the collection’s movies (its own image), or `url` with an address (fetched by the server under the same limits as a movie’s image). The image is downloaded and kept in Kinoshelf’s data; every server where it was sent becomes `pending`. Nothing is sent to a server here.
+         */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    key: string;
+                    type: "poster" | "fanart";
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        source: "tmdb" | "film" | "url";
+                        value: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Default Response */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Default Response */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Default Response */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Default Response */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Default Response */
+                502: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        post?: never;
+        /**
+         * Drops the choice made for a collection’s image
+         * @description Back to no choice. The server keeps the last image it was sent: Kinoshelf cannot take it back.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    key: string;
+                    type: "poster" | "fanart";
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Default Response */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Default Response */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Default Response */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/libraries/{id}/collections/send": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The latest send of collection images */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    key: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            send: {
+                                /** @enum {string} */
+                                status: "running" | "done" | "failed";
+                                done: number;
+                                total: number;
+                                current: string | null;
+                                outcomes: {
+                                    key: string;
+                                    name: string;
+                                    sent: number;
+                                    missing: number;
+                                    failures: {
+                                        /** @enum {string} */
+                                        server: "plex" | "jellyfin";
+                                        /** @enum {string} */
+                                        type: "poster" | "fanart";
+                                        error: string;
+                                    }[];
+                                }[];
+                                error: {
+                                    code: string;
+                                    params?: {
+                                        [key: string]: string | number;
+                                    };
+                                } | null;
+                            } | null;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Default Response */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        /**
+         * Sends the images chosen for collections to the media servers
+         * @description Starts the send and answers 202 at once; `GET` of the same path follows it (the `progress` event announces each step). Sends what is `pending`, `missing` or `error` for the collections named in `keys`, or all of them. A collection a server does not have yet becomes `missing` and is sent when the server creates it. 409 `collection.send-in-progress`.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    key: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        keys?: string[];
+                    };
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                202: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {string} */
+                            status: "running" | "done" | "failed";
+                            done: number;
+                            total: number;
+                            current: string | null;
+                            outcomes: {
+                                key: string;
+                                name: string;
+                                sent: number;
+                                missing: number;
+                                failures: {
+                                    /** @enum {string} */
+                                    server: "plex" | "jellyfin";
+                                    /** @enum {string} */
+                                    type: "poster" | "fanart";
+                                    error: string;
+                                }[];
+                            }[];
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            } | null;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Default Response */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Default Response */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/libraries/{id}/collections/{key}/rename": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Renames an owner’s own collection on all its movies
+         * @description Changes the name of the override of every movie of a `custom:` collection and writes their NFO again (one per version in a multi-version movie), keeping the image chosen. `dryRun` only counts the NFO. 409 `collection.not-custom` for a collection of TMDB’s.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    key: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        name: string;
+                        dryRun?: boolean;
+                    };
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description The collection’s key under its new name. */
+                            key: string;
+                            movies: number;
+                            /** @description NFO written (or to write, for a dry run). */
+                            rewritten: number;
+                            unchanged: number;
+                            /** @description NFO edited since: left as they are. */
+                            kept: number;
+                            missing: number;
+                            batchId: string | null;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Default Response */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Default Response */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Default Response */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Default Response */
+                502: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/libraries": {
         parameters: {
             query?: never;
@@ -2272,7 +3190,7 @@ export interface paths {
         };
         /**
          * What a library holds, as its last scan saw it
-         * @description Read from the snapshot a scan leaves, never from the disk: listing costs nothing, and transfers and undos keep it in step. `state` filters (`missing-nfo` and `missing-artwork` look at the files, so one without either shows under both); `q` matches the title or the file name; `multi=true` keeps the works held in several versions, whatever the state. `counts` do not depend on the filters. `scannedAt` is `null` until a scan of the source has ended; `scan` is the one queued or running. `writes` says which columns the profile gives a page. In a movie library that writes NFO, `collections` is true: each movie carries its `collection`, `collection` (`in`, `out`, `incomplete`, or a key `t:<id>` / `c:<name>`) narrows the list and `sort` orders it, `dir` (`asc` or `desc`) turning it over (a collection's movies by year, movies in none last; each sort has its own default direction). `collectionCounts` counts movies for those filters.
+         * @description Read from the snapshot a scan leaves, never from the disk: listing costs nothing, and transfers and undos keep it in step. `state` filters (`missing-nfo` and `missing-artwork` look at the files, so one without either shows under both); `q` matches the title or the file name; `multi=true` keeps the works held in several versions, whatever the state. `counts` do not depend on the filters. `scannedAt` is `null` until a scan of the source has ended; `scan` is the one queued or running. `writes` says which columns the profile gives a page. In a movie library that writes NFO, `collections` is true and `collection` (a key `tmdb:<id>` or `custom:<name>`, see `GET /api/libraries/{id}/collections`) narrows the list to the movies filed under it. `sort` orders it (`title`, `year`), `dir` (`asc` or `desc`) turning it over; each sort has its own default direction.
          */
         get: {
             parameters: {
@@ -2281,7 +3199,7 @@ export interface paths {
                     multi?: boolean;
                     q?: string;
                     collection?: string;
-                    sort?: "title" | "collection" | "year";
+                    sort?: "title" | "year";
                     dir?: "asc" | "desc";
                     limit?: number;
                     offset?: number;
@@ -2301,12 +3219,6 @@ export interface paths {
                     };
                     content: {
                         "application/json": {
-                            collectionCounts: {
-                                all: number;
-                                in: number;
-                                out: number;
-                                incomplete: number;
-                            };
                             library: {
                                 /** @description The library files its movies under collections (it writes NFO). */
                                 collections: boolean;
@@ -2421,17 +3333,6 @@ export interface paths {
                                         size: number;
                                     } | null;
                                 }[];
-                                collection: {
-                                    /** @description Stable id of the collection in a library: `t:<TMDB id>` or `c:<name>`. */
-                                    key: string;
-                                    name: string;
-                                    /** @description The owner’s own collection: it has no TMDB id. */
-                                    custom: boolean;
-                                    /** @description Movies of it that the library holds. */
-                                    held: number;
-                                    /** @description Movies TMDB lists in it; `null` for a custom collection, or when unknown. */
-                                    total: number | null;
-                                } | null;
                             }[];
                         };
                     };
@@ -2586,7 +3487,7 @@ export interface paths {
                                 choice: "tmdb" | "none" | "custom";
                                 name: string | null;
                                 effective: {
-                                    /** @description Stable id of the collection in a library: `t:<TMDB id>` or `c:<name>`. */
+                                    /** @description Stable id of the collection in a library: `tmdb:<TMDB id>` or `custom:<normalized name>`. */
                                     key: string;
                                     name: string;
                                     /** @description The owner’s own collection: it has no TMDB id. */
@@ -5913,7 +6814,7 @@ export interface paths {
                 query?: {
                     /** @description This level and above. */
                     level?: "debug" | "info" | "warn" | "error";
-                    component?: "server" | "http" | "scan" | "transfer" | "watcher" | "tmdb" | "notify";
+                    component?: "server" | "http" | "scan" | "transfer" | "watcher" | "tmdb" | "notify" | "collections";
                     q?: string;
                     minutes?: number;
                     limit?: number;
@@ -5941,7 +6842,7 @@ export interface paths {
                                 /** @enum {unknown} */
                                 level: "debug" | "info" | "warn" | "error";
                                 /** @enum {unknown} */
-                                component: "server" | "http" | "scan" | "transfer" | "watcher" | "tmdb" | "notify";
+                                component: "server" | "http" | "scan" | "transfer" | "watcher" | "tmdb" | "notify" | "collections";
                                 message: string;
                                 /** @description The job the line is about, if any. */
                                 job: string | null;

@@ -69,20 +69,24 @@ test.describe('the images of a movie', () => {
     await expect(dialog.getByRole('button', { name: 'Apply' })).toBeDisabled();
 
     // The library's language is English here: its images come first.
-    const logos = dialog.getByRole('list', { name: 'TMDB images' }).getByRole('button');
+    const logos = dialog.getByRole('radiogroup', { name: 'TMDB images' }).getByRole('radio');
     await expect(logos).toHaveCount(2);
     await logos.first().click();
-    await expect(logos.first()).toHaveAttribute('aria-pressed', 'true');
+    await expect(logos.first()).toBeChecked();
 
     // A choice is kept on its tab while another one is looked at.
     await dialog.getByRole('tab', { name: /Poster/ }).click();
-    await dialog.getByRole('list', { name: 'TMDB images' }).getByRole('button').nth(1).click();
+    await dialog.getByRole('radiogroup', { name: 'TMDB images' }).getByRole('radio').nth(1).click();
     await expect(dialog.getByText('2 changes pending: poster.jpg, clearlogo.png')).toBeVisible();
 
     // Clicking a chosen image again takes the choice back.
-    await dialog.getByRole('list', { name: 'TMDB images' }).getByRole('button').nth(1).click();
+    await dialog.getByRole('radiogroup', { name: 'TMDB images' }).getByRole('radio').nth(1).click();
     await expect(dialog.getByText('1 change pending: clearlogo.png')).toBeVisible();
-    await dialog.getByRole('list', { name: 'TMDB images' }).getByRole('button').first().click();
+    await dialog
+      .getByRole('radiogroup', { name: 'TMDB images' })
+      .getByRole('radio')
+      .first()
+      .click();
 
     await dialog.getByRole('button', { name: 'Apply' }).click();
     await expect(dialog).toBeHidden();

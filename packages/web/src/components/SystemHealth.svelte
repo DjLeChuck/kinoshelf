@@ -102,6 +102,7 @@
   {:else}
     <p
       class="alert"
+      class:notice={summary === 'ok'}
       class:alert-warn={summary === 'warn'}
       class:alert-danger={summary === 'danger'}
       role={summary === 'danger' ? 'alert' : 'status'}

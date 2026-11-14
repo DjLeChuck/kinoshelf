@@ -89,6 +89,11 @@ describe('catalogs', () => {
       'web.tmdb.kinds.cache',
       'web.tmdb.kind.images',
       'web.system.tab.maintenance',
+      'web.collections.view.collections',
+      'web.collections.images',
+      'web.collections.source.tmdb',
+      'web.collections.source.tmdb.short',
+      'web.collections.image.tab.tmdb',
     ];
     const identical = (Object.keys(en) as (keyof typeof en)[]).filter(
       (key) => fr[key] === en[key] && !key.startsWith('entry.') && !SAME_IN_BOTH.includes(key),

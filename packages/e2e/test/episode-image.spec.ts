@@ -64,7 +64,7 @@ test('changes the one image of an episode held in two versions, for both', async
     2,
   );
   // An episode has no button of its own: no generation of the NFO, no rename, no version.
-  await expect(page.getByRole('button', { name: 'Generate the missing NFO…' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Write the missing files…' })).toHaveCount(0);
   await expect(versions.getByRole('button')).toHaveCount(0);
 
   // The panel has one image for the episode, not one per version, and a button to change it.
@@ -78,7 +78,7 @@ test('changes the one image of an episode held in two versions, for both', async
   // A single kind of image: the tabs are not shown.
   await expect(dialog.getByRole('tablist')).toBeHidden();
   await expect(dialog.getByText(/for every version of the episode/)).toBeVisible();
-  await dialog.getByRole('list', { name: 'TMDB images' }).getByRole('button').first().click();
+  await dialog.getByRole('radiogroup', { name: 'TMDB images' }).getByRole('radio').first().click();
   await dialog.getByRole('button', { name: 'Apply' }).click();
   await expect(dialog).toBeHidden();
   await expect(page.getByText(/Images updated/)).toBeVisible();

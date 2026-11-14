@@ -1,5 +1,4 @@
 import type { Translate } from '@kinoshelf/i18n';
-import { COLLECTION_FILTERS, type CollectionFilter, type ItemCollection } from './collections.js';
 import type { Counts, ShowFilter } from './library-items.js';
 import { oneOf } from './routes.js';
 
@@ -8,8 +7,8 @@ import { oneOf } from './routes.js';
 // a first click sorts) are tested apart from the page that draws them.
 
 export type SortDirection = 'asc' | 'desc';
-/** Movies sort by title, year or collection; shows by title, year or what they lack. */
-export type SortColumn = 'title' | 'year' | 'collection' | 'missing';
+/** Movies sort by title or year; shows by title, year or what they lack. */
+export type SortColumn = 'title' | 'year' | 'missing';
 
 export interface SortState {
   readonly sort: SortColumn;
@@ -19,7 +18,6 @@ export interface SortState {
 /** A column's first click: a name reads upwards, a year or a count shows the most first. */
 export const FIRST_DIRECTION: Readonly<Record<SortColumn, SortDirection>> = {
   title: 'asc',
-  collection: 'asc',
   year: 'desc',
   missing: 'desc',
 };
@@ -99,8 +97,8 @@ export const nothingToHandle = (chips: readonly Chip[], active: ShowFilter | und
 export interface ListFilters {
   readonly state: ShowFilter | undefined;
   readonly multi: boolean;
-  /** `in`, `out`, `incomplete`, or the key of one collection. */
-  readonly collection: CollectionFilter | undefined;
+  /** The key of the one collection the list is narrowed to (`tmdb:<id>`, `custom:<name>`). */
+  readonly collection: string | undefined;
 }
 
 /** What the Filters button's badge counts: the state, the versions, the collection. */
@@ -124,40 +122,7 @@ export function activePills(filters: ListFilters): readonly Pill[] {
 }
 
 export function pillLabel(pill: Pill, t: Translate, collectionName: string): string {
-  if (pill.id === 'multi') {
-    return t('web.library.filter.multi-version');
-  }
-  const named = (COLLECTION_FILTERS as readonly string[]).includes(pill.key);
-  return named
-    ? t(`web.collection.filter.${pill.key as (typeof COLLECTION_FILTERS)[number]}`)
+  return pill.id === 'multi'
+    ? t('web.library.filter.multi-version')
     : t('web.collection.filter.active', { name: collectionName });
-}
-
-/** The line that opens a group in a list sorted by collection. */
-export type GroupHeading =
-  { readonly kind: 'collection'; readonly collection: ItemCollection } | { readonly kind: 'none' };
-
-/** The heading a row opens, if any: a list sorted by collection starts a group when the collection changes. */
-export function groupHeading(
-  items: readonly { readonly collection: ItemCollection | null }[],
-  index: number,
-  sort: SortColumn,
-): GroupHeading | undefined {
-  if (sort !== 'collection') {
-    return undefined;
-  }
-  const collection = items[index]?.collection ?? null;
-  if (index > 0 && (items[index - 1]?.collection?.key ?? null) === (collection?.key ?? null)) {
-    return undefined;
-  }
-  return collection === null ? { kind: 'none' } : { kind: 'collection', collection };
-}
-
-/** `Dragons - Saga · 2 sur 3`, the owner's own collections having no total to count against. */
-export function headingLabel(heading: GroupHeading, t: Translate): string {
-  if (heading.kind === 'none') {
-    return t('web.collection.group.none');
-  }
-  const { name, held, total, custom } = heading.collection;
-  return custom || total === null ? name : t('web.collection.group', { name, held, total });
 }

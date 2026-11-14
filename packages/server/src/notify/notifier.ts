@@ -3,6 +3,7 @@ import type { Config } from '@kinoshelf/core';
 import type { Translate } from '@kinoshelf/i18n';
 import type { Execution } from '../executions.js';
 import type { Job } from '../jobs.js';
+import type { CollectionImageServer } from './collection-images.js';
 import { deliver, type DeliveryOptions, type DeliveryResult } from './delivery.js';
 import { buildRequest, type HttpRequest, type WebhookConfig } from './formats.js';
 import { JellyfinClient } from './jellyfin.js';
@@ -164,6 +165,11 @@ export class Notifier {
   /** Whether anything is configured to talk to. */
   get targets(): { webhooks: number; plex: boolean; jellyfin: boolean } {
     return { webhooks: this.webhooks.length, plex: !!this.plex, jellyfin: !!this.jellyfin };
+  }
+
+  /** The media servers that can take a collection's images, as configured now. */
+  mediaServers(): CollectionImageServer[] {
+    return [this.plex, this.jellyfin].filter((server) => server !== undefined);
   }
 
   /** The last notifications and refreshes, newest first (since the server started). */

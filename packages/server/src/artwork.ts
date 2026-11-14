@@ -121,7 +121,7 @@ export interface ArtworkDeps {
   readonly changed?: (folder: { path: string; kind: 'movie' | 'series' }) => void;
 }
 
-const listed = (image: ImageCandidate): ListedImage => ({
+export const listed = (image: ImageCandidate): ListedImage => ({
   path: image.path,
   language: image.language ?? null,
   width: image.width,
@@ -144,7 +144,7 @@ const formatOfName = (name: string): ImageFormat =>
 const formatOfPath = (path: string): ImageFormat => formatOfName(path);
 
 /** Sniffs the first bytes: what the file says it is, whatever its name. */
-const sniff = (bytes: Uint8Array): ImageFormat | undefined =>
+export const sniff = (bytes: Uint8Array): ImageFormat | undefined =>
   bytes[0] === 0x89 && bytes[1] === 0x50
     ? 'png'
     : bytes[0] === 0xff && bytes[1] === 0xd8

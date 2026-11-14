@@ -538,18 +538,53 @@ section or bulk action (`hasCollections`, `library.collections` of `GET .../item
 - **`<set>`**: `<set tmdbcolid="645"><name>…</name><overview>…</overview></set>` for TMDB's, `<set><name>…</name></set>`
   for the owner's, nothing for none. Never the short form `<set>Name</set>`: Plex's agent does not read it.
 - **The rows carry it** (`library_items.collection_key|name|total`, refreshed by `regroup`, so every write path
-  keeps them right): `t:<id>` or `c:<name>`. What the library holds of a collection is counted when read
+  keeps them right): `tmdb:<id>` or `custom:<normalized name>` (the name folded as `sort_key` does). What the library holds of a collection is counted when read
   (`HELD`, a movie once whatever its versions), so a film arriving updates the `2/3` with no TMDB call.
 - **Changing it rewrites NFO, which is the one exception to "never overwritten"** (`CollectionEditor`,
   `PUT /api/libraries/{id}/collection`, `rewriteNfo`): the NFO is generated whole again, and only if Kinoshelf
   wrote it and nobody touched it since (`madeByUs`), else it is `kept` and the answer says so. The old one goes
   to `<config>/replaced/` and the batch (`replaced` entries) can be undone. Nothing moves. TMDB is read before
   anything changes, so a failure leaves the choice as it was.
-- **The web** (`CollectionDialog`, `lib/collections.ts`): the column and the Collection group of the
-  Filters panel show once a library has a collection (`?collection=in|out|incomplete|<key>`,
-  `?sort=collection` in the URL), filing stays offered in the bar before that. Sorted by collection, a line
-  opens each group (`Dragons - Saga · 2 of 3`, then "No collection"). A movie's page holds one fact line (name, the list's pastille, "Show in the list", an Edit / Set button); the edition is `CollectionDialog`, which also serves the bar's "Set the collection…" in multiple mode (nothing preselected, no saga, no preview). Every settled movie can be ticked, not only the ones
-  to rename. Collection images are out of scope: no convention is shared by the players.
+- **The web** (`CollectionDialog`, `CollectionsView`, `lib/collections.ts`): a movie library that writes NFO has a
+  **Films | Collections** choice beside its name (`?vue=collections&collection=<key>`, the key being the selected
+  collection there and a filter of the list in Films: "Show the movies" sets it, a removable pill says it). The list
+  has no collection column, filter or sort any more, only the bar's "Set the collection…" (`CollectionDialog`,
+  which also serves a movie's page: one fact line with the name, the pastille, "Show the collection", Edit / Set).
+  Every settled movie can be ticked, not only the ones to rename.
+- **The Collections screen** (`collection-screen.ts`, `collection-routes.ts`, `collection-images.ts`,
+  `collection-tasks.ts`; `CollectionsView`, `CollectionRenameDialog`, and `ImagesDialog` for the images: its `collection` prop gives the poster and background tabs a TMDB / movies-of-the-collection choice, an address with no preview, and `collectionsApi.choose` instead of a write to a folder):
+  `GET /api/libraries/{id}/collections` lists the effective collections (the owner's choices taken in) with their
+  movies (TMDB's parts the library lacks included), the image chosen for the poster and the background, and, for each
+  server that is set up, the state of each image. A collection exists as soon as one movie of the library is in it.
+  **Choosing an image** (`PUT .../collections/{key}/images/{poster|fanart}`, source `tmdb` with a path TMDB offers
+  for `/collection/{id}/images`, `film` with a movie's own image, or `url` fetched under the same limits as a
+  movie's) keeps the bytes in `<config>/collection-images/` (random names: a rename moves rows only; the folders of
+  movies are never used, a collection has none) and the choice in `collection_images`. A TMDB refresh never touches
+  it. Nothing is sent by a choice.
+- **States per image and server** (`syncState`, tested): `default` (nothing chosen), `pending` (chosen and no send
+  left a trace, or the hash sent is not the hash chosen), `sent` (date and hash kept), `missing` (the server has no
+  such collection), `error` (message kept, also logged under `collections`). `collection_sync` holds only what a
+  send left, so `pending` is computed, never stored.
+- **Sending** (`POST .../collections/send`, a background task like an undo: 202, `GET` follows it, the `progress`
+  event announces it, 409 `collection.send-in-progress`): `PlexClient`/`JellyfinClient` implement
+  `CollectionImageServer` (`notify/collection-images.ts`). The collection is found by **name** (folded), in the
+  Plex section holding the library's folder (`sectionFor`, path mappings as for refreshes) or among Jellyfin's
+  `BoxSet`s; several of the same name are told apart by the movies they hold (`pickCollection`); the id is kept in
+  `collection_remote` and looked for again once on a 404. Plex: `POST /library/metadata/{id}/posters|arts` with the
+  bytes (an uploaded image becomes the selected one, as python-plexapi relies on). Jellyfin: base64 body with the
+  image's `Content-Type` to `/Items/{id}/Images/Primary|Backdrop`, the first backdrop deleted before so the new one
+  replaces it. **Checked by hand on a real Plex and a real Jellyfin** (poster and background sent, the image shows):
+  neither server creates a collection from the NFO's `<set>` for a lone movie (Jellyfin: "Automatically add to
+  collection" and two movies at least, then a full scan of its library), so a collection holding one movie stays
+  `missing` there. **Not checked**: whether a Jellyfin "replace all images" refresh drops the image sent (expected: it
+  does, and Kinoshelf cannot see it), and how Plex's TV apps draw a collection's background.
+- A collection a server lacks is `missing`; the header's button counts only what can go now (`isDue`) and says how many wait (`isWaiting`), a collection's own button sends again anyway; after each scan of the library and every 15 minutes `retryMissing` looks
+  again, and sends **only what just left `missing`** (the owner approved that image). A `pending` born of a new
+  choice is never sent by itself. Kodi is out of scope; the stored images are what a later write to its "Movie Set
+  Information Folder" would read.
+- **Renaming an owner's own collection** (`POST .../collections/{key}/rename`, `dryRun` counts the NFO): the
+  override's name changes on all its movies through `CollectionEditor.apply` (every NFO of every version, one batch,
+  undoable), the image follows the new key, what was sent does not (the servers will create a new collection).
 
 ## List header
 
@@ -557,9 +592,9 @@ A library's list has two rows above it (`ListToolbar`, `ListFilterRow`, `lib/lis
 in `list-filters.test.ts`). The **toolbar** is the search box and a Filters button (a non-modal panel: Escape or a
 click outside closes it, the focus goes back to the button; a sheet at the foot of the screen on a phone) whose badge
 counts the active filters. The panel holds the states with their counts (one at a time, clicking the active one
-clears it), "Several versions" and, for movies with collections, the Collection group. The **row below** holds the
+clears it) and "Several versions". The **row below** holds the
 chips of the states to handle (only those above 0, "All" always, the chosen one even at 0; "Nothing to handle" when
-none), the removable pills of the traits (versions, collection) and the "2 of 5 movies" status. The panel and the
+none), the removable pills of the traits (versions, and the collection when the list comes from the Collections view) and the "2 of 5 movies" status. The panel and the
 chips are the same filter.
 
 - **The search reads the title and the file's name**, never the folders (`search_key`:
@@ -567,9 +602,9 @@ chips are the same filter.
   search never calls it: a JS call per row was most of its cost.
 - **"Several versions" is not a state**: `multi=true` of `GET .../items` and `.../shows` combines with `state`
   (`multi-version` stays a key of `counts`, for its count, but is no longer a value of `state`).
-- **Sorting is the column headers'** (`SortButton` in a `<th aria-sort>`): movies by title, year, collection, shows
+- **Sorting is the column headers'** (`SortButton` in a `<th aria-sort>`): movies by title and year, shows
   by title, year, missing; `sort` and `dir` of both lists, `?sort=&dir=` in the URL with the defaults left out. A
-  first click goes up for a title or a collection, down for a year or a count (`FIRST_DIRECTION`, the server's
+  first click goes up for a title, down for a year or a count (`FIRST_DIRECTION`, the server's
   `DEFAULT_DIRECTION`: keep them equal). Filters and sort live in the URL, so changing library (a link with no
   query) resets them.
 

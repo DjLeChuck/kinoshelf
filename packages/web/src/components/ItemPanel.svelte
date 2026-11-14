@@ -5,7 +5,7 @@
   import { messageOf } from '../lib/errors.js';
   import { locale, t } from '../lib/i18n.svelte.js';
   import { movieMeta, versionsSummary } from '../lib/fiche.js';
-  import { pillOf } from '../lib/collections.js';
+  import { collectionsViewUrl, pillOf } from '../lib/collections.js';
   import type { Arrival, Settled } from '../lib/arrivals.js';
   import {
     canNameVersion,
@@ -187,7 +187,7 @@
     {preview}
     onedit={editable ? edit : undefined}
   >
-    {#if imagesNotice}<p class="alert" role="status">{imagesNotice}</p>{/if}
+    {#if imagesNotice}<p class="alert alert-info" role="status">{imagesNotice}</p>{/if}
     {#if detail.overview}<p>{detail.overview}</p>{:else}<p class="muted">
         {t('web.library.no-overview')}
       </p>{/if}
@@ -207,7 +207,7 @@
                 type="button"
                 class="link show"
                 onclick={() => {
-                  router.setQuery({ collection: effective.key });
+                  router.navigate(collectionsViewUrl(libraryId, effective.key));
                 }}>{t('web.collection.fact.show')}</button
               >
             {/if}

@@ -13,7 +13,7 @@ const CLASSIFICATIONS = [
   'unrecognized',
 ] as const;
 
-const errorInfo = {
+export const errorInfo = {
   type: 'object',
   required: ['code'],
   properties: {
@@ -1041,7 +1041,8 @@ export const collectionSchema = {
   properties: {
     key: {
       type: 'string',
-      description: 'Stable id of the collection in a library: `t:<TMDB id>` or `c:<name>`.',
+      description:
+        'Stable id of the collection in a library: `tmdb:<TMDB id>` or `custom:<normalized name>`.',
     },
     name: { type: 'string' },
     custom: { type: 'boolean', description: 'The owner’s own collection: it has no TMDB id.' },
@@ -1061,11 +1062,10 @@ export const collectionSchema = {
  */
 export const workSchema = {
   ...libraryItemSchema,
-  required: [...libraryItemSchema.required, 'versions', 'collection'],
+  required: [...libraryItemSchema.required, 'versions'],
   properties: {
     ...libraryItemSchema.properties,
     versions: { type: 'array', items: versionSchema },
-    collection: collectionSchema,
   },
 } as const;
 

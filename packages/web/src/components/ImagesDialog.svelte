@@ -16,6 +16,12 @@
     type ImageChoice,
     type ImageListing,
   } from '../lib/images.js';
+  import {
+    collectionsApi,
+    type CollectionCard,
+    type CollectionImageType,
+    type ImageListing as CollectionListing,
+  } from '../lib/collections.js';
   import type { Settings } from '../lib/settings.js';
 
   let {
@@ -23,6 +29,7 @@
     initial,
     kinds = IMAGE_KINDS,
     heading: headingOverride,
+    collection,
     onclose,
     ondone,
   }: {
@@ -34,14 +41,25 @@
     kinds?: readonly ImageKind[];
     /** What to call the work in the title, when the listing's title is not it. */
     heading?: string;
+    /**
+     * A collection's images instead of a work's: `base` is then the collection's API path
+     * (`collectionBase`). Besides TMDB's, the posters and backgrounds of its own movies can be
+     * chosen, and the choice is kept by Kinoshelf (sent to the servers apart), not written to a folder.
+     */
+    collection?: { readonly libraryId: string; readonly card: CollectionCard } | undefined;
     onclose: () => void;
     /** The images were replaced: what to tell the user. */
     ondone: (message: string) => void;
   } = $props();
 
-  type Pick = { readonly source: 'tmdb' | 'url'; readonly value: string };
+  type Pick = { readonly source: 'tmdb' | 'url' | 'film'; readonly value: string };
 
   let listing = $state<ImageListing | undefined>(undefined);
+  /** A collection's movies that have an image of their own to offer. */
+  let films = $state<CollectionListing['films']>([]);
+  /** Where a collection's image comes from: TMDB, or one of its movies. */
+  /* svelte-ignore state_referenced_locally */
+  let origin = $state<'tmdb' | 'film'>(collection?.card.tmdbId === null ? 'film' : 'tmdb');
   let failure = $state<unknown>(undefined);
   let language = $state(baseLanguage(locale.value));
   // Set from the prop once: the parent mounts the dialog for one opening.
@@ -65,7 +83,13 @@
 
   async function load(): Promise<void> {
     try {
-      listing = await api.get<ImageListing>(`${base}/images`);
+      if (collection) {
+        const found = await collectionsApi.images(collection.libraryId, collection.card.key);
+        films = found.films;
+        listing = collectionListing(found);
+      } else {
+        listing = await api.get<ImageListing>(`${base}/images`);
+      }
     } catch (error) {
       failure = error;
     }
@@ -80,6 +104,41 @@
     }
   }
   void load();
+
+  /** A collection's listing in the shape a work's has, so the dialog draws both the same way. */
+  function collectionListing(found: CollectionListing): ImageListing {
+    const card = collection?.card;
+    const chosen = (type: CollectionImageType) => {
+      const image = card?.images[type];
+      if (!image) {
+        return null;
+      }
+      return {
+        size: 0,
+        modified: Date.parse(image.chosenAt),
+        width: null,
+        height: null,
+        // The offered image the choice was made from, to say so on its tile.
+        path:
+          image.source.type === 'tmdb' && image.source.url
+            ? `/${image.source.url.split('/').pop() ?? ''}`
+            : null,
+      };
+    };
+    return {
+      title: card?.name ?? null,
+      year: null,
+      folder: '',
+      files: { poster: '', fanart: '', logo: null, thumb: null },
+      current: { poster: chosen('poster'), fanart: chosen('fanart'), logo: null, thumb: null },
+      candidates: {
+        poster: found.tmdb?.poster ?? [],
+        fanart: found.tmdb?.fanart ?? [],
+        logo: [],
+        thumb: [],
+      },
+    };
+  }
 
   const layout = $derived(KIND_LAYOUT[tab]);
   const names = $derived(
@@ -101,12 +160,14 @@
   const fileOf = (kind: ImageKind): string => listing?.files[kind] ?? '';
   const changes = $derived(kinds.filter((kind) => picks[kind] !== undefined));
   const summary = $derived(
-    changes.length === 0
-      ? t('web.images.summary.none')
-      : t('web.images.summary', {
-          count: changes.length,
-          files: changes.map(fileOf).join(', '),
-        }),
+    collection
+      ? t('web.collections.image.note')
+      : changes.length === 0
+        ? t('web.images.summary.none')
+        : t('web.images.summary', {
+            count: changes.length,
+            files: changes.map(fileOf).join(', '),
+          }),
   );
 
   // Thumbnails come through our own server: the browser never contacts TMDB.
@@ -131,6 +192,52 @@
       : undefined,
   );
 
+  // The movies of a collection that have an image of the kind being chosen, and the one picked.
+  const filmsOfTab = $derived(
+    films.filter((film) =>
+      tab === 'poster' ? film.poster : tab === 'fanart' ? film.fanart : false,
+    ),
+  );
+  const filmUrl = (itemId: string): string =>
+    workImageUrl(`/api/libraries/${collection?.libraryId ?? ''}/items/${itemId}`, tab, 0);
+  const chosenFilm = $derived(
+    picked?.source === 'film' ? films.find((film) => film.itemId === picked.value) : undefined,
+  );
+  const tmdbOff = $derived(collection?.card.tmdbId === null);
+  const countOf = (kind: ImageKind): number =>
+    collection
+      ? (listing?.candidates[kind].length ?? 0) +
+        films.filter((film) => (kind === 'poster' ? film.poster : film.fanart)).length
+      : (listing?.candidates[kind].length ?? 0);
+
+  function pickFilm(itemId: string): void {
+    picks =
+      picked?.source === 'film' && picked.value === itemId
+        ? withoutTab(picks, tab)
+        : { ...picks, [tab]: { source: 'film', value: itemId } };
+  }
+
+  /** Arrow keys move through the tiles of a radiogroup; the one reached is the one chosen. */
+  function moveTile(event: KeyboardEvent): void {
+    const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[event.key];
+    const group = event.currentTarget instanceof HTMLElement ? event.currentTarget : undefined;
+    if (step === undefined || !group) {
+      return;
+    }
+    const tiles = [...group.querySelectorAll<HTMLButtonElement>('[role="radio"]')];
+    const at = tiles.findIndex((tile) => tile === document.activeElement);
+    const next = tiles[(at + step + tiles.length) % tiles.length];
+    if (next && at !== -1) {
+      event.preventDefault();
+      next.focus();
+      next.click();
+    }
+  }
+
+  /** The tile that takes the Tab key: the chosen one, else the first. */
+  const stop = (checked: boolean, first: boolean): number =>
+    checked || (first && picked === undefined) ? 0 : -1;
+
   function choose(candidate: Candidate): void {
     // The image already in place is no change: choosing it again leaves nothing to write.
     const same = picked?.source === 'tmdb' && picked.value === candidate.path;
@@ -153,9 +260,14 @@
     }
     addressError = false;
     addressFailure = undefined;
-    loadingAddress = true;
     const kind = tab;
     const url = address.trim();
+    if (collection) {
+      // Nothing to preview for a collection: the server downloads it when the choice is made.
+      picks = { ...picks, [kind]: { source: 'url', value: url } };
+      return;
+    }
+    loadingAddress = true;
     try {
       const found = await api.post<AddressPreview>(`${base}/images/preview`, { type: kind, url });
       previews = { ...previews, [kind]: { ...found, url } };
@@ -200,13 +312,31 @@
   async function apply(): Promise<void> {
     applying = true;
     failure = undefined;
-    const images: ImageChoice[] = changes.flatMap((type) => {
-      const pick = picks[type];
-      return pick ? [{ type, source: pick.source, value: pick.value }] : [];
-    });
     try {
-      await api.post(`${base}/images`, { images });
-      ondone(t('web.images.done'));
+      if (collection) {
+        for (const type of changes) {
+          const pick = picks[type];
+          if (pick && (type === 'poster' || type === 'fanart')) {
+            await collectionsApi.choose(
+              collection.libraryId,
+              collection.card.key,
+              type,
+              pick.source,
+              pick.value,
+            );
+          }
+        }
+        ondone(t('web.collections.image.done', { name: collection.card.name }));
+      } else {
+        const images: ImageChoice[] = changes.flatMap((type) => {
+          const pick = picks[type];
+          return pick && pick.source !== 'film'
+            ? [{ type, source: pick.source, value: pick.value }]
+            : [];
+        });
+        await api.post(`${base}/images`, { images });
+        ondone(t('web.images.done'));
+      }
       dialog?.close();
     } catch (error) {
       failure = error;
@@ -246,9 +376,11 @@
         <h2 id="images-title">{heading}</h2>
         <p class="muted">
           {t(
-            kinds.length === 1 && kinds[0] === 'thumb'
-              ? 'web.images.intro.episode'
-              : 'web.images.intro',
+            collection
+              ? 'web.collections.image.intro'
+              : kinds.length === 1 && kinds[0] === 'thumb'
+                ? 'web.images.intro.episode'
+                : 'web.images.intro',
           )}
         </p>
       </div>
@@ -277,7 +409,7 @@
             onkeydown={moveTab}
           >
             {t(`web.images.tab.${kind}`)}
-            <span class="count">{listing?.candidates[kind].length ?? ''}</span>
+            <span class="count">{listing ? countOf(kind) : ''}</span>
             {#if picks[kind]}<span class="dot" aria-hidden="true"></span>{/if}
           </button>
         {/each}
@@ -324,6 +456,8 @@
                   >
                     {#if chosenCandidate}
                       <img src={bigThumb(chosenCandidate.path)} alt="" />
+                    {:else if chosenFilm}
+                      <img src={filmUrl(chosenFilm.itemId)} alt="" />
                     {:else if chosenAddress}
                       <img src={chosenAddress.data} alt="" />
                     {:else}
@@ -333,9 +467,11 @@
                   <p class="caption">
                     {chosenCandidate
                       ? describe(chosenCandidate)
-                      : chosenAddress
-                        ? `${t('web.images.source.url')} · ${sizeLabel(chosenAddress)}`
-                        : t('web.images.source.url')}
+                      : chosenFilm
+                        ? t('web.collections.source.film', { title: chosenFilm.title })
+                        : chosenAddress
+                          ? `${t('web.images.source.url')} · ${sizeLabel(chosenAddress)}`
+                          : t('web.images.source.url')}
                   </p>
                   <button type="button" class="btn discard" onclick={discard}>
                     {t('web.images.discard')}
@@ -344,90 +480,152 @@
                   <p class="none">{t('web.images.unchanged')}</p>
                 {/if}
               </section>
-              <dl>
-                <dt>{t('web.images.file')}</dt>
-                <dd class="mono">{fileOf(tab)}</dd>
-                <dt>{t('web.images.folder')}</dt>
-                <dd class="mono path">
-                  {#each listing.folder.split('/') as part, index (index)}{#if index > 0}/<wbr
-                      />{/if}{part}{/each}/
-                </dd>
-              </dl>
+              {#if !collection}<dl>
+                  <dt>{t('web.images.file')}</dt>
+                  <dd class="mono">{fileOf(tab)}</dd>
+                  <dt>{t('web.images.folder')}</dt>
+                  <dd class="mono path">
+                    {#each listing.folder.split('/') as part, index (index)}{#if index > 0}/<wbr
+                        />{/if}{part}{/each}/
+                  </dd>
+                </dl>{/if}
             </div>
           </aside>
 
           <section class="choose">
             <div class="list">
               <div class="bar">
-                <div role="group" aria-label={t('web.images.language.group')} class="langs">
-                  <button
-                    type="button"
-                    class="pill"
-                    aria-pressed={filter === 'all'}
-                    onclick={() => {
-                      filter = 'all';
-                    }}>{t('web.images.language.all')}</button
-                  >
-                  {#each languages as code (code)}
+                {#if collection}
+                  <div role="group" aria-label={t('web.collections.image.tabs')} class="langs">
+                    {#each ['tmdb', 'film'] as const as source (source)}
+                      <button
+                        type="button"
+                        class="pill"
+                        aria-pressed={origin === source}
+                        disabled={source === 'tmdb' && tmdbOff}
+                        onclick={() => {
+                          origin = source;
+                        }}>{t(`web.collections.image.tab.${source}`)}</button
+                      >
+                    {/each}
+                  </div>
+                {/if}
+                {#if !collection || origin === 'tmdb'}
+                  <div role="group" aria-label={t('web.images.language.group')} class="langs">
                     <button
                       type="button"
                       class="pill"
-                      aria-pressed={filter !== 'all' && filter.code === code}
+                      aria-pressed={filter === 'all'}
                       onclick={() => {
-                        filter = { code };
-                      }}>{languageLabel(code)}</button
+                        filter = 'all';
+                      }}>{t('web.images.language.all')}</button
                     >
-                  {/each}
-                </div>
-                <span class="muted sort">{t('web.images.sort')}</span>
-              </div>
-
-              {#if candidates.length === 0}
-                <p class="muted">{t('web.images.empty', { file: fileOf(tab) })}</p>
-              {:else}
-                <ul
-                  class="grid"
-                  aria-label={t('web.images.grid')}
-                  style:grid-template-columns={`repeat(auto-fill, minmax(${layout.min}px, 1fr))`}
-                >
-                  {#each shown as candidate (candidate.path)}
-                    {@const selected = picked?.source === 'tmdb' && picked.value === candidate.path}
-                    <li>
+                    {#each languages as code (code)}
                       <button
                         type="button"
+                        class="pill"
+                        aria-pressed={filter !== 'all' && filter.code === code}
+                        onclick={() => {
+                          filter = { code };
+                        }}>{languageLabel(code)}</button
+                      >
+                    {/each}
+                  </div>
+                  <span class="muted sort">{t('web.images.sort')}</span>
+                {/if}
+              </div>
+
+              {#if collection && origin === 'film'}
+                {#if filmsOfTab.length === 0}
+                  <p class="muted">{t('web.collections.image.empty.film')}</p>
+                {:else}
+                  <div
+                    class="grid"
+                    role="radiogroup"
+                    aria-label={t('web.collections.image.film.grid')}
+                    tabindex="-1"
+                    style:grid-template-columns={`repeat(auto-fill, minmax(${layout.min}px, 1fr))`}
+                    onkeydown={moveTile}
+                  >
+                    {#each filmsOfTab as film, index (film.itemId)}
+                      {@const selected = picked?.source === 'film' && picked.value === film.itemId}
+                      <button
+                        type="button"
+                        role="radio"
                         class="card"
                         class:selected
-                        aria-pressed={selected}
+                        aria-checked={selected}
+                        tabindex={stop(selected, index === 0)}
                         onclick={() => {
-                          choose(candidate);
+                          pickFilm(film.itemId);
                         }}
                       >
-                        <span
-                          class="thumb"
-                          class:logo={tab === 'logo'}
-                          style:aspect-ratio={layout.ratio}
-                        >
-                          <img src={thumb(candidate.path)} alt="" loading="lazy" />
-                          {#if current?.path === candidate.path}
-                            <span class="badge">{t('web.images.current')}</span>
-                          {/if}
+                        <span class="thumb" style:aspect-ratio={layout.ratio}>
+                          <img src={filmUrl(film.itemId)} alt="" loading="lazy" />
                           {#if selected}<span class="tick" aria-hidden="true">✓</span>{/if}
                         </span>
                         <span class="line">
-                          <span class="lang">{languageLabel(candidate.language)}</span>
-                          <span class="muted">{sizeLabel(candidate)}</span>
-                        </span>
-                        <span class="muted rating">
-                          {candidate.rating === null
-                            ? ''
-                            : `★ ${candidate.rating.toFixed(1)} · `}{t('web.images.votes', {
-                            count: candidate.votes,
-                          })}
+                          <span class="lang">{film.title}</span>
+                          <span class="muted">{film.year ?? ''}</span>
                         </span>
                       </button>
-                    </li>
+                    {/each}
+                  </div>
+                {/if}
+              {:else if candidates.length === 0}
+                <p class="muted">
+                  {collection
+                    ? t('web.collections.image.empty.tmdb')
+                    : t('web.images.empty', { file: fileOf(tab) })}
+                </p>
+              {:else}
+                <div
+                  class="grid"
+                  role="radiogroup"
+                  aria-label={t('web.images.grid')}
+                  tabindex="-1"
+                  style:grid-template-columns={`repeat(auto-fill, minmax(${layout.min}px, 1fr))`}
+                  onkeydown={moveTile}
+                >
+                  {#each shown as candidate, index (candidate.path)}
+                    {@const selected = picked?.source === 'tmdb' && picked.value === candidate.path}
+                    <button
+                      type="button"
+                      role="radio"
+                      class="card"
+                      class:selected
+                      aria-checked={selected}
+                      tabindex={stop(selected, index === 0)}
+                      onclick={() => {
+                        choose(candidate);
+                      }}
+                    >
+                      <span
+                        class="thumb"
+                        class:logo={tab === 'logo'}
+                        style:aspect-ratio={layout.ratio}
+                      >
+                        <img src={thumb(candidate.path)} alt="" loading="lazy" />
+                        {#if current?.path === candidate.path}
+                          <span class="badge">{t('web.images.current')}</span>
+                        {/if}
+                        {#if selected}<span class="tick" aria-hidden="true">✓</span>{/if}
+                      </span>
+                      <span class="line">
+                        <span class="lang">{languageLabel(candidate.language)}</span>
+                        <span class="muted">{sizeLabel(candidate)}</span>
+                      </span>
+                      <span class="muted rating">
+                        {candidate.rating === null ? '' : `★ ${candidate.rating.toFixed(1)} · `}{t(
+                          'web.images.votes',
+                          {
+                            count: candidate.votes,
+                          },
+                        )}
+                      </span>
+                    </button>
                   {/each}
-                </ul>
+                </div>
               {/if}
             </div>
             <div class="custom">
@@ -437,7 +635,9 @@
                   id="images-address"
                   class="input"
                   type="url"
-                  placeholder={t('web.images.url.placeholder', { file: fileOf(tab) })}
+                  placeholder={collection
+                    ? 'https://…'
+                    : t('web.images.url.placeholder', { file: fileOf(tab) })}
                   bind:value={address}
                   aria-invalid={addressError}
                   onkeydown={(event) => {
@@ -465,6 +665,12 @@
                     size: sizeLabel(chosenAddress),
                     format: chosenAddress.format.toUpperCase(),
                   })}
+                </p>
+              {:else if collection}
+                <p class={picked?.source === 'url' ? 'ok' : 'muted'}>
+                  {picked?.source === 'url'
+                    ? t('web.collections.image.url.chosen')
+                    : t('web.collections.image.url.hint')}
                 </p>
               {:else}
                 <p class="muted">

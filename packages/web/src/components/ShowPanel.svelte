@@ -114,7 +114,7 @@
   {#if detail === undefined}
     <p class="muted" role="status">{t('web.loading')}</p>
   {:else}
-    {#if imagesNotice}<p class="alert" role="status">{imagesNotice}</p>{/if}
+    {#if imagesNotice}<p class="alert alert-info" role="status">{imagesNotice}</p>{/if}
     {#if detail.overview}<p>{detail.overview}</p>{:else}<p class="muted">
         {t('web.library.no-overview')}
       </p>{/if}

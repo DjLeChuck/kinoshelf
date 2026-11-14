@@ -239,7 +239,7 @@
       <p class="muted">{t('web.library.run.skipped', { count: report.skipped.length })}</p>
     {/if}
     <div class="list">
-      <ChangeList {rows}>
+      <ChangeList {rows} expanded={rows.length === 1}>
         {#snippet lead()}
           <p class="muted root">{t('web.library.run.root', { path: preview?.root ?? '' })}</p>
         {/snippet}

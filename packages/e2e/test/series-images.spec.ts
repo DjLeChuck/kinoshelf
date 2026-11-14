@@ -49,10 +49,10 @@ test('changes the poster and adds a logo of a show from its panel', async ({ pag
   await expect(dialog.getByText(/Severance \(2022\) \{tmdb-95396\}\/$/)).toBeVisible();
   await expect(dialog.getByText(/Season 01/)).toHaveCount(0);
 
-  const grid = dialog.getByRole('list', { name: 'TMDB images' });
-  await grid.getByRole('button').first().click();
+  const grid = dialog.getByRole('radiogroup', { name: 'TMDB images' });
+  await grid.getByRole('radio').first().click();
   await dialog.getByRole('tab', { name: /Poster/ }).click();
-  await grid.getByRole('button').first().click();
+  await grid.getByRole('radio').first().click();
   await expect(dialog.getByText('2 changes pending: poster.jpg, clearlogo.png')).toBeVisible();
   await dialog.getByRole('button', { name: 'Apply' }).click();
   await expect(dialog).toBeHidden();

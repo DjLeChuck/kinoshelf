@@ -147,6 +147,15 @@ createServer((request, response) => {
     } else {
       response.writeHead(404).end();
     }
+  } else if (url.pathname === '/3/collection/726871/images') {
+    // A collection owns posters and backgrounds only.
+    json({
+      posters: [
+        image('/colposteren.jpg', 'en', 2000, 3000, 12),
+        image('/colposterfr.jpg', 'fr', 2000, 3000, 8),
+      ],
+      backdrops: [image('/colbackdrop.jpg', null, 3840, 2160, 5)],
+    });
   } else if (url.pathname === '/3/collection/726871') {
     json({
       id: 726871,

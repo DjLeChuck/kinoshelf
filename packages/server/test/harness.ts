@@ -50,6 +50,7 @@ export const fakeProvider: MetadataProvider = {
   getCollection: (id) => base.getCollection(id),
   listImages: (id) => base.listImages(id),
   listEpisodeImages: (id, season) => base.listEpisodeImages(id, season),
+  listCollectionImages: (id) => base.listCollectionImages(id),
   imageUrl: (path, size) => base.imageUrl(path, size),
 };
 

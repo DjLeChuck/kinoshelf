@@ -14,12 +14,15 @@
     rows,
     detail,
     lead,
+    expanded = false,
   }: {
     rows: readonly ChangeRow[];
     /** What a row hides behind "+N files". */
     detail?: Snippet<[ChangeRow]>;
     /** Shown at the left of the bar, on the search's line. */
     lead?: Snippet;
+    /** Opens what each row hides: for a list of one row, which is read whole. */
+    expanded?: boolean;
   } = $props();
 
   const counts = $derived(countGroups(rows));
@@ -80,7 +83,7 @@
     <ul class="groups">
       {#each shown as group (group.key)}
         <li>
-          <ChangeGroup {group} {detail} />
+          <ChangeGroup {group} {detail} {expanded} />
         </li>
       {/each}
     </ul>

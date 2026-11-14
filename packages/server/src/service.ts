@@ -19,6 +19,7 @@ import {
   type ImageFetcher,
   type ImageSize,
   type ImageCandidate,
+  type CollectionImages,
   type WorkImages,
   type Journal,
   type LibraryConfig,
@@ -375,6 +376,12 @@ export class Service {
   async listImages(kind: 'movie' | 'series', tmdbId: number): Promise<WorkImages | null> {
     const provider = this.provider();
     return provider.listImages({ provider: provider.name, id: tmdbId }, kind);
+  }
+
+  /** The posters and backgrounds the provider offers for a collection. */
+  async listCollectionImages(tmdbId: number): Promise<CollectionImages | null> {
+    const provider = this.provider();
+    return provider.listCollectionImages({ provider: provider.name, id: tmdbId });
   }
 
   /** The stills the provider offers for an episode, in the configured language. */

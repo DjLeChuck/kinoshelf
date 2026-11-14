@@ -27,7 +27,11 @@ import { createTranslator, detectLocale } from '@kinoshelf/i18n';
 import type { DeliveryOptions } from './notify/delivery.js';
 import { Notifier } from './notify/notifier.js';
 import { revertedFolders } from './notify/paths.js';
-import { CollectionEditor, CollectionStore } from './collections.js';
+import { CollectionImageStore } from './collection-images.js';
+import { CollectionScreen } from './collection-screen.js';
+import { registerCollectionRoutes } from './collection-routes.js';
+import { SendTasks } from './collection-tasks.js';
+import { CollectionEditor, CollectionStore, hasCollections } from './collections.js';
 import { createProcessor, type ProcessorDeps } from './processor.js';
 import { forgetReplacedScans, purgeHistory, type LibraryScan } from './purge.js';
 import { registerFsRoutes } from './fs-routes.js';
@@ -142,6 +146,8 @@ export function trustProxyOf(value: string | undefined): boolean | string {
  * Builds the HTTP layer without listening, so tests can drive it with `inject`. Routes stay thin:
  * the logic lives in the core. Responses carry codes and parameters, never translated text.
  */
+const COLLECTION_RETRY_MS = 15 * 60_000;
+
 export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
   const logs = options.logs ?? new LogStore();
   const app = Fastify({
@@ -184,7 +190,8 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     events.emit('logs');
   });
   // Each part of the server logs under its own name, which the System page filters on.
-  const noted = (component: 'notify' | 'scan' | 'tmdb' | 'watcher') => app.log.child({ component });
+  const noted = (component: 'notify' | 'scan' | 'tmdb' | 'watcher' | 'collections') =>
+    app.log.child({ component });
   // What was sent to TMDB: counted by the provider, logged (429, abandoned calls) under `tmdb`.
   const tmdbUsage = tmdbUsageOf(options.database);
   tmdbUsage.log = noted('tmdb');
@@ -199,6 +206,12 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
   const undos = new UndoTasks(() => {
     progress.announce();
   });
+  const collectionSends = new SendTasks(() => {
+    progress.announce();
+  });
+  // Set once the screen exists (it needs the artwork, built with the routes): a scan that ends
+  // asks the media servers whether they created the collections they lacked.
+  let retryCollections: (libraryId?: string) => void = () => undefined;
   const entries = new EntryStore(options.database);
   const executions = new ExecutionStore(options.database);
   const jobs = new JobStore(options.database, entries, executions);
@@ -339,6 +352,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
         }
         if (job.libraryId) {
           probes.refresh(job.libraryId);
+          retryCollections(job.libraryId);
         }
       },
       idle: () => {
@@ -402,6 +416,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
   app.decorate('notifier', notifier);
 
   let purgeTimer: NodeJS.Timeout | undefined;
+  let collectionTimer: NodeJS.Timeout | undefined;
   let closeStreams = (): void => undefined;
   const purge = (): void => {
     const purged = purgeHistory(options.database, {
@@ -433,6 +448,10 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     purge();
     // Not kept alive by the timer: the process leaves when the server closes.
     purgeTimer = setInterval(purge, 86_400_000).unref();
+    // A media server creates a collection when it scans, which happens without us: look again.
+    collectionTimer = setInterval(() => {
+      retryCollections();
+    }, COLLECTION_RETRY_MS).unref();
   });
   // `preClose` runs before the server waits for its connections: an event stream never ends alone.
   app.addHook('preClose', () => {
@@ -440,6 +459,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
   });
   app.addHook('onClose', async () => {
     clearInterval(purgeTimer);
+    clearInterval(collectionTimer);
     health.stop();
     tmdbUsage.close();
     progress.close();
@@ -609,6 +629,46 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
       changed: (folder) => {
         notifier.foldersChanged([folder]);
       },
+    });
+    const collectionScreen = new CollectionScreen({
+      config: () => options.config,
+      items,
+      store: collectionStore,
+      images: new CollectionImageStore(
+        options.database,
+        join(options.configDir, 'collection-images'),
+      ),
+      editor: collectionEditor,
+      artwork,
+      servers: () => notifier.mediaServers(),
+      listImages: (tmdbId) => service.listCollectionImages(tmdbId),
+      imageUrl: (path) => service.imageUrl(path, 'original'),
+      log: noted('collections'),
+      ...(options.fetchImage && { fetchImage: options.fetchImage }),
+    });
+    retryCollections = (libraryId) => {
+      for (const library of options.config.libraries ?? []) {
+        if (
+          (libraryId !== undefined && library.id !== libraryId) ||
+          !hasCollections(library, options.config) ||
+          collectionSends.isRunning(library.id)
+        ) {
+          continue;
+        }
+        collectionSends.quiet(
+          library.id,
+          () => collectionScreen.retryMissing(library),
+          (error) => {
+            app.log.child({ component: 'collections' }).warn(error);
+          },
+        );
+      }
+    };
+    registerCollectionRoutes(api, {
+      config: () => options.config,
+      screen: collectionScreen,
+      sends: collectionSends,
+      events,
     });
     registerLibraryRoutes(api, {
       config: configStore,

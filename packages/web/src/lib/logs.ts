@@ -37,6 +37,7 @@ const COMPONENT_LIST = {
   watcher: true,
   tmdb: true,
   notify: true,
+  collections: true,
 } satisfies Record<LogComponent, true>;
 export const LOG_COMPONENTS = Object.keys(COMPONENT_LIST) as LogComponent[];
 

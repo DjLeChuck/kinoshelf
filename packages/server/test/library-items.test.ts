@@ -891,7 +891,7 @@ describe('the lookups of the item store', () => {
       const file = (total: number): void => {
         database
           .prepare(
-            `UPDATE library_items SET collection_key = 't:9', collection_name = 'Saga',
+            `UPDATE library_items SET collection_key = 'tmdb:9', collection_name = 'Saga',
                collection_total = ? WHERE library_id = 'films' AND tmdb_id IN (1, 2)`,
           )
           .run(total);
@@ -910,23 +910,14 @@ describe('the lookups of the item store', () => {
     };
 
     it('keeps a movie by its collection, whatever its versions and the other filters', () => {
-      const { store, file, titles } = setup();
-      expect(titles({ collection: 'in' })).toEqual(['Alien', 'Dune']);
-      expect(titles({ collection: 'out' })).toEqual(['Cube']);
-      expect(titles({ collection: { key: 't:9' } })).toEqual(['Alien', 'Dune']);
-      expect(titles({ collection: 'incomplete' })).toEqual(['Alien', 'Dune']);
+      const { store, titles } = setup();
+      expect(titles({ collection: 'tmdb:9' })).toEqual(['Alien', 'Dune']);
+      expect(titles({ collection: 'tmdb:10' })).toEqual([]);
       // A state is asked of the work's files, the collection of the work.
-      expect(titles({ collection: 'in', filter: 'missing-nfo' })).toEqual(['Alien', 'Dune']);
-      expect(titles({ collection: 'in', multi: true })).toEqual(['Alien']);
-      expect(titles({ collection: 'out', filter: 'missing-nfo' })).toEqual([]);
-      expect(titles({ collection: 'in', query: 'dun' })).toEqual(['Dune']);
-      expect(store.page('films', { collection: 'in', limit: 50, offset: 0 }).total).toBe(2);
-      expect(store.collectionCounts('films')).toEqual({ all: 3, in: 2, out: 1, incomplete: 2 });
-
-      // Holding the whole saga (two movies of two) is no longer incomplete.
-      file(2);
-      expect(titles({ collection: 'incomplete' })).toEqual([]);
-      expect(store.collectionCounts('films')).toEqual({ all: 3, in: 2, out: 1, incomplete: 0 });
+      expect(titles({ collection: 'tmdb:9', filter: 'missing-nfo' })).toEqual(['Alien', 'Dune']);
+      expect(titles({ collection: 'tmdb:9', multi: true })).toEqual(['Alien']);
+      expect(titles({ collection: 'tmdb:9', query: 'dun' })).toEqual(['Dune']);
+      expect(store.page('films', { collection: 'tmdb:9', limit: 50, offset: 0 }).total).toBe(2);
     });
 
     it('is sought in the index of the collections, not read from the whole library', () => {
@@ -937,10 +928,8 @@ describe('the lookups of the item store', () => {
         sent.push(text);
         return prepare(text);
       };
-      for (const collection of ['in', 'incomplete', { key: 't:9' }] as const) {
-        store.page('films', { collection, limit: 50, offset: 0 });
-      }
-      store.collectionCounts('films');
+      store.page('films', { collection: 'tmdb:9', limit: 50, offset: 0 });
+      store.collectionWorks('films');
       (database as unknown as { prepare: unknown }).prepare = prepare;
 
       const lists = sent.filter((text) => text.includes('FROM library_works'));
@@ -1082,7 +1071,7 @@ describe('the lookups of the item store', () => {
     store.refreshMovies('films', [1, 9]);
     read();
     expect(summary()).toEqual(rebuilt());
-    expect(store.collectionCounts('films')).toMatchObject({ in: 2, incomplete: 2 });
+    expect(store.collectionWorks('films').map((work) => work.key)).toEqual(['tmdb:5', 'tmdb:5']);
   });
 
   it('keeps the rows of its shows as a rebuild from the files would, whatever was written', () => {

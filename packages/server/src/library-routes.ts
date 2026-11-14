@@ -51,7 +51,6 @@ import {
   SHOW_SORTS,
   SORT_DIRECTIONS,
   STATE_FILTERS,
-  type CollectionFilter,
   type ItemSort,
   type ShowSort,
   type SortDirection,
@@ -268,7 +267,7 @@ const presentCollection = (collection: RowCollection | undefined) =>
     ? {
         key: collection.key,
         name: collection.name,
-        custom: collection.key.startsWith('c:'),
+        custom: collection.key.startsWith('custom:'),
         held: collection.held,
         total: collection.total,
       }
@@ -277,7 +276,6 @@ const presentCollection = (collection: RowCollection | undefined) =>
 const presentWork = (
   work: readonly LibraryItem[],
   probeOf: (path: string) => Probe | undefined,
-  collectionOf: (path: string) => RowCollection | undefined,
   release?: ReleaseOf,
 ): unknown => {
   const [first] = work;
@@ -301,13 +299,8 @@ const presentWork = (
     versions: largestFirst(work, resolutionOfItem).map((item) =>
       presentVersion(item, probeOf(item.path)),
     ),
-    // Every version of a movie is filed under the same collection.
-    collection: presentCollection(collectionOf(first.path)),
   };
 };
-
-const collectionFilterOf = (value: string): CollectionFilter =>
-  value === 'in' || value === 'out' || value === 'incomplete' ? value : { key: value };
 
 /** The year of an ISO date, if there is one. */
 const yearOf = (date: string | undefined): number | null =>
@@ -640,11 +633,10 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
           'versions, whatever the state. `counts` do not depend on the filters. ' +
           '`scannedAt` is `null` until a scan of the source has ended; `scan` is the one queued ' +
           'or running. `writes` says which columns the profile gives a page. In a movie library ' +
-          'that writes NFO, `collections` is true: each movie carries its `collection`, `collection` ' +
-          '(`in`, `out`, `incomplete`, or a key `t:<id>` / `c:<name>`) narrows the list and `sort` ' +
-          "orders it, `dir` (`asc` or `desc`) turning it over (a collection's movies by year, movies in none " +
-          'last; each sort has its own default direction). `collectionCounts` ' +
-          'counts movies for those filters.',
+          'that writes NFO, `collections` is true and `collection` (a key `tmdb:<id>` or ' +
+          '`custom:<name>`, see `GET /api/libraries/{id}/collections`) narrows the list to the ' +
+          'movies filed under it. `sort` orders it (`title`, `year`), `dir` (`asc` or `desc`) ' +
+          'turning it over; each sort has its own default direction.',
         params: idParams,
         querystring: {
           type: 'object',
@@ -663,7 +655,6 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
             type: 'object',
             required: [
               'library',
-              'collectionCounts',
               'scannedAt',
               'scan',
               'transfer',
@@ -673,16 +664,6 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
               'items',
             ],
             properties: {
-              collectionCounts: {
-                type: 'object',
-                required: ['all', 'in', 'out', 'incomplete'],
-                properties: {
-                  all: { type: 'integer' },
-                  in: { type: 'integer' },
-                  out: { type: 'integer' },
-                  incomplete: { type: 'integer' },
-                },
-              },
               library: {
                 type: 'object',
                 required: ['writes', 'collections'],
@@ -772,19 +753,13 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
       const page = items.page(library.id, {
         ...(state && { filter: state }),
         ...(multi && { multi }),
-        ...(collections && collection && { collection: collectionFilterOf(collection) }),
-        ...(sort && (collections || sort !== 'collection') && { sort }),
+        ...(collections && collection && { collection }),
+        ...(sort && { sort }),
         ...(dir && { dir }),
         ...(q && { query: q }),
         limit,
         offset,
       });
-      const filed = collections
-        ? items.collectionsOf(
-            library.id,
-            page.works.flatMap((work) => (work[0] ? [work[0].path] : [])),
-          )
-        : new Map<string, RowCollection>();
       const releases = ctx.entries.releasesOf(
         page.items.flatMap((item) => (item.entryId === null ? [] : [item.entryId])),
       );
@@ -796,9 +771,6 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
       const running = last?.status === 'queued' || last?.status === 'running' ? last : undefined;
       return {
         library: { writes: profileWrites(profile, library.type), collections },
-        collectionCounts: collections
-          ? items.collectionCounts(library.id)
-          : { all: 0, in: 0, out: 0, incomplete: 0 },
         // A scan that found nothing leaves no row, yet it did end.
         scannedAt:
           items.scannedAt(library.id) ?? (last?.status === 'done' ? last.finishedAt : null),
@@ -820,7 +792,6 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
           return presentWork(
             work,
             (path) => probed.get(path),
-            (path) => filed.get(path),
             entryId == null ? undefined : releases.get(entryId),
           );
         }),
@@ -1004,7 +975,7 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
     const override = ctx.collections.override(library.id, item.tmdbId);
     const effective = items.collectionsOf(library.id, [item.path]).get(item.path);
     const held = provider
-      ? items.movieIdsIn(library.id, `t:${String(provider.id)}`)
+      ? items.movieIdsIn(library.id, `tmdb:${String(provider.id)}`)
       : new Set<number>();
     return {
       tmdb: provider ? { id: provider.id, name: provider.name } : null,

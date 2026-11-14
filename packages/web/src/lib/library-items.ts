@@ -1,11 +1,6 @@
 import { api } from './api.js';
 import type { Library } from './libraries.js';
-import type {
-  CollectionDetail,
-  CollectionFilter,
-  ItemCollection,
-  ItemSort,
-} from './collections.js';
+import type { CollectionDetail, ItemSort } from './collections.js';
 import type { SortDirection } from './list-filters.js';
 
 export type ItemState = 'review' | 'rename' | 'unrecognized' | 'incomplete' | 'ok';
@@ -94,8 +89,6 @@ export interface Version {
 /** An entry of a list: a movie is one, with a version per file; its state is the worst of them. */
 export interface ListedItem extends LibraryItem {
   readonly versions: readonly Version[];
-  /** The collection its NFO files it under; `null` for none, and in a library that writes no NFO. */
-  readonly collection: ItemCollection | null;
 }
 
 /** The page of one item: the work as TMDB knows it, and the file as `ffprobe` read it. */
@@ -144,8 +137,6 @@ export interface ItemsPage {
     /** The library files its movies under collections: it writes NFO. */
     readonly collections: boolean;
   };
-  /** Movies per collection filter; all zero when the library has no collections. */
-  readonly collectionCounts: Readonly<Record<'all' | 'in' | 'out' | 'incomplete', number>>;
   /** `null` until a scan of the source has ended. */
   readonly scannedAt: string | null;
   readonly scan: {
@@ -170,7 +161,8 @@ export interface ItemsQuery {
   readonly state?: ItemFilter | undefined;
   /** Only the movies held in several versions, whatever the state. */
   readonly multi?: boolean | undefined;
-  readonly collection?: CollectionFilter | undefined;
+  /** Only the movies filed under this collection (`tmdb:<id>` or `custom:<name>`). */
+  readonly collection?: string | undefined;
   readonly sort?: ItemSort | undefined;
   /** Left out for the sort's own first direction. */
   readonly dir?: SortDirection | undefined;
