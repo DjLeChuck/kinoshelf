@@ -38,11 +38,12 @@
     onrun: () => void;
   } = $props();
 
+  const uid = $props.id();
   let confirming = $state(false);
 </script>
 
-<article class="card">
-  <h3>{title}</h3>
+<article class="card" aria-labelledby={`${uid}-title`}>
+  <h3 id={`${uid}-title`}>{title}</h3>
   <p class="muted">{text}</p>
   <p class="state" aria-live="polite">
     {#if result}<b>{result}</b>{:else if figure}{figure}{/if}

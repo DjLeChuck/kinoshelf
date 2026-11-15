@@ -77,6 +77,7 @@ describe('GET /api/openapi.json', () => {
       '/api/logs/level',
       '/api/maintenance',
       '/api/maintenance/backup',
+      '/api/maintenance/empty-replaced',
       '/api/maintenance/purge-hidden',
       '/api/maintenance/tidy',
       '/api/maintenance/vacuum',

@@ -1,8 +1,10 @@
+import { writeFileSync } from 'node:fs';
 import { mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { Database } from '@kinoshelf/core';
 import { DatabaseTasks } from '../src/database-tasks.js';
+import { ReplacedFiles } from '../src/replaced-files.js';
 import { ProgressTracker } from '../src/progress.js';
 import { cleanup, harness, makeDir, put, type Harness } from './harness.js';
 
@@ -316,6 +318,98 @@ describe('database backup and compaction', () => {
     });
     expect(() => tasks.startVacuum()).toThrow(
       expect.objectContaining({ code: 'maintenance.busy' }),
+    );
+  });
+});
+
+interface Replaced {
+  replaced: {
+    files: number;
+    bytes: number;
+    days: number;
+    due: { files: number; bytes: number; batches: number };
+  };
+  replacedTask: {
+    status: string;
+    all: boolean;
+    freed: { files: number; bytes: number; batches: number; failed: number } | null;
+  } | null;
+}
+
+async function emptied(h: Harness, body: object): Promise<NonNullable<Replaced['replacedTask']>> {
+  const started = await h.request('POST', '/api/maintenance/empty-replaced', body);
+  expect(started.statusCode).toBe(202);
+  for (;;) {
+    const { replacedTask } = (await h.request('GET', '/api/maintenance')).json<Replaced>();
+    if (replacedTask && replacedTask.status !== 'running') {
+      return replacedTask;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 5));
+  }
+}
+
+describe('POST /api/maintenance/empty-replaced', () => {
+  it('deletes the files set aside for good, and an undo then skips them instead of failing', async () => {
+    const { h, configDir, source } = await setup();
+    const task = await tidy(h, { library: 'films', files: false });
+    const batch = task.folders?.batch ?? '';
+    const dir = join(configDir, 'replaced');
+    expect(await readdir(dir)).toHaveLength(1);
+
+    // Just set aside: nothing is due under the 30 days, so a plain emptying deletes nothing.
+    const figures = (await h.request('GET', '/api/maintenance')).json<Replaced>().replaced;
+    expect(figures).toMatchObject({ files: 1, days: 30, due: { files: 0, batches: 0 } });
+    expect((await emptied(h, {})).freed).toMatchObject({ files: 0 });
+    expect(await readdir(dir)).toHaveLength(1);
+
+    const everything = await emptied(h, { all: true });
+    expect(everything.freed).toEqual({ files: 1, bytes: 6, batches: 1, failed: 0 });
+    expect(await readdir(dir)).toHaveLength(0);
+
+    const undone = (await h.undo(batch, {})).json<unknown>();
+    expect(JSON.stringify(undone)).toContain('undo.backup-missing');
+    // The folder did not come back: the file is gone for good, and nothing broke.
+    expect(await exists(join(source, 'Dune (2021) - 1080p'))).toBe(false);
+  });
+
+  it('keeps what is younger than the retention, and names the batches that would lose a file', async () => {
+    const { h, configDir } = await setup();
+    await h.request('PATCH', '/api/settings', { retention: { replacedRetentionDays: 10 } });
+    const dir = join(configDir, 'replaced');
+    await mkdir(dir, { recursive: true });
+    const aged = (name: string, daysAgo: number, batch: string | null): void => {
+      const path = join(dir, name);
+      writeFileSync(path, 'bytes');
+      if (batch !== null) {
+        h.database
+          .prepare(
+            `INSERT INTO journal_entries (id, batch_id, source, destination, mode, kind, at, created_directories, backup)
+             VALUES (?, ?, '/s', '/d', '', 'replaced', ?, '[]', ?)`,
+          )
+          .run(name, batch, new Date(Date.now() - daysAgo * 86_400_000).toISOString(), path);
+      }
+    };
+    aged('old.jpg', 40, 'batch-old');
+    aged('recent.jpg', 2, 'batch-recent');
+
+    const { replaced } = (await h.request('GET', '/api/maintenance')).json<Replaced>();
+    expect(replaced.due).toEqual({ files: 1, bytes: 5, batches: 1 });
+
+    const task = await emptied(h, {});
+    expect(task.freed).toMatchObject({ files: 1, batches: 1 });
+    expect(await readdir(dir)).toEqual(['recent.jpg']);
+  });
+
+  it('refuses while a scan, a transfer or an undo runs', () => {
+    const files = new ReplacedFiles({
+      database: new Database(':memory:'),
+      dir: '/nowhere',
+      progress: new ProgressTracker(() => undefined),
+      busy: () => true,
+      days: () => 30,
+    });
+    expect(() => files.start({ all: true })).toThrow(
+      expect.objectContaining({ code: 'maintenance.replaced-busy' }),
     );
   });
 });

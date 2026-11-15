@@ -9,6 +9,7 @@
   import type { DatabaseTask, MaintenanceFigures } from '../lib/maintenance.js';
   import { resource } from '../lib/resource.svelte.js';
   import ActionCard from './ActionCard.svelte';
+  import ReplacedCard from './ReplacedCard.svelte';
 
   // Counts change as scans and jobs end: read them again on those events.
   const figures = resource(
@@ -25,7 +26,8 @@
   const taskOf = (kind: DatabaseTask['kind']): DatabaseTask | undefined =>
     known?.databaseTasks.find((task) => task.kind === kind);
   const running = $derived(
-    known?.databaseTasks.some(({ status }) => status === 'running') ?? false,
+    (known?.databaseTasks.some(({ status }) => status === 'running') ?? false) ||
+      known?.replacedTask?.status === 'running',
   );
 
   // A backup or a compaction goes on in the server: follow it, also when started from another tab.
@@ -60,6 +62,19 @@
     failure = undefined;
     try {
       await api.post<DatabaseTask>(`/api/maintenance/${kind}`);
+      await figures.reload();
+    } catch (error) {
+      failure = error;
+    } finally {
+      starting = false;
+    }
+  }
+
+  async function emptyReplaced(all: boolean): Promise<void> {
+    starting = true;
+    failure = undefined;
+    try {
+      await api.post('/api/maintenance/empty-replaced', { all });
       await figures.reload();
     } catch (error) {
       failure = error;
@@ -162,6 +177,15 @@
       disabled={running || starting}
       link={{ href: '/settings#retention', label: t('web.maintenance.backup.settings') }}
       onrun={() => void startDatabase('backup')}
+    />
+    <ReplacedCard
+      figures={known?.replaced}
+      task={known?.replacedTask}
+      disabled={starting || busy !== undefined}
+      failure={known?.replacedTask?.status === 'failed' && known.replacedTask.error
+        ? describeError(t, known.replacedTask.error)
+        : undefined}
+      onrun={(all: boolean) => void emptyReplaced(all)}
     />
   </div>
 </section>

@@ -71,6 +71,7 @@ export const API_ERROR_CODES = [
   'library.transfer-in-progress',
   'maintenance.in-progress',
   'maintenance.busy',
+  'maintenance.replaced-busy',
   'maintenance.database-task-running',
   'maintenance.vacuum-failed',
   'maintenance.backup-failed',

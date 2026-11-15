@@ -37,6 +37,11 @@ export class UndoTasks {
     return this.tasks.get(batchId);
   }
 
+  /** An undo of any batch is running: what it is about to restore must not be deleted. */
+  anyRunning(): boolean {
+    return [...this.tasks.values()].some(({ status }) => status === 'running');
+  }
+
   isRunning(batchId: string): boolean {
     return this.tasks.get(batchId)?.status === 'running';
   }

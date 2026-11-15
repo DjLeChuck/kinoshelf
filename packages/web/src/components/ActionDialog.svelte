@@ -6,6 +6,8 @@
     does,
     keeps,
     confirm,
+    extra,
+    acknowledge,
     onclose,
     onconfirm,
   }: {
@@ -16,11 +18,16 @@
     keeps: string;
     /** The label of the button that starts it. */
     confirm: string;
+    /** More paragraphs, for an action with consequences to spell out. */
+    extra?: string[] | undefined;
+    /** A box to tick before the action can start: the one that cannot be undone. */
+    acknowledge?: string | undefined;
     onclose: () => void;
     onconfirm: () => void;
   } = $props();
 
   let dialog: HTMLDialogElement | undefined;
+  let understood = $state(false);
 
   $effect(() => {
     dialog?.showModal();
@@ -40,7 +47,14 @@
 
   <div class="body">
     <p>{does}</p>
+    {#each extra ?? [] as line (line)}<p>{line}</p>{/each}
     <p class="muted">{keeps}</p>
+    {#if acknowledge}
+      <label class="check">
+        <input type="checkbox" bind:checked={understood} />
+        <span>{acknowledge}</span>
+      </label>
+    {/if}
   </div>
 
   <footer>
@@ -50,6 +64,7 @@
     <button
       type="button"
       class="btn btn-primary"
+      disabled={acknowledge !== undefined && !understood}
       onclick={() => {
         onconfirm();
         dialog?.close();
@@ -113,6 +128,23 @@
     display: flex;
     flex-direction: column;
     gap: 10px;
+  }
+
+  .check {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    min-height: 44px;
+    cursor: pointer;
+    font-weight: 600;
+  }
+
+  .check input {
+    flex: none;
+    width: 18px;
+    height: 18px;
+    margin: 2px 0 0;
+    accent-color: var(--accent);
   }
 
   footer {

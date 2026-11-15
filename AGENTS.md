@@ -325,8 +325,16 @@ severity }`, `area` being its card and `code` translated by the web (`web.health
   `backupKeep` (**Settings › Retention**, 3 by default), only after the new one is safe. "Compact" (`POST /api/maintenance/vacuum`)
   is `VACUUM`, which cannot be cut up and holds the event loop: refused while a scan or a transfer runs (409 `maintenance.busy`),
   started after the 202 left. One of the two at a time (409 `maintenance.database-task-running`); both are tasks in memory
-  announced by `progress`. `replacedRetentionDays` (30 by default) is set in the same section and read by the "Empty replaced/"
-  action, not built yet.
+  announced by `progress`. "Empty replaced/" (`POST /api/maintenance/empty-replaced`, `{ all? }`, `replaced-files.ts`) is **the one
+  place Kinoshelf deletes for good**: it removes the files of `<config>/replaced/` set aside longer ago than
+  `replacedRetentionDays` (**Settings › Retention**, 30 by default, 0 = all), or every one with `all`. The age is the
+  journal entry's date (`at`), a file no entry names is aged by its change time (its own mtime is the original's, kept on
+  purpose). The journal is untouched: undoing a batch whose file is gone skips it (`undo.backup-missing`), what is still
+  there comes back. Refused (409 `maintenance.replaced-busy`) while a scan, a transfer, an undo, a tidy-up or another
+  emptying runs, since `all` would take what they have just put there. The dialog counts the files, the bytes and the
+  batches that could no longer restore everything, and needs a ticked box. `GET /api/maintenance` reads that folder (a
+  `readdir` and one `stat` per file): the config folder is local, so this stays quick; if it ever lives on a share, make it a
+  task.
 - **Decided not to build**: a "connection lost" banner on the logs (the event stream does not tell the page it is down). A
   dropped stream reconnects by itself and every view reloads on `ready`; it is not worth an indicator of its own.
 

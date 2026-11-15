@@ -314,6 +314,8 @@ export const en = {
     'This folder is not inside the library (or is the library itself: scan the library instead).',
   'error.library.transfer-in-progress':
     'A transfer already holds some of these items. Wait for it to end before running them again.',
+  'error.maintenance.replaced-busy':
+    'A scan, a transfer, a tidy-up, an undo or another emptying is running: wait for it to end before emptying the files set aside.',
   'error.maintenance.busy':
     'A scan or a transfer is running: the database cannot be compacted now. Try again when it ends.',
   'error.maintenance.database-task-running':
@@ -422,6 +424,25 @@ export const en = {
   'web.maintenance.vacuum.button': 'Compact',
   'web.maintenance.vacuum.done': 'Database compacted: {before}, then {after}.',
   'web.maintenance.action.progress': 'Progress',
+  'web.maintenance.replaced.title': 'Empty replaced/',
+  'web.maintenance.replaced.text': 'Deletes the files set aside. Irreversible.',
+  'web.maintenance.replaced.state':
+    '{files, plural, =0 {Nothing is set aside.} one {# file set aside} other {# files set aside}} · {size}',
+  'web.maintenance.replaced.due':
+    ' · {due, plural, =0 {none is older than {days} days} one {# is older than {days} days ({dueSize})} other {# are older than {days} days ({dueSize})}}',
+  'web.maintenance.replaced.button': 'Empty (older than {days} days)',
+  'web.maintenance.replaced.button.all': 'Empty all',
+  'web.maintenance.replaced.confirm.title': 'Empty replaced/',
+  'web.maintenance.replaced.does':
+    'Permanently deletes {count, plural, one {# file} other {# files}} ({size}) from the configuration’s replaced/ folder: what the tidy-up, image replacements and collections set aside there. Videos are never in it.',
+  'web.maintenance.replaced.batches':
+    '{count, plural, =0 {No batch of the History depends on them.} one {One batch of the History will no longer be able to restore all its files.} other {# batches of the History will no longer be able to restore all their files.}}',
+  'web.maintenance.replaced.undo':
+    'Undoing one of those batches will pass over these files without an error: what is still there comes back, the rest is lost.',
+  'web.maintenance.replaced.ack': 'I understand this cannot be undone.',
+  'web.maintenance.replaced.confirm': 'Delete for good',
+  'web.maintenance.replaced.done':
+    '{files, plural, =0 {Nothing to delete.} one {# file deleted} other {# files deleted}} ({size}).{failed, plural, =0 {} one { One could not be.} other { # could not be.}}',
   'web.maintenance.page.intro':
     'Each action says what it does and what it leaves alone, and asks for confirmation before it starts.',
   'web.maintenance.tidy.title': 'Tidy a library’s folders',

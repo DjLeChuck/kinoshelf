@@ -12,6 +12,31 @@ export interface MaintenanceFigures {
   readonly backupKeep: number;
   /** The latest backup and the latest compaction, since the server started. */
   readonly databaseTasks: readonly DatabaseTask[];
+  /** What is set aside in `<config>/replaced/`, and what emptying would delete now. */
+  readonly replaced: {
+    readonly files: number;
+    readonly bytes: number;
+    readonly due: { readonly files: number; readonly bytes: number; readonly batches: number };
+    /** The retention in force, in days (0: every file). */
+    readonly days: number;
+  };
+  readonly replacedTask: ReplacedTask | null;
+}
+
+export interface ReplacedTask {
+  readonly status: 'running' | 'done' | 'failed';
+  readonly done: number;
+  readonly total: number;
+  readonly startedAt: string;
+  readonly endedAt: string | null;
+  readonly all: boolean;
+  readonly freed: {
+    readonly files: number;
+    readonly bytes: number;
+    readonly batches: number;
+    readonly failed: number;
+  } | null;
+  readonly error: ErrorBody | null;
 }
 
 export interface BackupFile {

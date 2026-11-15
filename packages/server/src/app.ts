@@ -21,7 +21,8 @@ import { registerLogRoutes } from './log-routes.js';
 import { UndoTasks } from './undo-tasks.js';
 import { registerMaintenanceRoutes } from './maintenance-routes.js';
 import { DatabaseTasks } from './database-tasks.js';
-import { DEFAULT_BACKUP_KEEP } from './settings.js';
+import { ReplacedFiles } from './replaced-files.js';
+import { DEFAULT_BACKUP_KEEP, DEFAULT_REPLACED_RETENTION_DAYS } from './settings.js';
 import { registerTmdbRoutes } from './tmdb-routes.js';
 import { tmdbUsageOf } from './tmdb-usage.js';
 import { LOG_LEVELS, LogStore, type LogLevel } from './logs.js';
@@ -734,6 +735,13 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
       busy: () => runner.busy,
       keep: () => configStore.config.backupKeep ?? DEFAULT_BACKUP_KEEP,
     });
+    const replaced = new ReplacedFiles({
+      database: options.database,
+      dir: join(options.configDir, 'replaced'),
+      progress,
+      busy: () => runner.busy || undos.anyRunning(),
+      days: () => configStore.config.replacedRetentionDays ?? DEFAULT_REPLACED_RETENTION_DAYS,
+    });
     registerMaintenanceRoutes(api, {
       config: () => configStore.config,
       jobs,
@@ -741,6 +749,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
       database: options.database,
       tmdbUsage,
       databaseTasks,
+      replaced,
       backupKeep: () => configStore.config.backupKeep ?? DEFAULT_BACKUP_KEEP,
       snapshot,
       events,

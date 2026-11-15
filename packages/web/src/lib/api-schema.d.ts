@@ -6551,6 +6551,45 @@ export interface paths {
                             }[];
                             /** @description How many backups are kept. */
                             backupKeep: number;
+                            replaced: {
+                                files: number;
+                                bytes: number;
+                                /** @description What emptying would delete now, with the retention in force. */
+                                due: {
+                                    files: number;
+                                    bytes: number;
+                                    /** @description Batches of the History that could no longer restore all they set aside. */
+                                    batches: number;
+                                };
+                                /** @description The retention in force (0: every file). */
+                                days: number;
+                            };
+                            replacedTask: {
+                                /** @enum {unknown} */
+                                status: "running" | "done" | "failed";
+                                done: number;
+                                total: number;
+                                /** Format: date-time */
+                                startedAt: string;
+                                /** Format: date-time */
+                                endedAt: string | null;
+                                /** @description The retention was ignored. */
+                                all: boolean;
+                                freed: {
+                                    files: number;
+                                    bytes: number;
+                                    /** @description Batches that can no longer restore a file. */
+                                    batches: number;
+                                    /** @description Files that could not be deleted. */
+                                    failed: number;
+                                } | null;
+                                error: {
+                                    code: string;
+                                    params?: {
+                                        [key: string]: string | number;
+                                    };
+                                } | null;
+                            } | null;
                             /** @description The latest backup and the latest compaction, since the start. */
                             databaseTasks: {
                                 /** @enum {unknown} */
@@ -6678,6 +6717,125 @@ export interface paths {
                                     [key: string]: string | number;
                                 };
                             } | null;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Default Response */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/maintenance/empty-replaced": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Delete the files set aside, for good
+         * @description Starts a task and answers 202 at once; `GET /api/maintenance` tells how it goes. Deletes the files of `<config>/replaced/` set aside longer ago than `retention.replacedRetentionDays`, or all of them with `all`. **Irreversible**: the journal keeps its entries, and undoing a batch whose file is gone skips that file (`undo.backup-missing`). Videos are never in there. 409 `maintenance.replaced-busy` while a scan, a transfer, a tidy-up, an undo or another emptying runs.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** @default false */
+                        all?: boolean;
+                    };
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                202: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {unknown} */
+                            status: "running" | "done" | "failed";
+                            done: number;
+                            total: number;
+                            /** Format: date-time */
+                            startedAt: string;
+                            /** Format: date-time */
+                            endedAt: string | null;
+                            /** @description The retention was ignored. */
+                            all: boolean;
+                            freed: {
+                                files: number;
+                                bytes: number;
+                                /** @description Batches that can no longer restore a file. */
+                                batches: number;
+                                /** @description Files that could not be deleted. */
+                                failed: number;
+                            } | null;
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            } | null;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
                         };
                     };
                 };

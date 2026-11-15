@@ -92,10 +92,44 @@ test('the backup card leads to the retention settings, scrolled to its section',
 }) => {
   await signIn(page);
   await page.goto('/system?tab=maintenance');
-  await page.getByRole('link', { name: 'Change in the Settings' }).click();
+  await page.getByRole('link', { name: 'Change in the Settings' }).first().click();
 
   // An anchor must not be taken for part of the path (that was a 404).
   await expect(page).toHaveURL(/\/settings#retention$/);
   await expect(page.getByRole('heading', { name: 'Retention' })).toBeInViewport();
   await expect(page.getByLabel('Database backups to keep')).toHaveValue('3');
+});
+
+test('empties what a tidy-up set aside, after a confirmation that says it cannot be undone', async ({
+  page,
+}) => {
+  await mkdir(WORK, { recursive: true });
+  await mkdir(LEFTOVER, { recursive: true });
+  await writeFile(`${WORK}/Dune (2021) {tmdb-438631}.mkv`, 'video');
+  await writeFile(`${LEFTOVER}/Dune (2021) - 1080p-poster.jpg`, 'image');
+
+  await signIn(page);
+  await page.goto('/system?tab=maintenance');
+  const films = page.getByRole('article', { name: 'Films' });
+  await films.getByRole('button', { name: /^Analyse/ }).click();
+  await films.getByRole('button', { name: 'Tidy…' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Tidy the library' }).click();
+  await expect(films.getByText('1 folder taken out').first()).toBeVisible();
+
+  // Just set aside: younger than the 30 days, so only "Empty all" has something to delete.
+  const card = page.getByRole('article', { name: 'Empty replaced/' });
+  await expect(card.getByRole('button', { name: /^Empty \(older than 30 days\)/ })).toBeDisabled();
+  await card.getByRole('button', { name: 'Empty all' }).click();
+
+  const dialog = page.getByRole('dialog', { name: /Empty replaced/ });
+  await expect(dialog.getByText(/cannot be undone|Videos are never in it/).first()).toBeVisible();
+  // The box must be ticked first: this is the one action that cannot be undone.
+  const confirm = dialog.getByRole('button', { name: 'Delete for good' });
+  await expect(confirm).toBeDisabled();
+  await dialog.getByLabel('I understand this cannot be undone.').check();
+  await confirm.click();
+
+  await expect(card.getByText(/files? deleted/)).toBeVisible();
+  // Nothing is left to empty.
+  await expect(card.getByRole('button', { name: 'Empty all' })).toBeDisabled();
 });

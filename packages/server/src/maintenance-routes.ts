@@ -15,6 +15,7 @@ import type { EventBus } from './events.js';
 import type { JobStore } from './jobs.js';
 import type { LibrarySnapshot } from './library-items.js';
 import type { DatabaseTasks } from './database-tasks.js';
+import type { ReplacedFiles } from './replaced-files.js';
 import { countRoutineJobs, forgetRoutineJobs } from './purge.js';
 import type { TmdbUsage } from './tmdb-usage.js';
 import { failureOf, type MatchFailure } from './matches.js';
@@ -28,6 +29,7 @@ export interface MaintenanceDeps {
   readonly database: Database;
   readonly tmdbUsage: TmdbUsage;
   readonly databaseTasks: DatabaseTasks;
+  readonly replaced: ReplacedFiles;
   readonly backupKeep: () => number;
   readonly snapshot: LibrarySnapshot;
   readonly events: EventBus;
@@ -79,6 +81,53 @@ const databaseTaskSchema = {
       properties: { before: { type: 'integer' }, after: { type: 'integer' } },
     },
     error: { anyOf: [errorInfo, { type: 'null' }] },
+  },
+} as const;
+
+const replacedTaskSchema = {
+  type: 'object',
+  required: ['status', 'done', 'total', 'startedAt', 'endedAt', 'all', 'freed', 'error'],
+  properties: {
+    status: { enum: ['running', 'done', 'failed'] },
+    done: { type: 'integer' },
+    total: { type: 'integer' },
+    startedAt: { type: 'string', format: 'date-time' },
+    endedAt: { type: ['string', 'null'], format: 'date-time' },
+    all: { type: 'boolean', description: 'The retention was ignored.' },
+    freed: {
+      type: ['object', 'null'],
+      required: ['files', 'bytes', 'batches', 'failed'],
+      properties: {
+        files: { type: 'integer' },
+        bytes: { type: 'integer' },
+        batches: { type: 'integer', description: 'Batches that can no longer restore a file.' },
+        failed: { type: 'integer', description: 'Files that could not be deleted.' },
+      },
+    },
+    error: { anyOf: [errorInfo, { type: 'null' }] },
+  },
+} as const;
+
+const replacedFiguresSchema = {
+  type: 'object',
+  required: ['files', 'bytes', 'due', 'days'],
+  properties: {
+    files: { type: 'integer' },
+    bytes: { type: 'integer' },
+    due: {
+      type: 'object',
+      required: ['files', 'bytes', 'batches'],
+      description: 'What emptying would delete now, with the retention in force.',
+      properties: {
+        files: { type: 'integer' },
+        bytes: { type: 'integer' },
+        batches: {
+          type: 'integer',
+          description: 'Batches of the History that could no longer restore all they set aside.',
+        },
+      },
+    },
+    days: { type: 'integer', description: 'The retention in force (0: every file).' },
   },
 } as const;
 
@@ -271,12 +320,16 @@ export function registerMaintenanceRoutes(api: FastifyInstance, deps: Maintenanc
               'backups',
               'backupKeep',
               'databaseTasks',
+              'replaced',
+              'replacedTask',
             ],
             properties: {
               hiddenAnalyses: { type: 'integer' },
               databaseBytes: { type: 'integer', description: 'The size of the database file.' },
               backups: { type: 'array', items: backupFileSchema, description: 'Newest first.' },
               backupKeep: { type: 'integer', description: 'How many backups are kept.' },
+              replaced: replacedFiguresSchema,
+              replacedTask: { anyOf: [replacedTaskSchema, { type: 'null' }] },
               databaseTasks: {
                 type: 'array',
                 description: 'The latest backup and the latest compaction, since the start.',
@@ -302,6 +355,8 @@ export function registerMaintenanceRoutes(api: FastifyInstance, deps: Maintenanc
       backups: await deps.databaseTasks.backups(),
       backupKeep: deps.backupKeep(),
       databaseTasks: deps.databaseTasks.tasks(),
+      replaced: await deps.replaced.figures(),
+      replacedTask: deps.replaced.task(),
     }),
   );
 
@@ -320,6 +375,40 @@ export function registerMaintenanceRoutes(api: FastifyInstance, deps: Maintenanc
       },
     },
     (_request, reply) => reply.code(202).send(deps.databaseTasks.startBackup()),
+  );
+
+  api.post<{ Body: { all?: boolean } }>(
+    '/api/maintenance/empty-replaced',
+    {
+      schema: {
+        summary: 'Delete the files set aside, for good',
+        description:
+          'Starts a task and answers 202 at once; `GET /api/maintenance` tells how it goes. ' +
+          'Deletes the files of `<config>/replaced/` set aside longer ago than ' +
+          '`retention.replacedRetentionDays`, or all of them with `all`. **Irreversible**: the ' +
+          'journal keeps its entries, and undoing a batch whose file is gone skips that file ' +
+          '(`undo.backup-missing`). Videos are never in there. 409 `maintenance.replaced-busy` ' +
+          'while a scan, a transfer, a tidy-up, an undo or another emptying runs.',
+        body: {
+          type: 'object',
+          properties: { all: { type: 'boolean', default: false } },
+          additionalProperties: false,
+        },
+        response: {
+          202: replacedTaskSchema,
+          400: errorSchema,
+          401: errorSchema,
+          409: errorSchema,
+        },
+      },
+    },
+    (request, reply) => {
+      // A tidy-up writes into that folder, and "all" would take what it has just put there.
+      if ([...tasks.values()].some(({ status }) => status === 'running')) {
+        throw new ApiError(409, 'maintenance.replaced-busy');
+      }
+      return reply.code(202).send(deps.replaced.start({ all: request.body.all ?? false }));
+    },
   );
 
   api.post(

@@ -6,7 +6,7 @@ import type { paths } from './api-schema.js';
 import type { Arrival, ArrivalPage, Preview } from './arrivals.js';
 import type { Activity, BatchDetail, JobDetail, UndoTask } from './history.js';
 import type { AddressPreview, ImageListing } from './images.js';
-import type { DatabaseTask, MaintenanceFigures, TidyTask } from './maintenance.js';
+import type { DatabaseTask, MaintenanceFigures, ReplacedTask, TidyTask } from './maintenance.js';
 import type { PlexPin, PlexServer } from './plex.js';
 import type { Settings } from './settings.js';
 import type { Library } from './libraries.js';
@@ -58,6 +58,7 @@ export type Contract = [
   Expect<Fits<Got<'/api/maintenance'>, MaintenanceFigures>>,
   Expect<Fits<Posted<'/api/maintenance/backup', 202>, DatabaseTask>>,
   Expect<Fits<Posted<'/api/maintenance/vacuum', 202>, DatabaseTask>>,
+  Expect<Fits<Posted<'/api/maintenance/empty-replaced', 202>, ReplacedTask>>,
   Expect<Fits<Got<'/api/maintenance/tidy'>['tasks'][number], TidyTask>>,
   Expect<Fits<Posted<'/api/maintenance/tidy', 202>, TidyTask>>,
 ];
