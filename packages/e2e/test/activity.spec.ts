@@ -45,10 +45,7 @@ test('shows the tasks that run on every page, and keeps a failure until it is cl
       current: null,
     }),
   ];
-  await page.evaluate(() => {
-    // The page reads again on an event; any navigation does it too.
-    window.dispatchEvent(new Event('online'));
-  });
+  // Changing page reads the list again.
   await page.getByRole('navigation').getByRole('link', { name: 'Settings' }).click();
   await expect(panel.getByText(/✗/)).toBeVisible();
   await panel.getByRole('button', { name: 'Dismiss' }).click();
