@@ -6,7 +6,8 @@ import {
   type ActivitySource,
   type ActivityTask,
 } from '../src/activity.js';
-import { cleanup, harness } from './harness.js';
+import { join } from 'node:path';
+import { cleanup, harness, makeDir, put } from './harness.js';
 
 afterEach(cleanup);
 
@@ -102,5 +103,22 @@ describe('GET /api/activity', () => {
     const answer = await h.request('GET', '/api/activity');
     expect(answer.statusCode).toBe(200);
     expect(answer.json()).toEqual({ tasks: [] });
+  });
+});
+
+describe('a task shorter than the time the web takes to ask', () => {
+  it('is still reported, as done, when nobody read the list while it ran', async () => {
+    const root = await makeDir();
+    await put(join(root, 'Dune.2021.mkv'));
+    const h = await harness();
+    await h.request('POST', '/api/libraries', { name: 'Films', source: root, type: 'movie' });
+    const scan = await h.request('POST', '/api/libraries/films/scan');
+    const jobId = scan.json<{ id: string }>().id;
+    await h.app.jobs.idle();
+
+    const { tasks } = (await h.request('GET', '/api/activity')).json<{
+      tasks: { id: string; status: string }[];
+    }>();
+    expect(tasks.map(({ id, status }) => [id, status])).toContainEqual([`scan:${jobId}`, 'done']);
   });
 });

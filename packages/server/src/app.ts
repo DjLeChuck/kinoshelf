@@ -774,18 +774,23 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
       configDir: options.configDir,
     });
     // Every background task in one list, for the panel the web shows on every page.
-    registerActivityRoutes(
-      api,
-      new Activity([
-        scanSource({ progress, jobs, config: () => configStore.config }),
-        transferSource({ progress, jobs, executions }),
-        undoSource(undos),
-        matchSource(matches),
-        tidySource(tidyTasks, () => configStore.config),
-        maintenanceSource({ databaseTasks, replaced }),
-        collectionSendSource(collectionSends, () => configStore.config),
-      ]),
-    );
+    const activity = new Activity([
+      scanSource({ progress, jobs, config: () => configStore.config }),
+      transferSource({ progress, jobs, executions }),
+      undoSource(undos),
+      matchSource(matches),
+      tidySource(tidyTasks, () => configStore.config),
+      maintenanceSource({ databaseTasks, replaced }),
+      collectionSendSource(collectionSends, () => configStore.config),
+    ]);
+    // A task is only known to have run if someone looked while it did, and a short one is over
+    // before the web asks: the server looks itself whenever something moves.
+    events.subscribe((topic) => {
+      if (topic === 'progress' || topic === 'jobs' || topic === 'history') {
+        activity.list();
+      }
+    });
+    registerActivityRoutes(api, activity);
     registerLogRoutes(api, {
       logs,
       level: {
