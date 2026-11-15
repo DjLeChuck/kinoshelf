@@ -3,7 +3,8 @@
   import { t } from '../lib/i18n.svelte.js';
   import { router } from '../lib/router.svelte.js';
 
-  let { sections }: { sections: readonly { id: string; label: string }[] } = $props();
+  let { sections }: { sections: readonly { id: string; label: string; group: string }[] } =
+    $props();
 
   let active = $state<string | undefined>(undefined);
   // A click scrolls on its own: the sections crossed on the way, or the end of a page too short to
@@ -78,6 +79,24 @@
     }
   });
 
+  let bar = $state<HTMLElement | undefined>(undefined);
+
+  // On a narrow screen the nav is a row that overflows: keep the current chip in view. Moving
+  // the bar's own scroll (not `scrollIntoView`) leaves the page where it is.
+  $effect(() => {
+    if (active === undefined || !bar || bar.scrollWidth <= bar.clientWidth) {
+      return;
+    }
+    const chip = bar.querySelector<HTMLElement>('button.current');
+    if (chip) {
+      const smooth = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      bar.scrollTo({
+        left: chip.offsetLeft - (bar.clientWidth - chip.offsetWidth) / 2,
+        behavior: smooth ? 'smooth' : 'auto',
+      });
+    }
+  });
+
   function go(id: string): void {
     active = id;
     pinned = true;
@@ -89,9 +108,12 @@
   }
 </script>
 
-<nav aria-label={t('web.settings.nav.label')}>
+<nav aria-label={t('web.settings.nav.label')} bind:this={bar}>
   <ul>
-    {#each sections as section (section.id)}
+    {#each sections as section, index (section.id)}
+      {#if index === 0 || sections[index - 1]?.group !== section.group}
+        <li class="group" aria-hidden="true">{section.group}</li>
+      {/if}
       <li>
         <button
           type="button"
@@ -111,7 +133,7 @@
 <style>
   nav {
     position: sticky;
-    top: 24px;
+    top: calc(var(--header-h, 0px) + 24px);
   }
 
   ul {
@@ -121,6 +143,19 @@
     padding: 0;
     list-style: none;
     border-left: 2px solid var(--border);
+  }
+
+  .group {
+    padding: 14px 12px 4px;
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .group:first-child {
+    padding-top: 0;
   }
 
   button {
@@ -145,5 +180,40 @@
     border-left-color: var(--accent);
     color: var(--text);
     font-weight: 600;
+  }
+
+  @media (max-width: 1060px) {
+    nav {
+      top: var(--header-h, 0px);
+      z-index: 5;
+      padding: 8px 0;
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+
+    ul {
+      flex-direction: row;
+      gap: 6px;
+      width: max-content;
+      border-left: 0;
+    }
+
+    .group {
+      display: none;
+    }
+
+    button {
+      width: auto;
+      margin: 0;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+
+    button.current {
+      border-color: var(--accent);
+    }
   }
 </style>

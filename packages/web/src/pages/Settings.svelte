@@ -15,17 +15,17 @@
   import { router } from '../lib/router.svelte.js';
   import { DEFAULT_METADATA, DEFAULT_NAMING, type Settings } from '../lib/settings.js';
 
-  /** In page order: the nav lists them, and each wraps its section so a click can reach it. */
+  /** In page order: the nav lists them by group, and each wraps its section so a click can reach it. */
   const SECTIONS = [
-    { id: 'general', label: 'web.settings.general.title' },
-    { id: 'libraries', label: 'web.settings.libraries.title' },
-    { id: 'watch', label: 'web.settings.watch.title' },
-    { id: 'processing', label: 'web.settings.processing.title' },
-    { id: 'retention', label: 'web.settings.retention.title' },
-    { id: 'plex', label: 'web.settings.plex.title' },
-    { id: 'jellyfin', label: 'web.settings.jellyfin.title' },
-    { id: 'webhooks', label: 'web.settings.webhooks.title' },
-    { id: 'access', label: 'web.settings.access.title' },
+    { id: 'general', label: 'web.settings.general.title', group: 'base' },
+    { id: 'libraries', label: 'web.settings.libraries.title', group: 'base' },
+    { id: 'access', label: 'web.settings.access.title', group: 'base' },
+    { id: 'watch', label: 'web.settings.watch.title', group: 'processing' },
+    { id: 'processing', label: 'web.settings.processing.title', group: 'processing' },
+    { id: 'retention', label: 'web.settings.retention.title', group: 'processing' },
+    { id: 'plex', label: 'web.settings.plex.title', group: 'integrations' },
+    { id: 'jellyfin', label: 'web.settings.jellyfin.title', group: 'integrations' },
+    { id: 'webhooks', label: 'web.settings.webhooks.title', group: 'integrations' },
   ] as const;
 
   let settings = $state<Settings | undefined>(undefined);
@@ -61,6 +61,10 @@
   }
 </script>
 
+{#snippet group(id: (typeof SECTIONS)[number]['group'])}
+  <h2 class="group">{t(`web.settings.group.${id}`)}</h2>
+{/snippet}
+
 <div class="layout">
   <div class="page">
     <div>
@@ -72,6 +76,7 @@
       <p class="alert alert-danger" role="alert">{messageOf(t, failure)}</p>
       <button type="button" class="btn" onclick={() => void load()}>{t('web.retry')}</button>
     {:else if settings}
+      {@render group('base')}
       <div id="general"><SettingsGeneral {settings} {save} /></div>
       <div id="libraries">
         <SettingsLibraries
@@ -82,20 +87,28 @@
           }}
         />
       </div>
+      <div id="access"><SettingsAccess {settings} /></div>
+      {@render group('processing')}
       <div id="watch"><SettingsWatch {settings} {save} /></div>
       <div id="processing"><SettingsProcessing {settings} {save} /></div>
       <div id="retention"><SettingsRetention {settings} {save} /></div>
+      {@render group('integrations')}
       <div id="plex"><SettingsServer kind="plex" {settings} {save} /></div>
       <div id="jellyfin"><SettingsServer kind="jellyfin" {settings} {save} /></div>
       <div id="webhooks"><SettingsWebhooks {settings} {save} /></div>
-      <div id="access"><SettingsAccess {settings} /></div>
     {:else}
       <p class="muted" role="status">{t('web.loading')}</p>
     {/if}
   </div>
 
   {#if settings}
-    <SettingsNav sections={SECTIONS.map(({ id, label }) => ({ id, label: t(label) }))} />
+    <SettingsNav
+      sections={SECTIONS.map(({ id, label, group }) => ({
+        id,
+        label: t(label),
+        group: t(`web.settings.group.${group}`),
+      }))}
+    />
   {/if}
 </div>
 
@@ -109,25 +122,41 @@
     align-items: start;
   }
 
-  /* Short of room, the page is short enough to do without it. */
+  /* Short of room, the nav becomes a bar of chips above the page, kept in view while scrolling. */
   @media (max-width: 1060px) {
     .layout {
       grid-template-columns: minmax(0, 760px);
     }
 
     .layout > :global(nav) {
-      display: none;
+      order: -1;
     }
   }
 
   .page > :global(div[id]) {
-    scroll-margin-top: 16px;
+    /* Under the sticky header, and under the chip bar when the nav is one (about 56px). */
+    scroll-margin-top: calc(var(--header-h, 0px) + 72px);
   }
 
   .page {
     display: flex;
     flex-direction: column;
     gap: 16px;
+  }
+
+  .group {
+    margin: 16px 0 0;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .group:first-of-type {
+    margin-top: 0;
   }
 
   h1 {
