@@ -103,6 +103,11 @@ textarea {
   color: inherit;
 }
 
+/* The native bar is the browser's blue otherwise. */
+progress {
+  accent-color: var(--accent);
+}
+
 .mono {
   font-family: var(--mono);
   font-size: 12.5px;

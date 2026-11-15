@@ -11,6 +11,7 @@ import type { PlexPin, PlexServer } from './plex.js';
 import type { Settings } from './settings.js';
 import type { Library } from './libraries.js';
 import type { LogPage } from './logs.js';
+import type { ActivityTask } from './activity.js';
 import type { ItemDetail, ItemsPage, RunReport, Show, ShowDetail } from './library-items.js';
 
 type Json<R> = R extends { content: { 'application/json': infer B } } ? B : never;
@@ -61,4 +62,5 @@ export type Contract = [
   Expect<Fits<Posted<'/api/maintenance/empty-replaced', 202>, ReplacedTask>>,
   Expect<Fits<Got<'/api/maintenance/tidy'>['tasks'][number], TidyTask>>,
   Expect<Fits<Posted<'/api/maintenance/tidy', 202>, TidyTask>>,
+  Expect<Fits<Got<'/api/activity'>['tasks'][number], ActivityTask>>,
 ];

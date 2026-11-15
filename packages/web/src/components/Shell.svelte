@@ -1,6 +1,7 @@
 <script lang="ts">
-  import type { Snippet } from 'svelte';
+  import { onDestroy, type Snippet } from 'svelte';
   import { isLocale } from '@kinoshelf/i18n';
+  import { activity } from '../lib/activity.svelte.js';
   import { refetchOn } from '../lib/events.svelte.js';
   import { locale, t } from '../lib/i18n.svelte.js';
   import { router } from '../lib/router.svelte.js';
@@ -8,6 +9,7 @@
   import { session } from '../lib/session.svelte.js';
   import { shell } from '../lib/shell-state.svelte.js';
   import { theme, type ThemePreference } from '../lib/theme.svelte.js';
+  import ActivityTray from './ActivityTray.svelte';
   import Link from './Link.svelte';
   import Logo from './Logo.svelte';
 
@@ -17,11 +19,17 @@
   refetchOn(['settings', 'ready'], () => void shell.loadOnboarding());
   refetchOn(['arrivals', 'jobs', 'settings', 'ready'], () => void shell.loadArrivals());
   refetchOn(['health', 'ready'], () => void shell.loadHealth());
+  // The panel shows what runs wherever the person is, so it reads at every event that moves a task.
+  refetchOn(['progress', 'jobs', 'history', 'ready'], () => void activity.load());
 
   // Until the welcome page is left only what it needs is shown; unknown, everything is.
   const routes = $derived(
     shell.onboarding?.completed === false ? ROUTES.filter((route) => route.firstRun) : ROUTES,
   );
+
+  onDestroy(() => {
+    activity.clear();
+  });
 
   const themes: readonly ThemePreference[] = ['dark', 'light', 'system'];
 
@@ -90,6 +98,8 @@
 </header>
 
 <main id="content" tabindex="-1">{@render children()}</main>
+
+<ActivityTray />
 
 <footer class="muted">{t('web.tmdb-attribution')}</footer>
 
