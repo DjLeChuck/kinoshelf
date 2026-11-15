@@ -696,8 +696,8 @@
 
   .side {
     position: sticky;
-    top: 16px;
-    max-height: calc(100vh - 32px);
+    top: calc(var(--header-h, 0px) + 16px);
+    max-height: calc(100vh - var(--header-h, 0px) - 32px);
     overflow-y: auto;
   }
 

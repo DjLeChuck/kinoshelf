@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onDestroy, type Snippet } from 'svelte';
+  import type { Action } from 'svelte/action';
   import { isLocale } from '@kinoshelf/i18n';
   import { activity } from '../lib/activity.svelte.js';
   import { refetchOn } from '../lib/events.svelte.js';
@@ -31,6 +32,23 @@
     activity.clear();
   });
 
+  // The header wraps on a narrow screen, so its height is measured: whatever sticks below it
+  // (a side panel, the settings nav) reads `--header-h` to start under it.
+  const measure: Action = (node) => {
+    const publish = (): void => {
+      document.documentElement.style.setProperty('--header-h', `${node.offsetHeight}px`);
+    };
+    const observer = new ResizeObserver(publish);
+    observer.observe(node);
+    publish();
+    return {
+      destroy() {
+        observer.disconnect();
+        document.documentElement.style.removeProperty('--header-h');
+      },
+    };
+  };
+
   const themes: readonly ThemePreference[] = ['dark', 'light', 'system'];
 
   function pickLocale(event: Event & { currentTarget: HTMLSelectElement }): void {
@@ -47,7 +65,7 @@
 
 <a class="skip" href="#content">{t('web.skip-to-content')}</a>
 
-<header>
+<header use:measure>
   <Link href="/" aria-label="Kinoshelf"><Logo /></Link>
 
   <nav aria-label={t('web.nav.label')}>
@@ -127,6 +145,11 @@
     gap: 12px 24px;
     padding: 12px 24px;
     border-bottom: 1px solid var(--border);
+    /* Kept in view so the menus stay one click away on a long page. */
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background: var(--bg);
   }
 
   nav {
