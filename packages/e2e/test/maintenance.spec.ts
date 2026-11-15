@@ -1,7 +1,7 @@
 import { access, mkdir, rm, writeFile } from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
-import { library } from '../support.js';
-import { signIn } from './helpers.js';
+import { incoming, library } from '../support.js';
+import { signIn, submit } from './helpers.js';
 
 const exists = (path: string): Promise<boolean> =>
   access(path).then(
@@ -184,4 +184,28 @@ test('says the state of a library in its header, and in one line when folded', a
   await expect(films.getByText('same work as Dune (2021) {tmdb-438631}')).toBeHidden();
   await films.getByRole('button', { name: 'Show' }).click();
   await expect(films.getByText('same work as Dune (2021) {tmdb-438631}')).toBeVisible();
+});
+
+test('clears the TMDB cache after a confirmation', async ({ page, request }) => {
+  // An analysis asks TMDB, so there is something in the cache whatever ran before.
+  await submit(request, 'cache-card', ['Dune.2021.1080p.mkv']);
+  try {
+    await signIn(page);
+    await page.goto('/system?tab=maintenance');
+    const card = page.getByRole('article', { name: 'Clear the caches' });
+    await expect(card.getByText(/\d+ TMDB answers? kept/)).toBeVisible();
+
+    await card.getByRole('button', { name: 'Clear' }).click();
+    const dialog = page.getByRole('dialog', { name: /Clear the caches/ });
+    await expect(dialog.getByText(/send their requests to TMDB again/)).toBeVisible();
+    await dialog.getByRole('button', { name: 'Clear' }).click();
+    await expect(card.getByText(/\d+ answers? forgotten/)).toBeVisible();
+
+    // The figure is read again: nothing is kept.
+    await page.reload();
+    await expect(card.getByText('The TMDB cache is empty.')).toBeVisible();
+    await expect(card.getByRole('button', { name: 'Clear' })).toBeDisabled();
+  } finally {
+    await rm(incoming('cache-card'), { recursive: true, force: true });
+  }
 });
