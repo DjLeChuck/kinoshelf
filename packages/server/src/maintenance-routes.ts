@@ -9,7 +9,7 @@ import {
   type TidiedFolder,
   type TidiedForeignFile,
 } from '@kinoshelf/core';
-import type { FastifyInstance } from 'fastify';
+import type { FastifyBaseLogger, FastifyInstance } from 'fastify';
 import { ApiError } from './api-error.js';
 import type { EventBus } from './events.js';
 import type { JobStore } from './jobs.js';
@@ -30,6 +30,7 @@ export interface MaintenanceDeps {
   readonly tmdbUsage: TmdbUsage;
   readonly databaseTasks: DatabaseTasks;
   readonly replaced: ReplacedFiles;
+  readonly log: Pick<FastifyBaseLogger, 'info' | 'warn'>;
   readonly backupKeep: () => number;
   readonly snapshot: LibrarySnapshot;
   readonly events: EventBus;
@@ -451,6 +452,7 @@ export function registerMaintenanceRoutes(api: FastifyInstance, deps: Maintenanc
       if (jobs > 0) {
         deps.events.emit('history');
       }
+      deps.log.info({ removed: jobs }, 'Forgot the hidden analyses');
       return { removed: jobs };
     },
   );
@@ -558,6 +560,17 @@ export function registerMaintenanceRoutes(api: FastifyInstance, deps: Maintenanc
         .finally(() => {
           task.endedAt = new Date().toISOString();
           task.current = null;
+          if (!task.dryRun) {
+            deps.log.info(
+              {
+                library: library.id,
+                status: task.status,
+                folders: task.folders?.batch ?? null,
+                files: task.files?.batch ?? null,
+              },
+              'Tidied a library',
+            );
+          }
           deps.progress.announce();
           // A batch was made, even by a task that failed afterwards: the History lists it.
           if (task.folders?.batch != null || task.files?.batch != null) {

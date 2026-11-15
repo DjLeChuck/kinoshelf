@@ -7355,7 +7355,7 @@ export interface paths {
                 query?: {
                     /** @description This level and above. */
                     level?: "debug" | "info" | "warn" | "error";
-                    component?: "server" | "http" | "scan" | "transfer" | "watcher" | "tmdb" | "notify" | "collections";
+                    component?: "server" | "http" | "scan" | "transfer" | "watcher" | "tmdb" | "notify" | "collections" | "maintenance";
                     q?: string;
                     minutes?: number;
                     limit?: number;
@@ -7383,7 +7383,7 @@ export interface paths {
                                 /** @enum {unknown} */
                                 level: "debug" | "info" | "warn" | "error";
                                 /** @enum {unknown} */
-                                component: "server" | "http" | "scan" | "transfer" | "watcher" | "tmdb" | "notify" | "collections";
+                                component: "server" | "http" | "scan" | "transfer" | "watcher" | "tmdb" | "notify" | "collections" | "maintenance";
                                 message: string;
                                 /** @description The job the line is about, if any. */
                                 job: string | null;

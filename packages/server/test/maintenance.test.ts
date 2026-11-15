@@ -3,12 +3,15 @@ import { mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { Database } from '@kinoshelf/core';
+import { LogStore } from '../src/logs.js';
 import { DatabaseTasks } from '../src/database-tasks.js';
 import { ReplacedFiles } from '../src/replaced-files.js';
 import { ProgressTracker } from '../src/progress.js';
 import { cleanup, harness, makeDir, put, type Harness } from './harness.js';
 
 afterEach(cleanup);
+
+const silent = { info: () => undefined, warn: () => undefined };
 
 const exists = (path: string): Promise<boolean> =>
   stat(path).then(
@@ -310,6 +313,7 @@ describe('database backup and compaction', () => {
 
   it('refuses to compact while a scan or a transfer runs', () => {
     const tasks = new DatabaseTasks({
+      log: silent,
       database: new Database(':memory:'),
       configDir: '/nowhere',
       progress: new ProgressTracker(() => undefined),
@@ -402,6 +406,7 @@ describe('POST /api/maintenance/empty-replaced', () => {
 
   it('refuses while a scan, a transfer or an undo runs', () => {
     const files = new ReplacedFiles({
+      log: silent,
       database: new Database(':memory:'),
       dir: '/nowhere',
       progress: new ProgressTracker(() => undefined),
@@ -411,5 +416,34 @@ describe('POST /api/maintenance/empty-replaced', () => {
     expect(() => files.start({ all: true })).toThrow(
       expect.objectContaining({ code: 'maintenance.replaced-busy' }),
     );
+  });
+});
+
+describe('the log of the maintenance actions', () => {
+  it('records what each action did under the maintenance component', async () => {
+    const configDir = await makeDir();
+    const h = await harness({ configDir, logs: new LogStore() });
+    h.database
+      .prepare(
+        "INSERT INTO jobs (id, path, status, created_at, finished_at) VALUES ('j', '/x', 'done', 'a', 'b')",
+      )
+      .run();
+
+    await h.request('POST', '/api/maintenance/purge-hidden');
+    await h.request('POST', '/api/maintenance/backup');
+    await databaseTask(h, 'backup');
+    await h.request('POST', '/api/maintenance/vacuum');
+    await databaseTask(h, 'vacuum');
+    await emptied(h, { all: true });
+
+    const { entries } = (await h.request('GET', '/api/logs?component=maintenance&limit=50')).json<{
+      entries: { message: string }[];
+    }>();
+    expect(entries.map(({ message }) => message).sort()).toEqual([
+      'Backed up the database',
+      'Compacted the database',
+      'Emptied the files set aside',
+      'Forgot the hidden analyses',
+    ]);
   });
 });

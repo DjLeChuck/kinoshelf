@@ -193,8 +193,9 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     events.emit('logs');
   });
   // Each part of the server logs under its own name, which the System page filters on.
-  const noted = (component: 'notify' | 'scan' | 'tmdb' | 'watcher' | 'collections') =>
-    app.log.child({ component });
+  const noted = (
+    component: 'notify' | 'scan' | 'tmdb' | 'watcher' | 'collections' | 'maintenance',
+  ) => app.log.child({ component });
   // What was sent to TMDB: counted by the provider, logged (429, abandoned calls) under `tmdb`.
   const tmdbUsage = tmdbUsageOf(options.database);
   tmdbUsage.log = noted('tmdb');
@@ -729,6 +730,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     });
     registerTmdbRoutes(api, tmdbUsage);
     const databaseTasks = new DatabaseTasks({
+      log: noted('maintenance'),
       database: options.database,
       configDir: options.configDir,
       progress,
@@ -736,6 +738,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
       keep: () => configStore.config.backupKeep ?? DEFAULT_BACKUP_KEEP,
     });
     const replaced = new ReplacedFiles({
+      log: noted('maintenance'),
       database: options.database,
       dir: join(options.configDir, 'replaced'),
       progress,
@@ -750,6 +753,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
       tmdbUsage,
       databaseTasks,
       replaced,
+      log: noted('maintenance'),
       backupKeep: () => configStore.config.backupKeep ?? DEFAULT_BACKUP_KEEP,
       snapshot,
       events,

@@ -256,7 +256,7 @@ badge before it is built.
   keeps the last 5000 lines in memory (what the page lists) and writes `<config>/logs/kinoshelf.log`, rotated at
   10 MB with 3 files kept, read back at start so a restart does not empty the page; `main.ts` also echoes each
   line to stdout (`docker logs`). A line carries a `component` (`server` by default, else named by the code that
-  logs it: `http`, `scan`, `transfer`, `watcher`, `tmdb`, `notify`; `app.log.child({ component })`) and optionally a
+  logs it: `http`, `scan`, `transfer`, `watcher`, `tmdb`, `notify`, `collections`, `maintenance`; `app.log.child({ component })`) and optionally a
   `job`. A request is one `http` line at `debug` (never the reads of `/api/logs` or `/api/events`).
 - **Secrets are wiped when a line is written** (`scrub`): the values the settings and the environment hold (TMDB,
   API, Plex and Jellyfin keys, webhook addresses and headers, read at each line since the settings change) and the

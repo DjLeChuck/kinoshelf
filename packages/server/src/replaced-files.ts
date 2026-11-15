@@ -1,6 +1,7 @@
 import { readdir, stat, unlink } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { Database } from '@kinoshelf/core';
+import type { FastifyBaseLogger } from 'fastify';
 import { ApiError } from './api-error.js';
 import { failureOf, type MatchFailure } from './matches.js';
 import type { ProgressTracker } from './progress.js';
@@ -44,6 +45,8 @@ export interface ReplacedTask {
 }
 
 export interface ReplacedDeps {
+  /** Under the `maintenance` component of the log. */
+  readonly log: Pick<FastifyBaseLogger, 'info' | 'warn'>;
   readonly database: Database;
   readonly dir: string;
   readonly progress: ProgressTracker;
@@ -190,6 +193,7 @@ export class ReplacedFiles {
     }
     freed.batches = batchesOf(gone).length;
     task.freed = freed;
+    this.deps.log.info({ ...freed, all }, 'Emptied the files set aside');
   }
 }
 

@@ -27,6 +27,7 @@ export const LOG_COMPONENTS = [
   'tmdb',
   'notify',
   'collections',
+  'maintenance',
 ] as const;
 export type LogComponent = (typeof LOG_COMPONENTS)[number];
 

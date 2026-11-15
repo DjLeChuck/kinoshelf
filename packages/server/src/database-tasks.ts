@@ -1,6 +1,7 @@
 import { mkdir, readdir, rename, rm, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { Database } from '@kinoshelf/core';
+import type { FastifyBaseLogger } from 'fastify';
 import { ApiError } from './api-error.js';
 import { failureOf, type MatchFailure } from './matches.js';
 import type { ProgressTracker } from './progress.js';
@@ -32,6 +33,8 @@ export interface DatabaseTask {
 }
 
 export interface DatabaseTasksDeps {
+  /** Under the `maintenance` component of the log. */
+  readonly log: Pick<FastifyBaseLogger, 'info' | 'warn'>;
   readonly database: Database;
   readonly configDir: string;
   readonly progress: ProgressTracker;
@@ -118,6 +121,17 @@ export class DatabaseTasks {
       task.error = failureOf(error);
     }
     task.endedAt = new Date().toISOString();
+    if (task.status === 'done') {
+      this.deps.log.info(
+        {
+          ...(task.backup && { backup: task.backup.file.name, removed: task.backup.removed }),
+          ...(task.size && { before: task.size.before, after: task.size.after }),
+        },
+        task.kind === 'backup' ? 'Backed up the database' : 'Compacted the database',
+      );
+    } else {
+      this.deps.log.warn({ error: task.error?.code }, `The ${task.kind} of the database failed`);
+    }
     this.deps.progress.announce();
   }
 
