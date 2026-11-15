@@ -443,6 +443,8 @@ export const en = {
   'web.maintenance.replaced.confirm': 'Delete for good',
   'web.maintenance.replaced.done':
     '{files, plural, =0 {Nothing to delete.} one {# file deleted} other {# files deleted}} ({size}).{failed, plural, =0 {} one { One could not be.} other { # could not be.}}',
+  'web.maintenance.panel.show': 'Show',
+  'web.maintenance.panel.hide': 'Fold',
   'web.maintenance.page.intro':
     'Each action says what it does and what it leaves alone, and asks for confirmation before it starts.',
   'web.maintenance.tidy.title': 'Tidy a library’s folders',

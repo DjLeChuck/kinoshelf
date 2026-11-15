@@ -133,3 +133,26 @@ test('empties what a tidy-up set aside, after a confirmation that says it cannot
   // Nothing is left to empty.
   await expect(card.getByRole('button', { name: 'Empty all' })).toBeDisabled();
 });
+
+test('backs the database up after a confirmation, and says what the cache holds', async ({
+  page,
+}) => {
+  await signIn(page);
+  await page.goto('/system?tab=maintenance');
+
+  await expect(
+    page
+      .getByRole('article', { name: 'Clear the caches' })
+      .getByText(/TMDB answers? kept|The TMDB cache is empty/),
+  ).toBeVisible();
+
+  const card = page.getByRole('article', { name: 'Back up the journal database' });
+  await expect(card.getByText(/\d+ backups? · 3 kept at most|No backup\./)).toBeVisible();
+  await card.getByRole('button', { name: 'Back up' }).click();
+  // The confirmation says what it does and what it leaves alone.
+  const dialog = page.getByRole('dialog', { name: /Back up the journal database/ });
+  await expect(dialog.getByText(/without stopping the server/)).toBeVisible();
+  await dialog.getByRole('button', { name: 'Back up' }).click();
+
+  await expect(card.getByText(/Backup made: kinoshelf-\d{8}-\d{4}\.sqlite/)).toBeVisible();
+});

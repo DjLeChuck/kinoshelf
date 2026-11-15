@@ -52,6 +52,17 @@
       ) ??
       false,
   );
+  // Open while there is something to read or follow (a report, a result, a task, a failure), folded
+  // otherwise so a list of libraries stays short; the reader's own choice wins once made.
+  let toggled = $state<boolean | undefined>(undefined);
+  const open = $derived(
+    toggled ??
+      (shown !== undefined ||
+        running !== undefined ||
+        failure !== undefined ||
+        task?.status === 'failed' ||
+        library.scanning),
+  );
   const percent = $derived(
     running && running.total > 0 ? Math.round((running.done / running.total) * 100) : undefined,
   );
@@ -144,185 +155,200 @@
       <h2 id={`maintenance-${library.id}`}>{library.name}</h2>
       <p class="muted mono source">{library.source}</p>
     </div>
-    <button type="button" class="btn" disabled={locked} onclick={() => void start(true)}>
-      {#if running?.dryRun || starting}
-        {t('web.maintenance.analysing')}
-      {:else}
-        {report || result ? t('web.maintenance.analyse.again') : t('web.maintenance.analyse')}
-      {/if}
-    </button>
-  </header>
-
-  {#if library.scanning}
-    <p class="muted" role="status">{t('web.maintenance.scanning')}</p>
-  {/if}
-  {#if failure}
-    <p class="alert alert-danger" role="alert">{messageOf(t, failure)}</p>
-  {/if}
-  {#if task?.status === 'failed' && task.error}
-    <p class="alert alert-danger" role="alert">{describeError(t, task.error)}</p>
-  {/if}
-
-  {#if running}
-    <div class="running" role="status" aria-live="polite">
-      {#if percent === undefined}
-        <progress aria-label={t('web.maintenance.progress.label')}></progress>
-      {:else}
-        <progress max="100" value={percent} aria-label={t('web.maintenance.progress.label')}
-          >{percent}%</progress
-        >
-      {/if}
-      <p class="muted">
-        {#if running.phase === 'reading'}
-          {t('web.maintenance.progress.reading')}
-        {:else}
-          {t(`web.maintenance.progress.${running.phase}`, {
-            done: running.done,
-            total: running.total,
-          })}
-        {/if}
-      </p>
-      {#if running.current}<p class="muted mono current">{running.current}</p>{/if}
-    </div>
-  {/if}
-
-  {#if isMovies}
-    <label class="check">
-      <input
-        type="checkbox"
-        checked={nfo}
-        disabled={locked}
-        onchange={(event) => {
-          toggleNfo(event.currentTarget.checked);
-        }}
-      />
-      <span>
-        {t('web.maintenance.nfo')}
-        <span class="muted hint">{t('web.maintenance.nfo.hint')}</span>
-      </span>
-    </label>
-  {/if}
-
-  {#if shown && tally}
-    <section aria-live="polite" aria-label={t('web.maintenance.report')}>
-      <p class="summary">
-        {#if result}
-          <b class="stamp"
-            >{t('web.maintenance.result', {
-              date: formatDate(result.endedAt ?? result.startedAt, locale.value),
-            })}</b
-          >
-        {/if}
-        {#if !hasWork(tally) && tally.failed === 0}
-          {t('web.maintenance.nothing')}
-        {:else}
-          {[
-            tally.folders > 0 &&
-              t(result ? 'web.maintenance.folders.done' : 'web.maintenance.folders.todo', {
-                count: tally.folders,
-              }),
-            tally.renames > 0 &&
-              t(result ? 'web.maintenance.renames.done' : 'web.maintenance.renames.todo', {
-                count: tally.renames,
-              }),
-            tally.removals > 0 &&
-              t(result ? 'web.maintenance.removals.done' : 'web.maintenance.removals.todo', {
-                count: tally.removals,
-              }),
-            tally.failed > 0 && t('web.maintenance.failed', { count: tally.failed }),
-          ]
-            .filter(Boolean)
-            .join(' · ')}
-        {/if}
-      </p>
-
-      {#if todoFolders.length > 0}
-        <details open={todoFolders.length <= 12}>
-          <summary>
-            {t(result ? 'web.maintenance.folders.done' : 'web.maintenance.folders.todo', {
-              count: todoFolders.length,
-            })}
-          </summary>
-          {#if tally.approximate > 0}
-            <p class="muted hint">
-              {t('web.maintenance.approximate.hint', { count: tally.approximate })}
-            </p>
-          {/if}
-          {@render grouped(todoFolders, todoRow)}
-        </details>
-      {/if}
-
-      {#if leftFolders.length > 0}
-        <details>
-          <summary>{t('web.maintenance.left', { count: leftFolders.length })}</summary>
-          {@render grouped(leftFolders, leftRow)}
-        </details>
-      {/if}
-
-      {#if doneFiles.length > 0}
-        <details open={doneFiles.length <= 12}>
-          <summary>
-            {t(result ? 'web.maintenance.files.done' : 'web.maintenance.files.todo', {
-              count: doneFiles.length,
-            })}
-          </summary>
-          <ul class="rows">
-            {#each doneFiles as file (file.path)}
-              <li><span class="name" title={file.path}>{fileLine(file)}</span></li>
-            {/each}
-          </ul>
-        </details>
-      {/if}
-
-      {#if tally.nfoLeft > 0 && !nfo}
-        <p class="muted hint">{t('web.maintenance.nfo.left', { count: tally.nfoLeft })}</p>
-      {/if}
-
-      {#if failedFolders.length + failedFiles.length > 0}
-        <details open>
-          <summary
-            >{t('web.maintenance.failed', {
-              count: failedFolders.length + failedFiles.length,
-            })}</summary
-          >
-          <ul class="rows">
-            {#each [...failedFolders, ...failedFiles] as item (item.path)}
-              <li>
-                <span class="name" title={item.path}>{baseName(item.path)}</span>
-                {#if item.error}
-                  <span class="muted">{describeError(t, item.error)}</span>
-                {/if}
-              </li>
-            {/each}
-          </ul>
-        </details>
-      {/if}
-
-      {#if result}
-        <p class="batches">
-          {#each [result.folders?.batch, result.files?.batch].filter((id): id is string => id != null) as batch (batch)}
-            <Link href={`/history/${batch}`}>{t('web.maintenance.batch.link')}</Link>
-          {/each}
-        </p>
-        <p class="muted hint">{t('web.maintenance.batch.hint')}</p>
-      {/if}
-    </section>
-  {/if}
-
-  {#if report && tally && hasWork(tally)}
-    <footer>
+    <div class="actions">
       <button
         type="button"
-        class="btn btn-primary"
-        disabled={locked}
+        class="btn fold"
+        aria-expanded={open}
+        aria-controls={`maintenance-body-${library.id}`}
         onclick={() => {
-          confirming = true;
+          toggled = !open;
         }}
       >
-        {t('web.maintenance.run')}
+        {open ? t('web.maintenance.panel.hide') : t('web.maintenance.panel.show')}
       </button>
-    </footer>
-  {/if}
+      <button type="button" class="btn" disabled={locked} onclick={() => void start(true)}>
+        {#if running?.dryRun || starting}
+          {t('web.maintenance.analysing')}
+        {:else}
+          {report || result ? t('web.maintenance.analyse.again') : t('web.maintenance.analyse')}
+        {/if}
+      </button>
+    </div>
+  </header>
+
+  <div class="body" id={`maintenance-body-${library.id}`} hidden={!open}>
+    {#if library.scanning}
+      <p class="muted" role="status">{t('web.maintenance.scanning')}</p>
+    {/if}
+    {#if failure}
+      <p class="alert alert-danger" role="alert">{messageOf(t, failure)}</p>
+    {/if}
+    {#if task?.status === 'failed' && task.error}
+      <p class="alert alert-danger" role="alert">{describeError(t, task.error)}</p>
+    {/if}
+
+    {#if running}
+      <div class="running" role="status" aria-live="polite">
+        {#if percent === undefined}
+          <progress aria-label={t('web.maintenance.progress.label')}></progress>
+        {:else}
+          <progress max="100" value={percent} aria-label={t('web.maintenance.progress.label')}
+            >{percent}%</progress
+          >
+        {/if}
+        <p class="muted">
+          {#if running.phase === 'reading'}
+            {t('web.maintenance.progress.reading')}
+          {:else}
+            {t(`web.maintenance.progress.${running.phase}`, {
+              done: running.done,
+              total: running.total,
+            })}
+          {/if}
+        </p>
+        {#if running.current}<p class="muted mono current">{running.current}</p>{/if}
+      </div>
+    {/if}
+
+    {#if isMovies}
+      <label class="check">
+        <input
+          type="checkbox"
+          checked={nfo}
+          disabled={locked}
+          onchange={(event) => {
+            toggleNfo(event.currentTarget.checked);
+          }}
+        />
+        <span>
+          {t('web.maintenance.nfo')}
+          <span class="muted hint">{t('web.maintenance.nfo.hint')}</span>
+        </span>
+      </label>
+    {/if}
+
+    {#if shown && tally}
+      <section aria-live="polite" aria-label={t('web.maintenance.report')}>
+        <p class="summary">
+          {#if result}
+            <b class="stamp"
+              >{t('web.maintenance.result', {
+                date: formatDate(result.endedAt ?? result.startedAt, locale.value),
+              })}</b
+            >
+          {/if}
+          {#if !hasWork(tally) && tally.failed === 0}
+            {t('web.maintenance.nothing')}
+          {:else}
+            {[
+              tally.folders > 0 &&
+                t(result ? 'web.maintenance.folders.done' : 'web.maintenance.folders.todo', {
+                  count: tally.folders,
+                }),
+              tally.renames > 0 &&
+                t(result ? 'web.maintenance.renames.done' : 'web.maintenance.renames.todo', {
+                  count: tally.renames,
+                }),
+              tally.removals > 0 &&
+                t(result ? 'web.maintenance.removals.done' : 'web.maintenance.removals.todo', {
+                  count: tally.removals,
+                }),
+              tally.failed > 0 && t('web.maintenance.failed', { count: tally.failed }),
+            ]
+              .filter(Boolean)
+              .join(' · ')}
+          {/if}
+        </p>
+
+        {#if todoFolders.length > 0}
+          <details open={todoFolders.length <= 12}>
+            <summary>
+              {t(result ? 'web.maintenance.folders.done' : 'web.maintenance.folders.todo', {
+                count: todoFolders.length,
+              })}
+            </summary>
+            {#if tally.approximate > 0}
+              <p class="muted hint">
+                {t('web.maintenance.approximate.hint', { count: tally.approximate })}
+              </p>
+            {/if}
+            {@render grouped(todoFolders, todoRow)}
+          </details>
+        {/if}
+
+        {#if leftFolders.length > 0}
+          <details>
+            <summary>{t('web.maintenance.left', { count: leftFolders.length })}</summary>
+            {@render grouped(leftFolders, leftRow)}
+          </details>
+        {/if}
+
+        {#if doneFiles.length > 0}
+          <details open={doneFiles.length <= 12}>
+            <summary>
+              {t(result ? 'web.maintenance.files.done' : 'web.maintenance.files.todo', {
+                count: doneFiles.length,
+              })}
+            </summary>
+            <ul class="rows">
+              {#each doneFiles as file (file.path)}
+                <li><span class="name" title={file.path}>{fileLine(file)}</span></li>
+              {/each}
+            </ul>
+          </details>
+        {/if}
+
+        {#if tally.nfoLeft > 0 && !nfo}
+          <p class="muted hint">{t('web.maintenance.nfo.left', { count: tally.nfoLeft })}</p>
+        {/if}
+
+        {#if failedFolders.length + failedFiles.length > 0}
+          <details open>
+            <summary
+              >{t('web.maintenance.failed', {
+                count: failedFolders.length + failedFiles.length,
+              })}</summary
+            >
+            <ul class="rows">
+              {#each [...failedFolders, ...failedFiles] as item (item.path)}
+                <li>
+                  <span class="name" title={item.path}>{baseName(item.path)}</span>
+                  {#if item.error}
+                    <span class="muted">{describeError(t, item.error)}</span>
+                  {/if}
+                </li>
+              {/each}
+            </ul>
+          </details>
+        {/if}
+
+        {#if result}
+          <p class="batches">
+            {#each [result.folders?.batch, result.files?.batch].filter((id): id is string => id != null) as batch (batch)}
+              <Link href={`/history/${batch}`}>{t('web.maintenance.batch.link')}</Link>
+            {/each}
+          </p>
+          <p class="muted hint">{t('web.maintenance.batch.hint')}</p>
+        {/if}
+      </section>
+    {/if}
+
+    {#if report && tally && hasWork(tally)}
+      <footer>
+        <button
+          type="button"
+          class="btn btn-primary"
+          disabled={locked}
+          onclick={() => {
+            confirming = true;
+          }}
+        >
+          {t('web.maintenance.run')}
+        </button>
+      </footer>
+    {/if}
+  </div>
 </article>
 
 {#if confirming && tally}
@@ -345,9 +371,34 @@
 
   header {
     display: flex;
+    flex-wrap: wrap;
     align-items: flex-start;
     justify-content: space-between;
     gap: 12px;
+  }
+
+  /* The name and path keep a readable width: the buttons go under them on a phone. */
+  header > div:first-child {
+    flex: 1 1 220px;
+    min-width: 0;
+  }
+
+  .actions {
+    display: flex;
+    flex: none;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+
+  .body {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .body[hidden] {
+    display: none;
   }
 
   h2 {
