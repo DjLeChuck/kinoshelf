@@ -338,6 +338,24 @@ severity }`, `area` being its card and `code` translated by the web (`web.health
 - **Decided not to build**: a "connection lost" banner on the logs (the event stream does not tell the page it is down). A
   dropped stream reconnects by itself and every view reloads on `ready`; it is not worth an indicator of its own.
 
+## Activity
+
+The **activity panel** (`ActivityTray.svelte`, bottom right of the `Shell`, `lib/activity.svelte.ts`) lists what the server
+does in the background, on every page: scans, transfers, undos, arrival validations, tidy-ups, database backup and
+compaction, emptying `replaced/`, sending collection images. A pill says how many tasks run; it unfolds to a line per task
+(title, phase, bar, `done of total`, current file, a link to where it is followed).
+
+- **One list, no new state** (`activity.ts`, `activity-sources.ts`, `activity-routes.ts`): `GET /api/activity` is read at each
+  `progress`, `jobs` and `history` event (no new topic, no payload). `Activity` aggregates **sources**, adapters over the
+  modules that already hold each task in memory; a task is `{ id, kind, code, params, status, done, total, current, href, error }`,
+  `code` and `params` being translated by the web (`web.activity.task.<code>`), never text. **A new background task adds a
+  source in `app.ts` and a `code` in `lib/activity.ts` and both catalogs**, or it is invisible outside its own page.
+- **Ending**: `Activity` remembers which tasks it saw running. One that ends is kept as done 15 s, failed 10 min (the
+  panel closes it by hand, and it stays closed until the task runs again); a task a source keeps for its own page (the last
+  undo of a batch) is never offered if it was not seen running. A source that forgets a task as it ends (scan, transfer) says
+  what became of it in `ended`, from the job or the execution.
+- A page keeps its own detailed bar where it has more to say (the phases of a scan in a library); the panel does not replace it.
+
 ## History
 
 One list for what Kinoshelf did (`GET /api/history`, `History.activity`): a **batch** is a line
