@@ -30,6 +30,7 @@ describe('GET /api/openapi.json', () => {
     expect(spec.openapi).toMatch(/^3\./);
     expect(spec.info.version).toBe('1.2.3');
     expect(Object.keys(spec.paths).sort()).toEqual([
+      '/api/activity',
       '/api/arrivals',
       '/api/batches/{id}',
       '/api/batches/{id}/undo',

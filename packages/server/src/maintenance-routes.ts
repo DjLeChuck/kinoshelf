@@ -35,6 +35,8 @@ export interface MaintenanceDeps {
   readonly snapshot: LibrarySnapshot;
   readonly events: EventBus;
   readonly progress: ProgressTracker;
+  /** The tidy-ups, one per library (the latest), in memory: the activity panel reads them too. */
+  readonly tidyTasks: Map<string, TidyTask>;
   /** Where what a tidy-up takes out is kept, so that undo can bring it back. */
   readonly configDir: string;
 }
@@ -247,7 +249,7 @@ const isTyped = (library: LibraryConfig): library is Typed => library.type !== u
  */
 export function registerMaintenanceRoutes(api: FastifyInstance, deps: MaintenanceDeps): void {
   const backupDir = join(deps.configDir, 'replaced');
-  const tasks = new Map<string, TidyTask>();
+  const tasks = deps.tidyTasks;
 
   const typedLibrary = (id: string): Typed => {
     const all = deps.config().libraries ?? [];

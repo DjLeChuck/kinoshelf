@@ -83,6 +83,11 @@ export class MatchTracker {
     return this.states.get(entryId);
   }
 
+  /** Every match, running or lately ended, by entry id. */
+  all(): [string, MatchState][] {
+    return [...this.states];
+  }
+
   /** Whether a match of this release is in flight. */
   locked(lock: string): boolean {
     return this.locks.has(lock);

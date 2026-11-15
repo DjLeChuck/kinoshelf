@@ -28,6 +28,11 @@ export class SendTasks {
     return this.tasks.get(libraryId);
   }
 
+  /** The latest send of every library, by library id. */
+  all(): [string, SendTask][] {
+    return [...this.tasks];
+  }
+
   isRunning(libraryId: string): boolean {
     return this.tasks.get(libraryId)?.status === 'running' || this.quietRuns.has(libraryId);
   }

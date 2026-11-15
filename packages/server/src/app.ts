@@ -19,7 +19,7 @@ import { registerImageRoutes } from './images.js';
 import { JobStore } from './jobs.js';
 import { registerLogRoutes } from './log-routes.js';
 import { UndoTasks } from './undo-tasks.js';
-import { registerMaintenanceRoutes } from './maintenance-routes.js';
+import { registerMaintenanceRoutes, type TidyTask } from './maintenance-routes.js';
 import { DatabaseTasks } from './database-tasks.js';
 import { ReplacedFiles } from './replaced-files.js';
 import { DEFAULT_BACKUP_KEEP, DEFAULT_REPLACED_RETENTION_DAYS } from './settings.js';
@@ -61,6 +61,17 @@ import { Health } from './health.js';
 import { registerDiagnosticRoutes } from './diagnostic-routes.js';
 import { healthReport, type HealthReport } from './health-report.js';
 import { registerHealthRoutes } from './health-routes.js';
+import { Activity } from './activity.js';
+import {
+  collectionSendSource,
+  maintenanceSource,
+  matchSource,
+  scanSource,
+  tidySource,
+  transferSource,
+  undoSource,
+} from './activity-sources.js';
+import { registerActivityRoutes } from './activity-routes.js';
 import { registerWatchRoutes } from './watch-routes.js';
 import { FolderWatcher, watcherSettings } from './watcher.js';
 import { registerWeb } from './web.js';
@@ -729,6 +740,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
       report,
     });
     registerTmdbRoutes(api, tmdbUsage);
+    const tidyTasks = new Map<string, TidyTask>();
     const databaseTasks = new DatabaseTasks({
       log: noted('maintenance'),
       database: options.database,
@@ -758,8 +770,22 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
       snapshot,
       events,
       progress,
+      tidyTasks,
       configDir: options.configDir,
     });
+    // Every background task in one list, for the panel the web shows on every page.
+    registerActivityRoutes(
+      api,
+      new Activity([
+        scanSource({ progress, jobs, config: () => configStore.config }),
+        transferSource({ progress, jobs, executions }),
+        undoSource(undos),
+        matchSource(matches),
+        tidySource(tidyTasks, () => configStore.config),
+        maintenanceSource({ databaseTasks, replaced }),
+        collectionSendSource(collectionSends, () => configStore.config),
+      ]),
+    );
     registerLogRoutes(api, {
       logs,
       level: {

@@ -7339,6 +7339,85 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/activity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * What the server is doing in the background
+         * @description Running tasks, then those that ended a moment ago (done for a few seconds, failed for ten minutes). Read by the activity panel at each `progress`, `jobs` and `history` event.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            tasks: {
+                                id: string;
+                                kind: string;
+                                /** @description Translated by the client (`web.activity.task.<code>`). */
+                                code: string;
+                                params: {
+                                    [key: string]: string | number;
+                                };
+                                /** @enum {unknown} */
+                                status: "running" | "done" | "failed";
+                                /** @description `null`: the task cannot tell how far it is. */
+                                done: number | null;
+                                total: number | null;
+                                current: string | null;
+                                /** @description Where the web follows the task. */
+                                href: string | null;
+                                error: {
+                                    code: string;
+                                    params?: {
+                                        [key: string]: string | number;
+                                    };
+                                } | null;
+                            }[];
+                        };
+                    };
+                };
+                /** @description Default Response */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/logs": {
         parameters: {
             query?: never;

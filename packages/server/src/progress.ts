@@ -135,6 +135,19 @@ export class ProgressTracker {
     );
   }
 
+  /** Every analysis running, by job id (the activity panel lists them). */
+  scans(): [string, ScanProgress][] {
+    return [...this.states.keys()].flatMap((jobId) => {
+      const progress = this.of(jobId);
+      return progress ? [[jobId, progress] as [string, ScanProgress]] : [];
+    });
+  }
+
+  /** Every transfer running, by execution id. */
+  runningTransfers(): [string, TransferProgress][] {
+    return [...this.transfers];
+  }
+
   /** Stops a pending announcement, for a clean shutdown. */
   close(): void {
     clearTimeout(this.timer);
