@@ -66,7 +66,26 @@ How it behaves:
 - **Network shares** (NFS, SMB) announce no change: give them a `pollSeconds`.
 - Prefer the `hardlink` or `copy` mode: `move` takes the file from under its torrent.
 
-## 3. Ask by hand
+## 3. Scan a library or a path
+
+A scan of a library's source (**Update from source**) or a path sent with `POST /api/jobs` or
+`kinoshelf process` goes through the same queue, and files matched with confidence wait in Arrivals
+unless you ask for them to be transferred (`apply`, or "Transfer what is identified with confidence"
+for a watched folder).
+
+## 4. Ask by hand
 
 **Check now**, at the top of the Arrivals tab, scans the watched folders without waiting for files
-to settle. The API equivalent is `POST /api/watch/scan` (`GET /api/watch` says what is watched).
+to settle (a still-incomplete suffix such as `.part` is still skipped). The API equivalent is
+`POST /api/watch/scan` (`GET /api/watch` says what is watched).
+
+## What happens next
+
+Each release found becomes one job in the queue: analyses and transfers run one at a time each, and
+together only when they touch no common folder. A job survives a crash and resumes at the next start.
+The result shows in [Arrivals](1-web-ui.md#arrivals) and, once files move, in the
+[History](1-web-ui.md#history) as a batch you can undo. After a transfer, Plex and Jellyfin are asked
+to refresh and webhooks are told (see [Configuration](6-configuration.md#notifications)).
+
+Not built: reading completion from the download client's own API (qBittorrent, Transmission).
+Watching a raw download folder stays out on purpose.

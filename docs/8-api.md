@@ -31,16 +31,44 @@ curl -X POST localhost:8484/api/jobs -H "Authorization: Bearer $KEY" \
 
 Transfers are queued, survive a crash and resume at the next start.
 
-## Main routes
+## Routes
 
-| Route                          | Purpose                                                         |
-| ------------------------------ | --------------------------------------------------------------- |
-| `POST /api/jobs`               | analyze a path, optionally transfer (`apply`)                   |
-| `GET /api/arrivals`            | the files waiting for a decision                                |
-| `GET /api/search`              | search TMDB for candidates                                      |
-| `POST /api/entries/{id}/match` | pick a candidate for a waiting file (a series' release follows) |
-| `POST /api/batches/{id}/undo`  | undo a batch                                                    |
-| `GET /api/watch`               | what is watched                                                 |
-| `POST /api/watch/scan`         | scan the watched folders now                                    |
+The API serves Kinoshelf's own clients (the web UI, `kinoshelf submit` and the end-to-end tests): a
+route nobody reads is removed rather than kept. The OpenAPI document (`/api/openapi.json`, behind the
+key) is the reference for parameters and responses; this is the map.
 
-The OpenAPI document is the reference for parameters and responses.
+| Area            | Routes                                                                                                                                                                                    |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Public          | `GET /health`, the sign-in (`/api/session`) and first-key setup (`POST /api/setup/api-key`)                                                                                               |
+| Jobs            | `POST /api/jobs` (analyze a path, `apply` to transfer), `GET /api/jobs/{id}`                                                                                                              |
+| Arrivals        | `GET /api/arrivals` (`?state=ready\|review\|unrecognized`), `GET /api/search` (TMDB candidates)                                                                                           |
+| Entries         | `POST /api/entries/{id}/match`, `/preview`, `/ignore`; `GET .../match` follows a validation                                                                                               |
+| Plans           | `POST /api/plans/{id}/execute` (with `entries`) transfers what a plan holds                                                                                                               |
+| Libraries       | `/api/libraries` and `/api/libraries/{id}` (CRUD), `.../scan`, `.../rescan`, `.../execute`                                                                                                |
+| Library content | `.../items`, `.../items/{itemId}`, `.../shows`, `.../shows/{tmdbId}`                                                                                                                      |
+| Images          | `.../items/{itemId}/images`, `.../shows/{tmdbId}/images` and an episode's, with `.../preview`                                                                                             |
+| Collections     | `.../collection`, `.../collections`, `.../collections/{key}/images`, `/rename`, `/send`                                                                                                   |
+| History         | `GET /api/history`, `GET /api/batches/{id}`, `POST /api/batches/{id}/undo` (202, a task)                                                                                                  |
+| Watching        | `GET /api/watch`, `POST /api/watch/scan`                                                                                                                                                  |
+| Settings        | `/api/settings`, `/api/settings/api-key`, `/api/settings/tmdb/test`, `/api/onboarding`                                                                                                    |
+| Notifications   | `POST /api/notifications/test`, `/api/plex/auth` (sign-in), `/api/plex/servers`                                                                                                           |
+| System          | `/api/health`, `/api/health/report`, `/api/logs` (+ `/download`, `/level`), `/api/tmdb/usage`, `/api/tmdb/cache`, `/api/maintenance/*`, `/api/diagnostic` (+ `/archive`), `/api/activity` |
+| Misc            | `/api/fs` (path picker), `/api/images/{size}/{file}`, `/api/events` (server-sent events)                                                                                                  |
+
+## Things to know
+
+- **Nothing that can last runs inside a request.** A scan, an undo, a validation, a tidy-up, a
+  backup, sending collection images: `POST` answers **202** and the progress is read with a `GET`
+  (or announced on the event stream). A dry run of a long task is a task too.
+- **Events**: `GET /api/events` is a server-sent stream of payload-less topics (`jobs`, `progress`,
+  `arrivals`, `history`, `settings`, `logs`, `tmdb`, `health`, and `ready` on each connection): a
+  client reads the list again when its topic fires.
+- **Errors** carry a stable `code` and parameters (`library.scan-in-progress`,
+  `batch.already-undone`, `image.format-mismatch`…), translated by the client, not by the server.
+- **A variable that overrides a setting** makes its change a 409 (`settings.tmdb-key-from-env`,
+  `settings.api-key-from-env`).
+- **First key**: `POST /api/setup/api-key` works only while no key exists and only through a local
+  host name (see [Installation](0-installation.md#first-key)).
+- **Behind a proxy**, the rate limit and the origin checks read the address the proxy forwards, so
+  `KINOSHELF_TRUST_PROXY` must name it.
+- The web is served with a strict content security policy: nothing is loaded from another origin.

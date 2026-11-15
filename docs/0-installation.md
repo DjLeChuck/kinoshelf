@@ -92,9 +92,9 @@ cd kinoshelf-<version>-linux-x64
 ```
 
 `kinoshelf serve` starts the server, `kinoshelf scan`, `process`, `undo` and `submit` are the
-[command line](5-cli.md), and `kinoshelf api-key create` and `kinoshelf notify test` are the
+[command line](7-cli.md), and `kinoshelf api-key create` and `kinoshelf notify test` are the
 server's commands. Settings, the environment variables and the first key work as with Docker (see
-[Configuration](4-configuration.md) and [First key](#first-key)); the config directory is
+[Configuration](6-configuration.md) and [First key](#first-key)); the config directory is
 `~/.config/kinoshelf` unless `KINOSHELF_CONFIG_DIR` says otherwise. Put the two files wherever you
 like (for example `/usr/local/lib/kinoshelf/`, and a link to `kinoshelf` in `/usr/local/bin`), but
 keep them together: without `ffprobe` beside it, the binary falls back to the one on the `PATH`
@@ -177,6 +177,18 @@ first. You can also set `KINOSHELF_API_KEY` (32 characters at least) yourself.
 
 An address that gives ten wrong keys within ten minutes is refused with a 429 until those ten
 minutes are over.
+
+## Updating
+
+Docker: `docker compose pull && docker compose up -d`. The database migrates itself at start, and
+only forward: keep a backup (System › Maintenance › Back up the database) before a big jump.
+
+## Where the data is
+
+Everything Kinoshelf writes lives in the config directory (`/config` in Docker): `config.yaml`, the
+SQLite database (journal, library snapshot, TMDB cache), posters, files set aside, backups and logs.
+See [System](3-system.md#where-files-go). Your media folders are touched only by the transfers you
+validate.
 
 ## Behind a reverse proxy
 

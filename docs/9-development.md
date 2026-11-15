@@ -89,6 +89,14 @@ libraries in Jellyfin and Plex.
 - For the notifications, Kinoshelf's "Path in Kinoshelf" is `.work/media/…` as the server sees it,
   and the player's side is `/media/…`.
 
+## Documentation
+
+`README.md` and `docs/` are plain Markdown with relative links and no front matter, so a static site
+generator (VitePress, Starlight) can publish them as they are. The pages are numbered in reading order
+(`0-installation` to `9-development`); a page's first line is its title. Keep them in step with the
+code: a user-visible feature, setting, environment variable, command or route is documented in the
+same change, and the French and English catalogs get the same keys.
+
 ## Conventions
 
 See [AGENTS.md](../AGENTS.md). In short: everything in English, Conventional Commits, every

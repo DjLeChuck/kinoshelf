@@ -25,23 +25,50 @@ equivalent of tinyMediaManager and a companion to Radarr/Sonarr: it never downlo
 
 ## Features
 
-- **Libraries** organized in place: filters (to validate, to rename, unrecognized, missing NFO or
-  images, missing episodes, several versions), a series tree (show, season, episode), a page per item
-  with `ffprobe`. A movie or an episode held in several qualities is listed once, its versions
-  unfolded under it.
+**Identify and organize**
+
+- **Libraries** organized in place, and **arrival folders** whose files are identified then copied,
+  hardlinked or moved into them. Movies and series can live in separate libraries.
+- A matcher built on [guessit](https://github.com/opensubtitles/guessit-js) and TMDB, tuned on a corpus
+  of real release names: a score and a threshold decide, and anything uncertain waits for you. A
+  series is validated as a **release**, not file by file.
 - **Arrivals**: the files Kinoshelf could not place with confidence wait here, with their TMDB
   candidates and score. You pick the candidate and the destination library.
-- **Safe by design**: a preview before every write, the renaming never overwrites an existing file,
-  every batch can be undone, no silent copy when a hardlink fails.
-- **Artwork you choose**: from the page of a movie or a show, change the poster, the background or
-  the logo, and from the page of an episode its thumbnail (one picture, written for every version of
-  the episode), with one of the images TMDB offers or an address of your own (JPEG or PNG). The image
-  replaced is kept, and the change is a batch you can undo. Addresses on your local network are
-  refused unless the processing settings allow them.
-- **Naming and metadata options** that suit Plex and Jellyfin alike: the TMDB id in the names or not,
-  and Kodi-format NFO with artwork or nothing.
-- **Getting downloads in** from your client's "on completion" hook, or by watching a folder.
-- **Notifications**: Plex and Jellyfin library refresh, webhooks (generic, Gotify, ntfy, Discord).
+- **Several versions** of a movie or an episode (1080p and 2160p) side by side, listed once, with a
+  coverage matrix per series.
+- **Missing episodes** of a series, counted from TMDB without rescanning.
+
+**Safe by design**
+
+- A preview before every write, the renaming never overwrites an existing file, every batch can be
+  undone, no silent copy when a hardlink fails.
+- A journal of everything written, with its own **History**.
+
+**Metadata for every player**
+
+- **Naming and metadata options** that suit Plex, Jellyfin and Kodi alike: the TMDB id in the names or
+  not, and Kodi-format NFO with artwork or nothing.
+- NFO (`movie.nfo`, `tvshow.nfo`, per episode), poster, fanart, clear logo, season posters and
+  episode thumbnails, also for a library that is already organized.
+- **Artwork you choose**: change the poster, the background, the logo or an episode's thumbnail with one
+  of the images TMDB offers or an address of your own (JPEG or PNG). The replaced image is kept and the
+  change can be undone.
+- **Collections** (sagas): set, rename and choose their images, and send them to Plex and Jellyfin.
+
+**Getting downloads in**
+
+- From your client's "on completion" hook (`kinoshelf submit`) or by watching a folder that only holds
+  finished downloads.
+- **Notifications**: Plex (sign in with your account) and Jellyfin library refresh, webhooks (generic,
+  Gotify, ntfy, Discord).
+
+**Run it and watch it**
+
+- A **System** page: health checks, a live filtered log, TMDB usage, maintenance (tidy a library,
+  back up and compact the database, empty what was set aside) and a diagnostic archive for bug
+  reports. An **activity panel** shows background tasks everywhere.
+- A **REST API** (OpenAPI) and a **command line** (`scan`, `process`, `undo`, `submit`, `tidy`,
+  `cleanup`) over the same core.
 - French and English, dark and light themes, multi-arch Docker image (`amd64`, `arm64`), or a standalone
   binary for Linux and macOS with no Node to install.
 
@@ -62,16 +89,18 @@ through your first library.
 
 ## Documentation
 
-| Page                                                   | What is in it                                         |
-| ------------------------------------------------------ | ----------------------------------------------------- |
-| [Installation](docs/0-installation.md)                 | Docker, standalone binary, permissions, reverse proxy |
-| [Concepts and web UI](docs/1-web-ui.md)                | Libraries, Arrivals, History, Settings                |
-| [Getting downloads in](docs/2-getting-downloads-in.md) | Download client hooks, folder watcher                 |
-| [Output options](docs/3-output-options.md)             | The `naming` and `metadata` options                   |
-| [Configuration](docs/4-configuration.md)               | `config.yaml`, environment variables, notifications   |
-| [Command line](docs/5-cli.md)                          | `kinoshelf scan`, `process`, `undo`, `submit`         |
-| [REST API](docs/6-api.md)                              | Authentication, jobs, arrivals, batches               |
-| [Development](docs/7-development.md)                   | Building, testing, conventions                        |
+| Page                                                   | What is in it                                                     |
+| ------------------------------------------------------ | ----------------------------------------------------------------- |
+| [Installation](docs/0-installation.md)                 | Docker, standalone binary, service, permissions, first key, proxy |
+| [Concepts and web UI](docs/1-web-ui.md)                | How a file is handled, Welcome, Arrivals, History, Settings       |
+| [Libraries](docs/2-libraries.md)                       | Scan, filters, versions, artwork, collections                     |
+| [System](docs/3-system.md)                             | Health, logs, TMDB usage, maintenance, diagnostic                 |
+| [Getting downloads in](docs/4-getting-downloads-in.md) | Download client hooks, folder watcher                             |
+| [Output options](docs/5-output-options.md)             | The `naming` and `metadata` options, Plex, Jellyfin and Kodi      |
+| [Configuration](docs/6-configuration.md)               | `config.yaml`, environment variables, notifications               |
+| [Command line](docs/7-cli.md)                          | `scan`, `process`, `undo`, `submit`, `tidy`, `cleanup`            |
+| [REST API](docs/8-api.md)                              | Authentication, routes, events                                    |
+| [Development](docs/9-development.md)                   | Building, testing, documentation, conventions                     |
 
 ## License
 
