@@ -89,10 +89,14 @@
             {/if}
             <p class="muted line">
               {#if task.status === 'done'}✓{:else if task.status === 'failed'}✗{/if}
-              {detail(task)}
-              {#if task.status === 'running' && task.done !== null && task.total !== null}
-                · {t('web.activity.count', { done: task.done, total: task.total })}
-              {/if}
+              {[
+                detail(task),
+                task.status === 'running' && task.done !== null && task.total !== null
+                  ? t('web.activity.count', { done: task.done, total: task.total })
+                  : '',
+              ]
+                .filter(Boolean)
+                .join(' · ')}
             </p>
             {#if task.status === 'running' && task.current}
               <p class="muted mono line current" title={task.current}>{task.current}</p>
