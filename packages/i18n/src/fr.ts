@@ -466,6 +466,13 @@ export const fr: Record<keyof typeof en, string> = {
     '{files, plural, =0 {Rien à supprimer.} one {# fichier supprimé} other {# fichiers supprimés}} ({size}).{failed, plural, =0 {} one { Un n’a pas pu l’être.} other { # n’ont pas pu l’être.}}',
   'web.maintenance.panel.show': 'Afficher',
   'web.maintenance.panel.hide': 'Replier',
+  'web.maintenance.state.new': 'Non analysée',
+  'web.maintenance.state.running': 'En cours',
+  'web.maintenance.state.failed': 'Échec',
+  'web.maintenance.state.partial': 'Nettoyée en partie',
+  'web.maintenance.state.done': 'Nettoyée',
+  'web.maintenance.state.clean': 'Propre',
+  'web.maintenance.state.todo': '{count} à traiter',
   'web.maintenance.page.intro':
     'Chaque action dit ce qu’elle fait et ce qu’elle ne touche pas, et demande confirmation avant de commencer.',
   'web.maintenance.tidy.title': 'Nettoyer les dossiers d’une bibliothèque',

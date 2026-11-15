@@ -156,3 +156,32 @@ test('backs the database up after a confirmation, and says what the cache holds'
 
   await expect(card.getByText(/Backup made: kinoshelf-\d{8}-\d{4}\.sqlite/)).toBeVisible();
 });
+
+test('offers no fold button on a library that was never analysed', async ({ page }) => {
+  await signIn(page);
+  await page.goto('/system?tab=maintenance');
+  const series = page.getByRole('article', { name: /^Series/ });
+  await expect(series.getByText('Not analysed')).toBeVisible();
+  await expect(series.getByRole('button', { name: /^Analyse/ })).toBeVisible();
+  await expect(series.getByRole('button', { name: /^(Show|Fold)$/ })).toHaveCount(0);
+});
+
+test('says the state of a library in its header, and in one line when folded', async ({ page }) => {
+  await mkdir(WORK, { recursive: true });
+  await mkdir(LEFTOVER, { recursive: true });
+  await writeFile(`${WORK}/Dune (2021) {tmdb-438631}.mkv`, 'video');
+  await writeFile(`${LEFTOVER}/Dune (2021) - 1080p-poster.jpg`, 'image');
+
+  await signIn(page);
+  await page.goto('/system?tab=maintenance');
+  const films = page.getByRole('article', { name: /^Films/ });
+  await films.getByRole('button', { name: /^Analyse/ }).click();
+  await expect(films.getByText('1 to handle')).toBeVisible();
+
+  await films.getByRole('button', { name: 'Fold' }).click();
+  // Nothing to open to know what was found.
+  await expect(films.locator('p.folded')).toContainText('1 folder to take out');
+  await expect(films.getByText('same work as Dune (2021) {tmdb-438631}')).toBeHidden();
+  await films.getByRole('button', { name: 'Show' }).click();
+  await expect(films.getByText('same work as Dune (2021) {tmdb-438631}')).toBeVisible();
+});

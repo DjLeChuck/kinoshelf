@@ -445,6 +445,13 @@ export const en = {
     '{files, plural, =0 {Nothing to delete.} one {# file deleted} other {# files deleted}} ({size}).{failed, plural, =0 {} one { One could not be.} other { # could not be.}}',
   'web.maintenance.panel.show': 'Show',
   'web.maintenance.panel.hide': 'Fold',
+  'web.maintenance.state.new': 'Not analysed',
+  'web.maintenance.state.running': 'In progress',
+  'web.maintenance.state.failed': 'Failed',
+  'web.maintenance.state.partial': 'Partly tidied',
+  'web.maintenance.state.done': 'Tidied',
+  'web.maintenance.state.clean': 'Clean',
+  'web.maintenance.state.todo': '{count} to handle',
   'web.maintenance.page.intro':
     'Each action says what it does and what it leaves alone, and asks for confirmation before it starts.',
   'web.maintenance.tidy.title': 'Tidy a library’s folders',

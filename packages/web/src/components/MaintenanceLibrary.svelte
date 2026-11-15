@@ -55,14 +55,73 @@
   // Open while there is something to read or follow (a report, a result, a task, a failure), folded
   // otherwise so a list of libraries stays short; the reader's own choice wins once made.
   let toggled = $state<boolean | undefined>(undefined);
-  const open = $derived(
-    toggled ??
-      (shown !== undefined ||
-        running !== undefined ||
-        failure !== undefined ||
-        task?.status === 'failed' ||
-        library.scanning),
+  const foldable = $derived(
+    shown !== undefined ||
+      running !== undefined ||
+      failure !== undefined ||
+      task?.status === 'failed' ||
+      library.scanning,
   );
+  const open = $derived(toggled ?? foldable);
+  // What the analysis found or the run did, in one line: shown open, and folded under the name.
+  const counts = $derived.by(() => {
+    if (!tally) {
+      return '';
+    }
+    if (!hasWork(tally) && tally.failed === 0) {
+      return t('web.maintenance.nothing');
+    }
+    return [
+      tally.folders > 0 &&
+        t(result ? 'web.maintenance.folders.done' : 'web.maintenance.folders.todo', {
+          count: tally.folders,
+        }),
+      tally.renames > 0 &&
+        t(result ? 'web.maintenance.renames.done' : 'web.maintenance.renames.todo', {
+          count: tally.renames,
+        }),
+      tally.removals > 0 &&
+        t(result ? 'web.maintenance.removals.done' : 'web.maintenance.removals.todo', {
+          count: tally.removals,
+        }),
+      tally.failed > 0 && t('web.maintenance.failed', { count: tally.failed }),
+    ]
+      .filter(Boolean)
+      .join(' · ');
+  });
+  const stamp = $derived(
+    result
+      ? t('web.maintenance.result', {
+          date: formatDate(result.endedAt ?? result.startedAt, locale.value),
+        })
+      : '',
+  );
+
+  // The state of the library at a glance, in the header, whether the panel is open or folded.
+  const chip = $derived.by((): { kind: string; label: string } => {
+    if (running || starting) {
+      return { kind: 'info', label: t('web.maintenance.state.running') };
+    }
+    if (task?.status === 'failed' || failure !== undefined) {
+      return { kind: 'danger', label: t('web.maintenance.state.failed') };
+    }
+    if (!shown || !tally) {
+      return { kind: 'neutral', label: t('web.maintenance.state.new') };
+    }
+    if (result) {
+      return tally.failed > 0
+        ? { kind: 'warn', label: t('web.maintenance.state.partial') }
+        : { kind: 'ok', label: t('web.maintenance.state.done') };
+    }
+    return hasWork(tally) || tally.failed > 0
+      ? {
+          kind: 'warn',
+          label: t('web.maintenance.state.todo', {
+            count: tally.folders + tally.renames + tally.removals,
+          }),
+        }
+      : { kind: 'ok', label: t('web.maintenance.state.clean') };
+  });
   const percent = $derived(
     running && running.total > 0 ? Math.round((running.done / running.total) * 100) : undefined,
   );
@@ -152,21 +211,27 @@
 <article class="card" aria-labelledby={`maintenance-${library.id}`}>
   <header>
     <div>
-      <h2 id={`maintenance-${library.id}`}>{library.name}</h2>
+      <h3 id={`maintenance-${library.id}`}>
+        {library.name}
+        <span class={`chip chip-${chip.kind}`}>{chip.label}</span>
+      </h3>
       <p class="muted mono source">{library.source}</p>
     </div>
     <div class="actions">
-      <button
-        type="button"
-        class="btn fold"
-        aria-expanded={open}
-        aria-controls={`maintenance-body-${library.id}`}
-        onclick={() => {
-          toggled = !open;
-        }}
-      >
-        {open ? t('web.maintenance.panel.hide') : t('web.maintenance.panel.show')}
-      </button>
+      <!-- Only when there is something to fold: a library never analysed has nothing behind it. -->
+      {#if foldable}
+        <button
+          type="button"
+          class="btn fold"
+          aria-expanded={open}
+          aria-controls={`maintenance-body-${library.id}`}
+          onclick={() => {
+            toggled = !open;
+          }}
+        >
+          {open ? t('web.maintenance.panel.hide') : t('web.maintenance.panel.show')}
+        </button>
+      {/if}
       <button type="button" class="btn" disabled={locked} onclick={() => void start(true)}>
         {#if running?.dryRun || starting}
           {t('web.maintenance.analysing')}
@@ -176,6 +241,27 @@
       </button>
     </div>
   </header>
+
+  {#if !open && shown && tally}
+    <p class="muted folded">{stamp} {counts}</p>
+  {/if}
+
+  {#if isMovies}
+    <label class="check">
+      <input
+        type="checkbox"
+        checked={nfo}
+        disabled={locked}
+        onchange={(event) => {
+          toggleNfo(event.currentTarget.checked);
+        }}
+      />
+      <span>
+        {t('web.maintenance.nfo')}
+        <span class="muted hint">{t('web.maintenance.nfo.hint')}</span>
+      </span>
+    </label>
+  {/if}
 
   <div class="body" id={`maintenance-body-${library.id}`} hidden={!open}>
     {#if library.scanning}
@@ -211,54 +297,11 @@
       </div>
     {/if}
 
-    {#if isMovies}
-      <label class="check">
-        <input
-          type="checkbox"
-          checked={nfo}
-          disabled={locked}
-          onchange={(event) => {
-            toggleNfo(event.currentTarget.checked);
-          }}
-        />
-        <span>
-          {t('web.maintenance.nfo')}
-          <span class="muted hint">{t('web.maintenance.nfo.hint')}</span>
-        </span>
-      </label>
-    {/if}
-
     {#if shown && tally}
       <section aria-live="polite" aria-label={t('web.maintenance.report')}>
         <p class="summary">
-          {#if result}
-            <b class="stamp"
-              >{t('web.maintenance.result', {
-                date: formatDate(result.endedAt ?? result.startedAt, locale.value),
-              })}</b
-            >
-          {/if}
-          {#if !hasWork(tally) && tally.failed === 0}
-            {t('web.maintenance.nothing')}
-          {:else}
-            {[
-              tally.folders > 0 &&
-                t(result ? 'web.maintenance.folders.done' : 'web.maintenance.folders.todo', {
-                  count: tally.folders,
-                }),
-              tally.renames > 0 &&
-                t(result ? 'web.maintenance.renames.done' : 'web.maintenance.renames.todo', {
-                  count: tally.renames,
-                }),
-              tally.removals > 0 &&
-                t(result ? 'web.maintenance.removals.done' : 'web.maintenance.removals.todo', {
-                  count: tally.removals,
-                }),
-              tally.failed > 0 && t('web.maintenance.failed', { count: tally.failed }),
-            ]
-              .filter(Boolean)
-              .join(' · ')}
-          {/if}
+          {#if stamp}<b class="stamp">{stamp}</b>{/if}
+          {counts}
         </p>
 
         {#if todoFolders.length > 0}
@@ -401,7 +444,11 @@
     display: none;
   }
 
-  h2 {
+  h3 {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 10px;
     margin: 0;
     font-size: 16px;
   }
