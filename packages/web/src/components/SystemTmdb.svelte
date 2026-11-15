@@ -1,6 +1,5 @@
 <script lang="ts">
   import { untrack } from 'svelte';
-  import { formatBytes } from '@kinoshelf/i18n';
   import { api } from '../lib/api.js';
   import { messageOf } from '../lib/errors.js';
   import { locale, t } from '../lib/i18n.svelte.js';
@@ -65,34 +64,6 @@
         ? { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }
         : { day: 'numeric', month: 'short' }),
     });
-
-  let testing = $state(false);
-  let verdict = $state<{ ok: boolean; text: string } | undefined>(undefined);
-  async function test(): Promise<void> {
-    testing = true;
-    verdict = undefined;
-    try {
-      await api.post('/api/settings/tmdb/test');
-      verdict = { ok: true, text: t('web.settings.tmdb.ok') };
-    } catch (error) {
-      verdict = { ok: false, text: messageOf(t, error) };
-    } finally {
-      testing = false;
-    }
-  }
-
-  let confirming = $state(false);
-  let cleared = $state<string | undefined>(undefined);
-  async function clear(): Promise<void> {
-    confirming = false;
-    try {
-      const { removed } = await api.delete<{ removed: number }>('/api/tmdb/cache');
-      cleared = t('web.tmdb.cache.cleared', { count: removed });
-      await usage.reload();
-    } catch (error) {
-      usage.failure = error;
-    }
-  }
 </script>
 
 <div class="tmdb">
@@ -304,70 +275,6 @@
         <Link href="/system?tab=logs&component=tmdb&level=warn">{t('web.tmdb.errors.logs')} →</Link>
       {/if}
     </section>
-
-    <div class="pair">
-      <section class="card" aria-labelledby="tmdb-key">
-        <h2 id="tmdb-key">{t('web.tmdb.key')}</h2>
-        <p class="muted" role="status">
-          {t(`web.settings.tmdb.status.${settings.value?.tmdb.source ?? 'none'}`)}
-        </p>
-        <div class="row">
-          <button
-            type="button"
-            class="btn"
-            disabled={testing || !(settings.value?.tmdb.configured ?? false)}
-            onclick={() => void test()}
-          >
-            {testing ? t('web.settings.tmdb.testing') : t('web.settings.tmdb.test')}
-          </button>
-          {#if verdict}
-            <span class={verdict.ok ? 'ok' : 'bad'} role="status">{verdict.text}</span>
-          {/if}
-        </div>
-      </section>
-
-      <section class="card" aria-labelledby="tmdb-cache">
-        <h2 id="tmdb-cache">{t('web.tmdb.cache')}</h2>
-        <p class="muted">
-          {t('web.tmdb.cache.size', {
-            count: report.cache.entries,
-            size: formatBytes(report.cache.bytes, locale.value),
-          })}
-        </p>
-        {#if confirming}
-          <p>{t('web.tmdb.cache.confirm')}</p>
-          <div class="row">
-            <button type="button" class="btn btn-danger" onclick={() => void clear()}>
-              {t('web.tmdb.cache.confirm.yes')}
-            </button>
-            <button
-              type="button"
-              class="btn"
-              onclick={() => {
-                confirming = false;
-              }}
-            >
-              {t('web.tmdb.cache.confirm.no')}
-            </button>
-          </div>
-        {:else}
-          <div class="row">
-            <button
-              type="button"
-              class="btn"
-              disabled={report.cache.entries === 0}
-              onclick={() => {
-                cleared = undefined;
-                confirming = true;
-              }}
-            >
-              {t('web.tmdb.cache.clear')}
-            </button>
-            {#if cleared}<span class="muted" role="status">{cleared}</span>{/if}
-          </div>
-        {/if}
-      </section>
-    </div>
   {/if}
 </div>
 
@@ -435,13 +342,8 @@
     font-weight: 600;
   }
 
-  .value.bad,
-  .bad {
+  .value.bad {
     color: var(--danger);
-  }
-
-  .ok {
-    color: var(--ok);
   }
 
   .hint {
@@ -574,19 +476,5 @@
   .path {
     overflow-wrap: anywhere;
     font-size: 12px;
-  }
-
-  .pair {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 12px;
-  }
-
-  .row {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 12px;
-    margin-top: 8px;
   }
 </style>

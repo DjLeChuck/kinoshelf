@@ -68,7 +68,7 @@ test('downloads the log as a file', async ({ page }) => {
   expect(await readFile(path, 'utf8')).toContain('Server listening');
 });
 
-test('shows what was sent to TMDB, by period, and the key and cache', async ({ page }) => {
+test('shows what was sent to TMDB, by period', async ({ page }) => {
   await signIn(page);
   await page.getByRole('navigation').getByRole('link', { name: 'System' }).click();
   await page
@@ -87,11 +87,6 @@ test('shows what was sent to TMDB, by period, and the key and cache', async ({ p
     'aria-pressed',
     'true',
   );
-
-  // The key and the cache have their block; clearing asks first.
-  await expect(page.getByRole('heading', { name: 'TMDB key' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Test the key' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'TMDB cache' })).toBeVisible();
 });
 
 test('opens on the health of the server, card by card', async ({ page }) => {

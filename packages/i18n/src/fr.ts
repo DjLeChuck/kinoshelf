@@ -686,16 +686,6 @@ export const fr: Record<keyof typeof en, string> = {
   'web.tmdb.outcome.unreachable': 'Pas de réponse',
   'web.tmdb.outcome.refused': 'Refusée ({status})',
   'web.tmdb.empty': 'Aucune requête depuis le démarrage du serveur.',
-  'web.tmdb.key': 'Clé TMDB',
-  'web.tmdb.cache': 'Cache TMDB',
-  'web.tmdb.cache.size':
-    '{count, plural, one {# réponse gardée} other {# réponses gardées}} · {size}',
-  'web.tmdb.cache.clear': 'Vider le cache',
-  'web.tmdb.cache.confirm': 'Les prochaines analyses refont leurs requêtes auprès de TMDB.',
-  'web.tmdb.cache.confirm.yes': 'Le vider',
-  'web.tmdb.cache.confirm.no': 'Le garder',
-  'web.tmdb.cache.cleared':
-    '{count, plural, one {# réponse oubliée.} other {# réponses oubliées.}}',
   'web.logs.level': 'Niveau',
   'web.logs.level.all': 'Tous',
   'web.logs.level.info': 'Info et plus',
