@@ -271,6 +271,17 @@ export const SERVER_MIGRATIONS: readonly { readonly name: string; readonly sql: 
         remote_id TEXT NOT NULL,
         PRIMARY KEY (library_id, key, server)
       );
+
+      -- A season the owner accepted as it is (a 4K that will never exist for its first episodes):
+      -- the signature is what the season held then, so a change in its files lifts the acceptance.
+      CREATE TABLE season_version_acks (
+        library_id TEXT NOT NULL,
+        tmdb_id INTEGER NOT NULL,
+        season INTEGER NOT NULL,
+        signature TEXT NOT NULL,
+        at TEXT NOT NULL,
+        PRIMARY KEY (library_id, tmdb_id, season)
+      );
     `,
   },
 ];

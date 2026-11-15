@@ -73,6 +73,7 @@ describe('GET /api/openapi.json', () => {
       '/api/libraries/{id}/shows/{tmdbId}/seasons/{season}/episodes/{episode}/images',
       '/api/libraries/{id}/shows/{tmdbId}/seasons/{season}/episodes/{episode}/images/preview',
       '/api/libraries/{id}/shows/{tmdbId}/seasons/{season}/episodes/{episode}/images/{type}/file',
+      '/api/libraries/{id}/shows/{tmdbId}/seasons/{season}/versions/accepted',
       '/api/logs',
       '/api/logs/download',
       '/api/logs/level',

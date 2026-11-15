@@ -194,6 +194,8 @@ export interface Coverage {
   readonly resolution: string | null;
   readonly covered: number;
   readonly total: number;
+  /** A shortfall needs no follow-up: a season released in pieces, or one the owner accepted. */
+  readonly accepted: boolean;
 }
 
 /** The NFO of some files: how many the profile wants and how many are there. */
@@ -251,6 +253,8 @@ export interface ShowSeason {
   readonly missing: number;
   /** Every version of the show against this season's episodes: one absent from it holds none. */
   readonly versions: readonly Coverage[];
+  /** The owner accepted the versions of this season as they are, its files unchanged since. */
+  readonly acknowledged: boolean;
   readonly nfo: NfoTally;
   readonly episodes: readonly ShowEpisode[];
 }
@@ -548,6 +552,11 @@ export const libraryItems = {
     ),
   show: (libraryId: string, tmdbId: number) =>
     api.get<ShowDetail>(`/api/libraries/${libraryId}/shows/${tmdbId}`),
+  /** Accept a season's versions as they are, or count them again. */
+  acceptSeason: (libraryId: string, tmdbId: number, season: number, accept: boolean) => {
+    const url = `/api/libraries/${libraryId}/shows/${tmdbId}/seasons/${season}/versions/accepted`;
+    return accept ? api.put<undefined>(url) : api.delete<undefined>(url);
+  },
   detail: (libraryId: string, itemId: string) =>
     api.get<ItemDetail>(`/api/libraries/${libraryId}/items/${itemId}`),
   /** Where a scan is, without the counts and the page around it. */

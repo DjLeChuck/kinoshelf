@@ -118,5 +118,5 @@ export function slotsOf(
 }
 
 /** A version held in full is plain, one that lacks episodes carries its ratio (`2160p 7/8`). */
-export const isIncomplete = (coverage: Pick<Coverage, 'covered' | 'total'>): boolean =>
-  coverage.covered < coverage.total;
+export const isIncomplete = (coverage: Pick<Coverage, 'covered' | 'total' | 'accepted'>): boolean =>
+  coverage.covered < coverage.total && !coverage.accepted;

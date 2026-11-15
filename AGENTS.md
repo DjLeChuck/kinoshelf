@@ -403,6 +403,13 @@ other file is an entry of its own, and the episodes of a series are grouped by `
   (`2160p 7/8`), a version absent from a season counts 0 there. A missing episode (no file at all)
   lowers nothing: it is "Missing episodes". A file whose name gives no size is a version only if it
   shares an episode with another file, else it is in no version and not in the total.
+  **A shortfall can need no follow-up** (`VersionCoverage.accepted`, `versions.ts`): a season where no episode
+  has two files is released in pieces (1080p then 4K), not held in versions, so it is never
+  `incomplete-versions`; and a season the owner accepted as it is (`PUT`/`DELETE
+.../shows/:tmdbId/seasons/:season/versions/accepted`, `season_version_acks`, the choice of a season, never
+  of a show) stops counting too. The acceptance keeps the `seasonSignature` of the files it was given for
+  and lapses on its own when one arrives, goes or changes picture. The tallies stay true to the files
+  (`4/8` in a season); only a show's row (`showCoverageOf`) owes nothing for an accepted season.
 - The **resolution is read from the name** (`resolutionOf`, `library-items.ts`), else from the picture the
   probe read (`picture`; `resolutionOfItem`), so a list never reads the disk. The probe
   (`hdr`, `audioLanguages`, `subtitleLanguages`) fills the details of each

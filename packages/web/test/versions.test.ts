@@ -87,8 +87,9 @@ describe('slotsOf', () => {
 
 describe('isIncomplete', () => {
   it('is a version that holds fewer episodes than the show', () => {
-    expect(isIncomplete({ covered: 7, total: 8 })).toBe(true);
-    expect(isIncomplete({ covered: 8, total: 8 })).toBe(false);
-    expect(isIncomplete({ covered: 0, total: 0 })).toBe(false);
+    expect(isIncomplete({ covered: 7, total: 8, accepted: false })).toBe(true);
+    expect(isIncomplete({ covered: 7, total: 8, accepted: true })).toBe(false);
+    expect(isIncomplete({ covered: 8, total: 8, accepted: false })).toBe(false);
+    expect(isIncomplete({ covered: 0, total: 0, accepted: false })).toBe(false);
   });
 });

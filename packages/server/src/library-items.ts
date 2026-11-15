@@ -23,6 +23,7 @@ import {
   showCoverageOf,
   distinctEpisodes,
   hasIncompleteVersion,
+  seasonSignature,
   hasSeveralVersions,
   type VersionCoverage,
   type VersionRow,
@@ -580,6 +581,7 @@ export class LibraryItemStore {
         'series_completeness',
         'series_files',
         'collection_overrides',
+        'season_version_acks',
       ]) {
         this.database.prepare(`DELETE FROM ${table} WHERE library_id = ?`).run(libraryId);
       }
@@ -628,6 +630,49 @@ export class LibraryItemStore {
       )
       .all(libraryId, tmdbId)
       .map(toItem);
+  }
+
+  /** The seasons of a show the owner accepted, with what each held then (`seasonSignature`). */
+  versionAcks(libraryId: string, tmdbId: number): Map<number, string> {
+    return new Map(
+      this.database
+        .prepare<[string, number], { season: number; signature: string }>(
+          'SELECT season, signature FROM season_version_acks WHERE library_id = ? AND tmdb_id = ?',
+        )
+        .all(libraryId, tmdbId)
+        .map((row) => [row.season, row.signature]),
+    );
+  }
+
+  /**
+   * Accepts a season's versions as they are, or lifts the acceptance (`accept` false). Returns
+   * false when the season has no file to accept.
+   */
+  acknowledgeSeason(libraryId: string, tmdbId: number, season: number, accept: boolean): boolean {
+    const files = this.ofShow(libraryId, tmdbId)
+      .map(versionRowOf)
+      .filter((row) => row.season === season);
+    if (accept && files.length === 0) {
+      return false;
+    }
+    if (accept) {
+      this.database
+        .prepare(
+          `INSERT INTO season_version_acks (library_id, tmdb_id, season, signature, at)
+           VALUES (?, ?, ?, ?, ?)
+           ON CONFLICT (library_id, tmdb_id, season)
+           DO UPDATE SET signature = excluded.signature, at = excluded.at`,
+        )
+        .run(libraryId, tmdbId, season, seasonSignature(files), new Date().toISOString());
+    } else {
+      this.database
+        .prepare(
+          'DELETE FROM season_version_acks WHERE library_id = ? AND tmdb_id = ? AND season = ?',
+        )
+        .run(libraryId, tmdbId, season);
+    }
+    this.changed(libraryId, [tmdbId]);
+    return true;
   }
 
   /**
@@ -898,7 +943,7 @@ export class LibraryItemStore {
           year: row.year,
           seasons: row.seasons,
           episodes: distinctEpisodes(versionRows),
-          versions: showCoverageOf(versionRows),
+          versions: showCoverageOf(versionRows, this.versionAcks(libraryId, row.tmdb_id)),
           missing: row.missing,
           rename: row.rename,
           refresh: row.refresh,
@@ -1003,12 +1048,22 @@ export class LibraryItemStore {
         const item = toItem(row);
         byShow.set(item.tmdbId ?? 0, [...(byShow.get(item.tmdbId ?? 0) ?? []), versionRowOf(item)]);
       }
+      const acks = new Map<number, Map<number, string>>();
+      for (const row of this.database
+        .prepare<string[], { tmdb_id: number; season: number; signature: string }>(
+          `SELECT tmdb_id, season, signature FROM season_version_acks
+           WHERE library_id = ?${scope}`,
+        )
+        .all(libraryId, ...args)) {
+        const seasons = acks.get(row.tmdb_id) ?? new Map<number, string>();
+        acks.set(row.tmdb_id, seasons.set(row.season, row.signature));
+      }
       const versions = this.database.prepare(
         'UPDATE library_shows SET multi = ?, incomplete_versions = ? WHERE library_id = ? AND tmdb_id = ?',
       );
       for (const [tmdbId, files] of byShow) {
         const multi = hasSeveralVersions(files);
-        const incomplete = hasIncompleteVersion(files);
+        const incomplete = hasIncompleteVersion(files, acks.get(tmdbId));
         if (multi || incomplete) {
           versions.run(multi ? 1 : 0, incomplete ? 1 : 0, libraryId, tmdbId);
         }

@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto';
+
 /** What a file says of the episodes it holds and of its version, as the snapshot keeps it. */
 export interface VersionRow {
   readonly season: number | null;
@@ -12,7 +14,15 @@ export interface VersionCoverage {
   readonly resolution: string | null;
   readonly covered: number;
   readonly total: number;
+  /**
+   * The shortfall, if any, needs no follow-up: the season is a mix (no episode has two files, so
+   * nothing is a version of anything) or the owner accepted it as it is.
+   */
+  readonly accepted: boolean;
 }
+
+/** What the owner accepted, season by season: the `seasonSignature` of the files at that time. */
+export type SeasonAcks = ReadonlyMap<number, string>;
 
 const key = (season: number, episode: number): string => `${String(season)}:${String(episode)}`;
 
@@ -69,7 +79,11 @@ export const largestFirst = <T>(rows: readonly T[], resolution: (row: T) => stri
 export function coverageOf(
   rows: readonly VersionRow[],
   versions: readonly (string | null)[] = versionsOf(rows),
+  acknowledged = false,
 ): VersionCoverage[] {
+  // Pictures that never share an episode are a season released in pieces (the first half in 1080p,
+  // the rest in 4K because no better exists), not versions of it: nothing there is owed.
+  const accepted = acknowledged || !hasSeveralVersions(rows);
   const held = new Set(
     rows.filter((row) => versions.includes(row.resolution)).flatMap(episodesOfRow),
   );
@@ -78,8 +92,27 @@ export function coverageOf(
     covered: new Set(rows.filter((row) => row.resolution === resolution).flatMap(episodesOfRow))
       .size,
     total: held.size,
+    accepted,
   }));
 }
+
+/**
+ * What a season holds, for the owner's "accept as it is" to be tied to it: a file that arrives,
+ * goes or changes picture makes a different signature, so the acceptance lapses by itself.
+ */
+export function seasonSignature(rows: readonly VersionRow[]): string {
+  const parts = rows.map(
+    (row) =>
+      `${String(row.season)}:${String(row.episode)}-${String(row.episodeEnd ?? row.episode)}@${row.resolution ?? ''}`,
+  );
+  return createHash('sha1').update(parts.sort().join(',')).digest('hex').slice(0, 16);
+}
+
+/** Whether the owner accepted this season as it stands (and nothing changed since). */
+export const isAcknowledged = (season: readonly VersionRow[], acks: SeasonAcks): boolean => {
+  const number = season[0]?.season;
+  return number !== null && number !== undefined && acks.get(number) === seasonSignature(season);
+};
 
 /** The rows of each season, a file with no season being left out (it holds no episode). */
 function bySeason(rows: readonly VersionRow[]): VersionRow[][] {
@@ -95,16 +128,27 @@ function bySeason(rows: readonly VersionRow[]): VersionRow[][] {
  * so a show released in 1080p one year and 720p the next lacks nothing. A version's tally is the
  * sum over the seasons where it is one.
  */
-export function showCoverageOf(rows: readonly VersionRow[]): VersionCoverage[] {
+export function showCoverageOf(
+  rows: readonly VersionRow[],
+  acks: SeasonAcks = new Map(),
+): VersionCoverage[] {
   const sums = new Map<string | null, { covered: number; total: number }>();
   for (const season of bySeason(rows)) {
-    for (const { resolution, covered, total } of coverageOf(season)) {
+    for (const { resolution, covered, total, accepted } of coverageOf(
+      season,
+      undefined,
+      isAcknowledged(season, acks),
+    )) {
       const sum = sums.get(resolution) ?? { covered: 0, total: 0 };
-      sums.set(resolution, { covered: sum.covered + covered, total: sum.total + total });
+      // An accepted season owes nothing: its version holds all it is expected to.
+      sums.set(resolution, {
+        covered: sum.covered + covered,
+        total: sum.total + (accepted ? covered : total),
+      });
     }
   }
   return [...sums]
-    .map(([resolution, sum]) => ({ resolution, ...sum }))
+    .map(([resolution, sum]) => ({ resolution, ...sum, accepted: sum.covered === sum.total }))
     .sort((a, b) => pixels(b.resolution) - pixels(a.resolution));
 }
 
@@ -123,8 +167,13 @@ export function hasSeveralVersions(rows: readonly VersionRow[]): boolean {
 }
 
 /** Within one season, some version lacks an episode another one holds. */
-export function hasIncompleteVersion(rows: readonly VersionRow[]): boolean {
+export function hasIncompleteVersion(
+  rows: readonly VersionRow[],
+  acks: SeasonAcks = new Map(),
+): boolean {
   return bySeason(rows).some((season) =>
-    coverageOf(season).some(({ covered, total }) => covered < total),
+    coverageOf(season, undefined, isAcknowledged(season, acks)).some(
+      ({ covered, total, accepted }) => !accepted && covered < total,
+    ),
   );
 }

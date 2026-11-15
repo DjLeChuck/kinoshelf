@@ -3810,6 +3810,8 @@ export interface paths {
                                     resolution: string | null;
                                     covered: number;
                                     total: number;
+                                    /** @description A shortfall here needs no follow-up: the season is a mix (no episode has two files) or the owner accepted it as it is. On a show, `true` when nothing is owed. */
+                                    accepted: boolean;
                                 }[];
                                 /** @description Episodes with a version whose own NFO is missing. */
                                 episodesLackingNfo: number;
@@ -3949,7 +3951,11 @@ export interface paths {
                                     resolution: string | null;
                                     covered: number;
                                     total: number;
+                                    /** @description A shortfall here needs no follow-up: the season is a mix (no episode has two files) or the owner accepted it as it is. On a show, `true` when nothing is owed. */
+                                    accepted: boolean;
                                 }[];
+                                /** @description The owner accepted this season’s versions as they are (`PUT .../versions/accepted`) and its files have not changed since. */
+                                acknowledged: boolean;
                                 nfo: {
                                     expected: number;
                                     present: number;
@@ -4072,6 +4078,72 @@ export interface paths {
         put?: never;
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/libraries/{id}/shows/{tmdbId}/seasons/{season}/versions/accepted": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Accept a season’s versions as they are
+         * @description For a season held in several pictures where one lacks episodes the others have and nothing can change that (no 4K release of them). The season stops counting under `incomplete-versions` until its files change (an episode arrives, goes or changes picture).
+         */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    tmdbId: number;
+                    season: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        post?: never;
+        /**
+         * Stop accepting a season’s versions as they are
+         * @description Lifts the acceptance: the season counts again under `incomplete-versions`.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    tmdbId: number;
+                    season: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
         options?: never;
         head?: never;
         patch?: never;

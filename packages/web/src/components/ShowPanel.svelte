@@ -140,7 +140,7 @@
       <p class="alert" role="status">{t('web.library.shows.undetermined')}</p>
     {/if}
     <VersionsSection summary={[String(show.versions.length)]}>
-      <CoverageMatrix {detail} />
+      <CoverageMatrix {libraryId} {detail} />
     </VersionsSection>
     <div>
       <RescanButton {libraryId} path={folder} name={show.title ?? ''} {ondone} />

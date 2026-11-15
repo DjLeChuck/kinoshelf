@@ -1105,11 +1105,17 @@ export const coverageSchema = {
     'its episode (`resolution` `null`).',
   items: {
     type: 'object',
-    required: ['resolution', 'covered', 'total'],
+    required: ['resolution', 'covered', 'total', 'accepted'],
     properties: {
       resolution: { type: 'string', nullable: true },
       covered: { type: 'integer' },
       total: { type: 'integer' },
+      accepted: {
+        type: 'boolean',
+        description:
+          'A shortfall here needs no follow-up: the season is a mix (no episode has two files) or ' +
+          'the owner accepted it as it is. On a show, `true` when nothing is owed.',
+      },
     },
   },
 } as const;
@@ -1185,13 +1191,28 @@ export const showSchema = {
 
 export const seasonSchema = {
   type: 'object',
-  required: ['season', 'name', 'posterPath', 'poster', 'missing', 'versions', 'nfo', 'episodes'],
+  required: [
+    'season',
+    'name',
+    'posterPath',
+    'poster',
+    'missing',
+    'versions',
+    'acknowledged',
+    'nfo',
+    'episodes',
+  ],
   properties: {
     season: { type: 'integer', description: '0 is the specials.' },
     versions: {
       ...coverageSchema,
       description:
         'Every version of the show against the episodes of this season: one absent from it holds none.',
+    },
+    acknowledged: {
+      type: 'boolean',
+      description:
+        'The owner accepted this season’s versions as they are (`PUT .../versions/accepted`) and its files have not changed since.',
     },
     nfo: nfoTallySchema,
     name: { type: 'string', nullable: true },

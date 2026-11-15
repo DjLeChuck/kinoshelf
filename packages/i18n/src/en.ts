@@ -971,6 +971,11 @@ export const en = {
   'web.library.version.status.absent': 'Version absent',
   'web.library.coverage.cell': 'Episode {episode} · {version}: {status}',
   'web.library.coverage.legend.label': 'Legend',
+  'web.library.coverage.accept': 'Accept as it is',
+  'web.library.coverage.accept.hint':
+    'This season is held in several versions and one lacks episodes the others have. Accepting it stops it from counting as incomplete until its files change.',
+  'web.library.coverage.accepted': 'Accepted as it is',
+  'web.library.coverage.accepted.undo': 'Count again',
   'web.library.version.unknown': 'unknown resolution',
   'web.library.version.subtitles': 'Subs {languages}',
   'web.library.compare.hdr': 'HDR',

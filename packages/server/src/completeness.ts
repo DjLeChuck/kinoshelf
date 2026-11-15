@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import type { SeasonInfo, SeriesDetails } from '@kinoshelf/core';
 import type { Database } from '@kinoshelf/core';
 import { versionRowOf, type LibraryItem, type LibraryItemStore } from './library-items.js';
-import { coverageOf, type VersionCoverage } from './versions.js';
+import { coverageOf, isAcknowledged, type SeasonAcks, type VersionCoverage } from './versions.js';
 
 /**
  * - `present`: a file holds it.
@@ -48,6 +48,8 @@ export interface SeasonReport {
   readonly episodes: readonly EpisodeReport[];
   /** Each version of the show against the episodes of this season: absent here, it holds none. */
   readonly versions: readonly VersionCoverage[];
+  /** The owner accepted this season's versions as they are, and its files are still the same. */
+  readonly acknowledged: boolean;
   readonly nfo: NfoTally;
   /** Always 0 for the specials (season 0): they are never counted. */
   readonly missing: number;
@@ -77,6 +79,7 @@ export function compare(
   seasons: readonly SeasonInfo[],
   summaries: SeriesDetails['seasons'],
   today: string,
+  acks: SeasonAcks = new Map(),
 ): SeasonReport[] {
   const held = episodesOf(items);
   const numbers = new Set([...seasons.map((s) => s.season), ...held.map((i) => i.season ?? 0)]);
@@ -85,6 +88,7 @@ export function compare(
     .flatMap((season): SeasonReport[] => {
       const known = seasons.find((candidate) => candidate.season === season);
       const files = held.filter((item) => item.season === season);
+      const rows = files.map(versionRowOf);
       const covering = (episode: number): LibraryItem[] =>
         files.filter((item) => (item.episode ?? 0) <= episode && episode <= last(item));
       // Several files may hold one episode (versions of it): they are one episode with each of
@@ -135,7 +139,8 @@ export function compare(
           name: summary?.name ?? null,
           posterPath: summary?.posterPath ?? null,
           episodes,
-          versions: coverageOf(files.map(versionRowOf)),
+          versions: coverageOf(rows, undefined, isAcknowledged(rows, acks)),
+          acknowledged: isAcknowledged(rows, acks),
           nfo: nfoTally(files),
           missing: episodes.filter(({ state }) => state === 'missing').length,
         },
@@ -307,7 +312,13 @@ export class Completeness {
       return null;
     }
     const files = this.deps.items.ofShow(libraryId, tmdbId);
-    const seasons = compare(files, known.seasons, known.details.seasons, this.today());
+    const seasons = compare(
+      files,
+      known.seasons,
+      known.details.seasons,
+      this.today(),
+      this.deps.items.versionAcks(libraryId, tmdbId),
+    );
     this.deps.store.put(libraryId, tmdbId, missingOf(seasons), signatureOf(files));
     return { details: known.details, seasons };
   }

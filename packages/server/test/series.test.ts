@@ -383,8 +383,8 @@ describe('comparing the files with the provider', () => {
       '2026-01-01',
     );
     expect(season?.versions).toEqual([
-      { resolution: '1080p', covered: 2, total: 2 },
-      { resolution: '720p', covered: 1, total: 2 },
+      { resolution: '1080p', covered: 2, total: 2, accepted: false },
+      { resolution: '720p', covered: 1, total: 2, accepted: false },
     ]);
   });
 

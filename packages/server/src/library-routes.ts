@@ -1237,7 +1237,7 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
       const seasons =
         counted?.seasons ??
         // Without the provider only the files can be told: grouped by season, none missing.
-        compare(files, [], [], '0000-00-00');
+        compare(files, [], [], '0000-00-00', items.versionAcks(library.id, tmdbId));
       // The list of shows follows what this page just counted.
       return {
         tmdbId,
@@ -1260,12 +1260,48 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
           poster: ctx.seriesFiles.get(library.id, tmdbId, season.season)?.poster ?? null,
           missing: season.missing,
           versions: season.versions,
+          acknowledged: season.acknowledged,
           nfo: season.nfo,
           episodes: season.episodes.map(presentEpisode),
         })),
       };
     },
   );
+
+  for (const accept of [true, false]) {
+    api.route<{ Params: { id: string; tmdbId: number; season: number } }>({
+      method: accept ? 'PUT' : 'DELETE',
+      url: '/api/libraries/:id/shows/:tmdbId/seasons/:season/versions/accepted',
+      schema: {
+        summary: accept
+          ? 'Accept a season’s versions as they are'
+          : 'Stop accepting a season’s versions as they are',
+        description: accept
+          ? 'For a season held in several pictures where one lacks episodes the others have and ' +
+            'nothing can change that (no 4K release of them). The season stops counting under ' +
+            '`incomplete-versions` until its files change (an episode arrives, goes or changes picture).'
+          : 'Lifts the acceptance: the season counts again under `incomplete-versions`.',
+        params: {
+          type: 'object',
+          properties: {
+            id: { type: 'string' },
+            tmdbId: { type: 'integer' },
+            season: { type: 'integer' },
+          },
+        },
+        response: { 204: { type: 'null' } },
+      },
+      handler: (request, reply) => {
+        const library = seriesLibrary(request.params.id);
+        const { tmdbId, season } = request.params;
+        if (!items.acknowledgeSeason(library.id, tmdbId, season, accept)) {
+          throw new ApiError(404, 'library.item-not-found');
+        }
+        events.emit('history');
+        return reply.code(204).send();
+      },
+    });
+  }
 
   api.post<{
     Params: { id: string };

@@ -227,6 +227,7 @@ interface ShowDetail {
   seasons: {
     season: number;
     versions: Coverage[];
+    acknowledged: boolean;
     nfo: { expected: number; present: number };
     episodes: {
       episode: number;
@@ -260,7 +261,7 @@ async function show(episodes: [number, string][], metadata: 'none' | 'nfo' = 'nf
   });
   await h.request('POST', '/api/libraries/shows/scan');
   await h.app.jobs.idle();
-  return h;
+  return Object.assign(h, { root });
 }
 type Harness = Awaited<ReturnType<typeof show>>;
 const shows = async (h: Harness, query = '') =>
@@ -308,8 +309,8 @@ describe('a series held in two versions', () => {
     const [row] = (await shows(h)).items;
     expect(row).toMatchObject({ episodes: 3 });
     expect(row?.versions).toEqual([
-      { resolution: '2160p', covered: 2, total: 3 },
-      { resolution: '1080p', covered: 3, total: 3 },
+      { resolution: '2160p', covered: 2, total: 3, accepted: false },
+      { resolution: '1080p', covered: 3, total: 3, accepted: true },
     ]);
   });
 
@@ -336,8 +337,8 @@ describe('a series held in two versions', () => {
     expect(season?.nfo).toEqual({ expected: 5, present: 0 });
     // The season reads the coverage the list gives, version by version.
     expect(season?.versions).toEqual([
-      { resolution: '2160p', covered: 2, total: 3 },
-      { resolution: '1080p', covered: 3, total: 3 },
+      { resolution: '2160p', covered: 2, total: 3, accepted: false },
+      { resolution: '1080p', covered: 3, total: 3, accepted: false },
     ]);
   });
 
@@ -361,6 +362,58 @@ describe('a series held in two versions', () => {
     expect((await shows(h, '?state=incomplete-versions')).total).toBe(0);
   });
 
+  it('owes nothing for a season released in pieces, no episode having two pictures', async () => {
+    const h = await show([
+      [1, '1080p'],
+      [2, '1080p'],
+      [3, '2160p'],
+    ]);
+    expect(await counts(h)).toMatchObject({ 'multi-version': 0, 'incomplete-versions': 0 });
+  });
+
+  describe('accepted as it is', () => {
+    const accepted = '/api/libraries/shows/shows/93740/seasons/1/versions/accepted';
+
+    it('leaves the filter until a file of the season changes', async () => {
+      const h = await show(FULL);
+      expect((await h.request('PUT', accepted)).statusCode).toBe(204);
+      expect(await counts(h)).toMatchObject({ 'multi-version': 1, 'incomplete-versions': 0 });
+      expect((await shows(h, '?state=incomplete-versions')).total).toBe(0);
+      const [row] = (await shows(h)).items;
+      expect(row?.versions.map(({ covered, total }) => [covered, total])).toEqual([
+        [2, 2],
+        [3, 3],
+      ]);
+      const detail = (
+        await h.request('GET', '/api/libraries/shows/shows/93740')
+      ).json<ShowDetail>();
+      // The season still tells the truth about its files.
+      expect(detail.seasons[0]).toMatchObject({
+        acknowledged: true,
+        versions: [
+          { resolution: '2160p', covered: 2, total: 3, accepted: true },
+          { resolution: '1080p', covered: 3, total: 3, accepted: true },
+        ],
+      });
+      // A 720p of episode 3 arrives: the season is no longer what was accepted.
+      await put(join(h.root, 'Foundation.S01E03.720p.WEB-DL-GRP.mkv'), '720p');
+      await h.request('POST', '/api/libraries/shows/scan');
+      await h.app.jobs.idle();
+      expect(await counts(h)).toMatchObject({ 'incomplete-versions': 1 });
+    });
+
+    it('counts again once lifted, and refuses a season with no file', async () => {
+      const h = await show(FULL);
+      await h.request('PUT', accepted);
+      expect((await h.request('DELETE', accepted)).statusCode).toBe(204);
+      expect(await counts(h)).toMatchObject({ 'incomplete-versions': 1 });
+      expect(
+        (await h.request('PUT', '/api/libraries/shows/shows/93740/seasons/4/versions/accepted'))
+          .statusCode,
+      ).toBe(404);
+    });
+  });
+
   it('is neither with a single version', async () => {
     const h = await show([
       [1, '1080p'],
@@ -369,7 +422,7 @@ describe('a series held in two versions', () => {
     expect(await counts(h)).toMatchObject({ 'multi-version': 0, 'incomplete-versions': 0 });
     const [row] = (await shows(h)).items;
     expect(row).toMatchObject({ episodes: 2 });
-    expect(row?.versions).toEqual([{ resolution: '1080p', covered: 2, total: 2 }]);
+    expect(row?.versions).toEqual([{ resolution: '1080p', covered: 2, total: 2, accepted: true }]);
   });
 
   it('counts the episodes with a version lacking its NFO, an episode once', async () => {

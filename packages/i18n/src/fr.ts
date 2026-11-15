@@ -1003,6 +1003,11 @@ export const fr: Record<keyof typeof en, string> = {
   'web.library.version.status.absent': 'Version absente',
   'web.library.coverage.cell': 'Épisode {episode} · {version} : {status}',
   'web.library.coverage.legend.label': 'Légende',
+  'web.library.coverage.accept': 'Accepter en l’état',
+  'web.library.coverage.accept.hint':
+    'Cette saison existe en plusieurs versions et l’une d’elles n’a pas des épisodes que les autres ont. L’accepter la retire des versions incomplètes jusqu’à ce que ses fichiers changent.',
+  'web.library.coverage.accepted': 'Acceptée en l’état',
+  'web.library.coverage.accepted.undo': 'Compter à nouveau',
   'web.library.version.unknown': 'résolution inconnue',
   'web.library.version.subtitles': 'ST {languages}',
   'web.library.compare.hdr': 'HDR',
