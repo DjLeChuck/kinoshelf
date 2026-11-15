@@ -100,6 +100,13 @@ The lists show a movie or an episode **once**, whatever its number of files:
   badges, and the page of a series draws the matrix of versions against episodes. A missing episode
   stays in **Missing episodes**: it lowers no version. A file whose name gives no size counts as a
   version only when it shares an episode with another file;
+- a shortfall does not always call for action. A season where **no episode has two files** was
+  released in pieces (1080p first, then 4K), not held in versions, so it is never an **Incomplete
+  version**. When a season is held in several versions and one lacks episodes the others have, and no
+  better release exists, **Accept as it is** (on the season, in the series page's matrix) stops it from
+  counting as incomplete; **Count again** undoes it. The choice is per season, never per show, and it
+  lapses by itself when an episode of the season arrives, goes or changes picture. The badges still
+  tell the truth (`4/8`): only the show's own row owes nothing for an accepted season;
 - the poster, fanart and logo are shared. A movie has one `movie.nfo`; each version of an episode
   has its own `<file>.nfo` (no player reads a shared one) and its own copy of the episode's
   thumbnail (`<file>-thumb.jpg`), since a player picks the one of the version being played.

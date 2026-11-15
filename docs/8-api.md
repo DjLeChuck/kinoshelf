@@ -45,7 +45,7 @@ key) is the reference for parameters and responses; this is the map.
 | Entries         | `POST /api/entries/{id}/match`, `/preview`, `/ignore`; `GET .../match` follows a validation                                                                                               |
 | Plans           | `POST /api/plans/{id}/execute` (with `entries`) transfers what a plan holds                                                                                                               |
 | Libraries       | `/api/libraries` and `/api/libraries/{id}` (CRUD), `.../scan`, `.../rescan`, `.../execute`                                                                                                |
-| Library content | `.../items`, `.../items/{itemId}`, `.../shows`, `.../shows/{tmdbId}`                                                                                                                      |
+| Library content | `.../items`, `.../items/{itemId}`, `.../shows`, `.../shows/{tmdbId}`, `PUT`/`DELETE .../shows/{tmdbId}/seasons/{season}/versions/accepted`                                                |
 | Images          | `.../items/{itemId}/images`, `.../shows/{tmdbId}/images` and an episode's, with `.../preview`                                                                                             |
 | Collections     | `.../collection`, `.../collections`, `.../collections/{key}/images`, `/rename`, `/send`                                                                                                   |
 | History         | `GET /api/history`, `GET /api/batches/{id}`, `POST /api/batches/{id}/undo` (202, a task)                                                                                                  |
