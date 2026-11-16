@@ -2,7 +2,7 @@
 // standalone binary, see the end), with a fake TMDB standing in for the network. Playwright
 // starts this file and waits for /health.
 import { spawn } from 'node:child_process';
-import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { join } from 'node:path';
 
@@ -16,6 +16,23 @@ rmSync(dir, { recursive: true, force: true });
 for (const folder of ['config', 'incoming', 'library/films', 'library/series']) {
   mkdirSync(join(dir, folder), { recursive: true });
 }
+// The specs write files that are no videos, and the CI job has no ffprobe while a developer's
+// machine has one: both must read the same, so `KINOSHELF_FFPROBE` is this stand-in, which says
+// its version and refuses every file as ffprobe does a damaged one.
+const fakeFfprobe = join(dir, 'ffprobe');
+writeFileSync(
+  fakeFfprobe,
+  [
+    '#!/bin/sh',
+    'for arg in "$@"; do',
+    '  if [ "$arg" = "-version" ]; then echo "ffprobe version e2e"; exit 0; fi',
+    'done',
+    'echo "Invalid data found when processing input" >&2',
+    'exit 1',
+    '',
+  ].join('\n'),
+);
+chmodSync(fakeFfprobe, 0o755);
 // One library of each kind: the first of its type is where a job with no library goes.
 writeFileSync(
   join(dir, 'config', 'config.yaml'),

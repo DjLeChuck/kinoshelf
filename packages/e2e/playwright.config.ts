@@ -34,6 +34,7 @@ export default defineConfig({
       KINOSHELF_PLEX_TV_URL: `http://127.0.0.1:${PLEX_PORT}`,
       KINOSHELF_TMDB_URL: `http://127.0.0.1:${TMDB_PORT}`,
       KINOSHELF_TMDB_IMAGES_URL: `http://127.0.0.1:${TMDB_PORT}/t/p`,
+      KINOSHELF_FFPROBE: `${DIR}/ffprobe`,
       TMDB_API_KEY: 'e2e-tmdb-key',
     },
   },
