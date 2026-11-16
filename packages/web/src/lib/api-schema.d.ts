@@ -8250,8 +8250,10 @@ export interface paths {
                                     year?: number;
                                     posterPath?: string;
                                     score: number;
-                                    /** @description TMDB has no such season and episode for this series: a human must look. */
-                                    episodeUnknown?: boolean;
+                                }[];
+                                unknownEpisodes: {
+                                    file: string;
+                                    season: number | null;
                                 }[];
                                 conflicts: {
                                     reason: string;
@@ -8373,8 +8375,10 @@ export interface paths {
                                 year?: number;
                                 posterPath?: string;
                                 score: number;
-                                /** @description TMDB has no such season and episode for this series: a human must look. */
-                                episodeUnknown?: boolean;
+                            }[];
+                            unknownEpisodes: {
+                                file: string;
+                                season: number | null;
                             }[];
                             conflicts: {
                                 reason: string;
@@ -8608,8 +8612,6 @@ export interface paths {
                                     year?: number;
                                     posterPath?: string;
                                     score: number;
-                                    /** @description TMDB has no such season and episode for this series: a human must look. */
-                                    episodeUnknown?: boolean;
                                 }[];
                                 destination: string | null;
                                 conflicts: {
@@ -8967,8 +8969,6 @@ export interface paths {
                                 year?: number;
                                 posterPath?: string;
                                 score: number;
-                                /** @description TMDB has no such season and episode for this series: a human must look. */
-                                episodeUnknown?: boolean;
                             }[];
                             destination: string | null;
                             conflicts: {

@@ -1240,8 +1240,9 @@ export const en = {
   'web.queue.kind.unknown': 'Unknown',
   'web.queue.failed': 'The last transfer failed',
   'web.queue.candidates': 'Candidates on TMDB',
+  'web.queue.season-link': 'Season {season} on TMDB ↗',
   'web.queue.episode-unknown':
-    'TMDB has no such season and episode for this series: the numbering may differ, or the file is not part of it. Check before validating.',
+    'TMDB lacks the season and episode of {count, plural, one {# file} other {# files}} of this series: the numbering may differ, or {count, plural, one {it is} other {they are}} not part of it. Check before validating.',
   'web.queue.no-candidates': 'No candidate. Search by hand below.',
   'web.queue.score': '{score}% match',
   'web.queue.tmdb-link': 'Open the TMDB page (new tab)',

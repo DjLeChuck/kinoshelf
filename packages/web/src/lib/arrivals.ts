@@ -12,8 +12,6 @@ export interface Candidate {
   readonly posterPath?: string;
   /** 0 to 100; only the candidates of the analysis have one, a manual search has none. */
   readonly score?: number;
-  /** TMDB has no such season and episode for this series, which caps the score. */
-  readonly episodeUnknown?: boolean;
 }
 
 export interface ErrorBody {
@@ -34,6 +32,8 @@ export interface Arrival {
   readonly path: string;
   /** The file's name. */
   readonly file: string;
+  /** The files of its group TMDB has no season and episode for (sorted by name). */
+  readonly unknownEpisodes: readonly { readonly file: string; readonly season: number | null }[];
   /** The folder (or file) it came in: files sharing it are validated together. */
   readonly release: string | null;
   /** Which series of the folder: 0 is the main one, 1 and up the others set apart from it. */

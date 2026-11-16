@@ -1281,8 +1281,9 @@ export const fr: Record<keyof typeof en, string> = {
   'web.queue.kind.unknown': 'Inconnu',
   'web.queue.failed': 'Le dernier transfert a échoué',
   'web.queue.candidates': 'Candidats TMDB',
+  'web.queue.season-link': 'Saison {season} sur TMDB ↗',
   'web.queue.episode-unknown':
-    'TMDB ne connaît pas cette saison et cet épisode pour cette série : la numérotation peut différer, ou le fichier n’en fait pas partie. À vérifier avant de valider.',
+    'TMDB ne connaît pas la saison et l’épisode de {count, plural, one {# fichier} other {# fichiers}} de cette série : la numérotation peut différer, ou {count, plural, one {il n’en fait} other {ils n’en font}} pas partie. À vérifier avant de valider.',
   'web.queue.no-candidates': 'Aucun candidat. Cherchez à la main ci-dessous.',
   'web.queue.score': '{score} % de correspondance',
   'web.queue.tmdb-link': 'Ouvrir la fiche TMDB (nouvel onglet)',

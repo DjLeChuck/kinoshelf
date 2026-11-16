@@ -276,10 +276,6 @@ export const entrySchema = {
         properties: {
           ...candidateProperties,
           score: { type: 'number' },
-          episodeUnknown: {
-            type: 'boolean',
-            description: 'TMDB has no such season and episode for this series: a human must look.',
-          },
         },
       },
     },
@@ -861,6 +857,7 @@ export const arrivalsSchema = {
           'destinationOptions',
           'reason',
           'candidates',
+          'unknownEpisodes',
           'conflicts',
           'error',
         ],
@@ -911,6 +908,15 @@ export const arrivalsSchema = {
           },
           reason: entrySchema.properties.reason,
           candidates: entrySchema.properties.candidates,
+          /** Files of the group TMDB has no season and episode for, which keeps it to be validated. */
+          unknownEpisodes: {
+            type: 'array',
+            items: {
+              type: 'object',
+              required: ['file', 'season'],
+              properties: { file: { type: 'string' }, season: { type: 'integer', nullable: true } },
+            },
+          },
           /** What stops it from going there. */
           conflicts: entrySchema.properties.conflicts,
           error: entrySchema.properties.error,

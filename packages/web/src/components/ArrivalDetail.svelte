@@ -300,8 +300,24 @@
           selected = candidate;
         }}
       />
-      {#if selected?.episodeUnknown}
-        <p class="alert alert-warn" role="status">{t('web.queue.episode-unknown')}</p>
+      {#if entry.unknownEpisodes.length > 0}
+        <div class="alert alert-warn unknown" role="status">
+          <p>{t('web.queue.episode-unknown', { count: entry.unknownEpisodes.length })}</p>
+          <ul>
+            {#each entry.unknownEpisodes as { file, season } (file)}
+              <li>
+                {file}
+                {#if season !== null && entry.candidates[0]}
+                  <a
+                    href={`https://www.themoviedb.org/tv/${entry.candidates[0].id.id}/season/${season}`}
+                    target="_blank"
+                    rel="noopener noreferrer">{t('web.queue.season-link', { season })}</a
+                  >
+                {/if}
+              </li>
+            {/each}
+          </ul>
+        </div>
       {/if}
     {:else}
       <p class="muted">
@@ -441,6 +457,21 @@
 </article>
 
 <style>
+  .unknown {
+    margin-top: 12px;
+  }
+
+  .unknown p,
+  .unknown ul {
+    margin: 0;
+  }
+
+  .unknown ul {
+    margin-top: 6px;
+    padding-left: 18px;
+    overflow-wrap: anywhere;
+  }
+
   header {
     display: flex;
     align-items: flex-start;

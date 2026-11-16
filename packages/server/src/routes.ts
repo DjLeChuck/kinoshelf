@@ -104,6 +104,7 @@ function presentArrival(
   entry: Entry,
   service: Service,
   jobOf: (id: string) => Job | undefined,
+  mates: (entry: Entry) => Entry[],
 ): unknown {
   const job = jobOf(entry.jobId);
   const destination = service.destinationOf(entry, job);
@@ -127,6 +128,12 @@ function presentArrival(
     destinationOptions: service.destinationOptions(entry).map(({ id, name }) => ({ id, name })),
     reason: entry.reason,
     candidates: entry.candidates,
+    // The files of the release TMDB has no season and episode for: what keeps the choice under the
+    // threshold, said once for the whole group the validation covers.
+    unknownEpisodes: [entry, ...mates(entry)]
+      .filter((file) => file.candidates[0]?.episodeUnknown === true)
+      .map((file) => ({ file: basename(file.path), season: file.parsed.season ?? null }))
+      .sort((a, b) => (a.file < b.file ? -1 : 1)),
     conflicts: plan.conflicts,
     error: entry.error,
   };
@@ -278,7 +285,9 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
       return {
         total: page.total,
         sources: sources.map(({ id, name, source }) => ({ id, name, path: source })),
-        items: page.entries.map((entry) => presentArrival(entry, service, jobOf)),
+        items: page.entries.map((entry) =>
+          presentArrival(entry, service, jobOf, (file) => entries.releaseMates(file)),
+        ),
       };
     },
   );
@@ -304,7 +313,12 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
       if (!entry) {
         throw new ApiError(404, 'queue.entry-not-found');
       }
-      return presentArrival(entry, service, (id) => jobs.get(id));
+      return presentArrival(
+        entry,
+        service,
+        (id) => jobs.get(id),
+        (file) => entries.releaseMates(file),
+      );
     },
   );
 

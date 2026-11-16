@@ -34,6 +34,7 @@ const arrival = (over: Partial<Arrival> = {}): Arrival => ({
   destinationOptions: [{ id: 'films', name: 'Films' }],
   reason: null,
   candidates: [],
+  unknownEpisodes: [],
   conflicts: [],
   error: null,
   ...over,
