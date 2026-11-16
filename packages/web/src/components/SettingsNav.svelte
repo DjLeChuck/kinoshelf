@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { untrack } from 'svelte';
   import { SvelteSet } from 'svelte/reactivity';
   import { t } from '../lib/i18n.svelte.js';
   import { router } from '../lib/router.svelte.js';
@@ -76,6 +77,20 @@
         replace: true,
         scroll: false,
       });
+    }
+  });
+
+  // An anchor that arrives from outside (a link, back/forward) is a click: the browser scrolls to
+  // it, and the sections crossed on the way must not take the highlight, then the address, from it.
+  $effect(() => {
+    const anchor = router.hash.slice(1);
+    if (
+      anchor !== '' &&
+      anchor !== untrack(() => active) &&
+      sections.some(({ id }) => id === anchor)
+    ) {
+      active = anchor;
+      pinned = true;
     }
   });
 
