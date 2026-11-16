@@ -754,6 +754,8 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
         ...(state && { filter: state }),
         ...(multi && { multi }),
         ...(collections && collection && { collection }),
+        // A series library's files to validate are listed as the groups a validation settles.
+        ...(library.type === 'series' && { grouped: true }),
         ...(sort && { sort }),
         ...(dir && { dir }),
         ...(q && { query: q }),

@@ -137,6 +137,8 @@
   let selection = $state<Selection | undefined>(undefined);
   let failure = $state<unknown>(undefined);
   let limit = $state(PAGE_SIZE);
+  // Groups of files to validate, one row each: a release of sixteen episodes takes one place.
+  let settleLimit = $state(PAGE_SIZE);
   /** The shows ticked to rename or refresh, by TMDB id. */
   let picked = $state<readonly number[]>([]);
   let running = $state<{ mode: 'rename' | 'refresh'; items: readonly LibraryItem[] } | undefined>(
@@ -234,7 +236,7 @@
             });
       const pages = await Promise.all(
         waiting.map((state) =>
-          libraryItems.page(libraryId, { state, q: wanted.query, limit: 100 }),
+          libraryItems.page(libraryId, { state, q: wanted.query, limit: settleLimit }),
         ),
       );
       // A show that was open is read again, so the tree follows what a transfer changed.
@@ -284,6 +286,7 @@
         return;
       }
       limit = PAGE_SIZE;
+      settleLimit = PAGE_SIZE;
       picked = [];
       void load(wanted);
     });
@@ -516,6 +519,24 @@
                   </tr>
                 {/if}
               {/each}
+              {#if settleTotal > settleGroups.length}
+                <tr class="child">
+                  <td colspan={columns}>
+                    <button
+                      type="button"
+                      class="btn"
+                      onclick={() => {
+                        settleLimit += PAGE_SIZE;
+                        void load();
+                      }}
+                      >{t('web.library.more', {
+                        shown: settleGroups.length,
+                        total: settleTotal,
+                      })}</button
+                    >
+                  </td>
+                </tr>
+              {/if}
             {/if}
           {/if}
 

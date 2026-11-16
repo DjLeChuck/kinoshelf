@@ -791,6 +791,21 @@ describe('the lookups of the item store', () => {
     // The tab says what the node does, not the number of files.
     expect(store.counts('shows', true).review).toBe(4);
     expect(store.counts('shows').review).toBe(5);
+
+    // Grouped, a page counts the groups a validation settles, never the episodes.
+    const grouped = store.page('shows', { filter: 'review', grouped: true, limit: 3, offset: 0 });
+    expect(grouped.total).toBe(4);
+    expect(grouped.items).toHaveLength(3);
+    expect(
+      store.page('shows', { filter: 'review', grouped: true, limit: 3, offset: 3 }).items,
+    ).toHaveLength(1);
+    const all = store.page('shows', { filter: 'review', grouped: true, limit: 10, offset: 0 });
+    expect(all.items.map((i) => i.path).sort()).toEqual([
+      '/in/Film.mkv',
+      '/in/Foundation/1.mkv',
+      '/in/Foundation/3.mkv',
+      '/in/Odd.mkv',
+    ]);
   });
 
   it('finds the videos of one folder, not of its sub-folders nor of a folder named alike', () => {

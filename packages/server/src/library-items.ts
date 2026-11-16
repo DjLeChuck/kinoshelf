@@ -689,6 +689,11 @@ export class LibraryItemStore {
       multi?: boolean;
       /** Only the movies filed under this collection (`tmdb:<id>` or `custom:<name>`). */
       collection?: string;
+      /**
+       * A series library's files waiting for a person: one row per group a validation settles (a
+       * release's episodes of one series), so a page counts series and not episodes.
+       */
+      grouped?: boolean;
       sort?: ItemSort;
       dir?: SortDirection;
       query?: string;
@@ -698,6 +703,9 @@ export class LibraryItemStore {
   ): { total: number; groups: number; items: LibraryItem[]; works: LibraryItem[][] } {
     this.settleWorks(libraryId);
     const matching = options.query ? [contains(sortKey(options.query))] : [];
+    if (options.grouped && (options.filter === 'review' || options.filter === 'unrecognized')) {
+      return this.pageOfGroups(libraryId, options, matching);
+    }
     // What a single file must meet: with a search, one file has to satisfy every condition at once (the
     // version whose name matches may not be the one to rename), so the files are asked, once.
     const fileConditions = [
@@ -764,6 +772,54 @@ export class LibraryItemStore {
     }
     const works = keys.map((key) => byKey.get(key) ?? []).filter((work) => work.length > 0);
     return { total, groups, items: works.flatMap((work) => work.slice(0, 1)), works };
+  }
+
+  /**
+   * The groups of files waiting for a person, one row each (the first file by path stands for it):
+   * the web lists a group once and takes its size from the entry's `releaseFiles`, so paging by
+   * file would let a release of sixteen episodes take sixteen of a page's places.
+   */
+  private pageOfGroups(
+    libraryId: string,
+    options: {
+      filter?: StateFilter;
+      collection?: string;
+      query?: string;
+      limit: number;
+      offset: number;
+    },
+    matching: readonly string[],
+  ): { total: number; groups: number; items: LibraryItem[]; works: LibraryItem[][] } {
+    const conditions = [
+      'library_id = ?',
+      ...(options.filter ? [FILTER_SQL[options.filter]] : []),
+      ...(options.query ? ["search_key LIKE ? ESCAPE '\\'"] : []),
+    ].join(' AND ');
+    const params = [libraryId, ...matching];
+    const groups = this.groupsWhere(conditions, params);
+    const leads = this.database
+      .prepare<unknown[], { lead: string }>(
+        `SELECT MIN(i.path) AS lead
+         FROM (SELECT path, kind, entry_id, sort FROM library_items WHERE ${conditions}) i
+         LEFT JOIN job_entries e ON e.id = i.entry_id
+         GROUP BY CASE WHEN i.kind = 'series' AND e.release IS NOT NULL
+                  THEN e.release || '|' || e.cluster ELSE i.path END
+         ORDER BY MIN(i.sort), MIN(i.path) LIMIT ? OFFSET ?`,
+      )
+      .all(...params, options.limit, options.offset)
+      .map(({ lead }) => lead);
+    const rows = this.database
+      .prepare<[string, string], Row>(
+        `SELECT ${COLUMNS} FROM library_items
+         WHERE library_id = ? AND path IN (SELECT value FROM json_each(?))`,
+      )
+      .all(libraryId, JSON.stringify(leads));
+    const byPath = new Map(rows.map((row) => [row.path, toItem(row)]));
+    const works = leads.flatMap((path) => {
+      const item = byPath.get(path);
+      return item === undefined ? [] : [[item]];
+    });
+    return { total: groups, groups, items: works.flat(), works };
   }
 
   /** The files a list of the ones waiting for a person keeps, counted as a validation settles them. */
