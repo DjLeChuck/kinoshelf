@@ -35,6 +35,7 @@ const arrival = (over: Partial<Arrival> = {}): Arrival => ({
   reason: null,
   candidates: [],
   unknownEpisodes: [],
+  limits: [],
   conflicts: [],
   error: null,
   ...over,

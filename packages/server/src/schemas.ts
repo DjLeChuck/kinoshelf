@@ -858,6 +858,7 @@ export const arrivalsSchema = {
           'reason',
           'candidates',
           'unknownEpisodes',
+          'limits',
           'conflicts',
           'error',
         ],
@@ -920,6 +921,15 @@ export const arrivalsSchema = {
                 // false: TMDB has no page for this season, so only the episode's absence is said.
                 seasonKnown: { type: 'boolean' },
               },
+            },
+          },
+          /** What keeps the best candidate from a full score; `value` is the country the file named. */
+          limits: {
+            type: 'array',
+            items: {
+              type: 'object',
+              required: ['code', 'value'],
+              properties: { code: { type: 'string' }, value: { type: 'string', nullable: true } },
             },
           },
           /** What stops it from going there. */

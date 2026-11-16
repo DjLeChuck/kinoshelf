@@ -1293,6 +1293,17 @@ export const fr: Record<keyof typeof en, string> = {
   'web.queue.season-none': 'Sans numéro de saison',
   'web.queue.unknown-count': '{count, plural, one {# fichier} other {# fichiers}}',
   'web.queue.season-absent': 'Saison {season} : TMDB ne connaît pas cette saison',
+  'web.queue.limits': 'Pourquoi la meilleure correspondance n’est pas à 100 % :',
+  'web.queue.limit.title': 'Le titre diffère de celui du fichier.',
+  'web.queue.limit.year': 'L’année diffère de celle du fichier.',
+  'web.queue.limit.kind': 'Le type (film ou série) diffère de ce que dit le nom.',
+  'web.queue.limit.country': 'Le pays lu dans le nom ({value}) n’est pas celui de la série.',
+  'web.queue.limit.volume': 'Le numéro de partie du nom diffère de celui du titre.',
+  'web.queue.limit.runner-up': 'Un autre candidat est presque aussi bon.',
+  'web.queue.limit.known-id':
+    'Un identifiant du nom désigne une autre œuvre que la meilleure correspondance.',
+  'web.queue.limit.installment-year':
+    'Le numéro de partie et l’année désignent des films différents.',
   'web.queue.episode-unknown':
     'TMDB ne connaît pas la saison et l’épisode de {count, plural, one {# fichier} other {# fichiers}} de cette série : la numérotation peut différer, ou {count, plural, one {il n’en fait} other {ils n’en font}} pas partie. À vérifier avant de valider.',
   'web.queue.no-candidates': 'Aucun candidat. Cherchez à la main ci-dessous.',

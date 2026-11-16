@@ -138,6 +138,12 @@ function presentArrival(
         seasonKnown: file.candidates[0]?.seasonUnknown !== true,
       }))
       .sort((a, b) => (a.file < b.file ? -1 : 1)),
+    // Why the best candidate is not a full score, in the words of the web: the country is the one
+    // the file named, since a wrong one is the odd cause to find.
+    limits: (entry.candidates[0]?.limits ?? []).map((code) => ({
+      code,
+      value: code === 'country' ? (entry.parsed.country ?? null) : null,
+    })),
     conflicts: plan.conflicts,
     error: entry.error,
   };

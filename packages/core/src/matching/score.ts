@@ -1,5 +1,5 @@
 import type { ParsedMedia } from '../types/media.js';
-import type { ScoreBreakdown, ScoredCandidate } from '../types/matching.js';
+import type { ScoreBreakdown, ScoreLimit, ScoredCandidate } from '../types/matching.js';
 import type { Candidate, SeasonInfo } from '../types/provider.js';
 import type { MatchingConfig } from './config.js';
 import { installmentsOf } from './installment.js';
@@ -230,7 +230,22 @@ export function scoreCandidates(
       parsed.kind === 'episode' &&
       raw.candidate.kind === 'series' &&
       seasons.get(candidateKey(raw.candidate)) === null;
-    return { candidate: raw.candidate, score, breakdown, ...(seasonMissing && { seasonMissing }) };
+    const yearOff = yearGap(parsed, raw.candidate);
+    const limits: ScoreLimit[] = [
+      ...(raw.title < weights.title * 0.9 ? (['title'] as const) : []),
+      ...(yearOff !== undefined && yearOff > 0 ? (['year'] as const) : []),
+      ...(parsed.kind !== 'unknown' && raw.kind === 0 ? (['kind'] as const) : []),
+      ...(raw.country < 0 ? (['country'] as const) : []),
+      ...(raw.volume < 0 ? (['volume'] as const) : []),
+      ...(margin < weights.margin * 0.67 ? (['runner-up'] as const) : []),
+    ];
+    return {
+      candidate: raw.candidate,
+      score,
+      breakdown,
+      limits,
+      ...(seasonMissing && { seasonMissing }),
+    };
   });
 
   const ranked = scored.sort((a, b) => b.score - a.score);
@@ -245,7 +260,7 @@ export function scoreCandidates(
     (yearGap(parsed, lead.candidate) ?? 0) > 0 &&
     ranked.some((s) => s.breakdown.volume < 0 && yearGap(parsed, s.candidate) === 0)
   ) {
-    return ranked.map((s) => ({ ...s, score: Math.min(s.score, config.threshold - 1) }));
+    return capped(ranked, 'installment-year', config.threshold);
   }
 
   // The names carry an id and the candidate it designates is in the results, yet something
@@ -255,7 +270,20 @@ export function scoreCandidates(
   const top = ranked[0];
   const hinted = ranked.some((s) => knownIdMatches(parsed, s.candidate));
   if (hinted && top && !knownIdMatches(parsed, top.candidate)) {
-    return ranked.map((s) => ({ ...s, score: Math.min(s.score, config.threshold - 1) }));
+    return capped(ranked, 'known-id', config.threshold);
   }
   return ranked;
+}
+
+/** Every score just under the threshold, the leader saying which rule did it. */
+function capped(
+  ranked: readonly ScoredCandidate[],
+  limit: ScoreLimit,
+  threshold: number,
+): ScoredCandidate[] {
+  return ranked.map((s, index) => ({
+    ...s,
+    score: Math.min(s.score, threshold - 1),
+    ...(index === 0 && { limits: [...(s.limits ?? []), limit] }),
+  }));
 }

@@ -467,6 +467,8 @@ describe('country', () => {
       await matcher.match(parsedEpisode('The Office', 3, [4], undefined, { country: 'US' })),
     );
     expect(outcome.others[0]?.breakdown.country).toBe(-15);
+    expect(outcome.others[0]?.limits).toContain('country');
+    expect(outcome.best.limits ?? []).not.toContain('country');
   });
 
   it('is neutral when the candidate has no known country (TMDB movies)', async () => {

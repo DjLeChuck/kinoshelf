@@ -31,6 +31,8 @@ export interface StoredCandidate {
   readonly episodeUnknown?: true;
   /** …because TMDB has no such season at all (a 404), not only no such episode. */
   readonly seasonUnknown?: true;
+  /** What keeps the score from being full (`title`, `year`, `country`…), see `ScoreLimit`. */
+  readonly limits?: readonly string[];
 }
 
 export interface Entry {
@@ -89,8 +91,9 @@ const compact = (
     score,
     breakdown,
     seasonMissing,
+    limits,
   }: Pick<ScoredCandidate, 'candidate' | 'score'> &
-    Partial<Pick<ScoredCandidate, 'breakdown' | 'seasonMissing'>>,
+    Partial<Pick<ScoredCandidate, 'breakdown' | 'seasonMissing' | 'limits'>>,
   parsed: ParsedMedia,
 ): StoredCandidate => ({
   kind: candidate.kind,
@@ -100,6 +103,7 @@ const compact = (
   ...(candidate.year !== undefined && { year: candidate.year }),
   ...(candidate.posterPath !== undefined && { posterPath: candidate.posterPath }),
   score,
+  ...(limits !== undefined && limits.length > 0 && { limits }),
   // A choice made by hand has no breakdown: it says nothing of the season.
   ...(parsed.kind === 'episode' &&
     candidate.kind === 'series' &&
@@ -403,6 +407,7 @@ export class EntryStore {
               score: kept.score,
               ...(kept.episodeUnknown && { episodeUnknown: true }),
               ...(kept.seasonUnknown && { seasonUnknown: true }),
+              ...(kept.limits && { limits: kept.limits }),
             }),
           },
           ...outcome.candidates.filter((c) => c.id.id !== chosen.candidate.id.id),

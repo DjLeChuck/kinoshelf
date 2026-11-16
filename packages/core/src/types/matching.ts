@@ -24,6 +24,10 @@ export interface ScoreBreakdown {
   readonly knownId: number;
 }
 
+/** What keeps a candidate from a full score, for a human to read (translated at the edges). */
+export type ScoreLimit =
+  'title' | 'year' | 'kind' | 'country' | 'volume' | 'runner-up' | 'known-id' | 'installment-year';
+
 export interface ScoredCandidate {
   readonly candidate: Candidate;
   /** 0–100. */
@@ -31,6 +35,8 @@ export interface ScoredCandidate {
   readonly breakdown: ScoreBreakdown;
   /** The provider has no such season for this series (not just the episode): set for an episode. */
   readonly seasonMissing?: true;
+  /** Why it is not a full score; an unknown season or episode is `seasonMissing` and the breakdown. */
+  readonly limits?: readonly ScoreLimit[];
 }
 
 /** Why nothing could be matched; translated at the edges. */

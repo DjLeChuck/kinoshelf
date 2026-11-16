@@ -315,6 +315,16 @@
           selected = candidate;
         }}
       />
+      {#if entry.limits.length > 0}
+        <div class="alert alert-info unknown" role="status">
+          <p>{t('web.queue.limits')}</p>
+          <ul>
+            {#each entry.limits as { code, value } (code)}
+              <li>{t(`web.queue.limit.${code}` as MessageKey, { value: value ?? '' })}</li>
+            {/each}
+          </ul>
+        </div>
+      {/if}
       {#if entry.unknownEpisodes.length > 0}
         <div class="alert alert-warn unknown" role="status">
           <p>{t('web.queue.episode-unknown', { count: entry.unknownEpisodes.length })}</p>

@@ -33,6 +33,8 @@ export interface Arrival {
   /** The file's name. */
   readonly file: string;
   /** The files of its group TMDB has no season and episode for (sorted by name). */
+  /** What keeps its best candidate from a full score (`code` is a `ScoreLimit`). */
+  readonly limits: readonly { readonly code: string; readonly value: string | null }[];
   readonly unknownEpisodes: readonly {
     readonly file: string;
     readonly season: number | null;

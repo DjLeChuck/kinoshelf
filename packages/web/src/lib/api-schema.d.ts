@@ -8383,6 +8383,10 @@ export interface paths {
                                     season: number | null;
                                     seasonKnown: boolean;
                                 }[];
+                                limits: {
+                                    code: string;
+                                    value: string | null;
+                                }[];
                                 conflicts: {
                                     reason: string;
                                     path: string;
@@ -8508,6 +8512,10 @@ export interface paths {
                                 file: string;
                                 season: number | null;
                                 seasonKnown: boolean;
+                            }[];
+                            limits: {
+                                code: string;
+                                value: string | null;
                             }[];
                             conflicts: {
                                 reason: string;
