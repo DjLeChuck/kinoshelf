@@ -15,7 +15,7 @@ VERSION ?= 0.0.0-dev
 .DEFAULT_GOAL := help
 
 .PHONY: help hooks install build build-web dev-server dev-web typecheck lint format format-check test test-corpus \
-        test-e2e test-live corpus-report corpus-record check docker-build ffprobe sea sea-run test-sea sea-archive smoke-sea players-up players-down players-seed players-kodi22-up players-kodi22-down flake-check clean
+        docs-dev docs-build docs-preview test-e2e test-live corpus-report corpus-record check docker-build ffprobe sea sea-run test-sea sea-archive smoke-sea players-up players-down players-seed players-kodi22-up players-kodi22-down flake-check clean
 
 help: ## List the targets
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}'
@@ -52,6 +52,15 @@ test: ## Run every test, corpus included (builds first)
 
 test-corpus: ## Run the matching corpus only
 	$(PNPM) test:corpus
+
+docs-dev: ## Serve the documentation site with live reload (VitePress, http://localhost:5173)
+	$(PNPM) docs:dev
+
+docs-build: ## Build the documentation site into docs/.vitepress/dist (a broken link fails)
+	DOCS_BASE=/ $(PNPM) docs:build
+
+docs-preview: docs-build ## Build the documentation site and serve it as published (http://localhost:4173)
+	$(PNPM) docs:preview
 
 test-e2e: ## End-to-end tests of the web UI (Playwright; builds the server and the UI first)
 	$(PNPM) test:e2e

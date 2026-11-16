@@ -91,14 +91,39 @@ libraries in Jellyfin and Plex.
 
 ## Documentation
 
-`README.md` and `docs/` are plain Markdown with relative links and no front matter, so a static site
-generator (VitePress, Starlight) can publish them as they are. The pages are numbered in reading order
-(`0-installation` to `9-development`); a page's first line is its title. Keep them in step with the
-code: a user-visible feature, setting, environment variable, command or route is documented in the
-same change, and the French and English catalogs get the same keys.
+`README.md` and `docs/` are plain Markdown with relative links, so GitHub shows them as they are. They
+are also built into a static site with [VitePress](https://vitepress.dev) (`docs/.vitepress/`, the
+navigation and the theme; `docs/index.md`, the home page):
+
+```sh
+make docs-dev       # live reload on http://localhost:5173
+make docs-build     # the site, in docs/.vitepress/dist (a broken link fails the build)
+make docs-preview   # build, then serve it as published on http://localhost:4173
+```
+
+The `Docs` workflow publishes it to GitHub Pages (run by hand for now: Settings › Pages › Source must
+be "GitHub Actions"; it serves from `/kinoshelf/`, set by `DOCS_BASE`).
+
+Rules that keep both renderings working:
+
+- Pages are numbered in reading order on disk (`0-installation` to `9-development`); the site drops the
+  numbers (`/installation`) through `rewrites` in the config, which also holds the sidebar: a new page
+  is added there and to the README's table.
+- No front matter (except the home page), one H1 per page, relative links to the `.md` files.
+- A heading does not start with a digit: VitePress prefixes its anchor with an underscore, GitHub does not.
+- A screenshot comes in two themes, `name.png` (dark) and `name-light.png`, embedded as a pair with
+  the `#gh-dark-mode-only` and `#gh-light-mode-only` fragments, which GitHub and the site both honour:
+
+  ```md
+  ![Alt](images/name.png#gh-dark-mode-only)
+  ![Alt](images/name-light.png#gh-light-mode-only)
+  ```
+
+Keep the pages in step with the code: a user-visible feature, setting, environment variable, command or
+route is documented in the same change, and the French and English catalogs get the same keys.
 
 ## Conventions
 
-See [AGENTS.md](../AGENTS.md). In short: everything in English, Conventional Commits, every
+See [AGENTS.md](https://github.com/DjLeChuck/kinoshelf/blob/main/AGENTS.md). In short: everything in English, Conventional Commits, every
 user-facing string in both the `fr` and `en` catalogs, and nothing touches the disk without a
 validated plan.

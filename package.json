@@ -21,6 +21,9 @@
     "corpus:report": "pnpm build && pnpm --filter @kinoshelf/corpus report",
     "corpus:record": "pnpm build && pnpm --filter @kinoshelf/corpus record",
     "build:web": "pnpm --filter @kinoshelf/web build",
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs",
     "test:e2e": "pnpm build && pnpm build:web && pnpm --filter @kinoshelf/e2e test"
   },
   "devDependencies": {
@@ -34,6 +37,7 @@
     "svelte-eslint-parser": "^1.10.0",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.72.0",
+    "vitepress": "^1.6.4",
     "vitest": "^5.0.5"
   }
 }

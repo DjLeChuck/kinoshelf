@@ -124,7 +124,7 @@ else the global ones, else the defaults.
 
 ### Watching
 
-See [Getting downloads in](4-getting-downloads-in.md#2-watch-a-folder).
+See [Getting downloads in](4-getting-downloads-in.md#watch-a-folder).
 
 ### Notifications
 
