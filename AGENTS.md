@@ -623,6 +623,7 @@ section or bulk action (`hasCollections`, `library.collections` of `GET .../item
   collection" and two movies at least, then a full scan of its library), so a collection holding one movie stays
   `missing` there. **Not checked**: whether a Jellyfin "replace all images" refresh drops the image sent (expected: it
   does, and Kinoshelf cannot see it), and how Plex's TV apps draw a collection's background.
+- **TMDB's own images** (`tmdbImages`: paths, drawn dimmed through `/api/images`, never TMDB's address: the policy refuses it) are only a preview of the default: no choice, nothing to send. "Choose TMDB's images" (`POST .../collections/adopt-tmdb`, a `SendTasks` task of purpose `adopt`, activity code `adopt-collections`) keeps them as the choice of every collection with none, which makes them `pending`; it sends nothing. The paths come with `/collection/{id}` (`collections.poster_path`, `backdrop_path`), so a collection read before migration 002 has none until a movie of it is read again.
 - A collection a server lacks is `missing`; the header's button counts only what can go now (`isDue`) and says how many wait (`isWaiting`), a collection's own button sends again anyway; after each scan of the library and every 15 minutes `retryMissing` looks
   again, and sends **only what just left `missing`** (the owner approved that image). A `pending` born of a new
   choice is never sent by itself. Kodi is out of scope; the stored images are what a later write to its "Movie Set

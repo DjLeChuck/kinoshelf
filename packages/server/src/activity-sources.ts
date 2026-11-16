@@ -240,7 +240,7 @@ export function collectionSendSource(sends: SendTasks, config: () => Config): Ac
         task({
           id: `send:${libraryId}`,
           kind: 'send',
-          code: 'send-collections',
+          code: send.purpose === 'adopt' ? 'adopt-collections' : 'send-collections',
           params: { name: nameOf(config(), libraryId, libraryId) },
           status: send.status,
           ...counted(send.done, send.total),

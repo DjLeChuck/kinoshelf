@@ -820,6 +820,9 @@ export const en = {
     '{server}: {error} ({count, plural, one {# collection} other {# collections}})',
   'web.collections.waiting':
     '{count, plural, one {# collection does not exist on a server yet} other {# collections do not exist on a server yet}}: their image goes as soon as it creates them (scan its library), or send again from the collection’s panel.',
+  'web.collections.adopt.all': 'Choose TMDB’s images ({count})',
+  'web.collections.adopt.done':
+    '{count, plural, one {# TMDB image chosen} other {# TMDB images chosen}}: send them with “Send pending images”.',
   'web.collections.send.nothing': 'Nothing to send.',
   'web.collections.send.one': 'Send to {servers}',
   'web.collections.send.none': 'Nothing to send',
@@ -1015,6 +1018,7 @@ export const en = {
   'web.activity.task.backup': 'Backup of the database',
   'web.activity.task.vacuum': 'Compaction of the database',
   'web.activity.task.empty-replaced': 'Emptying of replaced/',
+  'web.activity.task.adopt-collections': 'Choosing the TMDB images of the collections of {name}',
   'web.activity.task.send-collections': 'Sending the collection images of {name}',
   'web.activity.task.scan': 'Scan of {name}',
   'web.activity.task.transfer': 'Transfer of files',

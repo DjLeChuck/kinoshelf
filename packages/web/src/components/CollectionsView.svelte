@@ -9,6 +9,7 @@
     COLLECTION_IMAGE_TYPES,
     collectionBase,
     COLLECTION_VIEW_FILTERS,
+    canAdopt,
     canSend,
     isDue,
     isWaiting,
@@ -62,6 +63,8 @@
   const sending = $derived(task?.status === 'running');
   /** What the header's button sends: what can go now. A collection a server lacks cannot. */
   const toSendCount = $derived(cards.filter(isDue).length);
+  /** Collections whose TMDB image could be chosen in one go. */
+  const toAdoptCount = $derived(cards.filter(canAdopt).length);
   const waitingCount = $derived(cards.filter(isWaiting).length);
 
   const serverName = (kind: MediaServer): string => (kind === 'plex' ? 'Plex' : 'Jellyfin');
@@ -103,8 +106,14 @@
         : undefined;
     }
     const summary = sendSummary(done.outcomes, t);
+    const chosen = done.outcomes.reduce((sum, outcome) => sum + outcome.chosen, 0);
     noticeLevel = summary.level;
-    notice = summary.lines.length > 0 ? summary.lines : [t('web.collections.send.nothing')];
+    notice =
+      chosen > 0
+        ? [t('web.collections.adopt.done', { count: chosen }), ...summary.lines]
+        : summary.lines.length > 0
+          ? summary.lines
+          : [t('web.collections.send.nothing')];
     void list.reload();
   }
 
@@ -114,6 +123,17 @@
     noticeLevel = 'ok';
     try {
       task = await collectionsApi.send(library.id, keys);
+    } catch (error) {
+      failure = error;
+    }
+  }
+
+  async function adopt(): Promise<void> {
+    failure = undefined;
+    notice = [];
+    noticeLevel = 'ok';
+    try {
+      task = await collectionsApi.adoptTmdb(library.id);
     } catch (error) {
       failure = error;
     }
@@ -208,6 +228,11 @@
         <p class="muted waiting">{t('web.collections.waiting', { count: waitingCount })}</p>
       {/if}
     </div>
+    {#if toAdoptCount > 0}
+      <button type="button" class="btn" disabled={sending} onclick={() => void adopt()}>
+        {t('web.collections.adopt.all', { count: toAdoptCount })}
+      </button>
+    {/if}
     {#if toSendCount > 0}
       <button type="button" class="btn btn-primary" disabled={sending} onclick={() => void start()}>
         {sending

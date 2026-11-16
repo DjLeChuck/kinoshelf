@@ -144,6 +144,7 @@ describe('the result of a send', () => {
     name,
     sent: 0,
     missing: 1,
+    chosen: 0,
     failures: [
       {
         server: 'plex' as const,
@@ -154,7 +155,9 @@ describe('the result of a send', () => {
   });
 
   it('is one line when everything went through', () => {
-    expect(sendSummary([{ key: 'a', name: 'A', sent: 2, missing: 0, failures: [] }], t)).toEqual({
+    expect(
+      sendSummary([{ key: 'a', name: 'A', sent: 2, missing: 0, chosen: 0, failures: [] }], t),
+    ).toEqual({
       level: 'ok',
       lines: ['2 envois réussis'],
     });
@@ -163,7 +166,7 @@ describe('the result of a send', () => {
   it('keeps totals apart from causes, each cause once whatever the collections it touched', () => {
     const summary = sendSummary(
       [
-        { key: 'a', name: 'A', sent: 1, missing: 0, failures: [] },
+        { key: 'a', name: 'A', sent: 1, missing: 0, chosen: 0, failures: [] },
         failing('B'),
         failing('C'),
         { ...failing('C'), failures: [...failing('C').failures, ...failing('C').failures] },
@@ -178,7 +181,7 @@ describe('the result of a send', () => {
   });
 
   it('is a warning when collections only wait for a server', () => {
-    const waiting = { key: 'a', name: 'A', sent: 0, missing: 1, failures: [] };
+    const waiting = { key: 'a', name: 'A', sent: 0, missing: 1, chosen: 0, failures: [] };
     expect(sendSummary([waiting], t).level).toBe('warn');
   });
 });

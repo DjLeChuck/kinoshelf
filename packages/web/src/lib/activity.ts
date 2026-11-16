@@ -13,6 +13,7 @@ const LABELS: Readonly<Record<string, MessageKey>> = {
   vacuum: 'web.activity.task.vacuum',
   'empty-replaced': 'web.activity.task.empty-replaced',
   'send-collections': 'web.activity.task.send-collections',
+  'adopt-collections': 'web.activity.task.adopt-collections',
   transfer: 'web.activity.task.transfer',
   undo: 'web.activity.task.undo',
   'undo-check': 'web.activity.task.undo-check',

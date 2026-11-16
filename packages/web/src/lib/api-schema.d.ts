@@ -2060,6 +2060,8 @@ export interface paths {
                                     name: string;
                                     sent: number;
                                     missing: number;
+                                    /** @description Images chosen from TMDB’s own. */
+                                    chosen: number;
                                     failures: {
                                         /** @enum {string} */
                                         server: "plex" | "jellyfin";
@@ -2152,6 +2154,125 @@ export interface paths {
                                 name: string;
                                 sent: number;
                                 missing: number;
+                                /** @description Images chosen from TMDB’s own. */
+                                chosen: number;
+                                failures: {
+                                    /** @enum {string} */
+                                    server: "plex" | "jellyfin";
+                                    /** @enum {string} */
+                                    type: "poster" | "fanart";
+                                    error: string;
+                                }[];
+                            }[];
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            } | null;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Default Response */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Default Response */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/libraries/{id}/collections/adopt-tmdb": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Chooses TMDB’s own poster and background for the collections with none
+         * @description A background task like a send (202, followed by `GET …/collections/send`): downloads TMDB’s poster and background of every collection of TMDB’s that has no choice and keeps them as its choice, so they become `pending`. Nothing is sent to a server. 409 `collection.send-in-progress`.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    key: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                202: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {string} */
+                            status: "running" | "done" | "failed";
+                            done: number;
+                            total: number;
+                            current: string | null;
+                            outcomes: {
+                                key: string;
+                                name: string;
+                                sent: number;
+                                missing: number;
+                                /** @description Images chosen from TMDB’s own. */
+                                chosen: number;
                                 failures: {
                                     /** @enum {string} */
                                     server: "plex" | "jellyfin";

@@ -3,6 +3,8 @@ import { failureOf, type MatchFailure } from './matches.js';
 
 /** The latest send of a library's collection images: how far it got, what each collection came to. */
 export interface SendTask {
+  /** What the task does: sends the images, or first chooses TMDB's for the collections with none. */
+  readonly purpose: 'send' | 'adopt';
   status: 'running' | 'done' | 'failed';
   /** Collections settled out of those to send. */
   done: number;
@@ -53,8 +55,10 @@ export class SendTasks {
     work: (
       onProgress: (done: number, total: number, current: string) => void,
     ) => Promise<SendOutcome[]>,
+    purpose: SendTask['purpose'] = 'send',
   ): SendTask {
     const task: SendTask = {
+      purpose,
       status: 'running',
       done: 0,
       total: 0,

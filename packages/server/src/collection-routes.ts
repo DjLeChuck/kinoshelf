@@ -174,12 +174,13 @@ const sendTaskSchema = {
       type: 'array',
       items: {
         type: 'object',
-        required: ['key', 'name', 'sent', 'missing', 'failures'],
+        required: ['key', 'name', 'sent', 'missing', 'chosen', 'failures'],
         properties: {
           key: { type: 'string' },
           name: { type: 'string' },
           sent: { type: 'integer' },
           missing: { type: 'integer' },
+          chosen: { type: 'integer', description: 'Images chosen from TMDB’s own.' },
           failures: {
             type: 'array',
             items: {
@@ -389,6 +390,41 @@ export function registerCollectionRoutes(api: FastifyInstance, ctx: CollectionRo
       screen.list(lib);
       const task = sends.start(lib.id, (onProgress) =>
         screen.send(lib, request.body.keys, onProgress),
+      );
+      return reply.code(202).send(presentTask(task));
+    },
+  );
+
+  api.post<{ Params: { id: string } }>(
+    '/api/libraries/:id/collections/adopt-tmdb',
+    {
+      schema: {
+        summary: 'Chooses TMDB’s own poster and background for the collections with none',
+        description:
+          'A background task like a send (202, followed by `GET …/collections/send`): downloads ' +
+          'TMDB’s poster and background of every collection of TMDB’s that has no choice and keeps ' +
+          'them as its choice, so they become `pending`. Nothing is sent to a server. 409 ' +
+          '`collection.send-in-progress`.',
+        params,
+        response: { 202: sendTaskSchema, 401: errorSchema, 404: errorSchema, 409: errorSchema },
+      },
+    },
+    (request, reply) => {
+      const lib = library(request.params.id);
+      if (sends.isRunning(lib.id)) {
+        throw new ApiError(409, 'collection.send-in-progress');
+      }
+      screen.list(lib);
+      const task = sends.start(
+        lib.id,
+        async (onProgress) => {
+          try {
+            return await screen.adoptTmdb(lib, onProgress);
+          } finally {
+            events.emit('jobs');
+          }
+        },
+        'adopt',
       );
       return reply.code(202).send(presentTask(task));
     },

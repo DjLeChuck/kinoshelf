@@ -286,6 +286,12 @@ export const canSend = (card: CollectionCard): boolean =>
   );
 
 /** An image that can go now: chosen and not sent yet (or changed), or whose last send failed. */
+/** TMDB's own image can be chosen for it: a collection of TMDB's with none chosen yet. */
+export const canAdopt = (card: CollectionCard): boolean =>
+  COLLECTION_IMAGE_TYPES.some(
+    (type) => card.images[type] === null && card.tmdbImages[type] !== null,
+  );
+
 export const isDue = (card: CollectionCard): boolean =>
   card.servers.some((server) =>
     COLLECTION_IMAGE_TYPES.some((type) =>
@@ -322,6 +328,7 @@ export interface SendOutcome {
   readonly name: string;
   readonly sent: number;
   readonly missing: number;
+  readonly chosen: number;
   readonly failures: readonly {
     readonly server: MediaServer;
     readonly type: CollectionImageType;
@@ -431,6 +438,8 @@ export const collectionsApi = {
   ) => api.put(`${collectionBase(libraryId, key)}/images/${type}`, { source, value }),
   drop: (libraryId: string, key: string, type: CollectionImageType) =>
     api.delete(`${collectionBase(libraryId, key)}/images/${type}`),
+  adoptTmdb: (libraryId: string) =>
+    api.post<SendTask>(`/api/libraries/${libraryId}/collections/adopt-tmdb`, {}),
   send: (libraryId: string, keys?: readonly string[]) =>
     api.post<SendTask>(`/api/libraries/${libraryId}/collections/send`, keys ? { keys } : {}),
   sendState: (libraryId: string) =>

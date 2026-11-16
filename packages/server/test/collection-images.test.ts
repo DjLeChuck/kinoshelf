@@ -275,7 +275,7 @@ const saga: MetadataProvider = {
     Promise.resolve({
       id: COLLECTION,
       name: 'Dune - Saga',
-      posterPath: '/saga-poster.jpg',
+      posterPath: '/collectionposter.jpg',
       // TMDB's order is not the releases': the screen sorts by year.
       parts: [
         { id: { provider: 'tmdb', id: 693134 }, title: 'Dune : Deuxième partie', year: 2024 },
@@ -402,6 +402,7 @@ async function screen(options: { plexKnows?: boolean } = {}) {
     collection,
     choose,
     send,
+    settled,
     stateOf,
   };
 }
@@ -428,8 +429,23 @@ describe('the Collections screen', () => {
       tmdbImages: { poster: string | null; fanart: string | null };
     };
     expect(one.films.map((film) => film.year)).toEqual([2021, 2024]);
-    expect(one.tmdbImages.poster).toBe('/saga-poster.jpg');
+    expect(one.tmdbImages.poster).toBe('/collectionposter.jpg');
     expect(one.tmdbImages.fanart).toBeNull();
+  });
+
+  it('chooses TMDB’s own poster for a collection with none, and sends nothing', async () => {
+    const { h, settled, collection, plex, jellyfin } = await screen();
+    const started = await h.request('POST', '/api/libraries/films/collections/adopt-tmdb', {});
+    expect(started.statusCode).toBe(202);
+    const task = await settled();
+    expect(task.outcomes).toEqual([
+      { key: KEY, name: 'Dune - Saga', sent: 0, missing: 0, chosen: 1, failures: [] },
+    ]);
+    const one = await collection();
+    expect(one.images.poster?.source.type).toBe('tmdb');
+    expect(one.status).toBe('pending');
+    expect(plex.received).toEqual([]);
+    expect(jellyfin.received).toEqual([]);
   });
 
   it('keeps a chosen image in Kinoshelf’s data and marks the servers `pending`, sending nothing', async () => {
@@ -475,7 +491,7 @@ describe('the Collections screen', () => {
     const task = await send();
 
     expect(task.outcomes).toEqual([
-      { key: KEY, name: 'Dune - Saga', sent: 2, missing: 0, failures: [] },
+      { key: KEY, name: 'Dune - Saga', sent: 2, missing: 0, chosen: 0, failures: [] },
     ]);
     const upload = plex.received.find((r) => r.method === 'POST');
     expect(upload?.url).toBe('/library/metadata/900/posters');

@@ -848,6 +848,9 @@ export const fr: Record<keyof typeof en, string> = {
     '{server} : {error} ({count, plural, one {# collection} other {# collections}})',
   'web.collections.waiting':
     '{count, plural, one {# collection n’existe pas encore sur un serveur} other {# collections n’existent pas encore sur un serveur}} : leur image partira dès qu’il les aura créées (scan de sa bibliothèque), ou en relançant l’envoi depuis leur fiche.',
+  'web.collections.adopt.all': 'Choisir les images TMDB ({count})',
+  'web.collections.adopt.done':
+    '{count, plural, one {# image TMDB choisie} other {# images TMDB choisies}} : envoyez-les avec « Envoyer les images en attente ».',
   'web.collections.send.nothing': 'Rien à envoyer.',
   'web.collections.send.one': 'Envoyer à {servers}',
   'web.collections.send.none': 'Rien à envoyer',
@@ -1048,6 +1051,7 @@ export const fr: Record<keyof typeof en, string> = {
   'web.activity.task.backup': 'Sauvegarde de la base de données',
   'web.activity.task.vacuum': 'Compactage de la base de données',
   'web.activity.task.empty-replaced': 'Vidage de replaced/',
+  'web.activity.task.adopt-collections': 'Choix des images TMDB des collections de {name}',
   'web.activity.task.send-collections': 'Envoi des images de collections de {name}',
   'web.activity.task.scan': 'Analyse de {name}',
   'web.activity.task.transfer': 'Transfert de fichiers',

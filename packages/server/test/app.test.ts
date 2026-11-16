@@ -52,6 +52,7 @@ describe('GET /api/openapi.json', () => {
       '/api/libraries/{id}',
       '/api/libraries/{id}/collection',
       '/api/libraries/{id}/collections',
+      '/api/libraries/{id}/collections/adopt-tmdb',
       '/api/libraries/{id}/collections/send',
       '/api/libraries/{id}/collections/{key}/images',
       '/api/libraries/{id}/collections/{key}/images/{type}',

@@ -81,6 +81,8 @@ export interface SendOutcome {
   readonly sent: number;
   /** The server has no such collection yet: it will be sent when it has. */
   readonly missing: number;
+  /** Images chosen from TMDB's own (`adoptTmdb`); 0 for a send. */
+  readonly chosen: number;
   readonly failures: readonly {
     readonly server: MediaServerKind;
     readonly type: CollectionImageType;
@@ -425,6 +427,51 @@ export class CollectionScreen {
     return outcomes;
   }
 
+  /**
+   * Chooses TMDB's own poster and background for every collection of TMDB's that has none chosen,
+   * so they can be sent. Nothing goes to a server. An image TMDB no longer offers is left out and
+   * logged: the collection keeps the server's.
+   */
+  async adoptTmdb(
+    library: LibraryConfig,
+    onProgress: (done: number, total: number, current: string) => void = () => undefined,
+  ): Promise<SendOutcome[]> {
+    const wanted = this.list(library).collections.filter((collection) =>
+      COLLECTION_IMAGE_TYPES.some(
+        (type) => collection.images[type] === null && collection.tmdbImages[type] !== null,
+      ),
+    );
+    const outcomes: SendOutcome[] = [];
+    for (const collection of wanted) {
+      onProgress(outcomes.length, wanted.length, collection.name);
+      let chosen = 0;
+      for (const type of COLLECTION_IMAGE_TYPES) {
+        const path = collection.tmdbImages[type];
+        if (collection.images[type] !== null || path === null) {
+          continue;
+        }
+        try {
+          await this.choose(library, collection.key, type, { source: 'tmdb', value: path });
+          chosen += 1;
+        } catch (error) {
+          this.deps.log.warn(
+            `${collection.name}: TMDB's ${type} could not be chosen (${error instanceof Error ? error.message : String(error)})`,
+          );
+        }
+      }
+      outcomes.push({
+        key: collection.key,
+        name: collection.name,
+        sent: 0,
+        missing: 0,
+        chosen,
+        failures: [],
+      });
+    }
+    onProgress(wanted.length, wanted.length, '');
+    return outcomes;
+  }
+
   /** `only` names the `<server>:<type>` pairs to send, when not all of what is due. */
   private async sendCollection(
     library: LibraryConfig,
@@ -459,7 +506,7 @@ export class CollectionScreen {
         }
       }
     }
-    return { key: collection.key, name: collection.name, sent, missing, failures };
+    return { key: collection.key, name: collection.name, sent, missing, chosen: 0, failures };
   }
 
   private async sendOne(
