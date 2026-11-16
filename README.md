@@ -15,10 +15,6 @@ Kinoshelf identifies video files (movies, series) **already on disk**, renames t
 player's conventions (Plex, Jellyfin) and writes their metadata (NFO, artwork). It is a web-native
 equivalent of tinyMediaManager and a companion to Radarr/Sonarr: it never downloads anything.
 
-> **Status: work in progress, no stable release yet.** The core, the CLI, the REST server, the
-> Docker image and the web UI (libraries, arrivals, history, settings) all work, as do the folder
-> watcher and the NFO and artwork writers for Plex and Jellyfin.
-
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/images/libraries.png">

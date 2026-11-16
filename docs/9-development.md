@@ -42,6 +42,13 @@ starts it on a throwaway config, `make test-sea` runs the e2e suite against it, 
 clean Debian and Ubuntu containers. The release workflow does the same per platform on a tag. The
 Docker image is built from the same bundle (`make docker-build`).
 
+## Releasing
+
+Update `CHANGELOG.md` (the version's section is the text of the GitHub release), set the same version in
+every `package.json`, commit as `chore: release X.Y.Z`, then tag `vX.Y.Z` and push the tag. The workflows build the
+binaries and the Docker image and publish the release. Try a `vX.Y.Z-rc.1` tag first after changing them: a tag with
+a dash is a pre-release and leaves `latest` alone.
+
 ## Packages
 
 | Package          | Role                                                    |

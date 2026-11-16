@@ -17,7 +17,7 @@ episode) with its missing episodes. Items are renamed and refreshed from the pag
 jobs in one list (see "History" below). A series is validated as a release, not file by file. A movie or an episode held in several
 versions is listed once (see "Versions in the lists" below). The NFO
 and artwork writers (`metadata: nfo`) are built (see "NFO and artwork"
-below), metadata included for a library that is already organized. No stable release is tagged yet.
+below), metadata included for a library that is already organized. Releases: see "Releasing" below (`v1.0.0` is the first).
 
 Backlog, not built: skipping samples by size (today only by name: `sample.*`, a `Sample` folder);
 reading completion from a download client's own API (see "Getting downloads in").
@@ -968,6 +968,19 @@ Run `pnpm typecheck && pnpm lint && pnpm format:check && pnpm test` before consi
 `pnpm test:e2e` is separate (it needs a browser: the Nix shell provides it, CI installs
 Chromium) and runs in its own CI job; `@playwright/test` is pinned to the version of nixpkgs'
 `playwright-driver`, so bump both together.
+
+## Releasing
+
+- **The tag is the version.** `vX.Y.Z` triggers `release.yml` (binaries, e2e on the binary, smoke test, GitHub
+  release) and `docker.yml` (image `X.Y.Z`, `X.Y`, `X` and `latest`; `main` is `edge`). The binary takes its version from
+  the tag; the Docker image and `kinoshelf --version` from the `package.json`s, so they are bumped in the release commit
+  (`chore: release X.Y.Z`), all to the same number.
+- **The release notes are the version's section of `CHANGELOG.md`** (`scripts/changelog-section.sh`, which fails when it
+  is missing). Write it before tagging, in the same commit; keep `[Unreleased]` for what comes after. A tag with a dash
+  (`v1.1.0-rc.1`) is a pre-release, takes its final version's section, and does not move `latest`.
+- **Rehearse with a `-rc` tag** after any change to the workflows. Not published to npm (Docker and the binary are the
+  distribution).
+- Durable data: a shipped migration is never edited (see the golden rules), which is what makes an upgrade safe.
 
 ## Conventions
 
