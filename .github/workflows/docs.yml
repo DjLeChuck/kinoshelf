@@ -1,9 +1,13 @@
 name: Docs
 
-# Manual until the first public release: then add `push` on `main` for `docs/**` and `README.md`.
 # Needs Settings › Pages › Source set to "GitHub Actions".
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - docs/**
+      - README.md
 
 permissions:
   contents: read
