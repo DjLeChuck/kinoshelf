@@ -61,6 +61,10 @@ A movie library lists movies; a series library reads as a **tree**: show, season
   resets them.
 - A **Rename preview** (and **Refresh**) works on the ticked lines: a dry run lists what would move
   and what would be written, then you confirm. Only the files to rename (or to refresh) can be ticked.
+  When a filter lists more than the page loaded, **Select all N, even those not shown** takes every
+  one under the filter.
+- Long lists load by themselves as you scroll to the end; a series library lists a release to validate
+  as one line, fifty at a time.
 
 ### What a series tree shows
 
@@ -159,8 +163,9 @@ In a movie library that writes NFO, a **collection** (a saga) exists for a playe
   overwritten": only if Kinoshelf wrote it and nobody touched it since; otherwise it is left and the
   answer says so. The old NFO goes to `replaced/` and the batch can be undone.
 - The **Collections** screen lists every collection with its movies (the parts the library lacks
-  included, "2/3"), and lets you **rename** an own collection on all its movies, and choose its
-  **poster** and **background** (from TMDB, from one of its movies, or from an address).
+  included, "2/3", sorted by year), and lets you **rename** an own collection on all its movies, and choose its
+  **poster** and **background** (from TMDB, from one of its movies, or from an address). While none is
+  chosen, TMDB's poster and background are drawn dimmed and tagged as a preview.
 - A collection image is kept by Kinoshelf (in `<config>/collection-images/`), never in a movie's
   folder. **Send** pushes the chosen images to Plex and Jellyfin (found by collection name). The state
   of each is `default`, `pending`, `sent`, `missing` (the server has no such collection yet: neither

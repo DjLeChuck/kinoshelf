@@ -78,13 +78,14 @@ place never lands here. The files are in three states:
   because the analysis only reads. That is what a watched folder or a scan does while the setting
   "Transfer what is identified with confidence" is off. **Transfer** runs the plan as it is, or pick
   another candidate, library or size and **Validate** instead; **Transfer all the files that are
-  ready** (at the top, once the whole list is loaded) starts them all.
+  ready** (at the top) starts them all, even those the list has not loaded yet.
 - **To validate**: Kinoshelf could not place the file with confidence, or a conflict or a failed
   transfer needs a look.
 - **Not recognized**: nothing was found.
 
 For each file you see its TMDB candidates and their score, a manual search, and the destination a
-choice would give.
+choice would give. When TMDB has no such season and episode for the series, the panel says so: a
+perfect title still waits for validation, because the numbering may differ.
 
 ![The Arrivals tab: files ready to transfer, with the TMDB candidate and the destination](images/arrivals.png#gh-dark-mode-only)
 ![The Arrivals tab: files ready to transfer, with the TMDB candidate and the destination](images/arrivals-light.png#gh-light-mode-only)
