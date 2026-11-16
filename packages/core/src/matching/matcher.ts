@@ -103,11 +103,28 @@ export class Matcher {
       return [...movies, ...series];
     };
 
-    const first = await run(query(parsed.year));
+    // The whole title (`Ça - Bienvenue à Derry`) is searched too: the short one (`Ça`) may not
+    // bring the work back at all.
+    const whole =
+      parsed.subtitle !== undefined && title === parsed.title
+        ? [`${title} ${parsed.subtitle}`]
+        : [];
+    const runAll = async (year: number | undefined): Promise<Candidate[]> => {
+      const found = await Promise.all(
+        [title, ...whole].map((t) => run({ ...query(year), title: t })),
+      );
+      const seen = new Set<string>();
+      return found.flat().filter((c) => {
+        const key = candidateKey(c);
+        return !seen.has(key) && seen.add(key);
+      });
+    };
+
+    const first = await runAll(parsed.year);
     if (first.length > 0 || parsed.year === undefined) {
       return first;
     }
-    return run(query(undefined));
+    return runAll(undefined);
   }
 
   /** Season lookups only for the likeliest series, plus the one whose id the names carry. */

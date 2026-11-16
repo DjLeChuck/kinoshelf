@@ -188,9 +188,10 @@ export class GuessitParser implements Parser {
     const country = countryOf(guess.country);
     // `Title - Subtitle - Extended Edition` gives a list: the subtitle comes first, what follows
     // is an edition or another label, which does not belong to the title.
-    const subtitle = toList(guess.alternative_title)
-      .map(text)
-      .find((t) => t !== undefined);
+    const subtitle =
+      toList(guess.alternative_title)
+        .map(text)
+        .find((t) => t !== undefined) ?? subtitleBeforeYear(base, episodeTitle, year);
     // guessit calls it a volume (`Vol.2`) or a part (`Part.2`); a title names it either way.
     const volume = count(guess.volume) ?? count(guess.part);
     const otherTitles = title === undefined ? [] : otherTitlesOf(title);
@@ -208,7 +209,7 @@ export class GuessitParser implements Parser {
       kind,
       episodes: kind === 'episode' ? episodes : [],
       ...(title !== undefined && { title }),
-      ...(kind === 'movie' && subtitle !== undefined && { subtitle }),
+      ...(subtitle !== undefined && kind !== 'unknown' && { subtitle }),
       ...(otherTitles.length > 0 && { otherTitles }),
       ...(year !== undefined && { year }),
       ...(kind === 'movie' && volume !== undefined && { volume }),
@@ -223,4 +224,21 @@ export class GuessitParser implements Parser {
       ...(kind !== 'unknown' && source !== undefined && { source }),
     };
   }
+}
+
+/**
+ * `Dune - Prophecy (2024) - s01e01`: guessit takes what follows the dash for the episode's title,
+ * but it sits before the year, where an episode title never is: it is the show's own subtitle.
+ */
+function subtitleBeforeYear(
+  base: string,
+  episodeTitle: string | undefined,
+  year: number | undefined,
+): string | undefined {
+  if (episodeTitle === undefined || year === undefined) {
+    return undefined;
+  }
+  const at = base.indexOf(episodeTitle);
+  const yearAt = base.indexOf(String(year));
+  return at >= 0 && yearAt > at ? episodeTitle : undefined;
 }

@@ -3064,5 +3064,17 @@
       "tmdb": 82702,
       "kind": "movie"
     }
+  },
+  {
+    "path": "Dune - Prophecy (2024)/Season 01/Dune - Prophecy (2024) - s01e01.mkv",
+    "language": "fr",
+    "note": "from a real library: subtitle before the year read as the episode title",
+    "expect": {
+      "status": "matched",
+      "tmdb": 90228,
+      "kind": "series",
+      "season": 1,
+      "episodes": [1]
+    }
   }
 ]

@@ -1179,6 +1179,22 @@
     "status": 200,
     "body": "{\"results\":[{\"id\":22,\"title\":\"Pirates of the Caribbean: The Curse of the Black Pearl\",\"original_title\":\"Pirates of the Caribbean: The Curse of the Black Pearl\",\"release_date\":\"2003-07-09\",\"poster_path\":\"/poHwCZeWzJCShH7tOjg8RIoyjcw.jpg\",\"popularity\":32.8068},{\"id\":1865,\"title\":\"Pirates of the Caribbean: On Stranger Tides\",\"original_title\":\"Pirates of the Caribbean: On Stranger Tides\",\"release_date\":\"2011-05-15\",\"poster_path\":\"/keGfSvCmYj7CvdRx36OdVrAEibE.jpg\",\"popularity\":26.5375},{\"id\":285,\"title\":\"Pirates of the Caribbean: At World's End\",\"original_title\":\"Pirates of the Caribbean: At World's End\",\"release_date\":\"2007-05-19\",\"poster_path\":\"/jGWpG4YhpQwVmjyHEGkxEkeRf0S.jpg\",\"popularity\":26.8999},{\"id\":58,\"title\":\"Pirates of the Caribbean: Dead Man's Chest\",\"original_title\":\"Pirates of the Caribbean: Dead Man's Chest\",\"release_date\":\"2006-07-06\",\"poster_path\":\"/uXEqmloGyP7UXAiphJUu2v2pcuE.jpg\",\"popularity\":28.6576},{\"id\":166426,\"title\":\"Pirates of the Caribbean: Dead Men Tell No Tales\",\"original_title\":\"Pirates of the Caribbean: Dead Men Tell No Tales\",\"release_date\":\"2017-05-23\",\"poster_path\":\"/6lAPOAFYFWIO3SQRemEY2wInQMC.jpg\",\"popularity\":20.1276},{\"id\":609251,\"title\":\"Pirates Of The Caribbean: Accidentally Genius\",\"original_title\":\"Pirates Of The Caribbean: Accidentally Genius\",\"release_date\":\"2017-05-17\",\"poster_path\":null,\"popularity\":0.8925},{\"id\":1208513,\"title\":\"Lionfish: New Pirates of the Caribbean\",\"original_title\":\"Lionfish: New Pirates of the Caribbean\",\"release_date\":\"2017-09-09\",\"poster_path\":null,\"popularity\":0.4702}]}"
   },
+  "/3/search/movie?include_adult=false&language=en-US&query=Pirates+of+the+Caribbean+4KLight&year=2006": {
+    "status": 200,
+    "body": "{\"results\":[]}"
+  },
+  "/3/search/movie?include_adult=false&language=en-US&query=Pirates+of+the+Caribbean+4KLight&year=2007": {
+    "status": 200,
+    "body": "{\"results\":[]}"
+  },
+  "/3/search/movie?include_adult=false&language=en-US&query=Pirates+of+the+Caribbean+4KLight&year=2011": {
+    "status": 200,
+    "body": "{\"results\":[]}"
+  },
+  "/3/search/movie?include_adult=false&language=en-US&query=Pirates+of+the+Caribbean+Dead+Men+Tell+No+Tales&year=2017": {
+    "status": 200,
+    "body": "{\"results\":[{\"id\":166426,\"title\":\"Pirates of the Caribbean: Dead Men Tell No Tales\",\"original_title\":\"Pirates of the Caribbean: Dead Men Tell No Tales\",\"release_date\":\"2017-05-23\",\"poster_path\":\"/6lAPOAFYFWIO3SQRemEY2wInQMC.jpg\",\"popularity\":14.0289}]}"
+  },
   "/3/search/movie?include_adult=false&language=en-US&query=Pirates+of+the+Caribbean+The+Curse+of+the+Black+Pearl&year=2003": {
     "status": 200,
     "body": "{\"results\":[{\"id\":22,\"title\":\"Pirates of the Caribbean: The Curse of the Black Pearl\",\"original_title\":\"Pirates of the Caribbean: The Curse of the Black Pearl\",\"release_date\":\"2003-07-09\",\"poster_path\":\"/poHwCZeWzJCShH7tOjg8RIoyjcw.jpg\",\"popularity\":32.8068},{\"id\":1687059,\"title\":\"An Epic at Sea: The Making of 'Pirates of the Caribbean: The Curse of the Black Pearl'\",\"original_title\":\"An Epic at Sea: The Making of 'Pirates of the Caribbean: The Curse of the Black Pearl'\",\"release_date\":\"2003-12-02\",\"poster_path\":\"/lxyPfpPzb6U7STNHyHILOr3Dop8.jpg\",\"popularity\":0.59}]}"
@@ -1186,6 +1202,10 @@
   "/3/search/movie?include_adult=false&language=en-US&query=Project+Hail+Mary&year=2026": {
     "status": 200,
     "body": "{\"results\":[{\"id\":687163,\"title\":\"Project Hail Mary\",\"original_title\":\"Project Hail Mary\",\"release_date\":\"2026-03-15\",\"poster_path\":\"/iOb2fjXLbpJgyQXe46n1WtGCnaa.jpg\",\"popularity\":105.251},{\"id\":1729088,\"title\":\"Project Hail Mary | Watch Rocky Sleep\",\"original_title\":\"Project Hail Mary | Watch Rocky Sleep\",\"release_date\":\"2026-04-01\",\"poster_path\":\"/ubvkhYJdCcOXhiRPMs9vBScxcHn.jpg\",\"popularity\":0.9799}]}"
+  },
+  "/3/search/movie?include_adult=false&language=en-US&query=Project+Hail+Mary+MULTi+VF2&year=2026": {
+    "status": 200,
+    "body": "{\"results\":[]}"
   },
   "/3/search/movie?include_adult=false&language=en-US&query=Pulp+Fiction&year=1994": {
     "status": 200,
@@ -1203,9 +1223,17 @@
     "status": 200,
     "body": "{\"results\":[{\"id\":345887,\"title\":\"The Equalizer 2\",\"original_title\":\"The Equalizer 2\",\"release_date\":\"2018-07-19\",\"poster_path\":\"/cQvc9N6JiMVKqol3wcYrGshsIdZ.jpg\",\"popularity\":19.2402}]}"
   },
+  "/3/search/movie?include_adult=false&language=en-US&query=The+Equalizer+2+MULTi+VF2&year=2018": {
+    "status": 200,
+    "body": "{\"results\":[]}"
+  },
   "/3/search/movie?include_adult=false&language=en-US&query=The+Equalizer+3&year=2023": {
     "status": 200,
     "body": "{\"results\":[{\"id\":926393,\"title\":\"The Equalizer 3\",\"original_title\":\"The Equalizer 3\",\"release_date\":\"2023-08-30\",\"poster_path\":\"/b0Ej6fnXAP8fK75hlyi2jKqdhHz.jpg\",\"popularity\":21.2155}]}"
+  },
+  "/3/search/movie?include_adult=false&language=en-US&query=The+Equalizer+MULTi+VF2&year=2014": {
+    "status": 200,
+    "body": "{\"results\":[]}"
   },
   "/3/search/movie?include_adult=false&language=en-US&query=The+Matrix&year=1999": {
     "status": 200,
@@ -1247,9 +1275,17 @@
     "status": 200,
     "body": "{\"results\":[{\"id\":9929,\"title\":\"Astérix et Cléopâtre\",\"original_title\":\"Astérix et Cléopâtre\",\"release_date\":\"1968-12-19\",\"poster_path\":\"/1gwJ6x9hkLDEBzH8tDXD8KtDklI.jpg\",\"popularity\":4.7283}]}"
   },
+  "/3/search/movie?include_adult=false&language=fr&query=Ast%C3%A9rix+Le+Domaine+des+dieux&year=2014": {
+    "status": 200,
+    "body": "{\"results\":[{\"id\":170522,\"title\":\"Astérix : Le Domaine des dieux\",\"original_title\":\"Astérix : Le Domaine des dieux\",\"release_date\":\"2014-11-26\",\"poster_path\":\"/lhB8cU7sHMy4ibKHVn67YcP4dI.jpg\",\"popularity\":3.4756}]}"
+  },
   "/3/search/movie?include_adult=false&language=fr&query=Avengers&year=2019": {
     "status": 200,
     "body": "{\"results\":[{\"id\":299534,\"title\":\"Avengers : Endgame\",\"original_title\":\"Avengers: Endgame\",\"release_date\":\"2019-04-24\",\"poster_path\":\"/qXekTarZKRrVfnBwhS6xevt6BGU.jpg\",\"popularity\":75.8559},{\"id\":538153,\"title\":\"Avengers of Justice: Farce Wars\",\"original_title\":\"Avengers of Justice: Farce Wars\",\"release_date\":\"2019-10-16\",\"poster_path\":\"/yymsCwKPbJIF1xcl2ih8fl7OxAa.jpg\",\"popularity\":2.0401},{\"id\":1215047,\"title\":\"Avengers Assemble: Thor\",\"original_title\":\"Avengers Assemble: Thor\",\"release_date\":\"2019-04-03\",\"poster_path\":\"/1q2nRbxxD9KX1Xn8cCFogDeg6O4.jpg\",\"popularity\":0.5296},{\"id\":1215051,\"title\":\"Avengers Assemble: Captain America\",\"original_title\":\"Avengers Assemble: Captain America\",\"release_date\":\"2019-04-03\",\"poster_path\":\"/prk9hvv7yMA4KyHKLpvtC0fw6Nh.jpg\",\"popularity\":0.5517}]}"
+  },
+  "/3/search/movie?include_adult=false&language=fr&query=Avengers+Endgame&year=2019": {
+    "status": 200,
+    "body": "{\"results\":[{\"id\":299534,\"title\":\"Avengers : Endgame\",\"original_title\":\"Avengers: Endgame\",\"release_date\":\"2019-04-24\",\"poster_path\":\"/qXekTarZKRrVfnBwhS6xevt6BGU.jpg\",\"popularity\":84.784}]}"
   },
   "/3/search/movie?include_adult=false&language=fr&query=Babysitting": {
     "status": 200,
@@ -1279,6 +1315,10 @@
     "status": 200,
     "body": "{\"results\":[{\"id\":920,\"title\":\"Cars : Quatre roues\",\"original_title\":\"Cars\",\"release_date\":\"2006-06-08\",\"poster_path\":\"/hvHw7ASXEK8x3EawlOtwYXrovdo.jpg\",\"popularity\":16.6343},{\"id\":340809,\"title\":\"The Cars: Unlocked\",\"original_title\":\"The Cars: Unlocked\",\"release_date\":\"2006-10-14\",\"poster_path\":\"/9UjS3F1RyqMGEwqIcC1IPAWKNEP.jpg\",\"popularity\":1.3403},{\"id\":51896,\"title\":\"Two Cars, One Night\",\"original_title\":\"Two Cars, One Night\",\"release_date\":\"2004-06-09\",\"poster_path\":\"/a3BkwY76IUwadgxeKByxWv5Qukf.jpg\",\"popularity\":1.5095},{\"id\":653782,\"title\":\"The Inspiration for 'Cars'\",\"original_title\":\"The Inspiration for 'Cars'\",\"release_date\":\"2006-11-07\",\"poster_path\":\"/o7vQ0LMu6cbwpepr4QNZpsHqOjX.jpg\",\"popularity\":0.8469},{\"id\":66116,\"title\":\"Porsche: The Legendary Cars\",\"original_title\":\"Porsche: The Legendary Cars\",\"release_date\":\"2006-04-04\",\"poster_path\":null,\"popularity\":0.4192},{\"id\":185419,\"title\":\"All About Cars / All About Motorcycles\",\"original_title\":\"All About Cars / All About Motorcycles\",\"release_date\":\"2006-09-04\",\"poster_path\":null,\"popularity\":0.41},{\"id\":154634,\"title\":\"Little Cars - Dans la grande course\",\"original_title\":\"Os Carrinhos em: A Grande Corrida\",\"release_date\":\"2006-06-20\",\"poster_path\":\"/m03qC3PMfwpdj4pXmuXvzIlOV3P.jpg\",\"popularity\":1.0505},{\"id\":1617771,\"title\":\"The making of Cars | Behind the Scenes\",\"original_title\":\"The making of Cars | Behind the Scenes\",\"release_date\":\"2006-12-07\",\"poster_path\":\"/fXgaON6ytWj0BewuvmwYfSguaNF.jpg\",\"popularity\":0.4084},{\"id\":258716,\"title\":\"A Car's Life: Sparky's Big Adventure\",\"original_title\":\"A Car's Life: Sparky's Big Adventure\",\"release_date\":\"2006-11-21\",\"poster_path\":\"/vsQrXYysVfrITR97xS3U7fOlTS6.jpg\",\"popularity\":0.8321},{\"id\":21011,\"title\":\"Babas bilar\",\"original_title\":\"Babas bilar\",\"release_date\":\"2006-03-31\",\"poster_path\":\"/sT9WRzo9hPc4w8A6UTEPrGhlJ7c.jpg\",\"popularity\":0.9578},{\"id\":13934,\"title\":\"Martin & la lumière fantôme\",\"original_title\":\"Mater and the Ghostlight\",\"release_date\":\"2006-07-27\",\"poster_path\":\"/wAkaq2Rg6Ued9KOtJyHNdmr8wI0.jpg\",\"popularity\":4.6792}]}"
   },
+  "/3/search/movie?include_adult=false&language=fr&query=Cars%C2%A0+Quatre+roues&year=2006": {
+    "status": 200,
+    "body": "{\"results\":[{\"id\":920,\"title\":\"Cars : Quatre roues\",\"original_title\":\"Cars\",\"release_date\":\"2006-06-08\",\"poster_path\":\"/hvHw7ASXEK8x3EawlOtwYXrovdo.jpg\",\"popularity\":12.8821}]}"
+  },
   "/3/search/movie?include_adult=false&language=fr&query=Casino+Royale&year=2006": {
     "status": 200,
     "body": "{\"results\":[{\"id\":36557,\"title\":\"Casino Royale\",\"original_title\":\"Casino Royale\",\"release_date\":\"2006-11-14\",\"poster_path\":\"/1ST7phuvQsaAIIkRyAtESZFLMx9.jpg\",\"popularity\":17.9566},{\"id\":711246,\"title\":\"Becoming Bond\",\"original_title\":\"Becoming Bond\",\"release_date\":\"2006-11-07\",\"poster_path\":\"/hJsiNIn1YWQsSW88tNhJwgeDXJn.jpg\",\"popularity\":1.1215}]}"
@@ -1303,13 +1343,25 @@
     "status": 200,
     "body": "{\"results\":[{\"id\":166428,\"title\":\"Dragons 3 : Le monde caché\",\"original_title\":\"How to Train Your Dragon: The Hidden World\",\"release_date\":\"2019-01-03\",\"poster_path\":\"/oki89nNxoecoOTyqdPe9MS8zbiX.jpg\",\"popularity\":10.7299},{\"id\":586839,\"title\":\"大三元\",\"original_title\":\"大三元\",\"release_date\":\"2019-02-01\",\"poster_path\":\"/h1n4rQQwCkolwCdra2ZqflGZ8UF.jpg\",\"popularity\":0.6036},{\"id\":82702,\"title\":\"Dragons 2\",\"original_title\":\"How to Train Your Dragon 2\",\"release_date\":\"2014-06-05\",\"poster_path\":\"/q6UtQBNwyfRa5WDQqQOnvwsPOB2.jpg\",\"popularity\":12.5062}]}"
   },
+  "/3/search/movie?include_adult=false&language=fr&query=Dragons+3+Le+monde+cach%C3%A9&year=2015": {
+    "status": 200,
+    "body": "{\"results\":[]}"
+  },
   "/3/search/movie?include_adult=false&language=fr&query=Epic%C2%A0&year=2013": {
     "status": 200,
     "body": "{\"results\":[{\"id\":116711,\"title\":\"Epic : La Bataille du royaume secret\",\"original_title\":\"Epic\",\"release_date\":\"2013-05-15\",\"poster_path\":\"/d5AipA9vzy4Z8PvA07M9OZWg04H.jpg\",\"popularity\":10.6543},{\"id\":233851,\"title\":\"Epic Java\",\"original_title\":\"Epic Java\",\"release_date\":\"2013-05-16\",\"poster_path\":null,\"popularity\":0.6517},{\"id\":870060,\"title\":\"Gregorian - Epic Chants Tour\",\"original_title\":\"Gregorian - Epic Chants Tour\",\"release_date\":\"2013-12-06\",\"poster_path\":\"/mdVahLx3uYrBTPsaSjr6o4GYrWN.jpg\",\"popularity\":0.7448},{\"id\":445342,\"title\":\"A Short Epic About Love\",\"original_title\":\"A Short Epic About Love\",\"release_date\":\"2013-06-30\",\"poster_path\":\"/sphLLPEwZbHvTotMHzgYt6Rffq1.jpg\",\"popularity\":0.957},{\"id\":217268,\"title\":\"L'épopée de l'Everest\",\"original_title\":\"The Epic of Everest\",\"release_date\":\"1924-12-01\",\"poster_path\":\"/jY7L7cTxWsmuZVsjW1eaD2b0Xa1.jpg\",\"popularity\":1.1774},{\"id\":274135,\"title\":\"STRIKE (An Epic Superhero Short Film)\",\"original_title\":\"STRIKE (An Epic Superhero Short Film)\",\"release_date\":\"2013-05-13\",\"poster_path\":null,\"popularity\":0.5415},{\"id\":1155480,\"title\":\"Life of Pi: A Filmmaker's Epic Journey\",\"original_title\":\"Life of Pi: A Filmmaker's Epic Journey\",\"release_date\":\"2013-03-12\",\"poster_path\":\"/iNz5tkL3sLb1x8FA0mR7Ty9qrcj.jpg\",\"popularity\":1.6886},{\"id\":496242,\"title\":\"Hikayat Hang Kway Teow\",\"original_title\":\"Hikayat Hang Kway Teow\",\"release_date\":\"2013-04-17\",\"poster_path\":\"/odTNM40tidcnOlfGhosLvaxPzzG.jpg\",\"popularity\":0.8921},{\"id\":634952,\"title\":\"Chinese Tale\",\"original_title\":\"Chinese Tale\",\"release_date\":\"2013-12-26\",\"poster_path\":\"/3SFN6sTcnQnPUMcdxbBUa5SUOPK.jpg\",\"popularity\":0.8275},{\"id\":227268,\"title\":\"Ikki Tōsen: Shūgaku Tōshi Keppū-roku\",\"original_title\":\"一騎当千 集鍔闘士血風録\",\"release_date\":\"2011-11-12\",\"poster_path\":\"/n5xKGIzX52RkP4iziVbekcpQeIv.jpg\",\"popularity\":1.5598}]}"
   },
+  "/3/search/movie?include_adult=false&language=fr&query=Epic%C2%A0+La+bataille+du+royaume+secret&year=2013": {
+    "status": 200,
+    "body": "{\"results\":[{\"id\":116711,\"title\":\"Epic : La Bataille du royaume secret\",\"original_title\":\"Epic\",\"release_date\":\"2013-05-15\",\"poster_path\":\"/d5AipA9vzy4Z8PvA07M9OZWg04H.jpg\",\"popularity\":5.7736}]}"
+  },
   "/3/search/movie?include_adult=false&language=fr&query=Following&year=1999": {
     "status": 200,
     "body": "{\"results\":[{\"id\":11660,\"title\":\"Following : le suiveur\",\"original_title\":\"Following\",\"release_date\":\"1999-04-02\",\"poster_path\":\"/iLYLgzHXAf6sJUjWBTF7gkFgvYZ.jpg\",\"popularity\":11.4827},{\"id\":763719,\"title\":\"Untitled (Following)\",\"original_title\":\"Untitled (Following)\",\"release_date\":\"1999-01-01\",\"poster_path\":\"/e2hV1nXT0pnTOHIpWq3a3P46Lxa.jpg\",\"popularity\":0.6443}]}"
+  },
+  "/3/search/movie?include_adult=false&language=fr&query=Following+le+suiveur&year=1999": {
+    "status": 200,
+    "body": "{\"results\":[{\"id\":11660,\"title\":\"Following : le suiveur\",\"original_title\":\"Following\",\"release_date\":\"1999-04-02\",\"poster_path\":\"/iLYLgzHXAf6sJUjWBTF7gkFgvYZ.jpg\",\"popularity\":3.0382}]}"
   },
   "/3/search/movie?include_adult=false&language=fr&query=Forrest+Gump&year=1994": {
     "status": 200,
@@ -1339,6 +1391,10 @@
     "status": 200,
     "body": "{\"results\":[{\"id\":400155,\"title\":\"Hôtel Transylvanie 3 : Des vacances monstrueuses\",\"original_title\":\"Hotel Transylvania 3: Summer Vacation\",\"release_date\":\"2018-06-28\",\"poster_path\":\"/1LxO3gfe1YCXWD8zHEQXuPlOBye.jpg\",\"popularity\":17.935}]}"
   },
+  "/3/search/movie?include_adult=false&language=fr&query=H%C3%B4tel+Transylvanie+3+Des+vacances+monstrueuses&year=2018": {
+    "status": 200,
+    "body": "{\"results\":[{\"id\":400155,\"title\":\"Hôtel Transylvanie 3 : Des vacances monstrueuses\",\"original_title\":\"Hotel Transylvania 3: Summer Vacation\",\"release_date\":\"2018-06-28\",\"poster_path\":\"/1LxO3gfe1YCXWD8zHEQXuPlOBye.jpg\",\"popularity\":9.4297}]}"
+  },
   "/3/search/movie?include_adult=false&language=fr&query=Happy+Feet&year=2006": {
     "status": 200,
     "body": "{\"results\":[{\"id\":9836,\"title\":\"Happy Feet\",\"original_title\":\"Happy Feet\",\"release_date\":\"2006-11-16\",\"poster_path\":\"/xMqjB0ZPweftGytxfYFUWCMXNkW.jpg\",\"popularity\":8.687}]}"
@@ -1354,6 +1410,14 @@
   "/3/search/movie?include_adult=false&language=fr&query=Harry+Potter+et+les+Reliques+de+la+mort%C2%A0&year=2011": {
     "status": 200,
     "body": "{\"results\":[{\"id\":12445,\"title\":\"Harry Potter et les Reliques de la Mort - 2ème partie\",\"original_title\":\"Harry Potter and the Deathly Hallows: Part 2\",\"release_date\":\"2011-07-12\",\"poster_path\":\"/alQOPmKEPHkH4BLMEla1vTNYrUr.jpg\",\"popularity\":47.0486},{\"id\":12444,\"title\":\"Harry Potter et les Reliques de la Mort - 1ère partie\",\"original_title\":\"Harry Potter and the Deathly Hallows: Part 1\",\"release_date\":\"2010-11-17\",\"poster_path\":\"/yJm61MmTMjOmNXxPxdoaIkdqnOm.jpg\",\"popularity\":36.1999}]}"
+  },
+  "/3/search/movie?include_adult=false&language=fr&query=Harry+Potter+et+les+Reliques+de+la+mort%C2%A0+1%C3%A8re+partie&year=2010": {
+    "status": 200,
+    "body": "{\"results\":[{\"id\":12444,\"title\":\"Harry Potter et les Reliques de la Mort - 1ère partie\",\"original_title\":\"Harry Potter and the Deathly Hallows: Part 1\",\"release_date\":\"2010-11-17\",\"poster_path\":\"/yJm61MmTMjOmNXxPxdoaIkdqnOm.jpg\",\"popularity\":25.4112}]}"
+  },
+  "/3/search/movie?include_adult=false&language=fr&query=Harry+Potter+et+les+Reliques+de+la+mort%C2%A0+2%C3%A8me+partie&year=2011": {
+    "status": 200,
+    "body": "{\"results\":[{\"id\":12445,\"title\":\"Harry Potter et les Reliques de la Mort - 2ème partie\",\"original_title\":\"Harry Potter and the Deathly Hallows: Part 2\",\"release_date\":\"2011-07-12\",\"poster_path\":\"/alQOPmKEPHkH4BLMEla1vTNYrUr.jpg\",\"popularity\":25.5605},{\"id\":12444,\"title\":\"Harry Potter et les Reliques de la Mort - 1ère partie\",\"original_title\":\"Harry Potter and the Deathly Hallows: Part 1\",\"release_date\":\"2010-11-17\",\"poster_path\":\"/yJm61MmTMjOmNXxPxdoaIkdqnOm.jpg\",\"popularity\":25.4112}]}"
   },
   "/3/search/movie?include_adult=false&language=fr&query=Hercule&year=1997": {
     "status": 200,
@@ -1379,6 +1443,10 @@
     "status": 200,
     "body": "{\"results\":[{\"id\":346364,\"title\":\"Ça\",\"original_title\":\"It\",\"release_date\":\"2017-09-06\",\"poster_path\":\"/3SUz0F0I2Bodcj9Ev2pYSWnE9zp.jpg\",\"popularity\":19.8581},{\"id\":50546,\"title\":\"Le Mytho\",\"original_title\":\"Just Go with It\",\"release_date\":\"2011-02-10\",\"poster_path\":\"/rZxtqAKfOUMchFlhViM03vSxiQX.jpg\",\"popularity\":10.4427},{\"id\":340677,\"title\":\"I.T.\",\"original_title\":\"I.T.\",\"release_date\":\"2016-09-09\",\"poster_path\":\"/vQfAmYY7GFE9vdZkQuqpOBmGlB1.jpg\",\"popularity\":3.9134},{\"id\":239,\"title\":\"Certains l'aiment chaud\",\"original_title\":\"Some Like It Hot\",\"release_date\":\"1959-03-19\",\"poster_path\":\"/euufDAwaAcCOxD4l0c5nsS8YBca.jpg\",\"popularity\":9.4997},{\"id\":293,\"title\":\"Et au milieu coule une rivière\",\"original_title\":\"A River Runs Through It\",\"release_date\":\"1992-10-09\",\"poster_path\":\"/zePnAdcgh9wBzHAEW4WKan5vpio.jpg\",\"popularity\":8.0613},{\"id\":1585,\"title\":\"La vie est belle\",\"original_title\":\"It's a Wonderful Life\",\"release_date\":\"1946-12-20\",\"poster_path\":\"/niniH26VfSTF7fefLWwipvNFGbL.jpg\",\"popularity\":14.2323},{\"id\":418078,\"title\":\"It Comes at Night\",\"original_title\":\"It Comes at Night\",\"release_date\":\"2017-06-09\",\"poster_path\":\"/iKrIuFwXLVL1VnLVkVTN0YlpbFu.jpg\",\"popularity\":5.6008},{\"id\":253235,\"title\":\"Ainsi va la vie\",\"original_title\":\"And So It Goes\",\"release_date\":\"2014-07-10\",\"poster_path\":\"/9TXtawwMEMJcgT4FyTqoyYH5crP.jpg\",\"popularity\":4.5227},{\"id\":501007,\"title\":\"It\",\"original_title\":\"It\",\"release_date\":\"2017-12-14\",\"poster_path\":\"/cBu6jlMvlaB3H8oKL8gNcOqzU4C.jpg\",\"popularity\":1.1242},{\"id\":425007,\"title\":\"It Watches\",\"original_title\":\"It Watches\",\"release_date\":\"2016-12-06\",\"poster_path\":\"/5TLHMLgCCkEszjpFzAwRjlgwS0E.jpg\",\"popularity\":3.3916},{\"id\":397442,\"title\":\"Win It All\",\"original_title\":\"Win It All\",\"release_date\":\"2017-03-11\",\"poster_path\":\"/aEc69JY0azD9PwYtwS2RFwoyFOT.jpg\",\"popularity\":2.4111},{\"id\":457219,\"title\":\"Push It\",\"original_title\":\"Push It\",\"release_date\":\"2017-01-29\",\"poster_path\":\"/vP5MAm9WhBrPXekH4ms05s1TwhR.jpg\",\"popularity\":1.3543},{\"id\":1372468,\"title\":\"Waste It\",\"original_title\":\"Waste It\",\"release_date\":\"2017-10-01\",\"poster_path\":null,\"popularity\":1.7901},{\"id\":380109,\"title\":\"Catch It\",\"original_title\":\"Catch It\",\"release_date\":\"2015-09-03\",\"poster_path\":\"/hgupCnQ3vyPkmvjP03mbhha9TzC.jpg\",\"popularity\":1.2799},{\"id\":405882,\"title\":\"Don't Kill It\",\"original_title\":\"Don't Kill It\",\"release_date\":\"2016-08-27\",\"poster_path\":\"/hzxrUFabDCaTvgusssq5C4rcWls.jpg\",\"popularity\":4.5175},{\"id\":500048,\"title\":\"It Girl\",\"original_title\":\"It Girl\",\"release_date\":\"2017-11-08\",\"poster_path\":\"/mpirPStjmKY4UnXJQMacxX1DNwn.jpg\",\"popularity\":1.0281},{\"id\":475246,\"title\":\"We Blew It\",\"original_title\":\"We Blew It\",\"release_date\":\"2017-11-08\",\"poster_path\":\"/673Yhc8fEfJuh9iEhfzJJCwdmKy.jpg\",\"popularity\":2.3078},{\"id\":488028,\"title\":\"Turn it Around : À toi de jouer\",\"original_title\":\"Turn It Around\",\"release_date\":\"2017-06-06\",\"poster_path\":\"/4BaNj9IuXN7SL265L2Livu6qa6i.jpg\",\"popularity\":0.7423},{\"id\":552653,\"title\":\"Nailed It\",\"original_title\":\"Nailed It\",\"release_date\":\"2017-12-31\",\"poster_path\":\"/f3nHcu3PwImTU8LbGCMROYSISIf.jpg\",\"popularity\":1.5848},{\"id\":467248,\"title\":\"American Girls 6 : Confrontation Mondiale\",\"original_title\":\"Bring It On: Worldwide #Cheersmack\",\"release_date\":\"2017-08-29\",\"poster_path\":\"/4XRY6Zw0gwWc4SogzzIVZxNCTKS.jpg\",\"popularity\":3.1716}]}"
   },
+  "/3/search/movie?include_adult=false&language=fr&query=iT+MULTi+VF2&year=2017": {
+    "status": 200,
+    "body": "{\"results\":[]}"
+  },
   "/3/search/movie?include_adult=false&language=fr&query=Jurassic+Park+III&year=2001": {
     "status": 200,
     "body": "{\"results\":[{\"id\":331,\"title\":\"Jurassic Park III\",\"original_title\":\"Jurassic Park III\",\"release_date\":\"2001-07-18\",\"poster_path\":\"/evUJpV6wfX8mHCuuHTTdCK0EiEl.jpg\",\"popularity\":0.9021},{\"id\":1200709,\"title\":\"The Making Of  Jurassic Park III\",\"original_title\":\"The Making Of  Jurassic Park III\",\"release_date\":\"2001-12-11\",\"poster_path\":\"/f32yN9f8AFFgp6k8N5MQ3mvTXAT.jpg\",\"popularity\":1.3355},{\"id\":1039574,\"title\":\"Jurassic Park III: A Visit To ILM\",\"original_title\":\"Jurassic Park III: A Visit To ILM\",\"release_date\":\"2001-12-11\",\"poster_path\":null,\"popularity\":1.0004}]}"
@@ -1395,9 +1463,17 @@
     "status": 200,
     "body": "{\"results\":[{\"id\":8355,\"title\":\"L'Âge de glace 3 : Le Temps des dinosaures\",\"original_title\":\"Ice Age: Dawn of the Dinosaurs\",\"release_date\":\"2009-06-26\",\"poster_path\":\"/i7UY2xGCiKBe5qRv7dEYjPZ9Ps1.jpg\",\"popularity\":19.5832}]}"
   },
+  "/3/search/movie?include_adult=false&language=fr&query=L%27%C3%82ge+de+glace+3+Le+Temps+des+dinosaures&year=2009": {
+    "status": 200,
+    "body": "{\"results\":[{\"id\":8355,\"title\":\"L'Âge de glace 3 : Le Temps des dinosaures\",\"original_title\":\"Ice Age: Dawn of the Dinosaurs\",\"release_date\":\"2009-06-26\",\"poster_path\":\"/i7UY2xGCiKBe5qRv7dEYjPZ9Ps1.jpg\",\"popularity\":12.6339}]}"
+  },
   "/3/search/movie?include_adult=false&language=fr&query=L%27%C3%82ge+de+glace+4&year=2012": {
     "status": 200,
     "body": "{\"results\":[{\"id\":57800,\"title\":\"L'Âge de glace 4 : La Dérive des continents\",\"original_title\":\"Ice Age: Continental Drift\",\"release_date\":\"2012-06-27\",\"poster_path\":\"/3M3ueeQA5rj0mHOOHnMoQatiZJh.jpg\",\"popularity\":17.6841}]}"
+  },
+  "/3/search/movie?include_adult=false&language=fr&query=L%27%C3%82ge+de+glace+4+La+D%C3%A9rive+des+continents&year=2012": {
+    "status": 200,
+    "body": "{\"results\":[{\"id\":57800,\"title\":\"L'Âge de glace 4 : La Dérive des continents\",\"original_title\":\"Ice Age: Continental Drift\",\"release_date\":\"2012-06-27\",\"poster_path\":\"/3M3ueeQA5rj0mHOOHnMoQatiZJh.jpg\",\"popularity\":12.1123}]}"
   },
   "/3/search/movie?include_adult=false&language=fr&query=La+Belle+et+la+B%C3%AAte&year=1991": {
     "status": 200,
@@ -1406,6 +1482,10 @@
   "/3/search/movie?include_adult=false&language=fr&query=La+Belle+et+la+B%C3%AAte+2&year=1997": {
     "status": 200,
     "body": "{\"results\":[{\"id\":13313,\"title\":\"La Belle et la Bête 2 : Le Noël enchanté\",\"original_title\":\"Beauty and the Beast: The Enchanted Christmas\",\"release_date\":\"1997-11-11\",\"poster_path\":\"/i66tpoDILxbRAayRKGeZ4qm11Ja.jpg\",\"popularity\":8.196}]}"
+  },
+  "/3/search/movie?include_adult=false&language=fr&query=La+Belle+et+la+B%C3%AAte+2+Le+No%C3%ABl+enchant%C3%A9&year=1997": {
+    "status": 200,
+    "body": "{\"results\":[{\"id\":13313,\"title\":\"La Belle et la Bête 2 : Le Noël enchanté\",\"original_title\":\"Beauty and the Beast: The Enchanted Christmas\",\"release_date\":\"1997-11-11\",\"poster_path\":\"/i66tpoDILxbRAayRKGeZ4qm11Ja.jpg\",\"popularity\":5.197}]}"
   },
   "/3/search/movie?include_adult=false&language=fr&query=La+guerre+des+boutons": {
     "status": 200,
@@ -1423,6 +1503,10 @@
     "status": 200,
     "body": "{\"results\":[{\"id\":61711,\"title\":\"La Vérité\",\"original_title\":\"La Vérité\",\"release_date\":\"1960-11-02\",\"poster_path\":\"/lEbtl2x16j74FzvRDFOA27PdLeF.jpg\",\"popularity\":2.6872}]}"
   },
+  "/3/search/movie?include_adult=false&language=fr&query=La+verite+Brigitte+Bardot&year=1960": {
+    "status": 200,
+    "body": "{\"results\":[]}"
+  },
   "/3/search/movie?include_adult=false&language=fr&query=Last+Action+Hero&year=1993": {
     "status": 200,
     "body": "{\"results\":[{\"id\":9593,\"title\":\"Last Action Hero\",\"original_title\":\"Last Action Hero\",\"release_date\":\"1993-06-18\",\"poster_path\":\"/qRIB09pAqTTlKR2GMmTmkTOc4sG.jpg\",\"popularity\":8.2007}]}"
@@ -1430,6 +1514,10 @@
   "/3/search/movie?include_adult=false&language=fr&query=Le+Dernier+Combat&year=1983": {
     "status": 200,
     "body": "{\"results\":[{\"id\":19184,\"title\":\"Le Dernier Combat\",\"original_title\":\"Le Dernier Combat\",\"release_date\":\"1983-04-06\",\"poster_path\":\"/kO9XSWBMki6mvvZ8ceujO2dpc4g.jpg\",\"popularity\":3.0166}]}"
+  },
+  "/3/search/movie?include_adult=false&language=fr&query=Le+Dernier+Combat+Luc+Besson&year=1983": {
+    "status": 200,
+    "body": "{\"results\":[]}"
   },
   "/3/search/movie?include_adult=false&language=fr&query=Le+fabuleux+destin+d%27Amelie+Poulain&year=2001": {
     "status": 200,
@@ -1447,9 +1535,17 @@
     "status": 200,
     "body": "{\"results\":[{\"id\":1427,\"title\":\"Le Parfum : Histoire d'un meurtrier\",\"original_title\":\"Perfume: The Story of a Murderer\",\"release_date\":\"2006-09-13\",\"poster_path\":\"/lj7MirDUj83gqJtvIsUvRtcyfI1.jpg\",\"popularity\":10.9043},{\"id\":16605,\"title\":\"Le Saut périlleux\",\"original_title\":\"Somersault\",\"release_date\":\"2004-06-19\",\"poster_path\":\"/hN6GnyLhamDrz2xAOqVZ4Fv6Lyo.jpg\",\"popularity\":1.3611}]}"
   },
+  "/3/search/movie?include_adult=false&language=fr&query=Le+Parfum+Histoire+d%27un+meurtrier&year=2006": {
+    "status": 200,
+    "body": "{\"results\":[{\"id\":1427,\"title\":\"Le Parfum : Histoire d'un meurtrier\",\"original_title\":\"Perfume: The Story of a Murderer\",\"release_date\":\"2006-09-13\",\"poster_path\":\"/lj7MirDUj83gqJtvIsUvRtcyfI1.jpg\",\"popularity\":8.087}]}"
+  },
   "/3/search/movie?include_adult=false&language=fr&query=Le+Roi+lion+2&year=1998": {
     "status": 200,
     "body": "{\"results\":[{\"id\":9732,\"title\":\"Le Roi lion 2 : L'Honneur de la tribu\",\"original_title\":\"The Lion King II: Simba's Pride\",\"release_date\":\"1998-10-24\",\"poster_path\":\"/k3bXkFnSdEeQa5WcK1R1tfDKcDp.jpg\",\"popularity\":13.9129}]}"
+  },
+  "/3/search/movie?include_adult=false&language=fr&query=Le+Roi+lion+2+L%27Honneur+de+la+tribu&year=1998": {
+    "status": 200,
+    "body": "{\"results\":[{\"id\":9732,\"title\":\"Le Roi lion 2 : L'Honneur de la tribu\",\"original_title\":\"The Lion King II: Simba's Pride\",\"release_date\":\"1998-10-24\",\"poster_path\":\"/k3bXkFnSdEeQa5WcK1R1tfDKcDp.jpg\",\"popularity\":7.8382}]}"
   },
   "/3/search/movie?include_adult=false&language=fr&query=Le+Seigneur+des+anneaux&year=2001": {
     "status": 200,
@@ -1458,6 +1554,14 @@
   "/3/search/movie?include_adult=false&language=fr&query=Le+Seigneur+des+anneaux&year=2002": {
     "status": 200,
     "body": "{\"results\":[{\"id\":121,\"title\":\"Le Seigneur des anneaux : Les Deux Tours\",\"original_title\":\"The Lord of the Rings: The Two Towers\",\"release_date\":\"2002-12-18\",\"poster_path\":\"/qVHBqQYLDRs7ESjP9q6o9iPHLWj.jpg\",\"popularity\":40.3834},{\"id\":123,\"title\":\"Le Seigneur des anneaux\",\"original_title\":\"The Lord of the Rings\",\"release_date\":\"1978-11-15\",\"poster_path\":\"/lH5at1RvvglQmnoBkytTTPZfw94.jpg\",\"popularity\":7.4911},{\"id\":120,\"title\":\"Le Seigneur des anneaux : La Communauté de l'anneau\",\"original_title\":\"The Lord of the Rings: The Fellowship of the Ring\",\"release_date\":\"2001-12-18\",\"poster_path\":\"/5OPg6M0yHr21Ovs1fni2H1xpKuF.jpg\",\"popularity\":57.6045}]}"
+  },
+  "/3/search/movie?include_adult=false&language=fr&query=Le+Seigneur+des+anneaux+La+Communaut%C3%A9+de+l%27anneau&year=2001": {
+    "status": 200,
+    "body": "{\"results\":[{\"id\":120,\"title\":\"Le Seigneur des anneaux : La Communauté de l'anneau\",\"original_title\":\"The Lord of the Rings: The Fellowship of the Ring\",\"release_date\":\"2001-12-18\",\"poster_path\":\"/5OPg6M0yHr21Ovs1fni2H1xpKuF.jpg\",\"popularity\":40.3568}]}"
+  },
+  "/3/search/movie?include_adult=false&language=fr&query=Le+Seigneur+des+anneaux+Les+Deux+Tours&year=2002": {
+    "status": 200,
+    "body": "{\"results\":[{\"id\":121,\"title\":\"Le Seigneur des anneaux : Les Deux Tours\",\"original_title\":\"The Lord of the Rings: The Two Towers\",\"release_date\":\"2002-12-18\",\"poster_path\":\"/qVHBqQYLDRs7ESjP9q6o9iPHLWj.jpg\",\"popularity\":29.4635}]}"
   },
   "/3/search/movie?include_adult=false&language=fr&query=Le+vent+se+l%C3%A8ve&year=2013": {
     "status": 200,
@@ -1487,6 +1591,10 @@
     "status": 200,
     "body": "{\"results\":[{\"id\":20760,\"title\":\"Lilo & Stitch 2 : Hawaï, nous avons un problème !\",\"original_title\":\"Lilo & Stitch 2: Stitch Has a Glitch\",\"release_date\":\"2005-08-22\",\"poster_path\":\"/ltdsi8zLxbc0Eaq5Z10W3pch1om.jpg\",\"popularity\":7.9254}]}"
   },
+  "/3/search/movie?include_adult=false&language=fr&query=Lilo+%26+Stitch+2%C2%A0+Hawa%C3%AF%2C+nous+avons+un+probl%C3%A8me%E2%80%AF%21&year=2005": {
+    "status": 200,
+    "body": "{\"results\":[{\"id\":20760,\"title\":\"Lilo & Stitch 2 : Hawaï, nous avons un problème !\",\"original_title\":\"Lilo & Stitch 2: Stitch Has a Glitch\",\"release_date\":\"2005-08-22\",\"poster_path\":\"/ltdsi8zLxbc0Eaq5Z10W3pch1om.jpg\",\"popularity\":4.6161}]}"
+  },
   "/3/search/movie?include_adult=false&language=fr&query=Merlin+l%27enchanteur&year=1963": {
     "status": 200,
     "body": "{\"results\":[{\"id\":9078,\"title\":\"Merlin l'enchanteur\",\"original_title\":\"The Sword in the Stone\",\"release_date\":\"1963-12-25\",\"poster_path\":\"/fht7xph50bzcvtfsPkcrHRSPYcT.jpg\",\"popularity\":9.8105}]}"
@@ -1498,6 +1606,10 @@
   "/3/search/movie?include_adult=false&language=fr&query=Mill%C3%A9nium+2&year=2009": {
     "status": 200,
     "body": "{\"results\":[{\"id\":24253,\"title\":\"Millénium 2 : La Fille qui rêvait d'un bidon d'essence et d'une allumette\",\"original_title\":\"Flickan som lekte med elden\",\"release_date\":\"2009-09-18\",\"poster_path\":\"/x4UZpR2vnC4y2UUIK9Qq5NrMl06.jpg\",\"popularity\":8.3479}]}"
+  },
+  "/3/search/movie?include_adult=false&language=fr&query=Mill%C3%A9nium+2+La+Fille+qui+r%C3%AAvait+d%27un+bidon+d%27essence+et+d%27une+allumette&year=2009": {
+    "status": 200,
+    "body": "{\"results\":[{\"id\":24253,\"title\":\"Millénium 2 : La Fille qui rêvait d'un bidon d'essence et d'une allumette\",\"original_title\":\"Flickan som lekte med elden\",\"release_date\":\"2009-09-18\",\"poster_path\":\"/x4UZpR2vnC4y2UUIK9Qq5NrMl06.jpg\",\"popularity\":5.5665}]}"
   },
   "/3/search/movie?include_adult=false&language=fr&query=Miss+Peregrines+Home+For+Peculiar+Children&year=2016": {
     "status": 200,
@@ -1535,9 +1647,17 @@
     "status": 200,
     "body": "{\"results\":[{\"id\":13761,\"title\":\"Pocahontas II : Un monde nouveau\",\"original_title\":\"Pocahontas II: Journey to a New World\",\"release_date\":\"1998-08-04\",\"poster_path\":\"/jOE8yV1uTpGnDxNHyV9qVl43Yse.jpg\",\"popularity\":4.396}]}"
   },
+  "/3/search/movie?include_adult=false&language=fr&query=Pocahontas+II+Un+monde+nouveau&year=1998": {
+    "status": 200,
+    "body": "{\"results\":[{\"id\":13761,\"title\":\"Pocahontas II : Un monde nouveau\",\"original_title\":\"Pocahontas II: Journey to a New World\",\"release_date\":\"1998-08-04\",\"poster_path\":\"/jOE8yV1uTpGnDxNHyV9qVl43Yse.jpg\",\"popularity\":2.1128}]}"
+  },
   "/3/search/movie?include_adult=false&language=fr&query=Pollux&year=2005": {
     "status": 200,
     "body": "{\"results\":[{\"id\":16455,\"title\":\"Pollux, le manège enchanté\",\"original_title\":\"The Magic Roundabout\",\"release_date\":\"2005-02-02\",\"poster_path\":\"/d0XVWnWvnZ3WoXEKjj6FFw6SRZ1.jpg\",\"popularity\":3.1459}]}"
+  },
+  "/3/search/movie?include_adult=false&language=fr&query=Pollux+Le+Man%C3%A8ge+enchant%C3%A9&year=2005": {
+    "status": 200,
+    "body": "{\"results\":[{\"id\":16455,\"title\":\"Pollux, le manège enchanté\",\"original_title\":\"The Magic Roundabout\",\"release_date\":\"2005-02-02\",\"poster_path\":\"/d0XVWnWvnZ3WoXEKjj6FFw6SRZ1.jpg\",\"popularity\":1.7902}]}"
   },
   "/3/search/movie?include_adult=false&language=fr&query=Princesse+Mononoke": {
     "status": 200,
@@ -1567,6 +1687,10 @@
     "status": 200,
     "body": "{\"results\":[{\"id\":14411,\"title\":\"Sinbad : La légende des sept mers\",\"original_title\":\"Sinbad: Legend of the Seven Seas\",\"release_date\":\"2003-07-02\",\"poster_path\":\"/pdlVybgicgZ8dzCgd0b22GrP5Uh.jpg\",\"popularity\":10.0384},{\"id\":381690,\"title\":\"Sinbad sur l'Île aux cyclopes\",\"original_title\":\"Sinbad and the Cyclops Island\",\"release_date\":\"2003-11-18\",\"poster_path\":\"/mt36MT7iW95qME4exPXcCUcDFLl.jpg\",\"popularity\":1.6404}]}"
   },
+  "/3/search/movie?include_adult=false&language=fr&query=Sinbad+La+l%C3%A9gende+des+sept+mers&year=2003": {
+    "status": 200,
+    "body": "{\"results\":[{\"id\":14411,\"title\":\"Sinbad : La légende des sept mers\",\"original_title\":\"Sinbad: Legend of the Seven Seas\",\"release_date\":\"2003-07-02\",\"poster_path\":\"/pdlVybgicgZ8dzCgd0b22GrP5Uh.jpg\",\"popularity\":5.4367}]}"
+  },
   "/3/search/movie?include_adult=false&language=fr&query=Spider-Man+2&year=2004": {
     "status": 200,
     "body": "{\"results\":[{\"id\":558,\"title\":\"Spider-Man 2\",\"original_title\":\"Spider-Man 2\",\"release_date\":\"2004-06-25\",\"poster_path\":\"/m8X5HdADsW5YdmVNjwTOArMOUoL.jpg\",\"popularity\":11.0293},{\"id\":470035,\"title\":\"Spider-Man 2: Making the Amazing\",\"original_title\":\"Spider-Man 2: Making the Amazing\",\"release_date\":\"2004-11-30\",\"poster_path\":\"/3oF3GbxSSQxO9rWjrUjwAFi1fSF.jpg\",\"popularity\":1.5519}]}"
@@ -1583,9 +1707,21 @@
     "status": 200,
     "body": "{\"results\":[]}"
   },
+  "/3/search/movie?include_adult=false&language=fr&query=Starwars+2+L%27attaque+Des+Clones": {
+    "status": 200,
+    "body": "{\"results\":[]}"
+  },
+  "/3/search/movie?include_adult=false&language=fr&query=Starwars+2+L%27attaque+Des+Clones&year=2002": {
+    "status": 200,
+    "body": "{\"results\":[]}"
+  },
   "/3/search/movie?include_adult=false&language=fr&query=Tenet&year=2020": {
     "status": 200,
     "body": "{\"results\":[{\"id\":577922,\"title\":\"Tenet\",\"original_title\":\"Tenet\",\"release_date\":\"2020-08-22\",\"poster_path\":\"/72SOtZnFhCumLRZhoXlX8g2IkgF.jpg\",\"popularity\":18.3361},{\"id\":1417088,\"title\":\"Looking at the World in a New Way: The Making of ‘Tenet’\",\"original_title\":\"Looking at the World in a New Way: The Making of ‘Tenet’\",\"release_date\":\"2020-12-15\",\"poster_path\":\"/4e6LF8r1OHioRgE3CkBbpYOCV2v.jpg\",\"popularity\":1.1906},{\"id\":870490,\"title\":\"Tenets of the Maladjusted\",\"original_title\":\"Tenets of the Maladjusted\",\"release_date\":\"2020-03-15\",\"poster_path\":null,\"popularity\":0.8322}]}"
+  },
+  "/3/search/movie?include_adult=false&language=fr&query=Tenet+TF&year=2020": {
+    "status": 200,
+    "body": "{\"results\":[]}"
   },
   "/3/search/movie?include_adult=false&language=fr&query=The+Adventures+Of+Baron+Munchausen&year=1988": {
     "status": 200,
@@ -1615,6 +1751,10 @@
     "status": 200,
     "body": "{\"results\":[{\"id\":34655,\"title\":\"Tous à l'ouest : Une aventure de Lucky Luke\",\"original_title\":\"Tous à l'ouest : Une aventure de Lucky Luke\",\"release_date\":\"2007-07-29\",\"poster_path\":\"/bSXxySTlVabt5PA7ete6P4dwMuD.jpg\",\"popularity\":1.5785}]}"
   },
+  "/3/search/movie?include_adult=false&language=fr&query=Tous+%C3%A0+l%E2%80%99ouest+Une+aventure+de+Lucky+Luke&year=2007": {
+    "status": 200,
+    "body": "{\"results\":[{\"id\":34655,\"title\":\"Tous à l'ouest : Une aventure de Lucky Luke\",\"original_title\":\"Tous à l'ouest : Une aventure de Lucky Luke\",\"release_date\":\"2007-07-29\",\"poster_path\":\"/bSXxySTlVabt5PA7ete6P4dwMuD.jpg\",\"popularity\":0.7784}]}"
+  },
   "/3/search/movie?include_adult=false&language=fr&query=Turbo&year=2013": {
     "status": 200,
     "body": "{\"results\":[{\"id\":77950,\"title\":\"Turbo\",\"original_title\":\"Turbo\",\"release_date\":\"2013-07-11\",\"poster_path\":\"/kDC08RXG8XNsmrVHaEBAeAM17Bl.jpg\",\"popularity\":9.0057},{\"id\":724586,\"title\":\"Turbo\",\"original_title\":\"Turbo\",\"release_date\":\"2012-01-01\",\"poster_path\":\"/iZivlJmq2tWkGjRSUVBpkOOCajN.jpg\",\"popularity\":0.844},{\"id\":539707,\"title\":\"Lakewood Plaza Turbo\",\"original_title\":\"Lakewood Plaza Turbo\",\"release_date\":\"2013-05-21\",\"poster_path\":\"/iduQyiqnD4ZsaAEvYmyJ02UQW0u.jpg\",\"popularity\":1.8065},{\"id\":370871,\"title\":\"Turbo & Tacho\",\"original_title\":\"Turbo & Tacho\",\"release_date\":\"2013-02-07\",\"poster_path\":\"/k1iiFkzOkLK0Asl8Do86RpWR7E3.jpg\",\"popularity\":0.711},{\"id\":1244133,\"title\":\"Turbo Z\",\"original_title\":\"Turbo Z\",\"release_date\":\"2013-07-11\",\"poster_path\":null,\"popularity\":0.4167},{\"id\":423023,\"title\":\"Tom Turbo – Der Film\",\"original_title\":\"Tom Turbo – Der Film\",\"release_date\":\"2013-12-12\",\"poster_path\":\"/75Xy6pVezNo2wakydNKlB96AVhR.jpg\",\"popularity\":1.2064},{\"id\":1516222,\"title\":\"Turbokelk!\",\"original_title\":\"Turbokelk!\",\"release_date\":\"2013-05-05\",\"poster_path\":\"/tb7qdmjRx49JVfhAR2ePj1ClOnJ.jpg\",\"popularity\":0.8201},{\"id\":7459,\"title\":\"Speed Racer\",\"original_title\":\"Speed Racer\",\"release_date\":\"2008-05-07\",\"poster_path\":\"/hpCPT2V1UjBSOqxbTrPGsYLDRgC.jpg\",\"popularity\":8.5846},{\"id\":168055,\"title\":\"Amour & turbulences\",\"original_title\":\"Amour & turbulences\",\"release_date\":\"2013-04-02\",\"poster_path\":\"/ftjXj9MwPojSMP45UAhsDar3OAI.jpg\",\"popularity\":6.9874}]}"
@@ -1634,6 +1774,10 @@
   "/3/search/movie?include_adult=false&language=fr&query=X-Men+Origins&year=2009": {
     "status": 200,
     "body": "{\"results\":[{\"id\":2080,\"title\":\"X-Men Origins : Wolverine\",\"original_title\":\"X-Men Origins: Wolverine\",\"release_date\":\"2009-04-28\",\"poster_path\":\"/ucJroLJ6RCqXY6hjYeLCW6jbWwE.jpg\",\"popularity\":1.3845}]}"
+  },
+  "/3/search/movie?include_adult=false&language=fr&query=X-Men+Origins+Wolverine&year=2009": {
+    "status": 200,
+    "body": "{\"results\":[{\"id\":2080,\"title\":\"X-Men Origins : Wolverine\",\"original_title\":\"X-Men Origins: Wolverine\",\"release_date\":\"2009-04-28\",\"poster_path\":\"/ucJroLJ6RCqXY6hjYeLCW6jbWwE.jpg\",\"popularity\":1.2137}]}"
   },
   "/3/search/tv?first_air_date_year=1994&include_adult=false&language=fr&query=Friends": {
     "status": 200,
@@ -1879,9 +2023,25 @@
     "status": 200,
     "body": "{\"results\":[{\"id\":197125,\"name\":\"Constellation\",\"original_name\":\"Constellation\",\"first_air_date\":\"2024-02-21\",\"origin_country\":[\"DE\",\"FR\",\"GB\"],\"poster_path\":\"/sX6jEhoamf6yRCH17Fbkk7lArx3.jpg\",\"popularity\":17.1835}]}"
   },
+  "/3/search/tv?first_air_date_year=2024&include_adult=false&language=fr&query=Dune": {
+    "status": 200,
+    "body": "{\"results\":[{\"id\":90228,\"name\":\"Dune : Prophecy\",\"original_name\":\"Dune: Prophecy\",\"first_air_date\":\"2024-11-17\",\"origin_country\":[\"US\"],\"poster_path\":\"/vVhx4SP0eyDOmYRJdUNIQ24fGL5.jpg\",\"popularity\":27.2883},{\"id\":242875,\"name\":\"D'une main de fer\",\"original_name\":\"Mano de hierro\",\"first_air_date\":\"2024-03-15\",\"origin_country\":[\"ES\"],\"poster_path\":\"/2rvkru2Lb78OyfnFd3rSSTHGCg8.jpg\",\"popularity\":2.8588},{\"id\":237890,\"name\":\"La Coupe du Monde de Messi : le sacre d’une légende\",\"original_name\":\"Messi's World Cup: The Rise of a Legend\",\"first_air_date\":\"2024-02-20\",\"origin_country\":[\"US\"],\"poster_path\":\"/7aTfyPB9iDq7Jsq4q0EECU5a8Td.jpg\",\"popularity\":4.4054},{\"id\":249801,\"name\":\"Jeanick Fournier: l'histoire d'une voix\",\"original_name\":\"Jeanick Fournier: l'histoire d'une voix\",\"first_air_date\":\"2024-03-19\",\"origin_country\":[\"CA\"],\"poster_path\":\"/ttyOgcNlib0ratgrsHkjR6nHax5.jpg\",\"popularity\":0.6163},{\"id\":255919,\"name\":\"Mission Canada, l’aventure d’une vie\",\"original_name\":\"Fiennes: Return to the Wild\",\"first_air_date\":\"2024-05-26\",\"origin_country\":[\"CA\"],\"poster_path\":\"/h9ghhvZgPFHeXmr4uUpQMaBwbq1.jpg\",\"popularity\":1.1759},{\"id\":255582,\"name\":\"Le dernier jour d'une secte\",\"original_name\":\"El último día\",\"first_air_date\":\"2024-05-26\",\"origin_country\":[\"ES\"],\"poster_path\":\"/lbumfzlDubUIXiPjNR3qClLCHWE.jpg\",\"popularity\":0.1935},{\"id\":232926,\"name\":\"7th Time Loop: The Villainess Enjoys a Carefree Life Married to Her Worst Enemy!\",\"original_name\":\"ループ7回目の悪役令嬢は、元敵国で自由気ままな花嫁生活を満喫する\",\"first_air_date\":\"2024-01-07\",\"origin_country\":[\"JP\"],\"poster_path\":\"/1ttxQPgX6HJqUsXuC2HgnQRv7wZ.jpg\",\"popularity\":7.5579},{\"id\":277704,\"name\":\"La dame des dunes - Meurtre à Cap Code\",\"original_name\":\"Lady of the Dunes: Hunting the Cape Cod Killer\",\"first_air_date\":\"2024-11-30\",\"origin_country\":[\"US\"],\"poster_path\":\"/bDLi3RA443l2vCj1FMP13wftEAm.jpg\",\"popularity\":0.357}]}"
+  },
+  "/3/search/tv?first_air_date_year=2024&include_adult=false&language=fr&query=Dune+Prophecy": {
+    "status": 200,
+    "body": "{\"results\":[{\"id\":90228,\"name\":\"Dune : Prophecy\",\"original_name\":\"Dune: Prophecy\",\"first_air_date\":\"2024-11-17\",\"origin_country\":[\"US\"],\"poster_path\":\"/vVhx4SP0eyDOmYRJdUNIQ24fGL5.jpg\",\"popularity\":27.2883}]}"
+  },
   "/3/search/tv?first_air_date_year=2024&include_adult=false&language=fr&query=Shogun": {
     "status": 200,
     "body": "{\"results\":[{\"id\":126308,\"name\":\"Shōgun\",\"original_name\":\"Shōgun\",\"first_air_date\":\"2024-02-27\",\"origin_country\":[\"US\"],\"poster_path\":\"/7O4iVfOMQmdCSxhOg1WnzG1AgYT.jpg\",\"popularity\":40.4451}]}"
+  },
+  "/3/search/tv?first_air_date_year=2025&include_adult=false&language=fr&query=%C3%87a": {
+    "status": 200,
+    "body": "{\"results\":[{\"id\":200875,\"name\":\"Ça : Bienvenue à Derry\",\"original_name\":\"IT: Welcome to Derry\",\"first_air_date\":\"2025-10-26\",\"origin_country\":[\"US\"],\"poster_path\":\"/rsc88AZaxgk8dEGK3l0FIQu8lJQ.jpg\",\"popularity\":60.6234},{\"id\":272484,\"name\":\"Fated Hearts\",\"original_name\":\"一笑随歌\",\"first_air_date\":\"2025-10-02\",\"origin_country\":[\"CN\"],\"poster_path\":\"/oIzySWy8673xOGPW1FnHAlztpYH.jpg\",\"popularity\":10.2221},{\"id\":233347,\"name\":\"Study Group\",\"original_name\":\"스터디그룹\",\"first_air_date\":\"2025-01-23\",\"origin_country\":[\"KR\"],\"poster_path\":\"/rLrEtysTwvVZESavwufnoGIaq8j.jpg\",\"popularity\":12.3731},{\"id\":282662,\"name\":\"With You, Our Love Will Make It Through\",\"original_name\":\"キミと越えて恋になる\",\"first_air_date\":\"2025-10-14\",\"origin_country\":[\"JP\"],\"poster_path\":\"/13Xp6YhCeHTRznenDvNen231Utp.jpg\",\"popularity\":9.7168},{\"id\":240686,\"name\":\"Legend of the Female General\",\"original_name\":\"锦月如歌\",\"first_air_date\":\"2025-08-06\",\"origin_country\":[\"CN\"],\"poster_path\":\"/zHy4pWFdJLzR4AkKcelpr20R3tN.jpg\",\"popularity\":9.4465},{\"id\":212957,\"name\":\"샤크: 더 스톰\",\"original_name\":\"샤크: 더 스톰\",\"first_air_date\":\"2025-05-15\",\"origin_country\":[\"KR\"],\"poster_path\":\"/pHi8dxViJ7LJqk3eme6on0aVISQ.jpg\",\"popularity\":7.2494},{\"id\":275722,\"name\":\"Vampirina : l'ado vampire\",\"original_name\":\"Vampirina: Teenage Vampire\",\"first_air_date\":\"2025-09-12\",\"origin_country\":[\"US\"],\"poster_path\":\"/7TwsVRLD1rKnlIpn8pAQQo5YeY2.jpg\",\"popularity\":8.312},{\"id\":273051,\"name\":\"Vavam Vampire\",\"original_name\":\"ババンババンバンバンパイア\",\"first_air_date\":\"2025-01-11\",\"origin_country\":[\"JP\"],\"poster_path\":\"/8orjmg5lhdCRnMAev7rgDgu01wa.jpg\",\"popularity\":5.6968},{\"id\":238458,\"name\":\"Cashero\",\"original_name\":\"캐셔로\",\"first_air_date\":\"2025-12-26\",\"origin_country\":[\"KR\"],\"poster_path\":\"/SB3HbQAqQGWJTV1J5U10aXNXdU.jpg\",\"popularity\":6.6451},{\"id\":236565,\"name\":\"Hero Without a Class: Who Even Needs Skills?!\",\"original_name\":\"無職の英雄 別にスキルなんか要らなかったんだが\",\"first_air_date\":\"2025-10-01\",\"origin_country\":[\"JP\"],\"poster_path\":\"/kYxTx3iPYjLMsOirDNo5bnz13OZ.jpg\",\"popularity\":4.3587},{\"id\":283689,\"name\":\"Li'l Miss Vampire Can't Suck Right\",\"original_name\":\"ちゃんと吸えない吸血鬼ちゃん\",\"first_air_date\":\"2025-10-12\",\"origin_country\":[\"JP\"],\"poster_path\":\"/4ldkUuEe5YqrJ6QwIxCFBSfv9wV.jpg\",\"popularity\":4.0598},{\"id\":282891,\"name\":\"爱上海军蓝\",\"original_name\":\"爱上海军蓝\",\"first_air_date\":\"2025-07-02\",\"origin_country\":[\"CN\"],\"poster_path\":\"/rhNTAsX6AS9ZNyzdlq6uboMiG5Y.jpg\",\"popularity\":4.1332},{\"id\":281199,\"name\":\"Legend of Princess Chang-Ge\",\"original_name\":\"长歌行\",\"first_air_date\":\"2025-02-23\",\"origin_country\":[\"CN\"],\"poster_path\":\"/tRNkmdQT9YJOptirmupMtoNp9d4.jpg\",\"popularity\":4.0513},{\"id\":293703,\"name\":\"Un poisson rouge, un poisson bleu\",\"original_name\":\"Dr. Seuss's Red Fish, Blue Fish\",\"first_air_date\":\"2025-09-08\",\"origin_country\":[\"US\"],\"poster_path\":\"/b8u9qAGSGEG81jDxm6aNHxON8XB.jpg\",\"popularity\":3.6881},{\"id\":314730,\"name\":\"Est-il vrai que ... ?\",\"original_name\":\"Stimmt es, dass ...?\",\"first_air_date\":\"2025-06-18\",\"origin_country\":[\"DE\"],\"poster_path\":\"/eEb01ErgcBSm12BRWO1f3CmH6Yg.jpg\",\"popularity\":3.5316},{\"id\":278138,\"name\":\"คุณวาฬร้านชำ\",\"original_name\":\"คุณวาฬร้านชำ\",\"first_air_date\":\"2025-06-25\",\"origin_country\":[\"TH\"],\"poster_path\":\"/kdTLb3tgekQO4ycf74yqiLoCnye.jpg\",\"popularity\":3.0001},{\"id\":305035,\"name\":\"The Assembly\",\"original_name\":\"The Assembly\",\"first_air_date\":\"2025-11-06\",\"origin_country\":[\"CA\"],\"poster_path\":\"/2vQdsyOnFNoLK9V5Yc0NavStFmq.jpg\",\"popularity\":2.1682},{\"id\":294011,\"name\":\"All the Sharks : Trouvez-les tous !\",\"original_name\":\"All the Sharks\",\"first_air_date\":\"2025-07-04\",\"origin_country\":[\"US\"],\"poster_path\":\"/civ6fOaj6yWA73VeP8qUhlc7Yro.jpg\",\"popularity\":1.0269},{\"id\":290770,\"name\":\"无尽之海\",\"original_name\":\"无尽之海\",\"first_air_date\":\"2025-10-12\",\"origin_country\":[\"CN\"],\"poster_path\":\"/1CWI4dYpSGVKGFrNnwZJm82RMDy.jpg\",\"popularity\":0.9871},{\"id\":308627,\"name\":\"柔情史\",\"original_name\":\"柔情史\",\"first_air_date\":\"2025-12-18\",\"origin_country\":[\"CN\"],\"poster_path\":\"/5F6eb8IKq3T3DQo12jU3Z8kWRpa.jpg\",\"popularity\":0.9053}]}"
+  },
+  "/3/search/tv?first_air_date_year=2025&include_adult=false&language=fr&query=%C3%87a+Bienvenue+%C3%A0+Derry": {
+    "status": 200,
+    "body": "{\"results\":[{\"id\":200875,\"name\":\"Ça : Bienvenue à Derry\",\"original_name\":\"IT: Welcome to Derry\",\"first_air_date\":\"2025-10-26\",\"origin_country\":[\"US\"],\"poster_path\":\"/rsc88AZaxgk8dEGK3l0FIQu8lJQ.jpg\",\"popularity\":60.6234}]}"
   },
   "/3/search/tv?first_air_date_year=2025&include_adult=false&language=fr&query=American+Primeval": {
     "status": 200,
@@ -2907,6 +3067,10 @@
     "status": 404,
     "body": "{\"success\":false,\"status_code\":34,\"status_message\":\"The resource you requested could not be found.\"}"
   },
+  "/3/tv/233347/alternative_titles?": {
+    "status": 200,
+    "body": "{\"id\":233347,\"results\":[{\"title\":\"学习小组\"},{\"title\":\"Study group\"},{\"title\":\"Исследовательская группа\"},{\"title\":\"مجموعة دراسية\"},{\"title\":\"กลุ่มติวเดือด เลือดนักสู้\"},{\"title\":\"Study Group 2\"},{\"title\":\"Học Nhóm\"},{\"title\":\"Học Sinh Cá Biệt\"}]}"
+  },
   "/3/tv/236641/alternative_titles?": {
     "status": 200,
     "body": "{\"id\":236641,\"results\":[{\"title\":\"Hell's Kitchen Famosos\"}]}"
@@ -2943,6 +3107,26 @@
     "status": 200,
     "body": "{\"season_number\":21,\"episodes\":[{\"season_number\":21,\"episode_number\":1,\"name\":\"Let the Battle Begin\",\"air_date\":\"2022-09-29\"},{\"season_number\":21,\"episode_number\":2,\"name\":\"Just Wingin' It\",\"air_date\":\"2022-10-06\"},{\"season_number\":21,\"episode_number\":3,\"name\":\"Clawing Your Way to the Top\",\"air_date\":\"2022-10-13\"},{\"season_number\":21,\"episode_number\":4,\"name\":\"Slipping Down to Hell\",\"air_date\":\"2022-10-20\"},{\"season_number\":21,\"episode_number\":5,\"name\":\"Breakfast 911\",\"air_date\":\"2022-10-27\"},{\"season_number\":21,\"episode_number\":6,\"name\":\"Til Chef Do Us Part\",\"air_date\":\"2022-11-10\"},{\"season_number\":21,\"episode_number\":7,\"name\":\"Wok This Way\",\"air_date\":\"2022-11-17\"},{\"season_number\":21,\"episode_number\":8,\"name\":\"Game On!\",\"air_date\":\"2022-12-01\"},{\"season_number\":21,\"episode_number\":9,\"name\":\"Putting the Carne in Carnival\",\"air_date\":\"2022-12-08\"},{\"season_number\":21,\"episode_number\":10,\"name\":\"Everyone's Taco'ing About It\",\"air_date\":\"2023-01-05\"},{\"season_number\":21,\"episode_number\":11,\"name\":\"21st Annual Blind Taste Test\",\"air_date\":\"2023-01-12\"},{\"season_number\":21,\"episode_number\":12,\"name\":\"What in Hell's Kitchen?\",\"air_date\":\"2023-01-19\"},{\"season_number\":21,\"episode_number\":13,\"name\":\"The Fab Five Take Flight\",\"air_date\":\"2023-01-26\"},{\"season_number\":21,\"episode_number\":14,\"name\":\"Lights, Camera, Sabotage!\",\"air_date\":\"2023-02-02\"},{\"season_number\":21,\"episode_number\":15,\"name\":\"A Finale for the Ages (1)\",\"air_date\":\"2023-02-09\"},{\"season_number\":21,\"episode_number\":16,\"name\":\"A Finale for the Ages (2)\",\"air_date\":\"2023-02-09\"}]}"
   },
+  "/3/tv/237890/alternative_titles?": {
+    "status": 200,
+    "body": "{\"id\":237890,\"results\":[{\"title\":\"梅西的世界杯：传奇崛起\"},{\"title\":\"גביע העולם של מסי: עלייתה של אגדה\"}]}"
+  },
+  "/3/tv/238458/season/1?language=fr": {
+    "status": 200,
+    "body": "{\"season_number\":1,\"episodes\":[{\"season_number\":1,\"episode_number\":1,\"name\":\"Épisode 1 - Un pouvoir trop cher\",\"air_date\":\"2025-12-26\"},{\"season_number\":1,\"episode_number\":2,\"name\":\"Épisode 2 - Appât et trahisons\",\"air_date\":\"2025-12-26\"},{\"season_number\":1,\"episode_number\":3,\"name\":\"Épisode 3 - Alliances coûteuses\",\"air_date\":\"2025-12-26\"},{\"season_number\":1,\"episode_number\":4,\"name\":\"Épisode 4 - Vendre son pouvoir\",\"air_date\":\"2025-12-26\"},{\"season_number\":1,\"episode_number\":5,\"name\":\"Épisode 5 - Chaos à la boîte de nuit\",\"air_date\":\"2025-12-26\"},{\"season_number\":1,\"episode_number\":6,\"name\":\"Épisode 6 - Propositions dangereuses\",\"air_date\":\"2025-12-26\"},{\"season_number\":1,\"episode_number\":7,\"name\":\"Épisode 7 - Ce qui compte vraiment\",\"air_date\":\"2025-12-26\"},{\"season_number\":1,\"episode_number\":8,\"name\":\"Épisode 8 - Héros malgré tout\",\"air_date\":\"2025-12-26\"}]}"
+  },
+  "/3/tv/240686/alternative_titles?": {
+    "status": 200,
+    "body": "{\"id\":240686,\"results\":[{\"title\":\"锦月如歌\"},{\"title\":\"เหนือสมรภูมิ\"},{\"title\":\"Legend of The Female General\"}]}"
+  },
+  "/3/tv/242875/alternative_titles?": {
+    "status": 200,
+    "body": "{\"id\":242875,\"results\":[{\"title\":\"Iron Reign\"}]}"
+  },
+  "/3/tv/242875/season/1?language=fr": {
+    "status": 200,
+    "body": "{\"season_number\":1,\"episodes\":[{\"season_number\":1,\"episode_number\":1,\"name\":\"La loi du port\",\"air_date\":\"2024-03-15\"},{\"season_number\":1,\"episode_number\":2,\"name\":\"Longue vie au roi\",\"air_date\":\"2024-03-15\"},{\"season_number\":1,\"episode_number\":3,\"name\":\"Trône de sang\",\"air_date\":\"2024-03-15\"},{\"season_number\":1,\"episode_number\":4,\"name\":\"Quitte ou double\",\"air_date\":\"2024-03-15\"},{\"season_number\":1,\"episode_number\":5,\"name\":\"Œil pour œil, dent pour dent\",\"air_date\":\"2024-03-15\"},{\"season_number\":1,\"episode_number\":6,\"name\":\"Un mauvais présage\",\"air_date\":\"2024-03-15\"},{\"season_number\":1,\"episode_number\":7,\"name\":\"À la croisée des chemins\",\"air_date\":\"2024-03-15\"},{\"season_number\":1,\"episode_number\":8,\"name\":\"Une question de sang\",\"air_date\":\"2024-03-15\"}]}"
+  },
   "/3/tv/244623/alternative_titles?": {
     "status": 200,
     "body": "{\"id\":244623,\"results\":[{\"title\":\"逆转狂篮\"},{\"title\":\"男篮女主\"},{\"title\":\"עולה להתקפה\"}]}"
@@ -2962,6 +3146,10 @@
   "/3/tv/245927/season/1?language=fr": {
     "status": 200,
     "body": "{\"season_number\":1,\"episodes\":[{\"season_number\":1,\"episode_number\":1,\"name\":\"Wildcat est mort\",\"air_date\":\"2025-01-26\"},{\"season_number\":1,\"episode_number\":2,\"name\":\"Sinatra\",\"air_date\":\"2025-01-28\"},{\"season_number\":1,\"episode_number\":3,\"name\":\"L'Architecte du bien-être social\",\"air_date\":\"2025-01-28\"},{\"season_number\":1,\"episode_number\":4,\"name\":\"Agent Billy Pace\",\"air_date\":\"2025-02-04\"},{\"season_number\":1,\"episode_number\":5,\"name\":\"Aux palais des rois couronnés\",\"air_date\":\"2025-02-11\"},{\"season_number\":1,\"episode_number\":6,\"name\":\"Vous vouliez un miracle ?\",\"air_date\":\"2025-02-18\"},{\"season_number\":1,\"episode_number\":7,\"name\":\"Le Jour J\",\"air_date\":\"2025-02-25\"},{\"season_number\":1,\"episode_number\":8,\"name\":\"Le Gardien des secrets\",\"air_date\":\"2025-03-04\"}]}"
+  },
+  "/3/tv/249801/alternative_titles?": {
+    "status": 200,
+    "body": "{\"id\":249801,\"results\":[]}"
   },
   "/3/tv/250307/alternative_titles?": {
     "status": 200,
@@ -2990,6 +3178,14 @@
   "/3/tv/255777/alternative_titles?": {
     "status": 200,
     "body": "{\"id\":255777,\"results\":[]}"
+  },
+  "/3/tv/255919/alternative_titles?": {
+    "status": 200,
+    "body": "{\"id\":255919,\"results\":[]}"
+  },
+  "/3/tv/255919/season/1?language=fr": {
+    "status": 200,
+    "body": "{\"season_number\":1,\"episodes\":[{\"season_number\":1,\"episode_number\":1,\"name\":\"Épisode 1\",\"air_date\":\"2024-05-26\"},{\"season_number\":1,\"episode_number\":2,\"name\":\"Épisode 2\",\"air_date\":\"2024-06-02\"}]}"
   },
   "/3/tv/256480/alternative_titles?": {
     "status": 200,
@@ -3039,6 +3235,10 @@
     "status": 404,
     "body": "{\"success\":false,\"status_code\":34,\"status_message\":\"The resource you requested could not be found.\"}"
   },
+  "/3/tv/272484/alternative_titles?": {
+    "status": 200,
+    "body": "{\"id\":272484,\"results\":[{\"title\":\"绾心记\"},{\"title\":\"一笑\"},{\"title\":\"笑歌行‎\"},{\"title\":\"Corazones destinados\"},{\"title\":\"宿敵契約\"},{\"title\":\"Corazones destinados\"},{\"title\":\"Судьбоносные сердца\"},{\"title\":\"อริรักลิขิตใจ\"},{\"title\":\"Fated Hearts\"}]}"
+  },
   "/3/tv/273813/alternative_titles?": {
     "status": 200,
     "body": "{\"id\":273813,\"results\":[]}"
@@ -3051,6 +3251,10 @@
     "status": 404,
     "body": "{\"success\":false,\"status_code\":34,\"status_message\":\"The resource you requested could not be found.\"}"
   },
+  "/3/tv/275722/season/1?language=fr": {
+    "status": 200,
+    "body": "{\"season_number\":1,\"episodes\":[{\"season_number\":1,\"episode_number\":1,\"name\":\"L'élève la plus prometteuse\",\"air_date\":\"2025-09-12\"},{\"season_number\":1,\"episode_number\":2,\"name\":\"La rentrée des classes\",\"air_date\":\"2025-09-12\"},{\"season_number\":1,\"episode_number\":3,\"name\":\"Le premier bal\",\"air_date\":\"2025-09-19\"},{\"season_number\":1,\"episode_number\":4,\"name\":\"Première Journée des parents\",\"air_date\":\"2025-09-19\"},{\"season_number\":1,\"episode_number\":5,\"name\":\"La première ennemie\",\"air_date\":\"2025-09-26\"},{\"season_number\":1,\"episode_number\":6,\"name\":\"Premier club\",\"air_date\":\"2025-09-26\"},{\"season_number\":1,\"episode_number\":7,\"name\":\"Premier Halloween\",\"air_date\":\"2025-10-03\"},{\"season_number\":1,\"episode_number\":8,\"name\":\"Premier cauchemar\",\"air_date\":\"2025-10-03\"},{\"season_number\":1,\"episode_number\":9,\"name\":\"Premier examen\",\"air_date\":\"2025-10-10\"},{\"season_number\":1,\"episode_number\":10,\"name\":\"Premier Noël\",\"air_date\":\"2025-10-10\"},{\"season_number\":1,\"episode_number\":11,\"name\":\"Première amie vampire\",\"air_date\":\"2025-10-17\"},{\"season_number\":1,\"episode_number\":12,\"name\":\"Premier battement de cœur\",\"air_date\":\"2025-10-17\"},{\"season_number\":1,\"episode_number\":13,\"name\":\"Premier défi\",\"air_date\":\"2025-10-24\"},{\"season_number\":1,\"episode_number\":14,\"name\":\"Premier animal de compagnie\",\"air_date\":\"2025-10-24\"},{\"season_number\":1,\"episode_number\":15,\"name\":\"Premier méchant\",\"air_date\":\"2025-10-31\"},{\"season_number\":1,\"episode_number\":16,\"name\":\"Premiers grands pouvoirs\",\"air_date\":\"2025-10-31\"}]}"
+  },
   "/3/tv/278895/alternative_titles?": {
     "status": 200,
     "body": "{\"id\":278895,\"results\":[]}"
@@ -3062,6 +3266,10 @@
   "/3/tv/279307/season/1?language=fr": {
     "status": 200,
     "body": "{\"season_number\":1,\"episodes\":[{\"season_number\":1,\"episode_number\":1,\"name\":\"Episode 1\",\"air_date\":\"2026-01-07\"},{\"season_number\":1,\"episode_number\":2,\"name\":\"Episode 2\",\"air_date\":\"2026-01-07\"},{\"season_number\":1,\"episode_number\":3,\"name\":\"Episode 3\",\"air_date\":\"2026-01-14\"},{\"season_number\":1,\"episode_number\":4,\"name\":\"Episode 4\",\"air_date\":\"2026-01-14\"},{\"season_number\":1,\"episode_number\":5,\"name\":\"Episode 5\",\"air_date\":\"2026-01-21\"},{\"season_number\":1,\"episode_number\":6,\"name\":\"Episode 6\",\"air_date\":\"2026-01-21\"}]}"
+  },
+  "/3/tv/282662/alternative_titles?": {
+    "status": 200,
+    "body": "{\"id\":282662,\"results\":[{\"title\":\"Kimi to Koete Koi ni Naru\"},{\"title\":\"Kimito Koete Koininaru\"},{\"title\":\"Crossing the Walls of Love with You\"},{\"title\":\"Cross Race and Love You\"},{\"title\":\"Beyond Border, in Love We Are\"}]}"
   },
   "/3/tv/283296/season/1?language=fr": {
     "status": 200,
@@ -3846,6 +4054,10 @@
   "/3/tv/90228/season/1?language=en-US": {
     "status": 200,
     "body": "{\"season_number\":1,\"episodes\":[{\"season_number\":1,\"episode_number\":1,\"name\":\"The Hidden Hand\",\"air_date\":\"2024-11-17\"},{\"season_number\":1,\"episode_number\":2,\"name\":\"Two Wolves\",\"air_date\":\"2024-11-24\"},{\"season_number\":1,\"episode_number\":3,\"name\":\"Sisterhood Above All\",\"air_date\":\"2024-12-01\"},{\"season_number\":1,\"episode_number\":4,\"name\":\"Twice Born\",\"air_date\":\"2024-12-08\"},{\"season_number\":1,\"episode_number\":5,\"name\":\"In Blood, Truth\",\"air_date\":\"2024-12-15\"},{\"season_number\":1,\"episode_number\":6,\"name\":\"The High-Handed Enemy\",\"air_date\":\"2024-12-22\"}]}"
+  },
+  "/3/tv/90228/season/1?language=fr": {
+    "status": 200,
+    "body": "{\"season_number\":1,\"episodes\":[{\"season_number\":1,\"episode_number\":1,\"name\":\"La main sur le pouvoir\",\"air_date\":\"2024-11-17\"},{\"season_number\":1,\"episode_number\":2,\"name\":\"Deux louves\",\"air_date\":\"2024-11-24\"},{\"season_number\":1,\"episode_number\":3,\"name\":\"La communauté avant tout\",\"air_date\":\"2024-12-01\"},{\"season_number\":1,\"episode_number\":4,\"name\":\"Né deux fois\",\"air_date\":\"2024-12-08\"},{\"season_number\":1,\"episode_number\":5,\"name\":\"Dans le sang, la vérité\",\"air_date\":\"2024-12-15\"},{\"season_number\":1,\"episode_number\":6,\"name\":\"L’ennemi suprême\",\"air_date\":\"2024-12-22\"}]}"
   },
   "/3/tv/90650/alternative_titles?": {
     "status": 200,

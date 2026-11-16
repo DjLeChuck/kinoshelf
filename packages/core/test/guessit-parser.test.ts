@@ -395,4 +395,18 @@ describe('GuessitParser', () => {
     const shallow = new GuessitParser({ contextDepth: 1 });
     expect(shallow.parse('Breaking Bad/Season 2/02x05.mkv').title).not.toBe('Breaking Bad');
   });
+
+  it('reads the words between the title and the year of an episode as its subtitle', () => {
+    const parsed = parser.parse(
+      'Dune - Prophecy (2024)/Season 01/Dune - Prophecy (2024) - s01e01.mkv',
+    );
+    expect(parsed).toMatchObject({ kind: 'episode', title: 'Dune', subtitle: 'Prophecy' });
+    expect(
+      parser.parse(
+        'Ça - Bienvenue à Derry (2025)/Season 01/Ça - Bienvenue à Derry (2025) - s01e01.mkv',
+      ),
+    ).toMatchObject({ title: 'Ça', subtitle: 'Bienvenue à Derry' });
+    // After the year, it is the episode's own title.
+    expect(parser.parse('Show (2020) - s01e01 - Pilot.mkv').subtitle).toBeUndefined();
+  });
 });

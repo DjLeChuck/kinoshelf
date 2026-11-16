@@ -20,8 +20,9 @@ export interface ParsedMedia {
   readonly kind: ParsedKind;
   readonly title?: string;
   /**
-   * For a movie named `Title - Subtitle (Year)`: the part after the dash. TMDB writes the whole
-   * as one title (`Thor : Le Monde des ténèbres`), so the matcher compares both readings.
+   * For a work named `Title - Subtitle (Year)`: the part after the dash. TMDB writes the whole
+   * as one title (`Thor : Le Monde des ténèbres`, `Dune: Prophecy`), so the matcher compares
+   * both readings.
    */
   readonly subtitle?: string;
   /**
