@@ -68,6 +68,47 @@ put "The.Office.US.S00E01.Specials.720p.BluRay.x264-SEED" "The.Office.US.S00E01.
 put "Foundation.2021.S01E04E05.1080p.WEB-DL.DDP5.1.H.264-SEED" "Foundation.2021.S01E04E05.1080p.WEB-DL.DDP5.1.H.264-SEED.mkv"
 put "The.Office.US.S01E03-E04.720p.BluRay.x264-SEED" "The.Office.US.S01E03-E04.720p.BluRay.x264-SEED.mkv"
 
+# Subtitles. A tiny SubRip text, copied for every file: only the names are the test.
+sub=$(mktemp --suffix=.srt)
+trap 'rm -f "$base" "$sub"' EXIT
+printf '1\n00:00:00,000 --> 00:00:01,000\nKinoshelf\n' >"$sub"
+
+# putsub <release folder> <path under it>: one subtitle file, in its release folder.
+putsub() {
+  mkdir -p "$(dirname "$arrivals/$1/$2")"
+  [ -e "$arrivals/$1/$2" ] || cp "$sub" "$arrivals/$1/$2"
+}
+
+# A movie with a Subs folder, as scene releases ship them: the language is read from the name, `forced`
+# and `sdh` are kept. `Parasite.srt` names no language and `6_French.srt` is a second French, so both
+# stay in Subs and the preview of the rename says why.
+parasite="Parasite.2019.1080p.BluRay.x264-SEED"
+put "$parasite" "$parasite.mkv"
+putsub "$parasite" "Subs/2_French.srt"
+putsub "$parasite" "Subs/3_English.srt"
+putsub "$parasite" "Subs/4_English_Forced.srt"
+putsub "$parasite" "Subs/5_English SDH.srt"
+putsub "$parasite" "Subs/6_French.srt"
+putsub "$parasite" "Subs/Parasite.srt"
+
+# Subtitles already named after the video, and a VobSub pair (`.idx` and `.sub` stay together).
+alien="Alien.1979.1080p.BluRay.x264-SEED"
+put "$alien" "$alien.mkv"
+putsub "$alien" "$alien.fr.srt"
+putsub "$alien" "$alien.en.forced.srt"
+putsub "$alien" "$alien.eng.srt"
+putsub "$alien" "Subs/2_Spanish.idx"
+putsub "$alien" "Subs/2_Spanish.sub"
+
+# A season pack with one Subs sub-folder per episode, and a flat file naming its episode by number.
+severance="Severance.2022.S01.1080p.WEB-DL.DDP5.1.H.264-SEED"
+for e in 01 02; do
+  put "$severance" "Severance.2022.S01E$e.1080p.WEB-DL.DDP5.1.H.264-SEED.mkv"
+  putsub "$severance" "Subs/Severance.2022.S01E$e.1080p.WEB-DL.DDP5.1.H.264-SEED/2_English.srt"
+  putsub "$severance" "Subs/Severance.2022.S01E$e.1080p.WEB-DL.DDP5.1.H.264-SEED/3_French.srt"
+done
+putsub "$severance" "Subs/Severance 1x02 German.srt"
+
 # What no one can identify: it waits in Arrivals as unrecognized.
 put "zzqx.unknown.clip.2019.720p-SEED" "zzqx.unknown.clip.2019.720p-SEED.mkv"
 
