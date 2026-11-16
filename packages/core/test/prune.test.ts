@@ -7,6 +7,7 @@ import {
   buildProfile,
   madeByUs,
   MemoryJournal,
+  undoLastBatch,
   type Plan,
   type SeriesDetails,
 } from '../src/index.js';
@@ -214,5 +215,63 @@ describe('an episode matched again to another show', () => {
     // Not deleted and not carried along: it is the owner's, and so is the folder that holds it.
     expect(await readFile(stale, 'utf8')).toContain('The Bear');
     expect(await exists(join(root, 'The Bear (2022)'))).toBe(true);
+  });
+});
+
+describe('pruning a Subs folder the move emptied', () => {
+  it('removes the folder it leaves, the empty Subs inside it included', async () => {
+    const root = await makeDir();
+    const old = join(root, 'Release');
+    const source = await put(join(old, 'Dune.2021.mkv'), 'video');
+    await put(join(old, 'Subs', '2_French.srt'), 'sub');
+    const plan = await createPlan([{ parsed: parsedMovie(source), candidate: dune }], {
+      profile: plex,
+      destinationRoot: root,
+      mode: 'move',
+      newId: counter('p'),
+    });
+    await executePlan(plan, { journal: new MemoryJournal() });
+
+    expect(
+      await exists(join(root, 'Dune (2021) {tmdb-438631}', 'Dune (2021) {tmdb-438631}.fr.srt')),
+    ).toBe(true);
+    expect(await exists(old)).toBe(false);
+  });
+
+  it('keeps the folder when a file of the owner is left in Subs', async () => {
+    const root = await makeDir();
+    const old = join(root, 'Release');
+    const source = await put(join(old, 'Dune.2021.mkv'), 'video');
+    await put(join(old, 'Subs', '2_French.srt'), 'sub');
+    const mine = await put(join(old, 'Subs', 'notes.txt'), 'mine');
+    const plan = await createPlan([{ parsed: parsedMovie(source), candidate: dune }], {
+      profile: plex,
+      destinationRoot: root,
+      mode: 'move',
+      newId: counter('p'),
+    });
+    await executePlan(plan, { journal: new MemoryJournal() });
+
+    expect(await exists(mine)).toBe(true);
+  });
+
+  it('is undone: the subtitle goes back into a Subs folder that had been removed', async () => {
+    const root = await makeDir();
+    const old = join(root, 'Release');
+    const source = await put(join(old, 'Dune.2021.mkv'), 'video');
+    const sub = await put(join(old, 'Subs', '2_French.srt'), 'sub');
+    const journal = new MemoryJournal();
+    const plan = await createPlan([{ parsed: parsedMovie(source), candidate: dune }], {
+      profile: plex,
+      destinationRoot: root,
+      mode: 'move',
+      newId: counter('p'),
+    });
+    await executePlan(plan, { journal });
+    expect(await exists(old)).toBe(false);
+
+    await undoLastBatch(journal);
+    expect(await readFile(sub, 'utf8')).toBe('sub');
+    expect(await readFile(source, 'utf8')).toBe('video');
   });
 });

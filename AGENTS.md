@@ -141,6 +141,15 @@ nowhere: a custom profile file is to be discussed again.
   fanart and logo are written once (the first version; later ones leave them, so undoing a later batch does not
   remove them), while a `{file}.nfo` follows each version. Guessit does not tell WEB-DL from WEBRip
   (`Web`) nor read Remux, so two such files differ by their group or conflict.
+- **Subtitles** (`planning/sidecars.ts`, `languages.ts`) travel with their video in two ways: a file beside it
+  with its name as prefix keeps its suffix as is (`.en.forced.srt`), and the files of a `Subs`/`Sub`/`Subtitles`
+  folder next to it (loose or in a sub-folder named like the episode) are named `<video>.<iso 639-1>[.forced][.sdh].<ext>`,
+  the language read from the name (`readSubtitleName`: names, three-letter codes, a bare two-letter code only when it is all
+  the name says). A file with no readable language, or a second one for a language taken, stays where it is: never
+  renamed at random. A folder with one video gives it every file; with several, the file's name must start the
+  video's name (or the other way round) or carry the same `SxxExx`/`1x02`. A file of an item already in place is not
+  moved (the planner returns `in-place` first). `pruneVacated` removes sub-folders holding only our files or nothing.
+  Downloading subtitles (OpenSubtitles) is a project of its own, not built.
 - **A size read from the file** (`PlannerOptions.sizeOf`, `AnalyzeOptions.sizeOf`; the server's is
   `probePictureSize`, ffprobe's frame by `pictureSize(width, height)`, the larger of the sizes the
   width and the height read, so a 1920x800 film is 1080p). It is asked only for a file whose name

@@ -58,6 +58,15 @@ A `.nfo` already beside a video (another tool's, edited by hand) is never delete
 Kinoshelf writes its own, the other one stays where it is, and `kinoshelf tidy` reports it. Subtitles
 always travel with their video.
 
+**Subtitles in a release's `Subs` folder** (`Subs`, `Sub`, `Subtitles`) are taken too and put beside the
+video as `<video name>.<language>.<extension>`, the language being the two-letter ISO 639-1 code read from
+the file's name (`2_French.srt` becomes `… .fr.srt`; `.forced` and `.sdh` are kept: `….en.forced.srt`). A
+season pack's files go to their episode, by the name of their sub-folder or by their season and episode
+number. A file whose language the name does not give is left where it is, and so is a second file for a
+language already taken: nothing is renamed at random. Brazilian and European Portuguese are both `pt`, so
+only the first is taken. The emptied `Subs` folder goes with the release's folder, and an undo puts the
+files back.
+
 ## One layout for every player
 
 The layout is kept as close to what the players read as possible (Plex, Jellyfin and Kodi), so a library

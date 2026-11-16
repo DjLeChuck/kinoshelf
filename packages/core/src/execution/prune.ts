@@ -20,8 +20,8 @@ function isInside(path: string, roots: readonly string[]): boolean {
 /**
  * Cleans the folder a move left behind, and its parents while they follow. A folder goes only
  * when everything still in it is a file Kinoshelf made (NFO, artwork) and nobody touched since:
- * the journal's size and date must match. Any other file, any sub-folder or link, keeps the
- * folder, so nothing the user put there is ever lost. Never leaves, or removes, a library root.
+ * the journal's size and date must match. A sub-folder is held to the same rule (an
+ * emptied `Subs` goes). Any other file, or a link, keeps the folder, so nothing the user put there is ever lost. Never leaves, or removes, a library root.
  * Best effort: a failure here changes nothing for the transfer that came before.
  */
 export async function pruneVacated(
@@ -60,21 +60,46 @@ export async function madeByUs(journal: Journal, path: string): Promise<boolean>
   }
 }
 
-async function removeIfOurs(directory: string, journal: Journal): Promise<boolean> {
-  try {
-    const entries = await readdir(directory, { withFileTypes: true });
-    const ours: string[] = [];
-    for (const entry of entries) {
-      const path = join(directory, entry.name);
-      if (!entry.isFile() || !(await madeByUs(journal, path))) {
+/**
+ * Whether everything under `directory` can go: files Kinoshelf made and nobody changed, and
+ * folders that are themselves like that (an empty one included: a release's `Subs` once its files
+ * went along with the video). Collects what to delete, deepest folders first.
+ */
+async function removable(
+  directory: string,
+  journal: Journal,
+  files: string[],
+  directories: string[],
+): Promise<boolean> {
+  for (const entry of await readdir(directory, { withFileTypes: true })) {
+    const path = join(directory, entry.name);
+    if (entry.isDirectory()) {
+      if (!(await removable(path, journal, files, directories))) {
         return false;
       }
-      ours.push(path);
+    } else if (entry.isFile() && (await madeByUs(journal, path))) {
+      files.push(path);
+    } else {
+      return false;
     }
-    for (const path of ours) {
+  }
+  directories.push(directory);
+  return true;
+}
+
+async function removeIfOurs(directory: string, journal: Journal): Promise<boolean> {
+  try {
+    const files: string[] = [];
+    const directories: string[] = [];
+    if (!(await removable(directory, journal, files, directories))) {
+      return false;
+    }
+    for (const path of files) {
       await unlink(path);
     }
-    await rmdir(directory);
+    for (const path of directories) {
+      await rmdir(path);
+    }
     return true;
   } catch {
     return false;

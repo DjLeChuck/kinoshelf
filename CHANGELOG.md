@@ -12,7 +12,14 @@ All notable changes to Kinoshelf are written here. The format follows
   designates, that work joins the candidates (so a title the search misses is still weighed) and gets the
   same bonus as a TMDB id, only when its title, season and year agree.
 
+- The subtitles of a release's `Subs` folder now follow the video, named `<video>.<language>.<ext>`
+  (`2_French.srt` becomes `….fr.srt`, with `.forced` and `.sdh` kept). A file whose language the name does
+  not give stays where it is. `.smi` and `.mks` files travel too.
+
 ### Changed
+
+- The folder a move leaves behind is now removed when its sub-folders hold only what Kinoshelf made or
+  nothing (an emptied `Subs`).
 
 - A video `ffprobe` cannot read is now said so: one log line with its path and `ffprobe`'s reason (no
   stack), an Unreadable badge on its version, and a warning on the System page.
