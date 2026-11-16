@@ -31,6 +31,16 @@
 .vp-doc img {
   border: 1px solid var(--vp-c-divider);
   border-radius: 8px;
+  cursor: zoom-in;
+}
+/* The popin of a zoomed screenshot goes over the navigation bar. */
+.medium-zoom-overlay,
+.medium-zoom-image--opened {
+  z-index: 100;
+}
+.vp-doc img.medium-zoom-image--opened {
+  cursor: zoom-out;
+  border-radius: 0;
 }
 .VPImage.logo {
   height: 28px;

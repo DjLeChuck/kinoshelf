@@ -31,6 +31,7 @@
     "@types/node": "^26.6.5",
     "eslint": "^10.13.0",
     "eslint-plugin-svelte": "^3.23.1",
+    "medium-zoom": "^1.1.2",
     "prettier": "^3.9.10",
     "prettier-plugin-svelte": "^4.1.1",
     "svelte": "^5.57.3",
