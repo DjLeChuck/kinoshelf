@@ -56,6 +56,12 @@
           {#each versions as version (version.id)}
             <td class:mono={row.key === 'file'}>
               {#if row.key === 'status'}
+                {#if version.file?.unreadable}
+                  <span class="chip chip-danger" title={version.file.unreadable}
+                    >{t('web.library.version.status.unreadable')}</span
+                  >
+                  <span class="reason">{version.file.unreadable}</span>
+                {/if}
                 <span class="chip chip-{versionStatus(version) === 'complete' ? 'ok' : 'warn'}"
                   >{row.read(version)}</span
                 >
@@ -135,5 +141,11 @@
 
   .mono {
     font-size: 12px;
+  }
+
+  .reason {
+    display: block;
+    margin-top: 2px;
+    color: var(--muted);
   }
 </style>

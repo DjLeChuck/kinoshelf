@@ -17,6 +17,7 @@ export interface HealthProblem {
     | 'plex-signed-out'
     // Warnings, found by the report (they cost a disk read or a probe): never in the verdict.
     | 'ffprobe-missing'
+    | 'videos-unreadable'
     | 'disk-low'
     | 'webhook-failing'
     | 'media-refresh-failed';

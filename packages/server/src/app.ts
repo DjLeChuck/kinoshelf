@@ -44,7 +44,7 @@ import { registerLibraryRoutes } from './library-routes.js';
 import { jobPresenter, registerRoutes } from './routes.js';
 import { Completeness, CompletenessStore } from './completeness.js';
 import { SeriesFiles, SeriesFilesStore } from './series-files.js';
-import { ffprobe, ProbeQueue, type Prober } from './probe.js';
+import { ffprobe, probeFailure, ProbeQueue, type Prober } from './probe.js';
 import { LibraryItemStore, LibrarySnapshot } from './library-items.js';
 import { JobRunner, type ExecutionRunner, type JobProcessor } from './runner.js';
 import { healthSchema } from './schemas.js';
@@ -298,8 +298,11 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     store: items,
     prober: options.prober ?? ffprobe,
     busy: () => runner.busy,
-    onError: (error) => {
-      noted('scan').warn(error, 'Could not read a video with ffprobe');
+    onError: (error, path) => {
+      // One line: the path and ffprobe's own words. The stack and the command say nothing more.
+      noted('scan').warn(
+        `Could not read a video with ffprobe: ${path} (${probeFailure(error, path)})`,
+      );
     },
   });
   // Counts the episodes each show lacks, with the same patience: after the jobs, never during.

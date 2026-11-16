@@ -1031,7 +1031,7 @@ export const libraryItemSchema = {
 export const fileSchema = {
   type: 'object',
   nullable: true,
-  required: ['video', 'audio', 'hdr', 'audioLanguages', 'subtitleLanguages', 'size'],
+  required: ['video', 'audio', 'hdr', 'audioLanguages', 'subtitleLanguages', 'size', 'unreadable'],
   properties: {
     video: { type: 'string', nullable: true },
     audio: { type: 'string', nullable: true },
@@ -1039,6 +1039,11 @@ export const fileSchema = {
     audioLanguages: { type: 'array', items: { type: 'string' } },
     subtitleLanguages: { type: 'array', items: { type: 'string' } },
     size: { type: 'integer' },
+    unreadable: {
+      type: 'string',
+      nullable: true,
+      description: 'Why `ffprobe` could not read the file (a damaged one); `null` when it did.',
+    },
   },
 } as const;
 

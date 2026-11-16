@@ -605,6 +605,8 @@ export const en = {
   'web.health.problem.plex-signed-out': 'Plex no longer accepts the sign-in: sign in again.',
   'web.health.problem.ffprobe-missing':
     'ffprobe is not installed: the picture size of versions will not be detected.',
+  'web.health.problem.videos-unreadable':
+    'Videos ffprobe could not read: {count}. They are probably damaged; their page says why.',
   'web.health.problem.disk-low': 'Less than 5 % is free on “{name}”.',
   'web.health.problem.webhook-failing': 'The last notification to {target} failed.',
   'web.health.problem.media-refresh-failed': 'The last refresh of {target} failed.',
@@ -973,6 +975,7 @@ export const en = {
     '{count, plural, one {# episode lacks} other {# episodes lack}} the NFO of a version',
   'web.library.version.status.complete': 'Complete',
   'web.library.version.status.nfo-missing': 'NFO missing',
+  'web.library.version.status.unreadable': 'Unreadable',
   'web.library.version.status.absent': 'Version absent',
   'web.library.coverage.cell': 'Episode {episode} · {version}: {status}',
   'web.library.coverage.legend.label': 'Legend',

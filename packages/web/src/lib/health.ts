@@ -41,6 +41,7 @@ const PROBLEM_TEXT: Record<string, MessageKey> = {
   'watch-folder-unreachable': 'web.health.problem.watch-folder-unreachable',
   'plex-signed-out': 'web.health.problem.plex-signed-out',
   'ffprobe-missing': 'web.health.problem.ffprobe-missing',
+  'videos-unreadable': 'web.health.problem.videos-unreadable',
   'disk-low': 'web.health.problem.disk-low',
   'webhook-failing': 'web.health.problem.webhook-failing',
   'media-refresh-failed': 'web.health.problem.media-refresh-failed',

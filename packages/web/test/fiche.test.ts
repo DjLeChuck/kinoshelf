@@ -13,7 +13,15 @@ import type { ProbedFile } from '../src/lib/library-items.js';
 
 const GIB = 1024 ** 3;
 const file = (size: number): Pick<{ file: ProbedFile | null }, 'file'> => ({
-  file: { video: null, audio: null, hdr: null, audioLanguages: [], subtitleLanguages: [], size },
+  file: {
+    video: null,
+    audio: null,
+    hdr: null,
+    audioLanguages: [],
+    subtitleLanguages: [],
+    size,
+    unreadable: null,
+  },
 });
 
 describe.each([

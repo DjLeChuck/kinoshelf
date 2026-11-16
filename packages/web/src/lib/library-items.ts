@@ -73,6 +73,8 @@ export interface ProbedFile {
   readonly audioLanguages: readonly string[];
   readonly subtitleLanguages: readonly string[];
   readonly size: number;
+  /** Why `ffprobe` could not read the file (a damaged one), `null` when it did. */
+  readonly unreadable: string | null;
 }
 
 /** One file of a movie, as a list names it. */

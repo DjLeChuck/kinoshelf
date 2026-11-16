@@ -238,6 +238,7 @@ const presentFile = (probe: Probe | null | undefined): unknown =>
         audioLanguages: probe.audioLanguages,
         subtitleLanguages: probe.subtitleLanguages,
         size: probe.size,
+        unreadable: probe.unreadable ?? null,
       }
     : null;
 

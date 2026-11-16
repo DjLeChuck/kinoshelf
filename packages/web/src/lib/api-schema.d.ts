@@ -3470,6 +3470,8 @@ export interface paths {
                                         audioLanguages: string[];
                                         subtitleLanguages: string[];
                                         size: number;
+                                        /** @description Why `ffprobe` could not read the file (a damaged one); `null` when it did. */
+                                        unreadable: string | null;
                                     } | null;
                                 }[];
                             }[];
@@ -3664,6 +3666,8 @@ export interface paths {
                                 audioLanguages: string[];
                                 subtitleLanguages: string[];
                                 size: number;
+                                /** @description Why `ffprobe` could not read the file (a damaged one); `null` when it did. */
+                                unreadable: string | null;
                             } | null;
                             /** @description The files of the movie (this one alone for anything else), each read as `file` is. */
                             versions: {
@@ -3687,6 +3691,8 @@ export interface paths {
                                     audioLanguages: string[];
                                     subtitleLanguages: string[];
                                     size: number;
+                                    /** @description Why `ffprobe` could not read the file (a damaged one); `null` when it did. */
+                                    unreadable: string | null;
                                 } | null;
                             }[];
                             /** @description The NFO the profile wants for this item, checked on the disk now: the shared `movie.nfo` of a movie, the `<file>.nfo` of an episode. Empty when it writes none. */

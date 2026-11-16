@@ -632,6 +632,8 @@ export const fr: Record<keyof typeof en, string> = {
   'web.health.problem.plex-signed-out': 'Plex n’accepte plus la connexion : reconnectez-vous.',
   'web.health.problem.ffprobe-missing':
     'ffprobe n’est pas installé : la taille d’image des versions ne sera pas détectée.',
+  'web.health.problem.videos-unreadable':
+    'Vidéos qu’ffprobe n’a pas pu lire : {count}. Elles sont probablement abîmées ; leur page en donne la raison.',
   'web.health.problem.disk-low': 'Moins de 5 % d’espace libre sur « {name} ».',
   'web.health.problem.webhook-failing': 'La dernière notification vers {target} a échoué.',
   'web.health.problem.media-refresh-failed': 'Le dernier rafraîchissement de {target} a échoué.',
@@ -1006,6 +1008,7 @@ export const fr: Record<keyof typeof en, string> = {
     '{count, plural, one {# épisode n’a pas} other {# épisodes n’ont pas}} le NFO d’une version',
   'web.library.version.status.complete': 'Complet',
   'web.library.version.status.nfo-missing': 'NFO absent',
+  'web.library.version.status.unreadable': 'Illisible',
   'web.library.version.status.absent': 'Version absente',
   'web.library.coverage.cell': 'Épisode {episode} · {version} : {status}',
   'web.library.coverage.legend.label': 'Légende',

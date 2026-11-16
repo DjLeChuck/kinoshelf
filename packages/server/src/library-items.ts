@@ -118,12 +118,13 @@ interface ProbeRow {
   size: number | null;
   mtime: number | null;
   probed_at: string | null;
+  unreadable: string | null;
 }
 
 const PROBE_COLUMNS =
-  'path, video, audio, hdr, audio_languages, subtitle_languages, picture, size, mtime, probed_at';
+  'path, video, audio, hdr, audio_languages, subtitle_languages, picture, size, mtime, probed_at, unreadable';
 const PROBE_ASSIGNMENTS =
-  'video = ?, audio = ?, hdr = ?, audio_languages = ?, subtitle_languages = ?, picture = ?, size = ?, mtime = ?, probed_at = ?';
+  'video = ?, audio = ?, hdr = ?, audio_languages = ?, subtitle_languages = ?, picture = ?, size = ?, mtime = ?, probed_at = ?, unreadable = ?';
 
 const languages = (json: string | null): string[] =>
   json === null ? [] : (JSON.parse(json) as string[]);
@@ -409,6 +410,7 @@ export class LibraryItemStore {
             probe.size,
             probe.mtime,
             probe.probed_at,
+            probe.unreadable,
             libraryId,
             item.path,
           );
@@ -470,6 +472,7 @@ export class LibraryItemStore {
         picture: row.picture,
         size: row.size ?? 0,
         mtime: row.mtime ?? 0,
+        unreadable: row.unreadable,
         probedAt: row.probed_at,
       }
     );
@@ -505,6 +508,7 @@ export class LibraryItemStore {
         probe.size,
         probe.mtime,
         new Date().toISOString(),
+        probe.unreadable ?? null,
         libraryId,
         path,
       );

@@ -293,6 +293,15 @@ export const SERVER_MIGRATIONS: readonly { readonly name: string; readonly sql: 
       ALTER TABLE collections ADD COLUMN backdrop_path TEXT;
     `,
   },
+  {
+    // Why ffprobe could not read a file (a damaged download, not a video): a row read as empty
+    // since then says so, instead of looking like a file with no streams. Rows read before this
+    // are told again when their file next changes.
+    name: 'server:003-unreadable-videos',
+    sql: `
+      ALTER TABLE library_items ADD COLUMN unreadable TEXT;
+    `,
+  },
 ];
 
 /** Opens the single SQLite file of the config directory, shared with the CLI and the cache. */

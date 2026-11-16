@@ -108,6 +108,21 @@ function latestPerTarget(recent: readonly DeliveryRecord[], kind: DeliveryRecord
   return [...seen.values()];
 }
 
+/** Files ffprobe could not read, as the libraries' snapshots hold them: damaged downloads, mostly. */
+function unreadableVideos(database: Database): number {
+  try {
+    return (
+      database
+        .prepare<[], { count: number }>(
+          'SELECT COUNT(*) AS count FROM library_items WHERE unreadable IS NOT NULL',
+        )
+        .get()?.count ?? 0
+    );
+  } catch {
+    return 0;
+  }
+}
+
 /**
  * Everything the Health page draws, read at once when it opens. It is the slow cousin of
  * `Health.check` (disk space, `ffprobe`, the size of the database file) and is never asked for
@@ -130,6 +145,14 @@ export async function healthReport(deps: HealthReportDeps): Promise<HealthReport
   const warnings: HealthProblem[] = [];
   if (version === null) {
     warnings.push({ area: 'ffprobe', code: 'ffprobe-missing' });
+  }
+  const unreadable = unreadableVideos(database);
+  if (unreadable > 0) {
+    warnings.push({
+      area: 'ffprobe',
+      code: 'videos-unreadable',
+      params: { count: String(unreadable) },
+    });
   }
   for (const disk of disks) {
     if (

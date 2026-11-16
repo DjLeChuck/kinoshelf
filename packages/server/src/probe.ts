@@ -53,6 +53,8 @@ export interface Probe {
   readonly size: number;
   /** Modification time, in whole milliseconds. */
   readonly mtime: number;
+  /** Why `ffprobe` could not read the file (its own words), `null`/absent when it did. */
+  readonly unreadable?: string | null;
 }
 
 /**
@@ -274,7 +276,7 @@ export interface ProbeQueueDeps {
   readonly prober: Prober;
   /** The job queue is working: the disk is not ours. */
   readonly busy: () => boolean;
-  readonly onError?: (error: unknown) => void;
+  readonly onError?: (error: unknown, path: string) => void;
 }
 
 /**
@@ -396,15 +398,36 @@ export class ProbeQueue {
             picture: null,
             size: info.size,
             mtime: Math.floor(info.mtimeMs),
+            unreadable: probeFailure(error, path),
           };
           store.setProbe(libraryId, path, empty);
-          this.deps.onError?.(error);
+          this.deps.onError?.(error, path);
           return undefined;
         }
       }
       return undefined;
     }
   }
+}
+
+/**
+ * What `ffprobe` complained of, in one line: its error output minus the command and the file's
+ * path (said apart), the last line first since the first ones are a demuxer's own context
+ * (`[matroska,webm @ 0x…] EBML header parsing failed`). The address in brackets is noise.
+ */
+export function probeFailure(error: unknown, path: string): string {
+  const message = error instanceof Error ? error.message : String(error);
+  const lines = message
+    .split('\n')
+    .map((line) =>
+      line
+        .replace(/^\[[^\]]*\]\s*/, '')
+        .replaceAll(path, '')
+        .replace(/^:\s*/, '')
+        .trim(),
+    )
+    .filter((line) => line !== '' && !line.startsWith('Command failed'));
+  return lines.join(' · ') || 'ffprobe could not read the file';
 }
 
 const isMissing = (error: unknown): boolean => errnoCode(error) === 'ENOENT';

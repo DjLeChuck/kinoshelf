@@ -17,6 +17,7 @@ const file = (over: Partial<ProbedFile> = {}): ProbedFile => ({
   audioLanguages: [],
   subtitleLanguages: [],
   size: 10,
+  unreadable: null,
   ...over,
 });
 

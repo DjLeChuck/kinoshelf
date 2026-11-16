@@ -11,6 +11,7 @@ import {
   locateFfprobe,
   ProbeQueue,
   ProbeUnavailableError,
+  probeFailure,
   probePictureSize,
   sizeFromStreams,
   summarize,
@@ -20,6 +21,25 @@ import {
 import { cleanup, makeDir, put } from './harness.js';
 
 afterEach(cleanup);
+
+describe('probeFailure', () => {
+  const path = '/media/tv/Kyle XY (2006)/Season 02/Kyle XY (2006) - s02e13.mkv';
+
+  it('keeps ffprobe’s own words, without the command, the path or the demuxer’s address', () => {
+    const error = new Error(
+      `Command failed: /opt/ffprobe -v error -- ${path}\n[matroska,webm @ 0x7f5b927f3840] EBML header parsing failed\n${path}: Invalid data found when processing input\n`,
+    );
+    expect(probeFailure(error, path)).toBe(
+      'EBML header parsing failed · Invalid data found when processing input',
+    );
+  });
+
+  it('falls back to a sentence when ffprobe said nothing', () => {
+    expect(probeFailure(new Error('Command failed: ffprobe'), path)).toBe(
+      'ffprobe could not read the file',
+    );
+  });
+});
 
 describe('summarize', () => {
   it('keeps the first video and audio stream, and names the channel layout', () => {
@@ -523,6 +543,19 @@ describe('the probe queue', () => {
     expect(await broken.probes.now('films', b)).toBeUndefined();
     expect(broken.store.unprobed('films')).toEqual([]);
     expect(broken.errors).toHaveLength(1);
+    // The reason is kept with the row, so a page can say the file is damaged.
+    expect(broken.store.probeOf('films', b)?.unreadable).toBe('invalid data');
+    expect(missing.store.probeOf('films', a)?.unreadable).toBeNull();
+  });
+
+  it('keeps the reason through a scan of the same file', async () => {
+    const dir = await makeDir();
+    const a = await put(join(dir, 'a.mkv'));
+    const broken = queue({ prober: () => Promise.reject(new Error('invalid data')) });
+    broken.store.replace('films', [item(a)]);
+    await broken.probes.now('films', a);
+    broken.store.replace('films', [item(a)]);
+    expect(broken.store.probeOf('films', a)?.unreadable).toBe('invalid data');
   });
 
   it('forgets a file that left the disk', async () => {
