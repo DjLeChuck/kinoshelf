@@ -12,6 +12,8 @@ export interface Candidate {
   readonly posterPath?: string;
   /** 0 to 100; only the candidates of the analysis have one, a manual search has none. */
   readonly score?: number;
+  /** TMDB has no such season and episode for this series, which caps the score. */
+  readonly episodeUnknown?: boolean;
 }
 
 export interface ErrorBody {

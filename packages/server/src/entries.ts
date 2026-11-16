@@ -27,6 +27,8 @@ export interface StoredCandidate {
   readonly year?: number;
   readonly posterPath?: string;
   readonly score: number;
+  /** The file's season and episode are not in TMDB's season, which caps the score (absent: no). */
+  readonly episodeUnknown?: true;
 }
 
 export interface Entry {
@@ -79,10 +81,14 @@ const COLUMNS =
 /** Candidates kept per file: the runner-ups a human needs, a few kilobytes less than all of them. */
 const KEPT_CANDIDATES = 4;
 
-const compact = ({
-  candidate,
-  score,
-}: Pick<ScoredCandidate, 'candidate' | 'score'>): StoredCandidate => ({
+const compact = (
+  {
+    candidate,
+    score,
+    breakdown,
+  }: Pick<ScoredCandidate, 'candidate' | 'score'> & Partial<Pick<ScoredCandidate, 'breakdown'>>,
+  parsed: ParsedMedia,
+): StoredCandidate => ({
   kind: candidate.kind,
   id: candidate.id,
   title: candidate.title,
@@ -90,6 +96,11 @@ const compact = ({
   ...(candidate.year !== undefined && { year: candidate.year }),
   ...(candidate.posterPath !== undefined && { posterPath: candidate.posterPath }),
   score,
+  // A choice made by hand has no breakdown: it says nothing of the season.
+  ...(parsed.kind === 'episode' &&
+    candidate.kind === 'series' &&
+    breakdown !== undefined &&
+    breakdown.episodeExists === 0 && { episodeUnknown: true as const }),
 });
 
 function outcomeOf(entry: AnalysisEntry): { reason?: string; candidates: StoredCandidate[] } {
@@ -99,7 +110,9 @@ function outcomeOf(entry: AnalysisEntry): { reason?: string; candidates: StoredC
   }
   const ranked =
     outcome.status === 'matched' ? [outcome.best, ...outcome.others] : outcome.candidates;
-  return { candidates: ranked.slice(0, KEPT_CANDIDATES).map(compact) };
+  return {
+    candidates: ranked.slice(0, KEPT_CANDIDATES).map((scored) => compact(scored, entry.parsed)),
+  };
 }
 
 function toEntry(row: EntryRow): Entry {
@@ -377,7 +390,13 @@ export class EntryStore {
         };
         const kept = outcome.candidates.find((c) => c.id.id === chosen.candidate.id.id);
         const candidates = [
-          { ...compact(chosen), ...(kept && { score: kept.score }) },
+          {
+            ...compact(chosen, { kind: 'unknown', episodes: [], path: '' }),
+            ...(kept && {
+              score: kept.score,
+              ...(kept.episodeUnknown && { episodeUnknown: true }),
+            }),
+          },
           ...outcome.candidates.filter((c) => c.id.id !== chosen.candidate.id.id),
         ].slice(0, KEPT_CANDIDATES);
         this.database

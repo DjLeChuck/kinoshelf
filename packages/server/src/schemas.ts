@@ -273,7 +273,14 @@ export const entrySchema = {
       items: {
         type: 'object',
         required: ['kind', 'id', 'title', 'originalTitle', 'score'],
-        properties: { ...candidateProperties, score: { type: 'number' } },
+        properties: {
+          ...candidateProperties,
+          score: { type: 'number' },
+          episodeUnknown: {
+            type: 'boolean',
+            description: 'TMDB has no such season and episode for this series: a human must look.',
+          },
+        },
       },
     },
     /** Where the video will go, once matched. */

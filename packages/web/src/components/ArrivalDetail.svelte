@@ -300,6 +300,9 @@
           selected = candidate;
         }}
       />
+      {#if selected?.episodeUnknown}
+        <p class="alert alert-warn" role="status">{t('web.queue.episode-unknown')}</p>
+      {/if}
     {:else}
       <p class="muted">
         {entry.reason ? `${t(`unrecognized.${entry.reason}` as MessageKey)}. ` : ''}{t(
