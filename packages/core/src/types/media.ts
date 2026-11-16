@@ -51,6 +51,12 @@ export interface ParsedMedia {
    */
   readonly knownIds?: readonly ExternalId[];
   /**
+   * IMDb ids found in the names (`{imdb-tt0133093}`, `[imdbid-tt0133093]`). Not a `knownIds` entry:
+   * the matcher first asks the provider which work each one designates, and only that answer is
+   * a hint.
+   */
+  readonly imdbIds?: readonly string[];
+  /**
    * Country named in the file name (`The.Office.US`), ISO 3166-1 alpha-2 (`UK` becomes `GB`).
    * Tells apart same-titled works made in different countries.
    */

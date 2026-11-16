@@ -150,6 +150,54 @@ describe('searchMovies', () => {
   });
 });
 
+describe('findByImdbId', () => {
+  const found = (body: unknown) => [
+    at('/3/find/tt0083658', () => json(JSON.stringify(body))),
+    ...tmdbRoutes,
+  ];
+  const movieResult = {
+    id: 78,
+    title: 'Blade Runner',
+    original_title: 'Blade Runner',
+    release_date: '1982-06-25',
+  };
+
+  it('asks TMDB for the id and maps a movie like a search result', async () => {
+    const { provider, requests } = make(found({ movie_results: [movieResult], tv_results: [] }));
+    const candidate = await provider.findByImdbId('tt0083658', 'fr');
+
+    expect(candidate).toMatchObject({
+      kind: 'movie',
+      id: { provider: 'tmdb', id: 78 },
+      title: 'Blade Runner',
+      year: 1982,
+    });
+    const request = requests.find((r) => r.url.pathname === '/3/find/tt0083658');
+    expect(request?.url.searchParams.get('external_source')).toBe('imdb_id');
+    expect(request?.url.searchParams.get('language')).toBe('fr');
+  });
+
+  it('maps a series', async () => {
+    const { provider } = make(
+      found({
+        movie_results: [],
+        tv_results: [{ id: 136315, name: 'The Bear', original_name: 'The Bear' }],
+      }),
+    );
+    expect(await provider.findByImdbId('tt0083658')).toMatchObject({
+      kind: 'series',
+      id: { provider: 'tmdb', id: 136315 },
+    });
+  });
+
+  it('answers null when TMDB knows nothing of the id, or answers an episode only', async () => {
+    const { provider } = make(
+      found({ movie_results: [], tv_results: [], tv_episode_results: [{}] }),
+    );
+    expect(await provider.findByImdbId('tt0083658')).toBeNull();
+  });
+});
+
 describe('searchSeries', () => {
   it('maps real results using the TV field names and first_air_date_year', async () => {
     const { provider, requests } = make();

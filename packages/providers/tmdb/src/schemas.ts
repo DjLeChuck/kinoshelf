@@ -33,6 +33,12 @@ export const tvSearchSchema = z.object({
 });
 
 /** One result of a search. */
+/** `/find` answers with the same shapes as the searches, one list per kind of work. */
+export const findSchema = z.object({
+  movie_results: movieSearchSchema.shape.results.nullish(),
+  tv_results: tvSearchSchema.shape.results.nullish(),
+});
+
 export type MovieResult = z.infer<typeof movieSearchSchema>['results'][number];
 export type TvResult = z.infer<typeof tvSearchSchema>['results'][number];
 

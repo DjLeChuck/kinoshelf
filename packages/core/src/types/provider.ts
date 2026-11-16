@@ -79,6 +79,11 @@ export interface MetadataProvider {
    * regular season. Checking that an episode exists in the returned season is the matcher's job.
    */
   getSeason(seriesId: ExternalId, season: number, language?: string): Promise<SeasonInfo | null>;
+  /**
+   * The work an IMDb id (`tt0133093`) designates, `null` if the provider knows none. Optional: a
+   * provider that cannot look an id up is simply not asked. Any other failure throws.
+   */
+  findByImdbId?(imdbId: string, language?: string): Promise<Candidate | null>;
   /** Full record for a metadata file; `null` if unknown (any other failure throws). */
   getMovieDetails(id: ExternalId, language?: string): Promise<MovieDetails | null>;
   getSeriesDetails(id: ExternalId, language?: string): Promise<SeriesDetails | null>;

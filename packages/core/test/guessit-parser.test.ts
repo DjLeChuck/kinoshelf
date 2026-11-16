@@ -111,10 +111,24 @@ describe('GuessitParser', () => {
       });
     });
 
-    it('strips imdb/tvdb/edition tags without reporting them as ids', () => {
+    it('strips imdb/tvdb/edition tags without reporting them as known ids', () => {
       const parsed = parser.parse('Blade Runner (1982) {imdb-tt0083658} {edition-Final Cut}.mkv');
       expect(parsed).toMatchObject({ kind: 'movie', title: 'Blade Runner', year: 1982 });
       expect(parsed.knownIds).toBeUndefined();
+    });
+
+    it.each([
+      ['Blade Runner (1982) {imdb-tt0083658}.mkv'],
+      ['Blade Runner (1982) [imdbid-tt0083658]/Blade Runner (1982).mkv'],
+      ['Blade Runner (1982) {IMDB-TT0083658}/Blade Runner (1982) {imdb-tt0083658}.mkv'],
+    ])('reports an imdb id apart, once: %s', (path) => {
+      const parsed = parser.parse(path);
+      expect(parsed.imdbIds).toEqual(['tt0083658']);
+      expect(parsed.title).toBe('Blade Runner');
+    });
+
+    it('ignores an imdb tag that is not an id', () => {
+      expect(parser.parse('Blade Runner (1982) {imdb-1234}.mkv').imdbIds).toBeUndefined();
     });
 
     it('deduplicates the same id found in folder and file', () => {

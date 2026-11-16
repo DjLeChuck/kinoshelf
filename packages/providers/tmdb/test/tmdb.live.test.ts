@@ -29,6 +29,19 @@ describe.skipIf(!live)('TMDB (live)', () => {
     expect(await provider.getSeason(id, 99)).toBeNull();
   });
 
+  it('resolves an imdb id to a movie, a series, or nothing', async () => {
+    expect(await provider.findByImdbId('tt1160419')).toMatchObject({
+      kind: 'movie',
+      id: { provider: 'tmdb', id: 438631 },
+      title: 'Dune',
+    });
+    expect(await provider.findByImdbId('tt14452776')).toMatchObject({
+      kind: 'series',
+      id: { provider: 'tmdb', id: 136315 },
+    });
+    expect(await provider.findByImdbId('tt0000001')).not.toMatchObject({ id: { id: 438631 } });
+  });
+
   it('reads full details, credits and imdb id included', async () => {
     const movie = await provider.getMovieDetails({ provider: 'tmdb', id: 438631 });
     expect(movie).toMatchObject({ kind: 'movie', title: 'Dune', imdbId: 'tt1160419' });

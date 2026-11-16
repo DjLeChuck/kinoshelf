@@ -24,6 +24,7 @@ import {
   movieAlternativeTitlesSchema,
   movieFullDetailsSchema,
   episodeImagesSchema,
+  findSchema,
   imagesSchema,
   type ImageList,
   movieSearchSchema,
@@ -198,6 +199,25 @@ export class TmdbProvider implements MetadataProvider {
         this.movieCandidate(result, index < this.alternativeTitlesFor),
       ),
     );
+  }
+
+  /** An id found in a name is checked by the matcher, so the result needs no more than a search's. */
+  async findByImdbId(
+    imdbId: string,
+    language?: string,
+  ): Promise<MovieCandidate | SeriesCandidate | null> {
+    const response = await this.client.get(
+      `/3/find/${encodeURIComponent(imdbId)}`,
+      { external_source: 'imdb_id', language: language ?? this.language },
+      findSchema,
+      { ttlMs: SEARCH_TTL_MS, nullOn404: true },
+    );
+    const movie = response?.movie_results?.[0];
+    if (movie) {
+      return this.movieCandidate(movie, true);
+    }
+    const series = response?.tv_results?.[0];
+    return series ? this.seriesCandidate(series, true) : null;
   }
 
   async getMovieDetails(id: ExternalId, language?: string): Promise<MovieDetails | null> {

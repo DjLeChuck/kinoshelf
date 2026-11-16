@@ -64,6 +64,8 @@ export class FakeProvider implements MetadataProvider {
   /** Collections by movie id and by collection id, for the tests that need them. */
   readonly movieCollections = new Map<number, MovieCollection>();
   readonly collectionInfos = new Map<number, CollectionInfo>();
+  /** The work an IMDb id designates, for the tests of `findByImdbId`. */
+  readonly imdbIds = new Map<string, Candidate>();
   readonly calls: { method: string; query?: SearchQuery; id?: ExternalId; season?: number }[] = [];
 
   constructor(
@@ -87,6 +89,11 @@ export class FakeProvider implements MetadataProvider {
         (c): c is SeriesCandidate => c.kind === 'series' && this.answer(query, c),
       ),
     );
+  }
+
+  findByImdbId(imdbId: string): Promise<Candidate | null> {
+    this.calls.push({ method: 'findByImdbId' });
+    return Promise.resolve(this.imdbIds.get(imdbId) ?? null);
   }
 
   getSeason(seriesId: ExternalId, seasonNumber: number): Promise<SeasonInfo | null> {

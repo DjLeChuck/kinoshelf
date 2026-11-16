@@ -6,6 +6,12 @@ All notable changes to Kinoshelf are written here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- An IMDb id in a name (`{imdb-tt0083658}`, `[imdbid-tt0083658]`) is now used: TMDB says which work it
+  designates, that work joins the candidates (so a title the search misses is still weighed) and gets the
+  same bonus as a TMDB id, only when its title, season and year agree.
+
 ### Changed
 
 - A video `ffprobe` cannot read is now said so: one log line with its path and `ffprobe`'s reason (no

@@ -21,11 +21,15 @@ export class Matcher {
       return { status: 'unrecognized', reason: 'no-title' };
     }
 
-    const candidates = await this.search(parsed, parsed.title);
+    const {
+      files: [hinted = parsed],
+      found,
+    } = await this.resolveImdbIds([parsed]);
+    const candidates = mergeCandidates(await this.search(hinted, parsed.title), found);
     if (candidates.length === 0) {
       return { status: 'unrecognized', reason: 'no-candidates' };
     }
-    return this.decide(await this.rank(parsed, candidates));
+    return this.decide(await this.rank(hinted, candidates));
   }
 
   /**
@@ -40,13 +44,19 @@ export class Matcher {
     if (lead?.title === undefined) {
       return files.map(() => ({ status: 'unrecognized', reason: 'no-title' }));
     }
-    const candidates = await this.search(lead, lead.title);
+    const { files: hintedFiles, found } = await this.resolveImdbIds(files);
+    const candidates = mergeCandidates(
+      await this.search(hintedFiles[files.indexOf(lead)] ?? lead, lead.title),
+      found,
+    );
     if (candidates.length === 0) {
       return files.map(() => ({ status: 'unrecognized', reason: 'no-candidates' }));
     }
 
     const ranked = await Promise.all(
-      files.map((file) => (file.title?.trim() ? this.rank(file, candidates) : Promise.resolve([]))),
+      hintedFiles.map((file) =>
+        file.title?.trim() ? this.rank(file, candidates) : Promise.resolve([]),
+      ),
     );
     const totals = new Map<string, number>();
     for (const scored of ranked) {
@@ -65,6 +75,42 @@ export class Matcher {
       const pick = scored.find(({ candidate }) => candidateKey(candidate) === chosen);
       return this.decide(pick ? [pick, ...scored.filter((other) => other !== pick)] : scored);
     });
+  }
+
+  /**
+   * The IMDb ids the names carry, asked of the provider once each: what it answers joins the
+   * candidates (so a work the title search misses is still weighed) and becomes a `knownIds`
+   * entry, which `score` only believes when the title, season and year agree. An id the provider
+   * does not know, or a provider with no such lookup, changes nothing.
+   */
+  private async resolveImdbIds(
+    files: readonly ParsedMedia[],
+  ): Promise<{ files: ParsedMedia[]; found: Candidate[] }> {
+    const lookup = this.provider.findByImdbId?.bind(this.provider);
+    const wanted = [...new Set(files.flatMap((file) => file.imdbIds ?? []))];
+    if (lookup === undefined || wanted.length === 0) {
+      return { files: [...files], found: [] };
+    }
+
+    const answers = new Map<string, Candidate>();
+    await Promise.all(
+      wanted.map(async (imdbId) => {
+        const candidate = await lookup(imdbId, this.config.language);
+        if (candidate) {
+          answers.set(imdbId, candidate);
+        }
+      }),
+    );
+    return {
+      files: files.map((file) => {
+        const ids = (file.imdbIds ?? []).flatMap((imdbId) => {
+          const candidate = answers.get(imdbId);
+          return candidate ? [candidate.id] : [];
+        });
+        return ids.length === 0 ? file : { ...file, knownIds: [...(file.knownIds ?? []), ...ids] };
+      }),
+      found: [...answers.values()],
+    };
   }
 
   private async rank(
@@ -163,4 +209,13 @@ export class Matcher {
     );
     return seasons;
   }
+}
+
+/** `extra` after `candidates`, a work already there left out. */
+function mergeCandidates(candidates: Candidate[], extra: readonly Candidate[]): Candidate[] {
+  const seen = new Set(candidates.map(candidateKey));
+  return [
+    ...candidates,
+    ...extra.filter((c) => !seen.has(candidateKey(c)) && seen.add(candidateKey(c))),
+  ];
 }

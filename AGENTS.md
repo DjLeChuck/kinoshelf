@@ -159,6 +159,10 @@ nowhere: a custom profile file is to be discussed again.
   from the name's, or "Automatic", and can be changed (`POST /api/libraries/{id}/execute` with
   `version: true` and `screenSize`, which wins over the name, which wins over the file). Not done:
   a batch action in the web.
+- An IMDb id found in a name (`ParsedMedia.imdbIds`, `{imdb-tt…}` or `[imdbid-tt…]`) is resolved by the
+  optional `MetadataProvider.findByImdbId` (TMDB's `/find`, counted as a `search`): the work it names
+  joins the candidates and becomes a `knownIds` entry, so the rule below applies to it. A provider
+  without the method, or an id it does not know, changes nothing. IMDb itself is never queried (no free API).
 - `ParsedMedia.knownIds` (ids found in names) is a hint, not a truth: a candidate whose id matches
   is boosted only if its type, title, season/episode and year agree. If the id designates a
   candidate yet another one scores higher (`Dune (2021) {tmdb-841}`: 841 is the 1984 film), the

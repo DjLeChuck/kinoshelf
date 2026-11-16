@@ -16,6 +16,7 @@ export interface GuessitParserOptions {
 // (`[tmdbid-1]`). guessit would read them as titles, so they are removed before parsing.
 const TAG = /\s*[{[](?:tmdb|tvdb|imdb)(?:id)?-[^}\]]*[}\]]|\s*\{edition-[^}]*\}/gi;
 const TMDB_TAG = /[{[]tmdb(?:id)?-(\d+)[}\]]/i;
+const IMDB_TAG = /[{[]imdb(?:id)?-(tt\d{7,10})[}\]]/i;
 
 const toList = <T>(value: T | readonly T[] | undefined): readonly T[] =>
   value === undefined ? [] : Array.isArray(value) ? (value as readonly T[]) : [value as T];
@@ -117,6 +118,14 @@ export class GuessitParser implements Parser {
       const id = TMDB_TAG.exec(segment)?.[1];
       if (id !== undefined && !knownIds.some((known) => known.id === Number(id))) {
         knownIds.push({ provider: 'tmdb', id: Number(id) });
+      }
+    }
+
+    const imdbIds: string[] = [];
+    for (const segment of context) {
+      const id = IMDB_TAG.exec(segment)?.[1]?.toLowerCase();
+      if (id !== undefined && !imdbIds.includes(id)) {
+        imdbIds.push(id);
       }
     }
 
@@ -238,6 +247,7 @@ export class GuessitParser implements Parser {
       ...(kind === 'episode' && episodeTitle !== undefined && { episodeTitle }),
       ...(extension && { extension }),
       ...(knownIds.length > 0 && { knownIds }),
+      ...(imdbIds.length > 0 && { imdbIds }),
       ...(country !== undefined && { country }),
       ...(releaseGroup !== undefined && { releaseGroup }),
       ...(languages.length > 0 && { languages }),

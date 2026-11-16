@@ -339,6 +339,42 @@ describe('series year', () => {
   });
 });
 
+describe('imdb ids', () => {
+  it('weighs the work an imdb id designates, even when the title search misses it', async () => {
+    const provider = new FakeProvider([], {}, () => false);
+    provider.imdbIds.set('tt0083658', movie(78, 'Blade Runner', 1982));
+    const parsed = parsedMovie('Blade Runner', 1982, { imdbIds: ['tt0083658'] });
+    const { best } = expectMatched(await new Matcher(provider).match(parsed));
+    expect(best.candidate.id.id).toBe(78);
+    expect(best.breakdown.knownId).toBeGreaterThan(0);
+  });
+
+  it('asks once per id, whatever the number of files', async () => {
+    const provider = new FakeProvider([series(1, 'The Bear', 2022)], { '1:1': season(1, [1, 2]) });
+    provider.imdbIds.set('tt14452776', series(1, 'The Bear', 2022));
+    const files = [1, 2].map((n) =>
+      parsedEpisode('The Bear', 1, [n], 2022, { imdbIds: ['tt14452776'] }),
+    );
+    await new Matcher(provider).matchRelease(files);
+    expect(provider.calls.filter((c) => c.method === 'findByImdbId')).toHaveLength(1);
+  });
+
+  it('never believes an id attached to an unrelated title', async () => {
+    const provider = new FakeProvider([movie(1, 'Casablanca', 1942)]);
+    provider.imdbIds.set('tt0083658', movie(78, 'Blade Runner', 1982));
+    const parsed = parsedMovie('Dune', 2021, { imdbIds: ['tt0083658'] });
+    const outcome = expectAmbiguous(await new Matcher(provider).match(parsed));
+    expect(outcome.candidates.every((c) => c.breakdown.knownId === 0)).toBe(true);
+  });
+
+  it('changes nothing for an id the provider does not know', async () => {
+    const provider = new FakeProvider([movie(78, 'Blade Runner', 1982)]);
+    const parsed = parsedMovie('Blade Runner', 1982, { imdbIds: ['tt9999999'] });
+    const { best } = expectMatched(await new Matcher(provider).match(parsed));
+    expect(best.breakdown.knownId).toBe(0);
+  });
+});
+
 describe('known ids', () => {
   it('does not let an id rescue a title that is too different', async () => {
     const provider = new FakeProvider([

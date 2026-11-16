@@ -48,7 +48,7 @@ export interface UsageSink {
 
 /** Which kind of call a TMDB path is (`/3/tv/1/season/2` is a season, `/3/tv/1/images` images). */
 export function callKindOf(path: string): TmdbCallKind {
-  if (path.startsWith('/3/search/')) {
+  if (path.startsWith('/3/search/') || path.startsWith('/3/find/')) {
     return 'search';
   }
   if (path.endsWith('/images')) {
