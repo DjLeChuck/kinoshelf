@@ -1,15 +1,15 @@
 import {
+  closeSync,
   createReadStream,
-  createWriteStream,
   mkdirSync,
   openSync,
   renameSync,
   statSync,
+  writeSync,
 } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { Readable } from 'node:stream';
-import type { WriteStream } from 'node:fs';
 
 export const LOG_LEVELS = ['debug', 'info', 'warn', 'error'] as const;
 export type LogLevel = (typeof LOG_LEVELS)[number];
@@ -160,7 +160,7 @@ export class LogStore {
   private readonly entries: { entry: LogEntry; line: string }[] = [];
   private readonly listeners = new Set<() => void>();
   private seq = 0;
-  private stream: WriteStream | undefined;
+  private fd: number | undefined;
   private bytes = 0;
   private timer: NodeJS.Timeout | undefined;
 
@@ -260,16 +260,11 @@ export class LogStore {
     );
   }
 
-  async close(): Promise<void> {
+  close(): Promise<void> {
     clearTimeout(this.timer);
     this.timer = undefined;
-    const { stream } = this;
-    this.stream = undefined;
-    if (stream) {
-      await new Promise<void>((resolve) => {
-        stream.end(resolve);
-      });
-    }
+    this.closeFile();
+    return Promise.resolve();
   }
 
   /** Keeps a line in memory when it is one of pino's; false for anything else. */
@@ -348,28 +343,39 @@ export class LogStore {
       this.bytes = 0;
     }
     // Opened now, not on the first write: a rotation right after must find the file to rename.
-    let stream: WriteStream;
+    // Written with `writeSync` on the descriptor: a line is short, and Node 26.13's `createWriteStream({ fd })`
+    // crashes the process (`h.writev is not a function`) as soon as two writes are buffered.
     try {
-      stream = createWriteStream(path, { fd: openSync(path, 'a') });
+      this.fd = openSync(path, 'a');
     } catch (error) {
       process.stderr.write(`Cannot open the log file: ${(error as Error).message}\n`);
-      return;
     }
-    // A full or read-only disk must not take the server down: the memory keeps working.
-    stream.on('error', (error) => {
-      process.stderr.write(`Cannot write the log file: ${error.message}\n`);
-      if (this.stream === stream) {
-        this.stream = undefined;
+  }
+
+  private closeFile(): void {
+    const { fd } = this;
+    this.fd = undefined;
+    if (fd !== undefined) {
+      try {
+        closeSync(fd);
+      } catch {
+        // Already gone: nothing is left to flush.
       }
-    });
-    this.stream = stream;
+    }
   }
 
   private append(text: string): void {
-    if (!this.stream) {
+    if (this.fd === undefined) {
       return;
     }
-    this.stream.write(text);
+    // A full or read-only disk must not take the server down: the memory keeps working.
+    try {
+      writeSync(this.fd, text);
+    } catch (error) {
+      process.stderr.write(`Cannot write the log file: ${(error as Error).message}\n`);
+      this.closeFile();
+      return;
+    }
     this.bytes += Buffer.byteLength(text);
     if (this.bytes >= this.maxFileBytes) {
       this.rotate();
@@ -378,7 +384,7 @@ export class LogStore {
 
   private rotate(): void {
     const paths = this.paths();
-    this.stream?.end();
+    this.closeFile();
     // The oldest goes; each one moves to the next name, then a new file starts.
     for (let i = paths.length - 1; i > 0; i -= 1) {
       try {

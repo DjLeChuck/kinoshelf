@@ -175,6 +175,20 @@ describe('LogStore', () => {
     expect(existsSync(join(directory, 'kinoshelf.log.3'))).toBe(false);
   });
 
+  it('writes a burst of lines to the file without a stream (Node 26 crashed on buffered writes)', async () => {
+    const directory = await makeDir();
+    const store = new LogStore({ directory });
+    await store.open();
+    for (let i = 1; i <= 5; i++) {
+      store.write(line(INFO, `burst ${i}`));
+    }
+    // The crash came from a callback after the writes: let the event loop turn before reading.
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    const text = await readFile(join(directory, 'kinoshelf.log'), 'utf8');
+    expect(text.split('\n').filter((l) => l !== '')).toHaveLength(5);
+    await store.close();
+  });
+
   it('brings back the last lines after a restart, and downloads oldest first', async () => {
     const directory = await makeDir();
     const first = new LogStore({ directory, maxFileBytes: 300, files: 3 });
