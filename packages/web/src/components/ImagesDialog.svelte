@@ -709,7 +709,8 @@
 <style>
   dialog {
     width: min(1180px, 96vw);
-    max-height: 92vh;
+    /* Fixed, not fitted to the content: the height must not jump from one tab or one count to the next. */
+    height: min(1200px, 92vh);
     padding: 0;
     color: var(--text);
     background: var(--surface);
@@ -730,8 +731,8 @@
   .box {
     display: flex;
     flex-direction: column;
+    flex: 1 1 auto;
     min-height: 0;
-    max-height: 92vh;
   }
 
   header {
@@ -823,6 +824,7 @@
 
   .body {
     display: flex;
+    flex: 1 1 auto;
     flex-wrap: wrap;
     min-height: 0;
     overflow: auto;
