@@ -21,6 +21,11 @@ the next scan. Nothing scans on its own: a scan comes from a click, from the fol
 In the background, once no job runs, `ffprobe` reads each file (picture size, codec, HDR, audio,
 subtitles) to fill the details. A file is read again only if its size or date changed.
 
+A file `ffprobe` cannot read (a damaged or incomplete download) is not tried again either. Its
+version shows an **Unreadable** badge with `ffprobe`'s own words, the log gets one line with the
+path and the reason, and the System page counts such files as a warning. Replace the file and it is
+read again.
+
 ### Scan one folder again
 
 From the page of a movie, of a show or of a season, **Scan again** reads one folder again (a movie's, a

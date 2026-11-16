@@ -152,6 +152,9 @@ nowhere: a custom profile file is to be discussed again.
   page of a movie or an episode (below) or when validating an arrival (`screenSize` in the body of
   `POST /api/entries/{id}/match` and `/preview`, for that file only and kept in its stored plan). A
   missing ffprobe, or a file it cannot read, gives no size and the planner falls back to a conflict.
+  A file it cannot read is remembered empty **with the reason** (`Probe.unreadable`, `library_items.unreadable`,
+  `file.unreadable` of the API, words from `probeFailure`): the versions table shows an Unreadable badge, the log one
+  line, and Health counts them (`videos-unreadable`, warning).
   The page of a movie or an episode has "Add the version to the name": a dialog whose size menu starts
   from the name's, or "Automatic", and can be changed (`POST /api/libraries/{id}/execute` with
   `version: true` and `screenSize`, which wins over the name, which wins over the file). Not done:
@@ -286,7 +289,7 @@ badge before it is built.
   folder unreachable, a Plex sign-in plex.tv refused) and does no `statfs`, no `ffprobe`; `Health.check()` emits the
   payload-less `health` event only when the count changes, and runs every minute (a share that goes away says nothing)
   and on each `settings` event. `GET /api/health/report` is what the page reads (disk space, `ffprobe -version`, the
-  database file's size, queue counts) and adds the **warnings** (`ffprobe-missing`, `disk-low` under 5 %,
+  database file's size, queue counts) and adds the **warnings** (`ffprobe-missing`, `videos-unreadable`, `disk-low` under 5 %,
   `webhook-failing`, `media-refresh-failed`): a warning never turns the badge red. A problem is `{ area, code, params,
 severity }`, `area` being its card and `code` translated by the web (`web.health.problem.<code>`).
   Data comes from the modules that own it: `FolderWatcher.status()` (`lastScanAt`, `nextScanAt`, `intervalSeconds`: the

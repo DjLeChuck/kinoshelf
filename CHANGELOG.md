@@ -6,6 +6,11 @@ All notable changes to Kinoshelf are written here. The format follows
 
 ## [Unreleased]
 
+### Changed
+
+- A video `ffprobe` cannot read is now said so: one log line with its path and `ffprobe`'s reason (no
+  stack), an Unreadable badge on its version, and a warning on the System page.
+
 ## [1.0.0] - 2026-11-16
 
 First stable release.

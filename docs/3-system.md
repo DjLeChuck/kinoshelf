@@ -25,7 +25,7 @@ cause for each problem and a link to the Settings section that fixes it:
 
 The **System** entry of the header carries a red badge when there is an **error**: an unreadable
 database, a library or watched folder that cannot be reached (an unmounted share), a Plex sign-in
-that plex.tv refused. A **warning** (ffprobe missing, disk almost full, a failing webhook, a media
+that plex.tv refused. A **warning** (ffprobe missing, videos `ffprobe` cannot read, disk almost full, a failing webhook, a media
 server refresh that failed) never turns the badge red.
 
 ## Logs
