@@ -19,6 +19,8 @@
     type Arrival,
     type ArrivalPage,
   } from '../lib/arrivals.js';
+  import { loadWhenVisible } from '../lib/infinite-scroll.js';
+  import { MAX_SELECTION } from '../lib/library-items.js';
   import type { WatchScan, WatchStatus } from '../lib/watch.js';
   import ArrivalDetail from './ArrivalDetail.svelte';
 
@@ -73,18 +75,29 @@
   const siblings = $derived(Math.max(mates.length, 1));
   /** Everything matched with confidence that only waits for a go. */
   const ready = $derived(page?.items.filter(({ state }) => state === 'ready') ?? []);
-  // Only when the list is whole: "all" must not leave the files of a later page behind.
+  /** The list is whole: the ready files are all in it, and can be counted. */
+  const whole = $derived(page !== undefined && page.total === page.items.length);
+  // A list not read to the end may still hold ready files further down: the button reads them when
+  // pressed. Under another filter ("to review") it would be offered for files that tab never shows.
   const canTransferAll = $derived(
-    ready.length > 0 && page !== undefined && page.total === page.items.length,
+    whole ? ready.length > 0 : page !== undefined && (filter === 'all' || filter === 'ready'),
   );
   let starting = $state(false);
 
   async function transferAll(): Promise<void> {
     starting = true;
     try {
+      // Not the files on screen but every one that is ready, as the button promises.
+      const everything = whole
+        ? ready
+        : (
+            await readArrivals(MAX_SELECTION, (limit, offset) =>
+              api.get<ArrivalPage>(`/api/arrivals?limit=${limit}&offset=${offset}&state=ready`),
+            )
+          ).items.filter(({ state }) => state === 'ready');
       // A file being validated is held by that validation: asking for it too would be refused.
       const count = await startPlanned(
-        ready.filter(({ id }) => !validations.running(id)),
+        everything.filter(({ id }) => !validations.running(id)),
         api.post,
       );
       notice = t('web.arrivals.transfer-all.done', { count });
@@ -177,7 +190,9 @@
         onclick={() => void transferAll()}
         >{starting
           ? t('web.arrivals.transfer-all.running')
-          : t('web.arrivals.transfer-all', { count: ready.length })}</button
+          : whole
+            ? t('web.arrivals.transfer-all', { count: ready.length })
+            : t('web.arrivals.transfer-all.any')}</button
       >
     </div>
   {/if}
@@ -269,14 +284,17 @@
         {/each}
         {#if page.total > page.items.length}
           <li>
-            <button
-              type="button"
-              class="btn"
-              onclick={() => {
-                releases += PAGE;
-                void load();
-              }}>{t('web.library.more', { shown: page.items.length, total: page.total })}</button
-            >
+            {#key page.items.length}
+              <button
+                type="button"
+                class="btn"
+                use:loadWhenVisible
+                onclick={() => {
+                  releases += PAGE;
+                  void load();
+                }}>{t('web.library.more', { shown: page.items.length, total: page.total })}</button
+              >
+            {/key}
           </li>
         {/if}
       </ul>

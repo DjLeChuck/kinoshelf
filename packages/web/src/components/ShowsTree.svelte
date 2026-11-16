@@ -1,5 +1,6 @@
 <script lang="ts">
   import { baseName, rescanPath } from '../lib/paths.js';
+  import { loadWhenVisible } from '../lib/infinite-scroll.js';
   import { untrack } from 'svelte';
   import { ApiError } from '../lib/api.js';
   import { messageOf } from '../lib/errors.js';
@@ -22,6 +23,7 @@
     episodeLabel,
     groupSettling,
     libraryItems,
+    MAX_SELECTION,
     settleKey,
     lacksOnTmdb,
     thumbOf,
@@ -152,6 +154,25 @@
   const pickedShows = $derived(runnable.filter((s) => picked.includes(s.tmdbId)));
   const toRename = $derived(pickedShows.reduce((sum, s) => sum + s.rename, 0));
   const toRefresh = $derived(pickedShows.reduce((sum, s) => sum + s.refresh, 0));
+
+  /** Past `MAX_SELECTION` the shows are not read whole: the server would refuse their episodes. */
+  const canPickEverything = $derived(
+    shows !== undefined &&
+      shows.total > shows.items.length &&
+      shows.total <= MAX_SELECTION &&
+      pickedShows.length > 0 &&
+      pickedShows.length === runnable.length,
+  );
+
+  /** Reads every show under the filter, then ticks those with something to run: the ones off screen count too. */
+  async function pickEverything(): Promise<void> {
+    if (shows === undefined) {
+      return;
+    }
+    limit = shows.total;
+    await load();
+    picked = runnable.map((s) => s.tmdbId);
+  }
 
   function pick(tmdbId: number, on: boolean): void {
     picked = on ? [...picked, tmdbId] : picked.filter((id) => id !== tmdbId);
@@ -388,6 +409,11 @@
         />
         {t('web.library.run.all')}
       </label>
+      {#if canPickEverything && shows}
+        <button type="button" class="btn" onclick={() => void pickEverything()}>
+          {t('web.library.run.everything.shows', { count: shows.total })}
+        </button>
+      {/if}
       {#if pickedShows.length > 0}
         <span>{t('web.library.run.shows', { count: pickedShows.length })}</span>
         <button
@@ -525,6 +551,7 @@
                     <button
                       type="button"
                       class="btn"
+                      use:loadWhenVisible
                       onclick={() => {
                         settleLimit += PAGE_SIZE;
                         void load();
@@ -780,14 +807,17 @@
         </tbody>
       </table>
       {#if shows.total > shows.items.length}
-        <button
-          type="button"
-          class="btn"
-          onclick={() => {
-            limit += PAGE_SIZE;
-            void load();
-          }}>{t('web.library.more', { shown: shows.items.length, total: shows.total })}</button
-        >
+        {#key shows.items.length}
+          <button
+            type="button"
+            class="btn"
+            use:loadWhenVisible
+            onclick={() => {
+              limit += PAGE_SIZE;
+              void load();
+            }}>{t('web.library.more', { shown: shows.items.length, total: shows.total })}</button
+          >
+        {/key}
       {/if}
     </div>
 

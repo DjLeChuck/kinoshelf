@@ -7,11 +7,13 @@
   import { formatDate } from '../lib/history.js';
   import { libraryApi, type Library } from '../lib/libraries.js';
   import { baseName } from '../lib/paths.js';
+  import { loadWhenVisible } from '../lib/infinite-scroll.js';
   import { router } from '../lib/router.svelte.js';
   import { libraryKey, runs, validations } from '../lib/validations.svelte.js';
   import { oneOf } from '../lib/routes.js';
   import {
     ITEM_FILTERS,
+    MAX_SELECTION,
     PAGE_SIZE,
     SERIES_FILTERS,
     canRun,
@@ -118,6 +120,29 @@
       .filter(({ id }) => wanted.has(id))
       .flatMap((item) => versionsToRun(item, mode));
   });
+
+  /** Past this the server refuses a selection (`MAX_SELECTION`): the list is not read whole for it. */
+  const canPickEverything = $derived(
+    page !== undefined &&
+      page.total > page.items.length &&
+      page.total <= MAX_SELECTION &&
+      pickedItems.length > 0 &&
+      pickedItems.length === page.items.filter(selectable).length,
+  );
+
+  const latestPage = (): ItemsPage | undefined => page;
+
+  /** Reads the whole list under the filter, then ticks every row that can be: what is not on screen counts too. */
+  async function pickEverything(): Promise<void> {
+    if (page === undefined) {
+      return;
+    }
+    limit = page.total;
+    await load();
+    // `load` replaced the page while this waited: read it again, not the one checked above.
+    const whole = latestPage();
+    picked = whole?.items.filter(selectable).map(({ id }) => id) ?? [];
+  }
 
   function pick(id: string, on: boolean): void {
     picked = on ? [...picked, id] : picked.filter((other) => other !== id);
@@ -482,6 +507,11 @@
             />
             {t('web.library.run.all')}
           </label>
+          {#if canPickEverything && page}
+            <button type="button" class="btn" onclick={() => void pickEverything()}>
+              {t('web.library.run.everything', { count: page.total })}
+            </button>
+          {/if}
           {#if pickedItems.length > 0}
             <span>{t('web.library.run.selected', { count: pickedItems.length })}</span>
             <button
@@ -639,14 +669,17 @@
             </tbody>
           </table>
           {#if page.total > page.items.length}
-            <button
-              type="button"
-              class="btn"
-              onclick={() => {
-                limit += PAGE_SIZE;
-                void load();
-              }}>{t('web.library.more', { shown: page.items.length, total: page.total })}</button
-            >
+            {#key page.items.length}
+              <button
+                type="button"
+                class="btn"
+                use:loadWhenVisible
+                onclick={() => {
+                  limit += PAGE_SIZE;
+                  void load();
+                }}>{t('web.library.more', { shown: page.items.length, total: page.total })}</button
+              >
+            {/key}
           {/if}
         </div>
 

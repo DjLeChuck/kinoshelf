@@ -928,6 +928,8 @@ export const en = {
   'web.library.run.select': 'Select {name}',
   'web.library.run.all': 'Select all',
   'web.library.run.shows': 'Selected shows: {count}',
+  'web.library.run.everything': 'Select all {count}, even those not shown',
+  'web.library.run.everything.shows': 'Select all {count} shows, even those not shown',
   'web.library.run.title.rename': 'Rename preview',
   'web.library.run.title.version': 'Version naming preview',
   'web.library.run.version': 'Add the version to the name…',
@@ -1051,6 +1053,7 @@ export const en = {
   'web.arrivals.list.label': 'Files to settle',
   'web.arrivals.empty': 'Nothing waits for you.',
   'web.arrivals.transfer-all': 'Transfer all the files that are ready ({count})',
+  'web.arrivals.transfer-all.any': 'Transfer all the files that are ready',
   'web.arrivals.transfer-all.running': 'Starting…',
   'web.arrivals.transfer-all.done':
     '{count, plural, one {Transfer started for # file} other {Transfer started for # files}}.',

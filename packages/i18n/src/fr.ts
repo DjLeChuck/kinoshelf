@@ -959,6 +959,9 @@ export const fr: Record<keyof typeof en, string> = {
   'web.library.run.select': 'Sélectionner {name}',
   'web.library.run.all': 'Tout sélectionner',
   'web.library.run.shows': 'Séries sélectionnées : {count}',
+  'web.library.run.everything': 'Sélectionner les {count}, même ceux qui ne sont pas affichés',
+  'web.library.run.everything.shows':
+    'Sélectionner les {count} séries, même celles qui ne sont pas affichées',
   'web.library.run.title.rename': 'Aperçu du renommage',
   'web.library.run.title.version': 'Aperçu du nom avec la version',
   'web.library.run.version': 'Ajouter la version au nom…',
@@ -1085,6 +1088,7 @@ export const fr: Record<keyof typeof en, string> = {
   'web.arrivals.list.label': 'Fichiers à trancher',
   'web.arrivals.empty': 'Rien n’attend votre décision.',
   'web.arrivals.transfer-all': 'Transférer tous les fichiers prêts ({count})',
+  'web.arrivals.transfer-all.any': 'Transférer tous les fichiers prêts',
   'web.arrivals.transfer-all.running': 'Lancement…',
   'web.arrivals.transfer-all.done':
     '{count, plural, one {Transfert lancé pour # fichier} other {Transfert lancé pour # fichiers}}.',

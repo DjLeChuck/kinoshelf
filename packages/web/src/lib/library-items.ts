@@ -157,6 +157,9 @@ export interface ItemsPage {
 
 export const PAGE_SIZE = 50;
 
+/** What the server takes in one selection (`MAX_SELECTION`): "select everything" is offered up to it. */
+export const MAX_SELECTION = 5000;
+
 export interface ItemsQuery {
   readonly state?: ItemFilter | undefined;
   /** Only the movies held in several versions, whatever the state. */
