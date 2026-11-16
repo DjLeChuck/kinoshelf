@@ -86,7 +86,8 @@ place never lands here. The files are in three states:
 For each file you see its TMDB candidates and their score, a manual search, and the destination a
 choice would give.
 
-![The Arrivals tab: files ready to transfer, with the TMDB candidate and the destination](images/arrivals.png)
+![The Arrivals tab: files ready to transfer, with the TMDB candidate and the destination](images/arrivals.png#gh-dark-mode-only)
+![The Arrivals tab: files ready to transfer, with the TMDB candidate and the destination](images/arrivals-light.png#gh-light-mode-only)
 
 - **Validate** sends the file to the library you pick (by default the one of its kind in the arrival
   folder's `into`; any library of the work's kind otherwise). The choice is for that file and the
@@ -126,7 +127,8 @@ the metadata files the batch wrote are removed, and the folders it created are p
 
 The selected line is in the address (`/history/<id>`), so you can link to it.
 
-![The History: a batch with what it wrote and its Undo button](images/history.png)
+![The History: a batch with what it wrote and its Undo button](images/history.png#gh-dark-mode-only)
+![The History: a batch with what it wrote and its Undo button](images/history-light.png#gh-light-mode-only)
 
 ## Activity panel
 
@@ -143,7 +145,8 @@ again: a field says that a value is set and leaves it alone when empty. A value 
 environment variable (`TMDB_API_KEY`, `KINOSHELF_API_KEY`) is disabled with an explanation, and the
 API refuses to change it.
 
-![The Settings: libraries and arrival folders](images/settings.png)
+![The Settings: libraries and arrival folders](images/settings.png#gh-dark-mode-only)
+![The Settings: libraries and arrival folders](images/settings-light.png#gh-light-mode-only)
 
 ### TMDB and languages
 
@@ -164,7 +167,7 @@ libraries cannot share a source. A library an arrival folder points at cannot be
 
 How long a release must stay unchanged before it is submitted, a polling interval for network shares
 and whether to transfer what is matched with confidence. See
-[Getting downloads in](4-getting-downloads-in.md#2-watch-a-folder).
+[Getting downloads in](4-getting-downloads-in.md#watch-a-folder).
 
 ### Default settings
 

@@ -6,7 +6,8 @@ in the address (`/system`, `?tab=logs`, `?tab=tmdb`, `?tab=maintenance`, `?tab=d
 
 ## Health
 
-![The Health tab](images/system-health.png)
+![The Health tab](images/system-health.png#gh-dark-mode-only)
+![The Health tab](images/system-health-light.png#gh-light-mode-only)
 
 Eight cards, each `ok`, `warn`, `danger` or `off` (nothing set up: neither good nor wrong), with a
 cause for each problem and a link to the Settings section that fixes it:
@@ -53,7 +54,8 @@ failure or a refusal). Counts are kept for 30 days.
 
 ## Maintenance
 
-![The Maintenance tab](images/system-maintenance.png)
+![The Maintenance tab](images/system-maintenance.png#gh-dark-mode-only)
+![The Maintenance tab](images/system-maintenance-light.png#gh-light-mode-only)
 
 ### Tidy up a library
 

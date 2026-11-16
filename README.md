@@ -20,7 +20,10 @@ equivalent of tinyMediaManager and a companion to Radarr/Sonarr: it never downlo
 > watcher and the NFO and artwork writers for Plex and Jellyfin.
 
 <p align="center">
-  <img alt="The Libraries page: a movie library with its filters and the page of one film" src="docs/images/libraries.png" width="900">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/images/libraries.png">
+    <img alt="The Libraries page: a movie library with its filters and the page of one film" src="docs/images/libraries-light.png" width="900">
+  </picture>
 </p>
 
 ## Features

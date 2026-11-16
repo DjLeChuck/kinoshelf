@@ -38,7 +38,8 @@ replaced (the old ones are kept in `replaced/`, and undo puts them back), unless
 
 A movie library lists movies; a series library reads as a **tree**: show, season, episode.
 
-![A series library as a tree, with versions, NFO and images, and missing episodes](images/libraries-series.png)
+![A series library as a tree, with versions, NFO and images, and missing episodes](images/libraries-series.png#gh-dark-mode-only)
+![A series library as a tree, with versions, NFO and images, and missing episodes](images/libraries-series-light.png#gh-light-mode-only)
 
 - **Search** reads the title and the file name, never the folders.
 - **Filters**, in a panel (a sheet on a phone) and as chips under the search box:
@@ -149,7 +150,8 @@ writes the one picture for every version of the episode.
 In a movie library that writes NFO, a **collection** (a saga) exists for a player through the NFO's
 `<set>`. The library has a **Films | Collections** choice beside its name.
 
-![The Collections screen of a movie library](images/collections.png)
+![The Collections screen of a movie library](images/collections.png#gh-dark-mode-only)
+![The Collections screen of a movie library](images/collections-light.png#gh-light-mode-only)
 
 - A movie's collection comes from TMDB at no extra call. You can **set the collection** by hand: another
   TMDB collection, a custom name, or none. Your choice is kept apart and a scan never overrides it.
