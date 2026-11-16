@@ -51,8 +51,8 @@ read and write.
 - **TrueNAS**: use the `apps` user (568). Kinoshelf moves, links and writes files, so that user
   needs write access to the datasets holding your libraries and arrival folders: make it their
   owner, or grant it in the dataset's ACL. Without it, a scan works (read only) and the renames then
-  fail with `EACCES`. Put the libraries and the arrival folders in the **same dataset**: two
-  datasets are two file systems, and a hardlink cannot cross them (see below). For `/config`, a
+  fail with `EACCES`. To use the hardlink mode, put the arrival folders and the libraries in the **same dataset**:
+  two datasets are two file systems, and a hardlink cannot cross them (see below). Copy and move work across datasets. For `/config`, a
   volume managed by TrueNAS needs nothing; with a host path, the start-up `chown` may fail (a
   warning in the log), so apply the ACL to that path.
 - **`user:` instead**: start the container with `user: "1026:100"` (Compose) or `--user`. `PUID`
