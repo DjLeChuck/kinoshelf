@@ -166,6 +166,8 @@ In a movie library that writes NFO, a **collection** (a saga) exists for a playe
   included, "2/3", sorted by year), and lets you **rename** an own collection on all its movies, and choose its
   **poster** and **background** (from TMDB, from one of its movies, or from an address). While none is
   chosen, TMDB's poster and background are drawn dimmed and tagged as a preview.
+  **Choose TMDB's images** keeps those previews as the choice of every collection that has none (nothing is
+  sent until you use **Send pending images**).
 - A collection image is kept by Kinoshelf (in `<config>/collection-images/`), never in a movie's
   folder. **Send** pushes the chosen images to Plex and Jellyfin (found by collection name). The state
   of each is `default`, `pending`, `sent`, `missing` (the server has no such collection yet: neither

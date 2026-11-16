@@ -84,7 +84,8 @@ place never lands here. The files are in three states:
 - **Not recognized**: nothing was found.
 
 For each file you see its TMDB candidates and their score, a manual search, and the destination a
-choice would give. When TMDB has no such season and episode for the series, the panel says so: a
+choice would give. When TMDB lacks the season and episode of some files of the series, the panel lists
+them grouped by season, with a link to each season on TMDB (or says the season does not exist there): a
 perfect title still waits for validation, because the numbering may differ.
 
 ![The Arrivals tab: files ready to transfer, with the TMDB candidate and the destination](images/arrivals.png#gh-dark-mode-only)
