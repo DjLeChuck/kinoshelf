@@ -47,7 +47,9 @@ test('lists a movie held in two versions once', async ({ page, request }) => {
   const panel = page.getByRole('region', { name: /^Versions/ });
   await expect(panel.getByRole('heading')).toContainText('· 2');
   await expect(panel.getByRole('columnheader', { name: '2160p' })).toBeVisible();
-  await expect(panel.getByRole('row', { name: /File/ })).toContainText('- 1080p.mkv');
+  await expect(panel.getByRole('row', { name: /^File/ })).toContainText('- 1080p.mkv');
+  // The files here are not videos, so ffprobe cannot read them: each version says so, with a reason.
+  await expect(panel.getByRole('row', { name: /Status/ }).getByText('Unreadable')).toHaveCount(2);
   // Each version says whether its own NFO is there.
   await expect(panel.getByRole('row', { name: /Status/ }).getByText('Complete')).toHaveCount(2);
   // The file lines are gone from the facts: the path is the folder's, the files are in the table.
