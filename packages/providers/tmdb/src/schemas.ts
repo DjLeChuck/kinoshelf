@@ -201,6 +201,8 @@ export const collectionSchema = z.object({
   id: z.number().int(),
   name: z.string(),
   overview: z.string().nullish(),
+  poster_path: z.string().nullish(),
+  backdrop_path: z.string().nullish(),
   parts: z
     .array(z.object({ id: z.number().int(), title: z.string(), release_date: date }))
     .nullish(),

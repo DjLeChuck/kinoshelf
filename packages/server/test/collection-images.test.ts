@@ -275,9 +275,11 @@ const saga: MetadataProvider = {
     Promise.resolve({
       id: COLLECTION,
       name: 'Dune - Saga',
+      posterPath: '/saga-poster.jpg',
+      // TMDB's order is not the releases': the screen sorts by year.
       parts: [
-        { id: DUNE, title: 'Dune', year: 2021 },
         { id: { provider: 'tmdb', id: 693134 }, title: 'Dune : Deuxième partie', year: 2024 },
+        { id: DUNE, title: 'Dune', year: 2021 },
       ],
     }),
 };
@@ -417,6 +419,17 @@ describe('the Collections screen', () => {
         images: { poster: null, fanart: null },
       }),
     ]);
+  });
+
+  it('lists the films by year and offers TMDB’s own images until one is chosen', async () => {
+    const { collection } = await screen();
+    const one = (await collection()) as unknown as {
+      films: { year: number }[];
+      tmdbImages: { poster: string | null; fanart: string | null };
+    };
+    expect(one.films.map((film) => film.year)).toEqual([2021, 2024]);
+    expect(one.tmdbImages.poster).toContain('/saga-poster.jpg');
+    expect(one.tmdbImages.fanart).toBeNull();
   });
 
   it('keeps a chosen image in Kinoshelf’s data and marks the servers `pending`, sending nothing', async () => {

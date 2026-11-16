@@ -56,6 +56,8 @@ export interface CollectionSummary {
   readonly total: number | null;
   readonly films: readonly CollectionFilm[];
   readonly images: Record<CollectionImageType, StoredImage | null>;
+  /** TMDB's own poster and background, drawn while the owner has chosen none. */
+  readonly tmdbImages: Record<CollectionImageType, string | null>;
   /** Only the servers that are set up. */
   readonly servers: readonly {
     readonly kind: MediaServerKind;
@@ -113,6 +115,8 @@ export interface CollectionScreenDeps {
   readonly servers: () => readonly CollectionImageServer[];
   readonly listImages: (tmdbId: number) => Promise<CollectionImages | null>;
   readonly imageUrl: (path: string) => string;
+  /** A TMDB image at the size the screen draws it. */
+  readonly previewUrl: (path: string) => string;
   readonly fetchImage?: ImageFetcher;
   readonly log: { info(message: string): void; warn(message: string): void };
 }
@@ -155,7 +159,7 @@ export class CollectionScreen {
       const tmdbId = tmdbIdOf(key);
       const stored = tmdbId === null ? undefined : store.get(tmdbId);
       const present = new Map(works.map((work) => [work.workKey, work]));
-      const films: CollectionFilm[] =
+      const listed: CollectionFilm[] =
         stored === undefined
           ? works.map((work) => this.filmOf(work))
           : [
@@ -178,6 +182,11 @@ export class CollectionScreen {
                 )
                 .map((work) => this.filmOf(work)),
             ];
+      // TMDB lists the parts in its own order (not the releases'): by year, ties as listed.
+      const films = listed
+        .map((film, index) => ({ film, index }))
+        .sort((a, b) => (a.film.year ?? Infinity) - (b.film.year ?? Infinity) || a.index - b.index)
+        .map(({ film }) => film);
       const choice = chosen.get(key) ?? {};
       const rows = traces.get(key) ?? [];
       const states = this.deps.servers().map((server) => ({
@@ -217,6 +226,10 @@ export class CollectionScreen {
         total: first.total,
         films,
         images: { poster: choice.poster ?? null, fanart: choice.fanart ?? null },
+        tmdbImages: {
+          poster: stored?.posterPath ? this.deps.previewUrl(stored.posterPath) : null,
+          fanart: stored?.backdropPath ? this.deps.previewUrl(stored.backdropPath) : null,
+        },
         servers: states,
         status,
       };

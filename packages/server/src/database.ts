@@ -284,6 +284,15 @@ export const SERVER_MIGRATIONS: readonly { readonly name: string; readonly sql: 
       );
     `,
   },
+  {
+    // TMDB's own images of a collection, shown until the owner chooses one. Rows read before this
+    // have none until their movie is read again.
+    name: 'server:002-collection-tmdb-images',
+    sql: `
+      ALTER TABLE collections ADD COLUMN poster_path TEXT;
+      ALTER TABLE collections ADD COLUMN backdrop_path TEXT;
+    `,
+  },
 ];
 
 /** Opens the single SQLite file of the config directory, shared with the CLI and the cache. */

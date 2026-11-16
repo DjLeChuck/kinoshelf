@@ -162,8 +162,13 @@
 
   const imageSrc = (card: CollectionCard, type: CollectionImageType): string | undefined => {
     const image = card.images[type];
-    return image ? collectionImageUrl(library.id, card.key, type, image.hash) : undefined;
+    return image
+      ? collectionImageUrl(library.id, card.key, type, image.hash)
+      : (card.tmdbImages[type] ?? undefined);
   };
+  // TMDB's own image, drawn while none is chosen: dimmed and tagged, as a movie's page does.
+  const isPreview = (card: CollectionCard, type: CollectionImageType): boolean =>
+    !card.images[type] && card.tmdbImages[type] !== null;
 
   function statusText(card: CollectionCard): string {
     return t(`web.collections.status.${card.status}`);
@@ -271,7 +276,12 @@
                 }}
               >
                 <span class="cover" aria-hidden="true">
-                  {#if poster}<img src={poster} alt="" loading="lazy" />{/if}
+                  {#if poster}<img
+                      class:preview={isPreview(card, 'poster')}
+                      src={poster}
+                      alt=""
+                      loading="lazy"
+                    />{/if}
                 </span>
                 <span class="name">{card.name}</span>
                 <span class="meta">
@@ -294,7 +304,7 @@
             {@const pill = completenessOf(selected)}
             {@const toSend = serversToSend(selected)}
             <article class="card detail" aria-labelledby="collection-name">
-              <div class="banner" class:empty={!selected.images.fanart}>
+              <div class="banner" class:empty={!imageSrc(selected, 'fanart')}>
                 <button
                   type="button"
                   class="banner-btn"
@@ -308,9 +318,13 @@
                   }}
                 >
                   {#if imageSrc(selected, 'fanart')}<img
+                      class:preview={isPreview(selected, 'fanart')}
                       src={imageSrc(selected, 'fanart')}
                       alt=""
                     />{/if}
+                  {#if isPreview(selected, 'fanart')}<span class="preview-tag"
+                      >{t('web.images.preview')}</span
+                    >{/if}
                   <span class="pill" aria-hidden="true">{t('web.images.change-fanart')}</span>
                 </button>
                 <button
@@ -326,9 +340,13 @@
                   }}
                 >
                   {#if imageSrc(selected, 'poster')}<img
+                      class:preview={isPreview(selected, 'poster')}
                       src={imageSrc(selected, 'poster')}
                       alt=""
                     />{/if}
+                  {#if isPreview(selected, 'poster')}<span class="preview-tag"
+                      >{t('web.images.preview')}</span
+                    >{/if}
                   <span class="veil" aria-hidden="true">{t('web.images.change-poster')}</span>
                 </button>
               </div>
@@ -397,7 +415,7 @@
                           choosing = type;
                         }}
                       >
-                        {#if src}<img {src} alt="" />{/if}
+                        {#if src}<img class:preview={isPreview(selected, type)} {src} alt="" />{/if}
                         <span class="veil" aria-hidden="true"
                           >{t(
                             type === 'poster'
@@ -658,6 +676,34 @@
     );
   }
 
+  img.preview {
+    opacity: 0.55;
+  }
+
+  .preview-tag {
+    position: absolute;
+    left: 6px;
+    top: 6px;
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 11px;
+    background: rgb(20 22 27 / 0.85);
+    color: #fff;
+    pointer-events: none;
+  }
+
+  /* The poster is narrow: the tag is centred on it and wraps instead of running past its edges. */
+  .poster-btn .preview-tag {
+    left: 4px;
+    right: 4px;
+    top: auto;
+    bottom: 4px;
+    padding: 1px 2px;
+    font-size: 10px;
+    line-height: 1.2;
+    text-align: center;
+  }
+
   .cover img {
     width: 100%;
     height: 100%;
@@ -715,6 +761,10 @@
       var(--surface-2) 0 10px,
       var(--neutral-bg) 10px 20px
     );
+  }
+
+  .banner-btn {
+    position: relative;
   }
 
   .banner-btn {
@@ -878,8 +928,8 @@
     padding: 0;
     border: 0;
     cursor: pointer;
-    width: 40px;
-    height: 60px;
+    width: 56px;
+    height: 84px;
     overflow: hidden;
     border-radius: 4px;
     background: var(--surface-2);
@@ -888,6 +938,14 @@
   .thumb.wide {
     width: 80px;
     height: 45px;
+  }
+
+  /* A small poster: the label is smaller and darker so that it reads over any picture. */
+  .thumb .veil {
+    padding: 2px;
+    background: rgb(10 12 16 / 0.8);
+    font-size: 10px;
+    overflow-wrap: anywhere;
   }
 
   .thumb img {

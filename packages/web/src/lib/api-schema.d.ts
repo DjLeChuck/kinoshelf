@@ -1529,6 +1529,10 @@ export interface paths {
                                         chosenAt: string;
                                     } | null;
                                 };
+                                tmdbImages: {
+                                    poster: string | null;
+                                    fanart: string | null;
+                                };
                                 /** @description Only the servers that are set up. */
                                 servers: {
                                     /** @enum {string} */

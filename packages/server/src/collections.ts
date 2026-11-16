@@ -24,6 +24,8 @@ export interface StoredCollection {
   readonly id: number;
   readonly name: string;
   readonly overview: string | null;
+  readonly posterPath: string | null;
+  readonly backdropPath: string | null;
   readonly parts: readonly {
     readonly id: number;
     readonly title: string;
@@ -35,6 +37,8 @@ interface CollectionRow {
   id: number;
   name: string;
   overview: string | null;
+  poster_path: string | null;
+  backdrop_path: string | null;
   parts: string;
 }
 
@@ -67,14 +71,18 @@ export class CollectionStore {
       }
       this.database
         .prepare(
-          `INSERT INTO collections (id, name, overview, parts) VALUES (?, ?, ?, ?)
+          `INSERT INTO collections (id, name, overview, poster_path, backdrop_path, parts)
+           VALUES (?, ?, ?, ?, ?, ?)
            ON CONFLICT (id) DO UPDATE SET name = excluded.name, overview = excluded.overview,
+             poster_path = excluded.poster_path, backdrop_path = excluded.backdrop_path,
              parts = excluded.parts`,
         )
         .run(
           collection.id.id,
           collection.name,
           collection.overview ?? null,
+          collection.posterPath ?? null,
+          collection.backdropPath ?? null,
           JSON.stringify(
             collection.parts.map((part) => ({
               id: part.id.id,
@@ -95,10 +103,19 @@ export class CollectionStore {
   get(id: number): StoredCollection | undefined {
     const row = this.database
       .prepare<[number], CollectionRow>(
-        'SELECT id, name, overview, parts FROM collections WHERE id = ?',
+        'SELECT id, name, overview, poster_path, backdrop_path, parts FROM collections WHERE id = ?',
       )
       .get(id);
-    return row && { ...row, parts: JSON.parse(row.parts) as StoredCollection['parts'] };
+    return (
+      row && {
+        id: row.id,
+        name: row.name,
+        overview: row.overview,
+        posterPath: row.poster_path,
+        backdropPath: row.backdrop_path,
+        parts: JSON.parse(row.parts) as StoredCollection['parts'],
+      }
+    );
   }
 
   /** The collection the provider files a movie under, if it was read. */

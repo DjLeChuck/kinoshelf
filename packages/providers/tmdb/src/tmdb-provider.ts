@@ -264,6 +264,8 @@ export class TmdbProvider implements MetadataProvider {
       id: { provider: this.name, id: r.id },
       name: r.name,
       ...(r.overview?.trim() && { overview: r.overview.trim() }),
+      ...(r.poster_path && { posterPath: r.poster_path }),
+      ...(r.backdrop_path && { backdropPath: r.backdrop_path }),
       // A part with no release date or one still to come (a rumoured or planned film) is not
       // counted: a library could never hold it, so the collection would read as incomplete forever.
       // The collection endpoint gives no status, and one request per part would cost too much.

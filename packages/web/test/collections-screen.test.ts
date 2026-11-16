@@ -33,6 +33,7 @@ const card = (over: Partial<CollectionCard> = {}): CollectionCard => ({
   total: 3,
   films: [],
   images: { poster: null, fanart: null },
+  tmdbImages: { poster: null, fanart: null },
   servers: [
     { kind: 'plex', states: { poster: state('default'), fanart: state('default') } },
     { kind: 'jellyfin', states: { poster: state('default'), fanart: state('default') } },

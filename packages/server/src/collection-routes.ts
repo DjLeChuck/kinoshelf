@@ -71,6 +71,7 @@ const listSchema = {
           'total',
           'films',
           'images',
+          'tmdbImages',
           'servers',
           'status',
         ],
@@ -96,6 +97,14 @@ const listSchema = {
             },
           },
           images: perType(storedImageSchema),
+          tmdbImages: {
+            type: 'object',
+            required: ['poster', 'fanart'],
+            properties: {
+              poster: { type: 'string', nullable: true },
+              fanart: { type: 'string', nullable: true },
+            },
+          },
           servers: {
             type: 'array',
             description: 'Only the servers that are set up.',

@@ -89,6 +89,9 @@ export interface CollectionInfo {
   readonly id: ExternalId;
   readonly name: string;
   readonly overview?: string;
+  /** TMDB's own images of the collection, drawn until the owner picks one. */
+  readonly posterPath?: string;
+  readonly backdropPath?: string;
   readonly parts: readonly CollectionPart[];
 }
 

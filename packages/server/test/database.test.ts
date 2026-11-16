@@ -14,6 +14,7 @@ describe('server schema', () => {
 
     expect(database.prepare('SELECT name FROM schema_migrations').all()).toEqual([
       { name: 'server:001-initial' },
+      { name: 'server:002-collection-tmdb-images' },
     ]);
     expect(database.prepare('SELECT path, apply FROM jobs').get()).toEqual({
       path: '/a',
