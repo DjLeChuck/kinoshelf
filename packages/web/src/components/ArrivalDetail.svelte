@@ -68,6 +68,21 @@
   const progress = $derived(validations.progressOf(entry.id));
   const shownFailure = $derived(failure ?? validations.failure(entry.id)?.error);
   const status = $derived(statusOf(entry));
+  /** The files TMDB lacks, by season: a season it does not know at all is one line, not eighty. */
+  const NAMED_FILES = 3;
+  const unknownSeasons = $derived.by(() => {
+    const seasons: { season: number | null; known: boolean; files: string[] }[] = [];
+    for (const { file, season, seasonKnown } of entry.unknownEpisodes) {
+      const found = seasons.find((group) => group.season === season);
+      if (found) {
+        found.files.push(file);
+        found.known &&= seasonKnown;
+      } else {
+        seasons.push({ season, known: seasonKnown, files: [file] });
+      }
+    }
+    return seasons;
+  });
   const name = $derived(label(entry, siblings));
   /** Only a library other than the default one is a choice; the server knows the default. */
   const chosenLibrary = $derived(
@@ -304,15 +319,22 @@
         <div class="alert alert-warn unknown" role="status">
           <p>{t('web.queue.episode-unknown', { count: entry.unknownEpisodes.length })}</p>
           <ul>
-            {#each entry.unknownEpisodes as { file, season } (file)}
+            {#each unknownSeasons as { season, known, files } (season)}
               <li>
-                {file}
-                {#if season !== null && entry.candidates[0]}
+                {#if season !== null && !known}
+                  {t('web.queue.season-absent', { season })}
+                {:else if season !== null && entry.candidates[0]}
                   <a
                     href={`https://www.themoviedb.org/tv/${entry.candidates[0].id.id}/season/${season}`}
                     target="_blank"
                     rel="noopener noreferrer">{t('web.queue.season-link', { season })}</a
                   >
+                {:else}
+                  {t('web.queue.season-none')}
+                {/if}
+                · {t('web.queue.unknown-count', { count: files.length })}
+                {#if files.length <= NAMED_FILES}
+                  <span class="names">: {files.join(', ')}</span>
                 {/if}
               </li>
             {/each}
@@ -464,6 +486,10 @@
   .unknown p,
   .unknown ul {
     margin: 0;
+  }
+
+  .names {
+    opacity: 0.85;
   }
 
   .unknown ul {

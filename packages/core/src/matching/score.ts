@@ -225,7 +225,12 @@ export function scoreCandidates(
       parsed.kind === 'episode' && raw.candidate.kind === 'series' && raw.episodeExists === 0;
     const score = episodeMissing ? Math.min(total, config.threshold - 1) : total;
 
-    return { candidate: raw.candidate, score, breakdown };
+    // `null` is the provider saying there is no such season; absent is a season nobody asked for.
+    const seasonMissing =
+      parsed.kind === 'episode' &&
+      raw.candidate.kind === 'series' &&
+      seasons.get(candidateKey(raw.candidate)) === null;
+    return { candidate: raw.candidate, score, breakdown, ...(seasonMissing && { seasonMissing }) };
   });
 
   const ranked = scored.sort((a, b) => b.score - a.score);

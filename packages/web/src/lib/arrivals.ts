@@ -33,7 +33,12 @@ export interface Arrival {
   /** The file's name. */
   readonly file: string;
   /** The files of its group TMDB has no season and episode for (sorted by name). */
-  readonly unknownEpisodes: readonly { readonly file: string; readonly season: number | null }[];
+  readonly unknownEpisodes: readonly {
+    readonly file: string;
+    readonly season: number | null;
+    /** `false`: TMDB has no such season at all, so there is no page to link to. */
+    readonly seasonKnown: boolean;
+  }[];
   /** The folder (or file) it came in: files sharing it are validated together. */
   readonly release: string | null;
   /** Which series of the folder: 0 is the main one, 1 and up the others set apart from it. */

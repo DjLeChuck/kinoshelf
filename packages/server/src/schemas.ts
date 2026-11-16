@@ -913,8 +913,13 @@ export const arrivalsSchema = {
             type: 'array',
             items: {
               type: 'object',
-              required: ['file', 'season'],
-              properties: { file: { type: 'string' }, season: { type: 'integer', nullable: true } },
+              required: ['file', 'season', 'seasonKnown'],
+              properties: {
+                file: { type: 'string' },
+                season: { type: 'integer', nullable: true },
+                // false: TMDB has no page for this season, so only the episode's absence is said.
+                seasonKnown: { type: 'boolean' },
+              },
             },
           },
           /** What stops it from going there. */

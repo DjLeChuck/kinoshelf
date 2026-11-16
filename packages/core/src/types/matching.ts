@@ -29,6 +29,8 @@ export interface ScoredCandidate {
   /** 0–100. */
   readonly score: number;
   readonly breakdown: ScoreBreakdown;
+  /** The provider has no such season for this series (not just the episode): set for an episode. */
+  readonly seasonMissing?: true;
 }
 
 /** Why nothing could be matched; translated at the edges. */

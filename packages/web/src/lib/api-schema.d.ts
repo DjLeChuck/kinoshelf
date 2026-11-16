@@ -8254,6 +8254,7 @@ export interface paths {
                                 unknownEpisodes: {
                                     file: string;
                                     season: number | null;
+                                    seasonKnown: boolean;
                                 }[];
                                 conflicts: {
                                     reason: string;
@@ -8379,6 +8380,7 @@ export interface paths {
                             unknownEpisodes: {
                                 file: string;
                                 season: number | null;
+                                seasonKnown: boolean;
                             }[];
                             conflicts: {
                                 reason: string;

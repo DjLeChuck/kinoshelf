@@ -132,7 +132,11 @@ function presentArrival(
     // threshold, said once for the whole group the validation covers.
     unknownEpisodes: [entry, ...mates(entry)]
       .filter((file) => file.candidates[0]?.episodeUnknown === true)
-      .map((file) => ({ file: basename(file.path), season: file.parsed.season ?? null }))
+      .map((file) => ({
+        file: basename(file.path),
+        season: file.parsed.season ?? null,
+        seasonKnown: file.candidates[0]?.seasonUnknown !== true,
+      }))
       .sort((a, b) => (a.file < b.file ? -1 : 1)),
     conflicts: plan.conflicts,
     error: entry.error,

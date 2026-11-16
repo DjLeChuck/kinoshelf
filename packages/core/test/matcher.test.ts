@@ -198,6 +198,15 @@ describe('episodes', () => {
     const provider = new FakeProvider([bear], seasons);
     const outcome = await new Matcher(provider).match(parsedEpisode('The Bear', 9, [1], 2022));
     expect(expectAmbiguous(outcome).candidates[0]?.score).toBeLessThan(85);
+    expect(expectAmbiguous(outcome).candidates[0]?.seasonMissing).toBe(true);
+  });
+
+  it('tells a missing episode from a missing season', async () => {
+    const provider = new FakeProvider([bear], seasons);
+    const outcome = await new Matcher(provider).match(parsedEpisode('The Bear', 3, [9], 2022));
+    const [best] = expectAmbiguous(outcome).candidates;
+    expect(best?.breakdown.episodeExists).toBe(0);
+    expect(best?.seasonMissing).toBeUndefined();
   });
 
   it('matches the only same-titled series that has the season, even without a year', async () => {

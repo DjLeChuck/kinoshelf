@@ -29,6 +29,8 @@ export interface StoredCandidate {
   readonly score: number;
   /** The file's season and episode are not in TMDB's season, which caps the score (absent: no). */
   readonly episodeUnknown?: true;
+  /** …because TMDB has no such season at all (a 404), not only no such episode. */
+  readonly seasonUnknown?: true;
 }
 
 export interface Entry {
@@ -86,7 +88,9 @@ const compact = (
     candidate,
     score,
     breakdown,
-  }: Pick<ScoredCandidate, 'candidate' | 'score'> & Partial<Pick<ScoredCandidate, 'breakdown'>>,
+    seasonMissing,
+  }: Pick<ScoredCandidate, 'candidate' | 'score'> &
+    Partial<Pick<ScoredCandidate, 'breakdown' | 'seasonMissing'>>,
   parsed: ParsedMedia,
 ): StoredCandidate => ({
   kind: candidate.kind,
@@ -100,7 +104,10 @@ const compact = (
   ...(parsed.kind === 'episode' &&
     candidate.kind === 'series' &&
     breakdown !== undefined &&
-    breakdown.episodeExists === 0 && { episodeUnknown: true as const }),
+    breakdown.episodeExists === 0 && {
+      episodeUnknown: true as const,
+      ...(seasonMissing && { seasonUnknown: true as const }),
+    }),
 });
 
 function outcomeOf(entry: AnalysisEntry): { reason?: string; candidates: StoredCandidate[] } {
@@ -395,6 +402,7 @@ export class EntryStore {
             ...(kept && {
               score: kept.score,
               ...(kept.episodeUnknown && { episodeUnknown: true }),
+              ...(kept.seasonUnknown && { seasonUnknown: true }),
             }),
           },
           ...outcome.candidates.filter((c) => c.id.id !== chosen.candidate.id.id),
