@@ -338,6 +338,16 @@ describe('GuessitParser', () => {
       expect(parser.parse('The.Bear.S03E04.mkv').country).toBeUndefined();
     });
 
+    it('does not read the first word of an episode title as a country', () => {
+      const parsed = parser.parse(
+        'A Knight (2026)/Season 1/A Knight - S01E05 - Au nom de la mère.mkv',
+      );
+      expect(parsed.country).toBeUndefined();
+      expect(parsed.episodes).toEqual([5]);
+      // A tag in capitals after the marker is still one.
+      expect(parser.parse('The Office - S01E01 - AU.720p.mkv').country).toBe('AU');
+    });
+
     it('does not mistake a title for a country when the year follows', () => {
       expect(parser.parse('Us.2019.1080p.BluRay.mkv')).toMatchObject({
         kind: 'movie',

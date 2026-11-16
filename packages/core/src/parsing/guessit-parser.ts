@@ -64,6 +64,27 @@ function otherTitlesOf(title: string): readonly string[] {
 const countryOf = (value: unknown): string | undefined =>
   typeof value === 'string' && /^[A-Za-z]{2}$/.test(value) ? value.toUpperCase() : undefined;
 
+/**
+ * `Show - S01E05 - Au nom de la mère`: guessit reads the French word opening the episode's title as
+ * the country AU, then the series is penalized for not being Australian. A country tag follows the
+ * show's name (`The.Office.US.S01E01`), or is written in capitals after the marker; a capitalized
+ * word followed by others, after the marker, is a word of the title.
+ */
+function inEpisodeTitle(base: string, country: unknown): boolean {
+  const marker = /s\d+\s*[-.]?\s*e\d+|\b\d{1,2}x\d{2,3}\b/i.exec(base);
+  if (marker === null || typeof country !== 'string') {
+    return false;
+  }
+  const word = new RegExp(`^[\\s._-]*([A-Za-z]{2})[\\s._-]+\\p{L}`, 'u').exec(
+    base.slice(marker.index + marker[0].length),
+  )?.[1];
+  return (
+    word !== undefined &&
+    word !== word.toUpperCase() &&
+    word.toUpperCase() === country.toUpperCase()
+  );
+}
+
 /** {@link Parser} backed by guessit-js, which already understands parent-folder context. */
 export class GuessitParser implements Parser {
   private readonly contextDepth: number;
@@ -185,7 +206,7 @@ export class GuessitParser implements Parser {
     const releaseGroup = text(guess.release_group);
     const screenSize = text(guess.screen_size);
     const source = text(guess.source);
-    const country = countryOf(guess.country);
+    const country = inEpisodeTitle(base, guess.country) ? undefined : countryOf(guess.country);
     // `Title - Subtitle - Extended Edition` gives a list: the subtitle comes first, what follows
     // is an edition or another label, which does not belong to the title.
     const subtitle =
