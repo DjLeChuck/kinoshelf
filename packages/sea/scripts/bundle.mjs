@@ -24,7 +24,7 @@ const out = join(root, 'dist');
 // runs on its own architecture and injects into the target's musl node, already stripped).
 const baseNode = process.env.KINOSHELF_SEA_NODE;
 
-// The release workflow gives the tag's version: the packages all say 0.0.0 until one is cut.
+// The release workflow gives the tag's version; a local build falls back to the package's.
 const version =
   process.env.KINOSHELF_VERSION ??
   JSON.parse(readFileSync(join(root, '../server/package.json'), 'utf8')).version;

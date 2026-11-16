@@ -10,7 +10,7 @@ FFPROBE_DIR := .work/ffprobe-out
 SEA_DIST := packages/sea/dist
 SEA_CONFIG ?= .work/sea-config
 SEA_PORT ?= 18484
-VERSION ?= 0.0.0-dev
+VERSION ?= 1.0.0-dev
 
 .DEFAULT_GOAL := help
 
