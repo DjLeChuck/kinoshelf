@@ -1213,6 +1213,7 @@ export const en = {
   'web.login.submit': 'Sign in',
   'web.login.hint': 'Create one with “{command} api-key create”.',
   'web.signout': 'Sign out',
+  'web.back-to-top': 'Back to top',
   'web.theme.label': 'Theme',
   'web.theme.dark': 'Dark',
   'web.theme.light': 'Light',

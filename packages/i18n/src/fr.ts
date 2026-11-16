@@ -1252,6 +1252,7 @@ export const fr: Record<keyof typeof en, string> = {
   'web.login.submit': 'Se connecter',
   'web.login.hint': 'Créez-en une avec « {command} api-key create ».',
   'web.signout': 'Se déconnecter',
+  'web.back-to-top': 'Haut de page',
   'web.theme.label': 'Thème',
   'web.theme.dark': 'Sombre',
   'web.theme.light': 'Clair',

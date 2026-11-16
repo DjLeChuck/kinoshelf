@@ -11,6 +11,7 @@
   import { shell } from '../lib/shell-state.svelte.js';
   import { theme, type ThemePreference } from '../lib/theme.svelte.js';
   import ActivityTray from './ActivityTray.svelte';
+  import BackToTop from './BackToTop.svelte';
   import Link from './Link.svelte';
   import Logo from './Logo.svelte';
 
@@ -118,6 +119,7 @@
 <main id="content" tabindex="-1">{@render children()}</main>
 
 <ActivityTray />
+<BackToTop />
 
 <footer class="muted">{t('web.tmdb-attribution')}</footer>
 
