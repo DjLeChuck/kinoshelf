@@ -51,7 +51,8 @@ export const languageShort = (code: string): string => (TWO_LETTERS[code] ?? cod
 
 /** `French` or `français` for `fre`, in the language of the page; an unknown code as it is. */
 export function languageName(code: string, locale: string): string {
-  const two = TWO_LETTERS[code];
+  // A subtitle file's name gives the two-letter code already; a track's tag gives three letters.
+  const two = code.length === 2 ? code.toLowerCase() : TWO_LETTERS[code];
   if (two === undefined) {
     return code.toUpperCase();
   }

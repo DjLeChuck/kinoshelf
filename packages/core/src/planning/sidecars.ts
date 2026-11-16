@@ -22,6 +22,12 @@ export interface Sidecar {
   readonly suffix: string;
 }
 
+/** A subtitle of a `Subs` folder that was not taken, and why: nothing is ever renamed at random. */
+export interface LeftBehind {
+  readonly path: string;
+  readonly reason: 'language-unknown' | 'language-taken';
+}
+
 /** Folders where a release keeps its subtitles, next to the video. */
 const SUBTITLE_FOLDERS = new Set(['subs', 'sub', 'subtitles', 'subtitle']);
 
@@ -35,7 +41,19 @@ export async function findSidecars(
   extensions: readonly string[] = DEFAULT_SIDECAR_EXTENSIONS,
   /** Folder listings already asked for, shared by the videos of one plan: a season is read once. */
   listings?: Map<string, Promise<string[]>>,
+  /** Off for a page that says what lies beside the video, not what a rename would take. */
+  withSubtitleFolders = true,
 ): Promise<Sidecar[]> {
+  return (await sidecarsOf(source, extensions, listings, withSubtitleFolders)).sidecars;
+}
+
+/** `findSidecars`, and the files of a `Subs` folder it left where they are. */
+export async function sidecarsOf(
+  source: string,
+  extensions: readonly string[] = DEFAULT_SIDECAR_EXTENSIONS,
+  listings?: Map<string, Promise<string[]>>,
+  withSubtitleFolders = true,
+): Promise<{ sidecars: Sidecar[]; left: LeftBehind[] }> {
   const stem = basename(source, extname(source));
   const folder = dirname(source);
   const list = async (directory: string): Promise<string[]> => {
@@ -59,8 +77,11 @@ export async function findSidecars(
     .sort()
     .map((name) => ({ path: `${dirname(source)}/${name}`, suffix: name.slice(stem.length) }));
 
+  if (!withSubtitleFolders) {
+    return { sidecars: beside, left: [] };
+  }
   const inFolders = await subtitleFolderSidecars(source, names, extensions, list, beside);
-  return [...beside, ...inFolders];
+  return { sidecars: [...beside, ...inFolders.found], left: inFolders.left };
 }
 
 const isVideo = (name: string): boolean =>
@@ -94,7 +115,7 @@ async function subtitleFolderSidecars(
   extensions: readonly string[],
   list: (directory: string) => Promise<string[]>,
   beside: readonly Sidecar[],
-): Promise<Sidecar[]> {
+): Promise<{ found: Sidecar[]; left: LeftBehind[] }> {
   const subtitleExtensions = extensions.filter((extension) => extension !== 'nfo');
   const isSubtitle = (name: string): boolean =>
     subtitleExtensions.includes(extname(name).slice(1).toLowerCase());
@@ -103,7 +124,7 @@ async function subtitleFolderSidecars(
   const stem = basename(source, extname(source));
   const wanted = names.filter((name) => SUBTITLE_FOLDERS.has(name.toLowerCase())).sort();
   if (wanted.length === 0) {
-    return [];
+    return { found: [], left: [] };
   }
   const lone = names.filter((name) => isVideo(name) && !isSample(name)).length === 1;
   const lowerStem = stem.toLowerCase();
@@ -151,17 +172,20 @@ async function subtitleFolderSidecars(
 
   const taken = new Set(beside.map((sidecar) => sidecar.suffix.toLowerCase()));
   const found: Sidecar[] = [];
+  const left: LeftBehind[] = [];
   for (const group of [...groups.entries()].sort(([a], [b]) => a.localeCompare(b))) {
     const { base, files } = group[1];
     // What follows the video's name in `Subs/Movie.fr.srt` is all that is read of it.
     const residual = base.toLowerCase().startsWith(lowerStem) ? base.slice(stem.length) : base;
     const { language, forced, sdh } = readSubtitleName(residual);
     if (language === undefined) {
+      left.push(...files.map((path): LeftBehind => ({ path, reason: 'language-unknown' })));
       continue;
     }
     const label = `.${language}${forced ? '.forced' : ''}${sdh ? '.sdh' : ''}`;
     const suffixes = files.map((file) => `${label}${extname(file)}`);
     if (suffixes.some((suffix) => taken.has(suffix.toLowerCase()))) {
+      left.push(...files.map((path): LeftBehind => ({ path, reason: 'language-taken' })));
       continue;
     }
     files.forEach((path, index) => {
@@ -169,5 +193,32 @@ async function subtitleFolderSidecars(
       taken.add((suffixes[index] as string).toLowerCase());
     });
   }
-  return found;
+  return { found, left };
+}
+
+/** A subtitle file beside a video, as a page lists it. */
+export interface ExternalSubtitle {
+  /** ISO 639-1 as read from its name; `undefined` when the name names none we know. */
+  readonly language: string | undefined;
+  readonly forced: boolean;
+  readonly sdh: boolean;
+}
+
+/**
+ * The subtitles beside a video (`Movie.fr.srt`, `Movie.en.forced.srt`), each pair of `.idx` and
+ * `.sub` once, in the order of their names. Nothing is renamed or moved: this is what a page says
+ * of the disk as it is, so a file that follows no rule of ours (`Movie.English.srt`) is read too.
+ */
+export async function findSubtitles(source: string): Promise<ExternalSubtitle[]> {
+  const subtitleExtensions = DEFAULT_SIDECAR_EXTENSIONS.filter((extension) => extension !== 'nfo');
+  const found = new Map<string, ExternalSubtitle>();
+  for (const { suffix } of await findSidecars(source, subtitleExtensions, undefined, false)) {
+    // What follows the video's name, minus the extension: `.en.forced`.
+    const subtitle = readSubtitleName(suffix.slice(0, suffix.length - extname(suffix).length));
+    found.set(
+      `${subtitle.language ?? ''}|${String(subtitle.forced)}|${String(subtitle.sdh)}`,
+      subtitle,
+    );
+  }
+  return [...found.values()];
 }

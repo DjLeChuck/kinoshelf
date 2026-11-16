@@ -104,6 +104,42 @@ describe('scan', () => {
   });
 });
 
+describe('a release with a Subs folder', () => {
+  async function release() {
+    const src = await makeDir();
+    const dest = await makeDir();
+    await put(join(src, 'Dune.2021.mkv'), 'dune');
+    await put(join(src, 'Subs', '2_French.srt'), 'fr');
+    await put(join(src, 'Subs', '3_French.srt'), 'again');
+    await put(join(src, 'Subs', 'Dune.srt'), 'unknown');
+    return { src, dest };
+  }
+
+  it('says which subtitles stay behind, and why', async () => {
+    const { src, dest } = await release();
+    const h = await harness();
+    expect(await h.cli('scan', src, '--dest', dest)).toBe(0);
+    const text = h.out.join('\n');
+    expect(text).toContain('+ 1 companion file');
+    expect(text).toContain(
+      '3_French.srt stays in its Subs folder (that language is already taken)',
+    );
+    expect(text).toContain('Dune.srt stays in its Subs folder (no language in its name)');
+  });
+
+  it('carries them as codes in the JSON, not as text', async () => {
+    const { src, dest } = await release();
+    const h = await harness();
+    expect(await h.cli('scan', src, '--dest', dest, '--json')).toBe(0);
+    const report = JSON.parse(h.out.join('\n')) as { entries: { leftBehind: unknown[] }[] };
+    const [entry] = report.entries;
+    expect(entry?.leftBehind).toEqual([
+      { path: join(src, 'Subs', '3_French.srt'), reason: 'language-taken' },
+      { path: join(src, 'Subs', 'Dune.srt'), reason: 'language-unknown' },
+    ]);
+  });
+});
+
 describe('process', () => {
   it('is a dry run unless --apply is given', async () => {
     const { src, dest } = await library();

@@ -18,7 +18,7 @@ import type { Conflict, DestinationRoots, Plan, PlanItem } from '../types/plan.j
 import type { Profile } from '../types/profile.js';
 import type { Candidate, EpisodeInfo } from '../types/provider.js';
 import { companionOperations, unavailableImages } from './companions.js';
-import { DEFAULT_SIDECAR_EXTENSIONS, findSidecars } from './sidecars.js';
+import { DEFAULT_SIDECAR_EXTENSIONS, sidecarsOf } from './sidecars.js';
 import { MAX_VERSION_LEVEL, versionLabel, versionLabels } from './version.js';
 
 /** A matched file, ready to be planned. `parsed.path` is the source file. */
@@ -413,9 +413,14 @@ async function planItem(
   const writesNfo = generated.some(
     (operation) => operation.type === 'write-file' && operation.destination.endsWith('.nfo'),
   );
-  const sidecars = (
-    await findSidecars(source, options.sidecarExtensions ?? DEFAULT_SIDECAR_EXTENSIONS, listings)
-  ).filter((sidecar) => !(writesNfo && sidecar.suffix.toLowerCase().endsWith('.nfo')));
+  const found = await sidecarsOf(
+    source,
+    options.sidecarExtensions ?? DEFAULT_SIDECAR_EXTENSIONS,
+    listings,
+  );
+  const sidecars = found.sidecars.filter(
+    (sidecar) => !(writesNfo && sidecar.suffix.toLowerCase().endsWith('.nfo')),
+  );
   const operations: Operation[] = [
     { type: 'transfer', mode, role: 'main', source, destination },
     ...sidecars.map((sidecar): Operation => ({
@@ -437,6 +442,7 @@ async function planItem(
     operations,
     status: 'ready',
     conflicts: [],
+    ...(found.left.length > 0 && { leftBehind: found.left }),
   };
   if (needsSize) {
     wantingSize.add(item);

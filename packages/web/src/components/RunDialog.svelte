@@ -141,7 +141,17 @@
         beforeTitle: source,
         afterTitle: main.operation.destination,
       }),
-      chips: entry.failed ? [{ text: t('web.library.run.blocked'), tone: 'danger' }] : [],
+      chips: [
+        ...(entry.failed ? [{ text: t('web.library.run.blocked'), tone: 'danger' as const }] : []),
+        ...(entry.leftBehind.length > 0
+          ? [
+              {
+                text: t('web.library.run.left.chip', { count: entry.leftBehind.length }),
+                tone: 'warn' as const,
+              },
+            ]
+          : []),
+      ],
       ...(note !== undefined && { note }),
       problem: entry.failed,
       detailCount: entry.count - (main === undefined ? 0 : 1),
@@ -192,6 +202,17 @@
         {/if}
       </ul>
     {/each}
+    {#if item.leftBehind.length > 0}
+      <p class="left-title">{t('web.library.run.left.title', { count: item.leftBehind.length })}</p>
+      <ul class="files">
+        {#each item.leftBehind as file (file.path)}
+          <li>
+            <span class="mono" title={file.path}>{baseName(file.path)}</span>
+            <span class="muted">{t(`web.library.run.left.${file.reason}`)}</span>
+          </li>
+        {/each}
+      </ul>
+    {/if}
   </div>
 {/snippet}
 
@@ -351,6 +372,12 @@
   .files .mono {
     font-size: 11.5px;
     overflow-wrap: anywhere;
+  }
+
+  .left-title {
+    margin: 8px 0 2px;
+    font-size: 12px;
+    font-weight: 600;
   }
 
   .tag {

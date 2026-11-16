@@ -52,7 +52,12 @@ export {
   type PlannerOptions,
   hasVersionSibling,
 } from './planning/planner.js';
-export { type Sidecar } from './planning/sidecars.js';
+export {
+  findSubtitles,
+  type ExternalSubtitle,
+  type LeftBehind,
+  type Sidecar,
+} from './planning/sidecars.js';
 export { pictureSize, versionLabel, versionLabels } from './planning/version.js';
 export { executePlan, type ExecuteOptions } from './execution/executor.js';
 export { madeByUs } from './execution/prune.js';

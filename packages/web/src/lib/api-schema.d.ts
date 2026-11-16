@@ -3450,6 +3450,14 @@ export interface paths {
                                 /** @description Files a validation of this one settles: itself and the rest of its series in the release. */
                                 releaseFiles: number | null;
                                 versions: {
+                                    /** @description The subtitle files beside the video, read from the disk by the page of one item only (a list never reads it). Absent from a list. */
+                                    subtitles?: {
+                                        /** @description ISO 639-1 code read from the file name; `null` when the name names none known. */
+                                        language: string | null;
+                                        forced: boolean;
+                                        /** @description For the deaf and hard of hearing (`sdh`, `cc`, `hi`). */
+                                        sdh: boolean;
+                                    }[];
                                     /** @description What `POST /api/libraries/{id}/execute` takes. */
                                     id: string;
                                     path: string;
@@ -3671,6 +3679,14 @@ export interface paths {
                             } | null;
                             /** @description The files of the movie (this one alone for anything else), each read as `file` is. */
                             versions: {
+                                /** @description The subtitle files beside the video, read from the disk by the page of one item only (a list never reads it). Absent from a list. */
+                                subtitles?: {
+                                    /** @description ISO 639-1 code read from the file name; `null` when the name names none known. */
+                                    language: string | null;
+                                    forced: boolean;
+                                    /** @description For the deaf and hard of hearing (`sdh`, `cc`, `hi`). */
+                                    sdh: boolean;
+                                }[];
                                 /** @description What `POST /api/libraries/{id}/execute` takes. */
                                 id: string;
                                 path: string;
@@ -4324,6 +4340,12 @@ export interface paths {
                             dryRun: boolean;
                             items: {
                                 entryId: string;
+                                /** @description Subtitles of the release’s `Subs` folder that stay where they are: `language-unknown` (the name names no language) or `language-taken` (another file already gives that language). Only a dry run of a file that has some lists them. */
+                                leftBehind?: {
+                                    path: string;
+                                    /** @enum {string} */
+                                    reason: "language-unknown" | "language-taken";
+                                }[];
                                 results: {
                                     /** @enum {string} */
                                     type: "transfer" | "write-file" | "download";

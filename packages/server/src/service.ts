@@ -75,6 +75,8 @@ export interface ExecutionReport {
   readonly items: readonly {
     readonly entryId: string;
     readonly results: readonly OperationReport[];
+    /** Subtitles of a `Subs` folder the plan left where they are, with the reason. */
+    readonly leftBehind?: readonly { readonly path: string; readonly reason: string }[];
   }[];
 }
 
@@ -642,6 +644,7 @@ export class Service {
         ...batch.items.map((result) => ({
           entryId: entryOfItem.get(result.itemId)?.id ?? result.itemId,
           results: result.results.map(report),
+          ...(result.leftBehind && { leftBehind: result.leftBehind }),
         })),
       );
     }

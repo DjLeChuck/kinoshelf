@@ -332,6 +332,21 @@ export const executionReportSchema = {
         required: ['entryId', 'results'],
         properties: {
           entryId: { type: 'string' },
+          leftBehind: {
+            type: 'array',
+            description:
+              'Subtitles of the release’s `Subs` folder that stay where they are: ' +
+              '`language-unknown` (the name names no language) or `language-taken` (another file ' +
+              'already gives that language). Only a dry run of a file that has some lists them.',
+            items: {
+              type: 'object',
+              required: ['path', 'reason'],
+              properties: {
+                path: { type: 'string' },
+                reason: { type: 'string', enum: ['language-unknown', 'language-taken'] },
+              },
+            },
+          },
           results: {
             type: 'array',
             items: {
@@ -1057,11 +1072,33 @@ export const fileSchema = {
   },
 } as const;
 
+/** A subtitle file beside a video, from its name. */
+export const externalSubtitleSchema = {
+  type: 'object',
+  required: ['language', 'forced', 'sdh'],
+  properties: {
+    language: {
+      type: 'string',
+      nullable: true,
+      description: 'ISO 639-1 code read from the file name; `null` when the name names none known.',
+    },
+    forced: { type: 'boolean' },
+    sdh: { type: 'boolean', description: 'For the deaf and hard of hearing (`sdh`, `cc`, `hi`).' },
+  },
+} as const;
+
 /** One file of a work: a version of a movie or of an episode. */
 export const versionSchema = {
   type: 'object',
   required: ['id', 'path', 'state', 'resolution', 'nfo', 'entryId', 'file'],
   properties: {
+    subtitles: {
+      type: 'array',
+      description:
+        'The subtitle files beside the video, read from the disk by the page of one item only ' +
+        '(a list never reads it). Absent from a list.',
+      items: externalSubtitleSchema,
+    },
     id: { type: 'string', description: 'What `POST /api/libraries/{id}/execute` takes.' },
     path: { type: 'string' },
     state: libraryItemSchema.properties.state,

@@ -65,7 +65,7 @@ season pack's files go to their episode, by the name of their sub-folder or by t
 number. A file whose language the name does not give is left where it is, and so is a second file for a
 language already taken: nothing is renamed at random. Brazilian and European Portuguese are both `pt`, so
 only the first is taken. The emptied `Subs` folder goes with the release's folder, and an undo puts the
-files back.
+files back. The preview of a rename lists the subtitles that go along and says which ones stay, and why.
 
 ## One layout for every player
 

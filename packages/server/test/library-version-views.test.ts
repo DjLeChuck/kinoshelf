@@ -1,4 +1,4 @@
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import type { MetadataProvider, SeriesDetails } from '@kinoshelf/core';
 import { afterEach, describe, expect, it } from 'vitest';
 import { ITEM_FILTERS, itemId, SHOW_FILTERS } from '../src/library-items.js';
@@ -79,6 +79,33 @@ describe('a movie held in two versions', () => {
       expect(detail.versions.map(({ resolution }) => resolution)).toEqual(['2160p', '1080p']);
       expect(detail.nfoFiles).toEqual([{ path: join(root, FOLDER, 'movie.nfo'), present: true }]);
     }
+  });
+
+  it('says, on the page of an item only, which subtitle files lie beside each version', async () => {
+    const { h, root, hd, uhd } = await twoVersions(true);
+    await put(join(root, FOLDER, `${FOLDER} - 2160p.fr.srt`));
+    await put(join(root, FOLDER, `${FOLDER} - 2160p.en.forced.srt`));
+    await put(join(root, FOLDER, `${FOLDER} - 2160p.idx`));
+    await put(join(root, FOLDER, `${FOLDER} - 2160p.Klingon.srt`));
+    // A Subs folder is not beside the video: nothing took it yet.
+    await put(join(root, FOLDER, 'Subs', 'German.srt'));
+
+    const detail = (await h.request('GET', `/api/libraries/films/items/${itemId(hd)}`)).json<{
+      versions: { id: string; subtitles: unknown[] }[];
+    }>();
+    const bySize = Object.fromEntries(detail.versions.map((v) => [v.id, v.subtitles]));
+    expect(bySize[itemId(hd)]).toEqual([]);
+    expect(bySize[itemId(uhd)]).toEqual([
+      // In the order of the files' names; the `.idx` and `Klingon` files are one unknown language.
+      { language: null, forced: false, sdh: false },
+      { language: 'en', forced: true, sdh: false },
+      { language: 'fr', forced: false, sdh: false },
+    ]);
+    // The list never reads the disk for it.
+    const page = (await h.request('GET', '/api/libraries/films/items')).json<{
+      items: { versions: Record<string, unknown>[] }[];
+    }>();
+    expect(page.items[0]?.versions.every((v) => !('subtitles' in v))).toBe(true);
   });
 
   it('gives each version what ffprobe read of its file', async () => {
@@ -436,5 +463,41 @@ describe('a series held in two versions', () => {
     const detail = (await h.request('GET', '/api/libraries/shows/shows/93740')).json<ShowDetail>();
     expect(detail.seasons[0]?.nfo).toEqual({ expected: 0, present: 0 });
     expect((await shows(h)).items[0]?.episodesLackingNfo).toBe(0);
+  });
+});
+
+describe('a release with a Subs folder, in the preview of a rename', () => {
+  it('lists the subtitles that go along, and says which stay and why', async () => {
+    const root = await makeDir();
+    const video = await put(join(root, 'Dune.2021', 'Dune.2021.mkv'), 'video');
+    await put(join(root, 'Dune.2021', 'Subs', '2_French.srt'));
+    await put(join(root, 'Dune.2021', 'Subs', '3_French.srt'));
+    await put(join(root, 'Dune.2021', 'Subs', 'Dune.srt'));
+    const h = await harness({
+      config: {
+        libraries: [{ id: 'films', name: 'Films', source: root, type: 'movie', naming: 'no-id' }],
+      },
+    });
+    await h.request('POST', '/api/libraries/films/scan');
+    await h.app.jobs.idle();
+
+    const preview = await h.request('POST', '/api/libraries/films/execute', {
+      items: [itemId(video)],
+      dryRun: true,
+    });
+    const report = preview.json<{
+      items: {
+        results: { role: string | null; destination: string }[];
+        leftBehind?: { path: string; reason: string }[];
+      }[];
+    }>();
+    const [item] = report.items;
+    expect(
+      item?.results.filter((r) => r.role === 'sidecar').map((r) => basename(r.destination)),
+    ).toEqual(['Dune (2021).fr.srt']);
+    expect(item?.leftBehind).toEqual([
+      { path: join(root, 'Dune.2021', 'Subs', '3_French.srt'), reason: 'language-taken' },
+      { path: join(root, 'Dune.2021', 'Subs', 'Dune.srt'), reason: 'language-unknown' },
+    ]);
   });
 });

@@ -116,6 +116,32 @@ describe('createPlan: names', () => {
     ]);
   });
 
+  it('takes the subtitles of a Subs folder, and says which ones it left and why', async () => {
+    const [src, lib] = [await makeDir(), await makeDir()];
+    const source = await put(join(src, 'Dune.2021.2160p.mkv'));
+    const french = await put(join(src, 'Subs', '2_French.srt'));
+    const unknown = await put(join(src, 'Subs', 'Dune.srt'));
+    const again = await put(join(src, 'Subs', '3_French.srt'));
+
+    const result = await plan([{ parsed: parsedMovie(source), candidate: dune }], lib);
+    const [item] = result.items;
+    const stem = join(lib, 'Dune (2021) {tmdb-438631}', 'Dune (2021) {tmdb-438631}');
+
+    expect(item?.operations).toContainEqual({
+      type: 'transfer',
+      mode: 'copy',
+      role: 'sidecar',
+      source: french,
+      destination: `${stem}.fr.srt`,
+    });
+    expect(item?.leftBehind).toEqual([
+      { path: again, reason: 'language-taken' },
+      { path: unknown, reason: 'language-unknown' },
+    ]);
+    const batch = await executePlan(result, { journal: new MemoryJournal(), dryRun: true });
+    expect(batch.items[0]?.leftBehind).toEqual(item?.leftBehind);
+  });
+
   it('records plan metadata', async () => {
     const [src, lib] = [await makeDir(), await makeDir()];
     const source = await put(join(src, 'a.mkv'));

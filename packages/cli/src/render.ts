@@ -6,6 +6,7 @@ import type {
   Classification,
   DestinationRoots,
   ErrorInfo,
+  PlanItem,
   StaleFile,
   TidiedFolder,
   TidiedForeignFile,
@@ -39,6 +40,13 @@ function destinationLine(analysis: Analysis, t: Translate): string {
     : t('report.destinations', { movies: roots.movie, series: roots.series });
 }
 
+/** The subtitles of a `Subs` folder that stay where they are, one line each with its reason. */
+const leftBehindLines = (item: PlanItem, t: Translate): string[] =>
+  (item.leftBehind ?? []).map(
+    ({ path, reason }) =>
+      `      ↳ ${t('entry.left-behind', { file: basename(path), reason: t(`left-behind.${reason}`) })}`,
+  );
+
 function describeEntry(entry: AnalysisEntry, analysis: Analysis, t: Translate): string[] {
   const lines = [`  ${entry.file.displayPath}`];
   const { outcome, item } = entry;
@@ -58,6 +66,7 @@ function describeEntry(entry: AnalysisEntry, analysis: Analysis, t: Translate): 
         if (sidecars > 0) {
           lines.push(`      ${t('entry.sidecars', { count: sidecars })}`);
         }
+        lines.push(...leftBehindLines(item, t));
       } else {
         // Already where the profile wants it: only what goes beside it is missing.
         lines.push(
@@ -221,6 +230,7 @@ export function analysisToJson(analysis: Analysis, batch?: BatchResult) {
           score: best.score,
         },
         target: main?.type === 'transfer' ? main.destination : undefined,
+        leftBehind: entry.item?.leftBehind?.map(({ path, reason }) => ({ path, reason })),
         candidates:
           entry.outcome.status === 'ambiguous'
             ? entry.outcome.candidates.map((c) => ({

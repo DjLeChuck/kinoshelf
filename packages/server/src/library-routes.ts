@@ -9,7 +9,9 @@ import {
   libraryProfile,
   nfoCoverage,
   KinoshelfError,
+  findSubtitles,
   libraryId,
+  type ExternalSubtitle,
   type MovieDetails,
   type PlanItem,
   type SeriesDetails,
@@ -227,6 +229,12 @@ const presentItem = (item: LibraryItem, release?: ReleaseOf): unknown => ({
   release: release?.release ?? null,
   cluster: release ? release.cluster : null,
   releaseFiles: release ? release.files : null,
+});
+
+const presentSubtitle = ({ language, forced, sdh }: ExternalSubtitle) => ({
+  language: language ?? null,
+  forced,
+  sdh,
 });
 
 const presentFile = (probe: Probe | null | undefined): unknown =>
@@ -926,11 +934,13 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
             resolutionOfItem,
           )
         : [item];
-      const [details, ...probed] = await Promise.all([
+      const [details, probed, subtitles] = await Promise.all([
         item.kind !== null && item.tmdbId !== null
           ? ctx.details(item.kind, item.tmdbId).catch(() => null)
           : null,
-        ...files.map((row) => probes.now(library.id, row.path)),
+        Promise.all(files.map((row) => probes.now(library.id, row.path))),
+        // What lies beside the video now, which a probe tied to its size and date cannot tell.
+        Promise.all(files.map((row) => findSubtitles(row.path))),
       ]);
       const profile = buildProfile(libraryProfile(library, store.config));
       const folder = dirname(item.path);
@@ -959,6 +969,7 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
         file: presentFile(probed[files.findIndex((row) => row.path === item.path)]),
         versions: files.map((row, index) => ({
           ...(presentVersion(row, probed[index]) as object),
+          subtitles: (subtitles[index] ?? []).map(presentSubtitle),
         })),
         nfoFiles: nfo.expected.map((path) => ({ path, present: nfo.present.includes(path) })),
         collectionChoice:

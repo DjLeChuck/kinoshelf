@@ -1,5 +1,6 @@
 import type { ErrorInfo } from './errors.js';
 import type { ExternalId, ParsedMedia } from './media.js';
+import type { LeftBehind } from '../planning/sidecars.js';
 import type { Operation, OperationResult, TransferMode } from './operation.js';
 
 /** Why an item cannot go where the profile wants it; the destination is never overwritten. */
@@ -50,6 +51,11 @@ export interface PlanItem {
    * that are not on the disk: nothing is planned for them, and a list says so instead of calling them present.
    */
   readonly unavailable?: readonly ('poster' | 'fanart' | 'logo')[];
+  /**
+   * Subtitles of the release's `Subs` folder that stay where they are, and why. Informs a preview;
+   * nothing is planned for them.
+   */
+  readonly leftBehind?: readonly LeftBehind[];
 }
 
 /**
@@ -72,6 +78,8 @@ export interface Plan {
 export interface ItemResult {
   readonly itemId: string;
   readonly results: readonly OperationResult[];
+  /** What the plan left behind (`PlanItem.leftBehind`), for a report to say. */
+  readonly leftBehind?: readonly LeftBehind[];
 }
 
 export interface BatchResult {

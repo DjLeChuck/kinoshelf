@@ -4,7 +4,7 @@
   import { versionStatus } from '../lib/fiche.js';
   import { baseName } from '../lib/paths.js';
   import { HDR_LABEL, languageName } from '../lib/versions.js';
-  import type { Version } from '../lib/library-items.js';
+  import type { ExternalSubtitle, Version } from '../lib/library-items.js';
 
   // One column per version, titled by its resolution (a single one for a single version), shared
   // by the movie and the episode. From three versions on it scrolls sideways inside its frame
@@ -16,6 +16,21 @@
     readonly read: (version: Version) => string;
   };
   const dash = '—';
+  /** `Français (forcés, SDH)`: a file beside the video, by what its name says. */
+  const subtitleLine = (subtitles: readonly ExternalSubtitle[]): string =>
+    subtitles
+      .map(({ language, forced, sdh }) => {
+        const flags = [
+          ...(forced ? [t('web.library.subtitles.forced')] : []),
+          ...(sdh ? [t('web.library.subtitles.sdh')] : []),
+        ];
+        const name =
+          language === null
+            ? t('web.library.subtitles.unknown')
+            : languageName(language, locale.value);
+        return flags.length > 0 ? `${name} (${flags.join(', ')})` : name;
+      })
+      .join(', ');
   const names = (codes: readonly string[]): string =>
     codes.map((code) => languageName(code, locale.value)).join(', ');
   // One line per fact; a file not read yet has none to give.
@@ -31,7 +46,10 @@
       read: (v) =>
         [v.file?.audio, names(v.file?.audioLanguages ?? [])].filter(Boolean).join(' · ') || dash,
     },
-    { key: 'subtitles', read: (v) => names(v.file?.subtitleLanguages ?? []) || dash },
+    {
+      key: 'subtitles',
+      read: (v) => names(v.file?.subtitleLanguages ?? []) || (v.subtitles?.length ? '' : dash),
+    },
     { key: 'size', read: (v) => (v.file ? formatBytes(v.file.size, locale.value) : dash) },
     { key: 'file', read: (v) => baseName(v.path) },
     { key: 'status', read: (v) => t(`web.library.version.status.${versionStatus(v)}`) },
@@ -67,6 +85,13 @@
                 >
               {:else}
                 {row.read(version)}
+                {#if row.key === 'subtitles' && version.subtitles?.length}
+                  <span class="files"
+                    >{t('web.library.subtitles.files', {
+                      languages: subtitleLine(version.subtitles),
+                    })}</span
+                  >
+                {/if}
               {/if}
             </td>
           {/each}
@@ -131,6 +156,12 @@
     z-index: 1;
     box-shadow: 1px 0 0 var(--border);
     background: var(--surface);
+  }
+
+  /* The files beside the video, apart from the tracks inside it. */
+  .files {
+    display: block;
+    color: var(--muted);
   }
 
   .compare th[scope='row'] {

@@ -149,6 +149,11 @@ nowhere: a custom profile file is to be discussed again.
   renamed at random. A folder with one video gives it every file; with several, the file's name must start the
   video's name (or the other way round) or carry the same `SxxExx`/`1x02`. A file of an item already in place is not
   moved (the planner returns `in-place` first). `pruneVacated` removes sub-folders holding only our files or nothing.
+  What stays behind is told: `PlanItem.leftBehind` (`language-unknown`, `language-taken`) goes to `ItemResult`, the
+  dry-run report (`items[].leftBehind`), the preview of a rename and the CLI (`scan`, `process`; `leftBehind` in `--json`). **The subtitle files beside a version** are
+  read from the disk by the page of one item only (`GET .../items/{itemId}`: `versions[].subtitles`, `findSubtitles`, the
+  names beside the video, a `Subs` folder not counted, none for a list, which never reads the disk), shown by `VersionsTable`
+  under the tracks of ffprobe. They are not stored: Bazarr and the like add them at any time.
   Downloading subtitles (OpenSubtitles) is a project of its own, not built.
 - **A size read from the file** (`PlannerOptions.sizeOf`, `AnalyzeOptions.sizeOf`; the server's is
   `probePictureSize`, ffprobe's frame by `pictureSize(width, height)`, the larger of the sizes the

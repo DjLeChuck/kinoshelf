@@ -312,7 +312,11 @@ async function runItem(
     // A relayout (another profile) leaves the old folders with only the NFO and artwork we wrote.
     await pruneVacated([...vacated], plan.destinationRoot, options.journal);
   }
-  return { itemId: item.id, results };
+  return {
+    itemId: item.id,
+    results,
+    ...(item.leftBehind && item.leftBehind.length > 0 && { leftBehind: item.leftBehind }),
+  };
 }
 
 /**

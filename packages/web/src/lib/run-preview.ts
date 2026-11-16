@@ -1,4 +1,4 @@
-import type { ReportOperation, RunReport } from './library-items.js';
+import type { LeftBehind, ReportOperation, RunReport } from './library-items.js';
 
 /** One file of the preview: its name, and the same name without what its folder already says. */
 export interface PreviewFile {
@@ -21,6 +21,8 @@ export interface PreviewItem {
   readonly folders: readonly PreviewFolder[];
   readonly count: number;
   readonly failed: boolean;
+  /** Subtitles of a `Subs` folder that stay where they are. */
+  readonly leftBehind: readonly LeftBehind[];
 }
 
 export interface RunPreview {
@@ -72,7 +74,7 @@ export function previewOf(report: Pick<RunReport, 'items'>): RunPreview {
   const root = rootParts.length > 1 ? `${rootParts.join('/')}/` : '/';
   const cut = root.length - 1;
 
-  const items = report.items.map(({ entryId, results }): PreviewItem => {
+  const items = report.items.map(({ entryId, results, leftBehind }): PreviewItem => {
     const byFolder = new Map<string, ReportOperation[]>();
     for (const operation of results) {
       const folder = folderOf(operation.destination);
@@ -91,6 +93,7 @@ export function previewOf(report: Pick<RunReport, 'items'>): RunPreview {
       folders,
       count: results.length,
       failed: results.some(({ status }) => status === 'failed'),
+      leftBehind: leftBehind ?? [],
     };
   });
   return { root, items };

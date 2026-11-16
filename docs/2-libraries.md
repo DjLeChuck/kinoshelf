@@ -103,7 +103,8 @@ a size, or "Automatic").
 The lists show a movie or an episode **once**, whatever its number of files:
 
 - a movie with several versions has a chevron that unfolds one line per version (picture size, HDR,
-  codec, audio, languages, subtitles, file size), and its page can **compare the versions**;
+  codec, audio, languages, subtitles, file size), and its page can **compare the versions**, including the subtitle files lying beside each one (the
+  tracks inside the video are listed apart);
 - its state is the worst of its versions;
 - in a series library, the **Versions** column gives each version's coverage, `2160p 7/8`: the
   episodes that version holds out of the distinct episodes held by all of them. A season has its own

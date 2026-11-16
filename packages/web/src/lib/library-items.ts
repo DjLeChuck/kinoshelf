@@ -77,6 +77,13 @@ export interface ProbedFile {
   readonly unreadable: string | null;
 }
 
+/** A subtitle file beside a video; `language` is ISO 639-1, `null` when its name names none known. */
+export interface ExternalSubtitle {
+  readonly language: string | null;
+  readonly forced: boolean;
+  readonly sdh: boolean;
+}
+
 /** One file of a movie, as a list names it. */
 export interface Version {
   readonly id: string;
@@ -86,6 +93,8 @@ export interface Version {
   readonly nfo: boolean | null;
   readonly entryId: string | null;
   readonly file: ProbedFile | null;
+  /** The subtitle files beside the file, read from the disk by a page of one item; absent in a list. */
+  readonly subtitles?: readonly ExternalSubtitle[];
 }
 
 /** An entry of a list: a movie is one, with a version per file; its state is the worst of them. */
@@ -389,11 +398,18 @@ export interface ReportOperation {
   } | null;
 }
 
+/** A subtitle of a release's `Subs` folder the plan leaves where it is. */
+export interface LeftBehind {
+  readonly path: string;
+  readonly reason: 'language-unknown' | 'language-taken';
+}
+
 export interface RunReport {
   readonly batchId: string;
   readonly items: readonly {
     readonly entryId: string;
     readonly results: readonly ReportOperation[];
+    readonly leftBehind?: readonly LeftBehind[];
   }[];
   /** Items of the selection with nothing to do. */
   readonly skipped: readonly string[];

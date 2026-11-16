@@ -59,15 +59,20 @@
 
   // One column per file; what `ffprobe` read of it comes with its page, so a column fills in late.
   const versions = $derived<Version[]>(
-    files.map((file) => ({
-      id: file.id,
-      path: file.path,
-      state: file.state,
-      resolution: file.resolution,
-      nfo: file.nfo,
-      entryId: file.entryId,
-      file: details[file.id]?.file ?? null,
-    })),
+    files.map((file) => {
+      const subtitles = details[file.id]?.versions[0]?.subtitles;
+      return {
+        id: file.id,
+        path: file.path,
+        state: file.state,
+        resolution: file.resolution,
+        nfo: file.nfo,
+        entryId: file.entryId,
+        file: details[file.id]?.file ?? null,
+        // The page of an episode's file lists that file alone.
+        ...(subtitles && { subtitles }),
+      };
+    }),
   );
 
   // The files are read once: after a change every version has the picture, so the panel says so.

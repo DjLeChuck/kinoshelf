@@ -16,6 +16,11 @@ All notable changes to Kinoshelf are written here. The format follows
   (`2_French.srt` becomes `….fr.srt`, with `.forced` and `.sdh` kept). A file whose language the name does
   not give stays where it is. `.smi` and `.mks` files travel too.
 
+- The sheet of a movie or an episode now lists the **subtitle files** beside each version (`Français (forcés)`,
+  `English (malentendants)`), apart from the tracks inside the video. The preview of a rename says which
+  subtitles of a `Subs` folder stay behind and why (no language in the name, language already taken), and
+  so does `kinoshelf scan` and `process` (with `leftBehind` in `--json`).
+
 ### Changed
 
 - The folder a move leaves behind is now removed when its sub-folders hold only what Kinoshelf made or
