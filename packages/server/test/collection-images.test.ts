@@ -428,7 +428,7 @@ describe('the Collections screen', () => {
       tmdbImages: { poster: string | null; fanart: string | null };
     };
     expect(one.films.map((film) => film.year)).toEqual([2021, 2024]);
-    expect(one.tmdbImages.poster).toContain('/saga-poster.jpg');
+    expect(one.tmdbImages.poster).toBe('/saga-poster.jpg');
     expect(one.tmdbImages.fanart).toBeNull();
   });
 

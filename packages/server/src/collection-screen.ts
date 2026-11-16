@@ -56,7 +56,7 @@ export interface CollectionSummary {
   readonly total: number | null;
   readonly films: readonly CollectionFilm[];
   readonly images: Record<CollectionImageType, StoredImage | null>;
-  /** TMDB's own poster and background, drawn while the owner has chosen none. */
+  /** TMDB's paths of its own poster and background, drawn while the owner has chosen none. */
   readonly tmdbImages: Record<CollectionImageType, string | null>;
   /** Only the servers that are set up. */
   readonly servers: readonly {
@@ -115,8 +115,6 @@ export interface CollectionScreenDeps {
   readonly servers: () => readonly CollectionImageServer[];
   readonly listImages: (tmdbId: number) => Promise<CollectionImages | null>;
   readonly imageUrl: (path: string) => string;
-  /** A TMDB image at the size the screen draws it. */
-  readonly previewUrl: (path: string) => string;
   readonly fetchImage?: ImageFetcher;
   readonly log: { info(message: string): void; warn(message: string): void };
 }
@@ -227,8 +225,8 @@ export class CollectionScreen {
         films,
         images: { poster: choice.poster ?? null, fanart: choice.fanart ?? null },
         tmdbImages: {
-          poster: stored?.posterPath ? this.deps.previewUrl(stored.posterPath) : null,
-          fanart: stored?.backdropPath ? this.deps.previewUrl(stored.backdropPath) : null,
+          poster: stored?.posterPath ?? null,
+          fanart: stored?.backdropPath ?? null,
         },
         servers: states,
         status,

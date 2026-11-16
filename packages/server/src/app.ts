@@ -658,7 +658,6 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
       servers: () => notifier.mediaServers(),
       listImages: (tmdbId) => service.listCollectionImages(tmdbId),
       imageUrl: (path) => service.imageUrl(path, 'original'),
-      previewUrl: (path) => service.imageUrl(path, 'standard'),
       log: noted('collections'),
       ...(options.fetchImage && { fetchImage: options.fetchImage }),
     });

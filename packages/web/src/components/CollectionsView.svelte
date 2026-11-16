@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { imageUrl } from '../lib/arrivals.js';
   import { api } from '../lib/api.js';
   import { messageOf } from '../lib/errors.js';
   import { refetchOn } from '../lib/events.svelte.js';
@@ -164,7 +165,7 @@
     const image = card.images[type];
     return image
       ? collectionImageUrl(library.id, card.key, type, image.hash)
-      : (card.tmdbImages[type] ?? undefined);
+      : imageUrl(type === 'poster' ? 'w342' : 'w780', card.tmdbImages[type]);
   };
   // TMDB's own image, drawn while none is chosen: dimmed and tagged, as a movie's page does.
   const isPreview = (card: CollectionCard, type: CollectionImageType): boolean =>

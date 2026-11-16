@@ -207,7 +207,7 @@ export interface CollectionCard {
   readonly total: number | null;
   readonly films: readonly CollectionFilm[];
   readonly images: Readonly<Record<CollectionImageType, ChosenImage | null>>;
-  /** TMDB's own images, drawn (as a preview) while none is chosen. */
+  /** TMDB's paths of its own images, drawn (as a preview) while none is chosen. */
   readonly tmdbImages: Readonly<Record<CollectionImageType, string | null>>;
   /** Only the servers that are set up. */
   readonly servers: readonly {
