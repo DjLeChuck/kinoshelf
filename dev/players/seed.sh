@@ -109,6 +109,61 @@ for e in 01 02; do
 done
 putsub "$severance" "Subs/Severance 1x02 German.srt"
 
+# The same clip with a French subtitle track inside it, muxed once and copied for every name.
+embedded=$(mktemp --suffix=.mkv)
+trap 'rm -f "$base" "$sub" "$embedded"' EXIT
+ffmpeg -loglevel error -y -i "$base" -i "$sub" -map 0 -map 1 -c copy -c:s srt \
+  -metadata:s:s:0 language=fre "$embedded"
+
+# putembedded <release folder> <file name>: a video that carries its own French subtitles.
+putembedded() {
+  mkdir -p "$arrivals/$1"
+  [ -e "$arrivals/$1/$2" ] || cp "$embedded" "$arrivals/$1/$2"
+}
+
+# Subtitles inside the video: they travel with it, and nothing is read from the names. Alone first.
+gladiator="Gladiator.2000.1080p.BluRay.x264-SEED"
+putembedded "$gladiator" "$gladiator.mkv"
+
+# Embedded French, and a file in another language beside it: both are kept.
+heat="Heat.1995.1080p.BluRay.x264-SEED"
+putembedded "$heat" "$heat.mkv"
+putsub "$heat" "$heat.en.srt"
+
+# Embedded French, and a French file beside it: two French tracks for the player, none removed.
+arrival="Arrival.2016.1080p.BluRay.x264-SEED"
+putembedded "$arrival" "$arrival.mkv"
+putsub "$arrival" "$arrival.fr.srt"
+
+# One movie in four versions, each with its own subtitles, to see how the table of versions carries them:
+# 2160p has French inside and two files beside it (English forced, English SDH); 1080p has French inside
+# only; 720p has none inside and a Subs folder (English, French); 480p has nothing at all.
+interstellar="Interstellar.2014"
+uhd="$interstellar.2160p.BluRay.x265-SEED"
+putembedded "$uhd" "$uhd.mkv"
+putsub "$uhd" "$uhd.en.forced.srt"
+putsub "$uhd" "$uhd.en.sdh.srt"
+fhd="$interstellar.1080p.BluRay.x264-SEED"
+putembedded "$fhd" "$fhd.mkv"
+hd="$interstellar.720p.BluRay.x264-SEED"
+put "$hd" "$hd.mkv"
+putsub "$hd" "Subs/2_English.srt"
+putsub "$hd" "Subs/3_French.srt"
+sd="$interstellar.480p.DVDRip.x264-SEED"
+put "$sd" "$sd.mkv"
+
+# Two versions only, the usual case: 2160p has French inside and an English file beside it; 1080p has no
+# track inside and a Subs folder (English, French, and a forced English).
+oppenheimer="Oppenheimer.2023"
+uhd2="$oppenheimer.2160p.WEB-DL.DDP5.1.H.265-SEED"
+putembedded "$uhd2" "$uhd2.mkv"
+putsub "$uhd2" "$uhd2.en.srt"
+fhd2="$oppenheimer.1080p.BluRay.x264-SEED"
+put "$fhd2" "$fhd2.mkv"
+putsub "$fhd2" "Subs/2_English.srt"
+putsub "$fhd2" "Subs/3_French.srt"
+putsub "$fhd2" "Subs/4_English_Forced.srt"
+
 # What no one can identify: it waits in Arrivals as unrecognized.
 put "zzqx.unknown.clip.2019.720p-SEED" "zzqx.unknown.clip.2019.720p-SEED.mkv"
 
