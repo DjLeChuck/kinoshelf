@@ -3,7 +3,7 @@
   import { locale, t } from '../lib/i18n.svelte.js';
   import { versionStatus } from '../lib/fiche.js';
   import { baseName } from '../lib/paths.js';
-  import { HDR_LABEL, languageName } from '../lib/versions.js';
+  import { HDR_LABEL, languageName, languageShort } from '../lib/versions.js';
   import type { ExternalSubtitle, Version } from '../lib/library-items.js';
 
   // One column per version, titled by its resolution (a single one for a single version), shared
@@ -12,25 +12,40 @@
   let { versions }: { versions: readonly Version[] } = $props();
 
   type Row = {
-    readonly key: 'hdr' | 'video' | 'audio' | 'subtitles' | 'size' | 'file' | 'status';
+    readonly key:
+      'hdr' | 'video' | 'audio' | 'subtitles' | 'subtitleFiles' | 'size' | 'file' | 'status';
     readonly read: (version: Version) => string;
   };
   const dash = '—';
-  /** `Français (forcés, SDH)`: a file beside the video, by what its name says. */
-  const subtitleLine = (subtitles: readonly ExternalSubtitle[]): string =>
-    subtitles
-      .map(({ language, forced, sdh }) => {
-        const flags = [
-          ...(forced ? [t('web.library.subtitles.forced')] : []),
-          ...(sdh ? [t('web.library.subtitles.sdh')] : []),
-        ];
-        const name =
-          language === null
-            ? t('web.library.subtitles.unknown')
-            : languageName(language, locale.value);
-        return flags.length > 0 ? `${name} (${flags.join(', ')})` : name;
-      })
-      .join(', ');
+  /** A language as a short tag (`FR`), its full name on hover. */
+  interface Tag {
+    readonly text: string;
+    readonly title: string;
+  }
+  /** The tracks inside the video, tagged by the language ffprobe reads. */
+  const trackTags = (codes: readonly string[]): Tag[] =>
+    codes.map((code) => ({ text: languageShort(code), title: languageName(code, locale.value) }));
+  /** The files beside the video: `EN forcés` (`English (forced)` on hover), `?` for a name with no language. */
+  const fileTags = (subtitles: readonly ExternalSubtitle[]): Tag[] =>
+    subtitles.map(({ language, forced, sdh }) => {
+      const flags = [
+        ...(forced ? [t('web.library.subtitles.forced')] : []),
+        ...(sdh ? [t('web.library.subtitles.sdh')] : []),
+      ];
+      // The tag keeps to the short words; the hover says them in full (`SME` is not self-explanatory).
+      const full = [
+        ...(forced ? [t('web.library.subtitles.forced')] : []),
+        ...(sdh ? [t('web.library.subtitles.sdh-long')] : []),
+      ];
+      const name =
+        language === null
+          ? t('web.library.subtitles.unknown')
+          : languageName(language, locale.value);
+      return {
+        text: [language === null ? '?' : languageShort(language), ...flags].join(' '),
+        title: full.length > 0 ? `${name} (${full.join(', ')})` : name,
+      };
+    });
   const names = (codes: readonly string[]): string =>
     codes.map((code) => languageName(code, locale.value)).join(', ');
   // One line per fact; a file not read yet has none to give.
@@ -46,14 +61,26 @@
       read: (v) =>
         [v.file?.audio, names(v.file?.audioLanguages ?? [])].filter(Boolean).join(' · ') || dash,
     },
-    {
-      key: 'subtitles',
-      read: (v) => names(v.file?.subtitleLanguages ?? []) || (v.subtitles?.length ? '' : dash),
-    },
+    // Both subtitle rows are tags, drawn by the template: a track and a file never share a line.
+    { key: 'subtitles', read: () => '' },
+    { key: 'subtitleFiles', read: () => '' },
     { key: 'size', read: (v) => (v.file ? formatBytes(v.file.size, locale.value) : dash) },
     { key: 'file', read: (v) => baseName(v.path) },
     { key: 'status', read: (v) => t(`web.library.version.status.${versionStatus(v)}`) },
   ];
+  // A subtitle row is there only when a version has something to put in it: otherwise it would be a
+  // line of dashes. The tracks and the files follow the same rule.
+  const filled = (key: Row['key'], version: Version): boolean =>
+    key === 'subtitles'
+      ? (version.file?.subtitleLanguages.length ?? 0) > 0
+      : (version.subtitles?.length ?? 0) > 0;
+  const shown = $derived(
+    rows.filter(
+      (row) =>
+        (row.key !== 'subtitles' && row.key !== 'subtitleFiles') ||
+        versions.some((version) => filled(row.key, version)),
+    ),
+  );
 </script>
 
 <div class="scroll">
@@ -68,7 +95,7 @@
       </tr>
     </thead>
     <tbody>
-      {#each rows as row (row.key)}
+      {#each shown as row (row.key)}
         <tr>
           <th scope="row">{t(`web.library.compare.${row.key}`)}</th>
           {#each versions as version (version.id)}
@@ -83,15 +110,18 @@
                 <span class="chip chip-{versionStatus(version) === 'complete' ? 'ok' : 'warn'}"
                   >{row.read(version)}</span
                 >
+              {:else if row.key === 'subtitles' || row.key === 'subtitleFiles'}
+                {@const tags =
+                  row.key === 'subtitles'
+                    ? trackTags(version.file?.subtitleLanguages ?? [])
+                    : fileTags(version.subtitles ?? [])}
+                {#each tags as tag (tag.text + tag.title)}
+                  <abbr class="lang" title={tag.title}>{tag.text}</abbr>
+                {:else}
+                  {dash}
+                {/each}
               {:else}
                 {row.read(version)}
-                {#if row.key === 'subtitles' && version.subtitles?.length}
-                  <span class="files"
-                    >{t('web.library.subtitles.files', {
-                      languages: subtitleLine(version.subtitles),
-                    })}</span
-                  >
-                {/if}
               {/if}
             </td>
           {/each}
@@ -158,10 +188,17 @@
     background: var(--surface);
   }
 
-  /* The files beside the video, apart from the tracks inside it. */
-  .files {
-    display: block;
-    color: var(--muted);
+  /* A language as a tag: short, never broken in the middle, its name on hover. */
+  .lang {
+    display: inline-block;
+    margin: 0 4px 4px 0;
+    padding: 0 6px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    font-size: 11.5px;
+    text-decoration: none;
+    white-space: nowrap;
+    cursor: help;
   }
 
   .compare th[scope='row'] {
