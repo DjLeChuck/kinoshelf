@@ -56,12 +56,26 @@
       pinned = false;
       moved = true;
     };
+    // The browser scrolls to an anchor typed in the address, or followed from outside, before it
+    // tells the page, and that scroll can already have moved the highlight and the address (the end
+    // of the page takes the last section). Only a change of anchor fires this event, never our own
+    // rewrites of it, so it is where the section asked for gets back the highlight and the address.
+    const hashchange = (event: HashChangeEvent): void => {
+      const anchor = new URL(event.newURL).hash.slice(1);
+      if (sections.some(({ id }) => id === anchor)) {
+        active = anchor;
+        pinned = true;
+        moved = true;
+      }
+    };
+    window.addEventListener('hashchange', hashchange);
     window.addEventListener('scroll', atEnd, { passive: true });
     for (const event of ['wheel', 'touchmove', 'keydown'] as const) {
       window.addEventListener(event, unpin, { passive: true });
     }
     return () => {
       observer.disconnect();
+      window.removeEventListener('hashchange', hashchange);
       window.removeEventListener('scroll', atEnd);
       for (const event of ['wheel', 'touchmove', 'keydown'] as const) {
         window.removeEventListener(event, unpin);
