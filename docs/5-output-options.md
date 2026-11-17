@@ -37,6 +37,10 @@ identify the work from the NFO alone.
   is no setting for it. A library organized before this shows its colon titles as to rename.
 - A movie lives in `Title (Year)` (with ` {tmdb-<id>}` when `naming` is `with-id`), a series in
   `Show (Year)`, with `Season 01` folders and episodes named `Show (2022) - s01e01`.
+- **The picture size is added whatever the `naming`**: a file whose name gives one arrives as
+  `Dune (2021) - 1080p.mkv` (or `Dune (2021) {tmdb-438631} - 1080p.mkv` with `with-id`), so several versions
+  of a work can sit side by side (see [the rules below](#rules-that-hold-for-every-combination)). The examples of the naming
+  choice in the Settings show that case.
 
 ## What `nfo` writes
 

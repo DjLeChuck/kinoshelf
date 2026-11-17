@@ -181,7 +181,8 @@ and whether to transfer what is matched with confidence. See
 Used by libraries that do not set their own, and for a folder outside any library (a path you submit,
 or `scan` and `process` on the command line):
 
-- **Names** and **Metadata files**: see [Output options](5-output-options.md);
+- **Names** and **Metadata files**: see [Output options](5-output-options.md) (the examples under Names show
+  a file arriving with its picture size, which is added whatever the choice);
 - **File mode**: automatic (move when the destination is the source folder, copy otherwise), copy,
   hardlink or move;
 - **Automatic threshold** (0 to 100): a match scoring below it waits in Arrivals;
