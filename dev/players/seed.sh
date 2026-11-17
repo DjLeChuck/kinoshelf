@@ -164,6 +164,16 @@ putsub "$fhd2" "Subs/2_English.srt"
 putsub "$fhd2" "Subs/3_French.srt"
 putsub "$fhd2" "Subs/4_English_Forced.srt"
 
+# A movie already in the library, with a Subs folder beside it: it never goes through the arrival rules,
+# so `kinoshelf tidy --subtitles` (or System, Maintenance) is what brings its subtitles next to it.
+# French, English forced, a second French and a file with no language, so the report has all four lines.
+inplace="$WORK/media/movies/Casablanca (1942)"
+mkdir -p "$inplace/Subs"
+[ -e "$inplace/Casablanca (1942).mkv" ] || cp "$base" "$inplace/Casablanca (1942).mkv"
+for name in "2_French.srt" "3_English_Forced.srt" "4_French.srt" "Casablanca.srt"; do
+  [ -e "$inplace/Subs/$name" ] || cp "$sub" "$inplace/Subs/$name"
+done
+
 # What no one can identify: it waits in Arrivals as unrecognized.
 put "zzqx.unknown.clip.2019.720p-SEED" "zzqx.unknown.clip.2019.720p-SEED.mkv"
 
