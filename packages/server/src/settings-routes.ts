@@ -34,16 +34,25 @@ function exampleOf(profile: Profile): { movie: string; series: string } {
     key: Exclude<keyof Profile['templates'], 'movieVersion' | 'episodeVersion'>,
     variables: TemplateVariables,
   ): string[] => renderProfileTemplate(profile, profile.templates[key], variables);
+  // A file that arrives with its picture size in the name is written with it: the example shows that
+  // case, the one most files are in, rather than a bare name. A rendered segment loses its leading
+  // spaces, which ` - {version}` starts with, so the suffix goes behind a placeholder cut off again.
+  const suffix = (key: 'movieVersion' | 'episodeVersion'): string =>
+    renderProfileTemplate(profile, `_${profile.templates[key] ?? ''}`, { version: '1080p' })
+      .join('')
+      .slice(1);
+  const movieVersion = suffix('movieVersion');
+  const episodeVersion = suffix('episodeVersion');
   const movie = { title: 'Dune', year: 2021, tmdb: 438631 };
   const series = { title: 'The Bear', year: 2022, tmdb: 136315, season: 3, episode: 4 };
   const [movieFile = ''] = render('movieFile', movie);
   const [episodeFile = ''] = render('episodeFile', series);
   return {
-    movie: [...render('movieFolder', movie), `${movieFile}.mkv`].join('/'),
+    movie: [...render('movieFolder', movie), `${movieFile}${movieVersion}.mkv`].join('/'),
     series: [
       ...render('seriesFolder', series),
       ...render('seasonFolder', series),
-      `${episodeFile}.mkv`,
+      `${episodeFile}${episodeVersion}.mkv`,
     ].join('/'),
   };
 }

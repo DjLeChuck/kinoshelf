@@ -8,6 +8,10 @@ All notable changes to Kinoshelf are written here. The format follows
 
 ### Added
 
+- The naming choice in the Settings, the library form and the welcome now says that a file whose name gives a
+  picture size is named with it (`Movie (2024) - 1080p.mkv`), and points to the "Read the picture size with
+  ffprobe" setting (#7).
+
 - An IMDb id in a name (`{imdb-tt0083658}`, `[imdbid-tt0083658]`) is now used: TMDB says which work it
   designates, that work joins the candidates (so a title the search misses is still weighed) and gets the
   same bonus as a TMDB id, only when its title, season and year agree.

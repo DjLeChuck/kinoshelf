@@ -54,6 +54,7 @@
     <span class="muted hint">{t(`web.profile.naming.${shownNaming}.help`)}</span>
     <code class="example">{examples[shownNaming].movie}</code>
     <code class="example">{examples[shownNaming].series}</code>
+    <span class="muted hint">{t('web.profile.naming.size')}</span>
   </div>
 </fieldset>
 

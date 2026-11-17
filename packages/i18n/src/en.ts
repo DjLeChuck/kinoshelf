@@ -1528,6 +1528,8 @@ export const en = {
   'web.profile.naming.no-id': 'Without the id',
   'web.profile.naming.no-id.help':
     'More readable names. The player relies on the NFO, or on the title and year otherwise.',
+  'web.profile.naming.size':
+    'Whatever the choice, a file whose name gives a picture size arrives named with it (Movie (2024) - 1080p.mkv), so several versions of a work can sit side by side. When the name gives none, “Read the picture size with ffprobe” (in the default settings) can find it in the file.',
   'web.profile.metadata': 'Metadata files',
   'web.profile.metadata.hint': 'What is written next to the videos.',
   'web.profile.metadata.none': 'None',

@@ -59,12 +59,12 @@ describe('GET /api/settings', () => {
       (await h.request('GET', '/api/settings')).json<{ namingExamples: unknown }>().namingExamples,
     ).toEqual({
       'with-id': {
-        movie: 'Dune (2021) {tmdb-438631}/Dune (2021) {tmdb-438631}.mkv',
-        series: 'The Bear (2022) {tmdb-136315}/Season 03/The Bear (2022) - s03e04.mkv',
+        movie: 'Dune (2021) {tmdb-438631}/Dune (2021) {tmdb-438631} - 1080p.mkv',
+        series: 'The Bear (2022) {tmdb-136315}/Season 03/The Bear (2022) - s03e04 - 1080p.mkv',
       },
       'no-id': {
-        movie: 'Dune (2021)/Dune (2021).mkv',
-        series: 'The Bear (2022)/Season 03/The Bear (2022) - s03e04.mkv',
+        movie: 'Dune (2021)/Dune (2021) - 1080p.mkv',
+        series: 'The Bear (2022)/Season 03/The Bear (2022) - s03e04 - 1080p.mkv',
       },
     });
   });

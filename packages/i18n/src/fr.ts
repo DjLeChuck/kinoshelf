@@ -1572,6 +1572,8 @@ export const fr: Record<keyof typeof en, string> = {
   'web.profile.naming.no-id': 'Sans l’id',
   'web.profile.naming.no-id.help':
     'Des noms plus lisibles. Le lecteur s’appuie sur le NFO, ou à défaut sur le titre et l’année.',
+  'web.profile.naming.size':
+    'Quel que soit le choix, un fichier dont le nom indique une taille d’image arrive nommé avec elle (Film (2024) - 1080p.mkv), pour que plusieurs versions d’une œuvre puissent cohabiter. Quand le nom n’en donne aucune, « Lire la taille d’image avec ffprobe » (dans les réglages par défaut) peut la trouver dans le fichier.',
   'web.profile.metadata': 'Fichiers de métadonnées',
   'web.profile.metadata.hint': 'Ce qui est écrit à côté des vidéos.',
   'web.profile.metadata.none': 'Aucun',
