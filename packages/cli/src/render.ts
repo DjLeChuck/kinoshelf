@@ -7,7 +7,9 @@ import type {
   DestinationRoots,
   ErrorInfo,
   PlanItem,
+  LeftBehind,
   StaleFile,
+  TidiedSubtitle,
   TidiedFolder,
   TidiedForeignFile,
   TidyReport,
@@ -481,6 +483,82 @@ export function renderTidyFiles(
     lines.push(t('tidy.files.dry-run'));
   }
   return { lines, failed: count.failed };
+}
+
+export interface TidySubtitlesRun {
+  readonly library: { readonly id: string };
+  readonly files: readonly TidiedSubtitle[];
+  readonly left: readonly LeftBehind[];
+}
+
+export function renderTidySubtitles(
+  runs: readonly TidySubtitlesRun[],
+  batches: ReadonlyMap<string, string | null>,
+  options: { dryRun: boolean },
+  t: Translate,
+): { lines: string[]; failed: number } {
+  const lines: string[] = [];
+  const count = { moved: 0, skipped: 0, left: 0, failed: 0 };
+  for (const { library, files, left } of runs) {
+    lines.push(t('tidy.subtitles.header', { name: library.id }));
+    if (files.length === 0 && left.length === 0) {
+      lines.push(`  ${t('tidy.subtitles.none')}`);
+    }
+    for (const file of files) {
+      lines.push(`    · ${file.path}`);
+      if (file.status === 'skipped') {
+        count.skipped++;
+        lines.push(
+          `        ${t(`tidy.subtitles.skipped.${file.reason ?? 'changed'}`, { destination: basename(file.destination) })}`,
+        );
+      } else if (file.status === 'failed') {
+        count.failed++;
+        if (file.error) {
+          lines.push(`        ${describeError(t, file.error)}`);
+        }
+      } else {
+        count.moved++;
+        lines.push(
+          `        ${t(`tidy.subtitles.${file.status}`, { destination: basename(file.destination) })}`,
+        );
+      }
+    }
+    for (const { path, reason } of left) {
+      count.left++;
+      lines.push(
+        `    · ${path}`,
+        `        ${t('tidy.subtitles.left', { reason: t(`left-behind.${reason}`) })}`,
+      );
+    }
+    const batch = batches.get(library.id);
+    if (batch) {
+      lines.push(`  ${t('tidy.subtitles.batch', { batch })}`);
+    }
+    lines.push('');
+  }
+  lines.push(
+    t(options.dryRun ? 'tidy.subtitles.summary.dry-run' : 'tidy.subtitles.summary', count),
+  );
+  if (options.dryRun) {
+    lines.push(t('tidy.subtitles.dry-run'));
+  }
+  return { lines, failed: count.failed };
+}
+
+/** Codes and parameters, never translated text. */
+export function tidySubtitlesToJson(
+  runs: readonly (TidySubtitlesRun & { readonly batchId: string | null })[],
+  dryRun: boolean,
+): unknown {
+  return {
+    dryRun,
+    libraries: runs.map(({ library, batchId, files, left }) => ({
+      id: library.id,
+      batchId,
+      files,
+      left,
+    })),
+  };
 }
 
 /** Codes and parameters, never translated text. */

@@ -225,6 +225,21 @@ export const en = {
   'tidy.files.summary.dry-run':
     '{renamed} renamed, {removed} taken aside, {skipped} left, {failed} failed (dry run).',
   'tidy.files.dry-run': 'Dry run: nothing was changed. Add --apply to do it.',
+  'help.opt.tidy-subtitles':
+    'bring the subtitles of a Subs folder next to their video, named by language; undoable (a dry run unless --apply)',
+  'tidy.subtitles.header': 'Library {name}: subtitles in a Subs folder',
+  'tidy.subtitles.none': 'No subtitle to bring.',
+  'tidy.subtitles.would-do': 'would go to {destination}',
+  'tidy.subtitles.done': 'moved to {destination}',
+  'tidy.subtitles.skipped.destination-exists': 'left: {destination} is already there',
+  'tidy.subtitles.skipped.changed': 'left: it changed while being read',
+  'tidy.subtitles.left': 'stays in its folder ({reason})',
+  'tidy.subtitles.batch': 'Batch {batch}. Undo with: kinoshelf undo {batch} --apply',
+  'tidy.subtitles.summary':
+    '{moved} moved, {skipped} left, {left} stay in their folder, {failed} failed.',
+  'tidy.subtitles.summary.dry-run':
+    '{moved} moved, {skipped} left, {left} stay in their folder, {failed} failed (dry run).',
+  'tidy.subtitles.dry-run': 'Dry run: nothing was moved. Add --apply to do it.',
   'error.tidy.no-library':
     'No library with a type in {path}: a report reads the libraries organized in place, not the arrival folders.',
   'help.submit':
@@ -470,6 +485,20 @@ export const en = {
     'Some players read <film>.nfo before movie.nfo: check on yours that movie.nfo alone is read before enabling this.',
   'web.maintenance.nfo.left':
     '{count, plural, one {# <film>.nfo file is left as it is} other {# <film>.nfo files are left as they are}}: tick the box above to set them aside too.',
+  'web.maintenance.subtitles':
+    'Also bring the subtitles of the Subs, Sub and Subtitles folders next to their video',
+  'web.maintenance.subtitles.hint':
+    'Named by language (<video>.fr.srt). A file with no language in its name, or a second one for a language already taken, stays where it is.',
+  'web.maintenance.subtitles.todo':
+    '{count, plural, one {# subtitle to bring next to its video} other {# subtitles to bring next to their video}}',
+  'web.maintenance.subtitles.done':
+    '{count, plural, one {# subtitle brought next to its video} other {# subtitles brought next to their video}}',
+  'web.maintenance.subtitles.left':
+    '{count, plural, one {# subtitle stays in its folder} other {# subtitles stay in their folder}}',
+  'web.maintenance.subtitle.row': '{name} becomes {destination}',
+  'web.maintenance.progress.subtitles': 'Videos: {done} of {total}',
+  'web.maintenance.confirm.subtitles':
+    '{count, plural, one {# subtitle brought next to its video} other {# subtitles brought next to their video}}',
   'web.maintenance.report': 'Analysis',
   'web.maintenance.result': 'Done on {date}.',
   'web.maintenance.nothing': 'Nothing to tidy.',

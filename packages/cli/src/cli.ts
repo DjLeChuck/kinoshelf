@@ -18,6 +18,7 @@ import {
   SqliteJournal,
   removeOrphanFolders,
   tidyForeignFiles,
+  tidySubtitles,
   tidyReport,
   undoBatch,
   undoLastBatch,
@@ -39,7 +40,9 @@ import {
   cleanupToJson,
   tidyFilesToJson,
   tidyFoldersToJson,
+  tidySubtitlesToJson,
   renderTidyFiles,
+  renderTidySubtitles,
   tidyToJson,
   renderTidyFolders,
   renderAnalysis,
@@ -298,6 +301,7 @@ async function runTidy(
     json?: boolean;
     folders?: boolean;
     files?: boolean;
+    subtitles?: boolean;
     withNfo?: boolean;
     apply?: boolean;
   },
@@ -318,14 +322,17 @@ async function runTidy(
       ids: typed.map(({ id }) => id).join(', '),
     });
   }
-  if (options.folders || options.files) {
-    // Both can be asked at once: two batches per library, each undone on its own.
+  if (options.folders || options.files || options.subtitles) {
+    // Several can be asked at once: a batch each per library, each undone on its own.
     const codes = [];
     if (options.folders) {
       codes.push(await runTidyFolders(chosen, options, context));
     }
     if (options.files) {
       codes.push(await runTidyFiles(chosen, options, context));
+    }
+    if (options.subtitles) {
+      codes.push(await runTidySubtitles(chosen, options, context));
     }
     return Math.max(...codes);
   }
@@ -416,6 +423,42 @@ async function runTidyFiles(
       runs,
       new Map(runs.map((run) => [run.library.id, run.batchId])),
       { dryRun, backupDir },
+      t,
+    );
+    lines.forEach((line) => {
+      deps.io.out(line);
+    });
+    return failed > 0 ? 1 : 0;
+  } finally {
+    database?.close();
+  }
+}
+
+async function runTidySubtitles(
+  libraries: readonly { id: string; type: 'movie' | 'series'; source: string }[],
+  options: { json?: boolean; apply?: boolean },
+  context: Context,
+): Promise<number> {
+  const { t, deps } = context;
+  const dryRun = options.apply !== true;
+  // A dry run writes nothing, the config folder included: the journal is only needed to record moves.
+  const database = dryRun ? undefined : await openDatabase(context);
+  try {
+    const journal = database ? new SqliteJournal(database) : new MemoryJournal();
+    const runs = [];
+    // Movies and series alike: a video already named as the profile wants never went through `analyze`.
+    for (const library of libraries) {
+      const { batchId, files, left } = await tidySubtitles(library, { journal, dryRun });
+      runs.push({ library, batchId, files, left });
+    }
+    if (options.json) {
+      deps.io.out(JSON.stringify(tidySubtitlesToJson(runs, dryRun), null, 2));
+      return runs.some((run) => run.files.some((f) => f.status === 'failed')) ? 1 : 0;
+    }
+    const { lines, failed } = renderTidySubtitles(
+      runs,
+      new Map(runs.map((run) => [run.library.id, run.batchId])),
+      { dryRun },
       t,
     );
     lines.forEach((line) => {
@@ -518,6 +561,7 @@ function buildProgram(context: Context, exit: { code: number }): Command {
     .option('--library <id>', t('help.opt.tidy-library'))
     .option('--folders', t('help.opt.tidy-folders'))
     .option('--files', t('help.opt.tidy-files'))
+    .option('--subtitles', t('help.opt.tidy-subtitles'))
     .option('--with-nfo', t('help.opt.tidy-with-nfo'))
     .option('--apply', t('help.opt.apply'))
     .option('--json', t('help.opt.json'))
@@ -528,6 +572,7 @@ function buildProgram(context: Context, exit: { code: number }): Command {
         json?: boolean;
         folders?: boolean;
         files?: boolean;
+        subtitles?: boolean;
         withNfo?: boolean;
         apply?: boolean;
       }) => act(() => runTidy(options, context))(),

@@ -131,6 +131,13 @@ export {
   type TidyForeignResult,
 } from './maintenance/tidy-foreign.js';
 export {
+  tidySubtitles,
+  type SubtitleSkipReason,
+  type TidiedSubtitle,
+  type TidySubtitlesOptions,
+  type TidySubtitlesResult,
+} from './maintenance/tidy-subtitles.js';
+export {
   removeOrphanFolders,
   twinKey,
   type OrphanSkipReason,

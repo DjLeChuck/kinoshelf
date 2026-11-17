@@ -72,6 +72,11 @@ in a movie library, the metadata another tool named after the video (`<video>.nf
   to `<config>/replaced/`, nothing is deleted, and `kinoshelf undo` puts them back.
 - `--files` renames the metadata named after the video to Kinoshelf's names, or sets it aside when
   those exist; undoable. `--with-nfo` adds the `<video>.nfo` files that sit beside a `movie.nfo`.
+- `--subtitles` brings the subtitles of a `Subs`, `Sub`, `Subtitles` or `Subtitle` folder next to the
+  video they belong to, in movie and series libraries, as `<video>.<language>.<ext>` (`.forced` and
+  `.sdh` kept): what arrivals get, for a video already named as the profile wants. A file whose name
+  gives no language, or a second one for a language already taken, stays where it is, and the report
+  says so. A dry run unless `--apply`; undoable (`kinoshelf undo`), nothing is overwritten.
 
 The web has the same tool in [System › Maintenance](3-system.md#maintenance).
 

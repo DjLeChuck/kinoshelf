@@ -235,6 +235,21 @@ export const fr: Record<keyof typeof en, string> = {
   'tidy.files.summary.dry-run':
     '{renamed} renommé(s), {removed} mis de côté, {skipped} laissé(s), {failed} en échec (simulation).',
   'tidy.files.dry-run': 'Simulation : rien n’a été modifié. Ajoutez --apply pour le faire.',
+  'help.opt.tidy-subtitles':
+    'range les sous-titres d’un dossier Subs à côté de leur vidéo, nommés par langue ; annulable (simulation sans --apply)',
+  'tidy.subtitles.header': 'Bibliothèque {name} : sous-titres dans un dossier Subs',
+  'tidy.subtitles.none': 'Aucun sous-titre à ranger.',
+  'tidy.subtitles.would-do': 'irait en {destination}',
+  'tidy.subtitles.done': 'déplacé en {destination}',
+  'tidy.subtitles.skipped.destination-exists': 'laissé : {destination} est déjà là',
+  'tidy.subtitles.skipped.changed': 'laissé : il a changé pendant la lecture',
+  'tidy.subtitles.left': 'reste dans son dossier ({reason})',
+  'tidy.subtitles.batch': 'Lot {batch}. Pour annuler : kinoshelf undo {batch} --apply',
+  'tidy.subtitles.summary':
+    '{moved} déplacé(s), {skipped} laissé(s), {left} restent dans leur dossier, {failed} en échec.',
+  'tidy.subtitles.summary.dry-run':
+    '{moved} déplacé(s), {skipped} laissé(s), {left} restent dans leur dossier, {failed} en échec (simulation).',
+  'tidy.subtitles.dry-run': 'Simulation : rien n’a été déplacé. Ajoutez --apply pour le faire.',
   'error.tidy.no-library':
     'Aucune bibliothèque avec un type dans {path} : un rapport lit les bibliothèques organisées sur place, pas les dossiers d’arrivée.',
   'help.submit':
@@ -493,6 +508,20 @@ export const fr: Record<keyof typeof en, string> = {
     'Certains lecteurs lisent <film>.nfo avant movie.nfo : vérifiez sur le vôtre que movie.nfo seul est bien lu avant de l’activer.',
   'web.maintenance.nfo.left':
     '{count, plural, one {# fichier <film>.nfo est laissé tel quel} other {# fichiers <film>.nfo sont laissés tels quels}} : cochez la case ci-dessus pour les mettre de côté aussi.',
+  'web.maintenance.subtitles':
+    'Ranger aussi les sous-titres des dossiers Subs, Sub et Subtitles à côté de leur vidéo',
+  'web.maintenance.subtitles.hint':
+    'Nommés par langue (<vidéo>.fr.srt). Un fichier sans langue dans son nom, ou un second pour une langue déjà prise, reste où il est.',
+  'web.maintenance.subtitles.todo':
+    '{count, plural, one {# sous-titre à ranger à côté de sa vidéo} other {# sous-titres à ranger à côté de leur vidéo}}',
+  'web.maintenance.subtitles.done':
+    '{count, plural, one {# sous-titre rangé à côté de sa vidéo} other {# sous-titres rangés à côté de leur vidéo}}',
+  'web.maintenance.subtitles.left':
+    '{count, plural, one {# sous-titre reste dans son dossier} other {# sous-titres restent dans leur dossier}}',
+  'web.maintenance.subtitle.row': '{name} devient {destination}',
+  'web.maintenance.progress.subtitles': 'Vidéos : {done} sur {total}',
+  'web.maintenance.confirm.subtitles':
+    '{count, plural, one {# sous-titre rangé à côté de sa vidéo} other {# sous-titres rangés à côté de leur vidéo}}',
   'web.maintenance.report': 'Analyse',
   'web.maintenance.result': 'Terminé le {date}.',
   'web.maintenance.nothing': 'Rien à nettoyer.',

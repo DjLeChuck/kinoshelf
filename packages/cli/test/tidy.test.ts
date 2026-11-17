@@ -200,3 +200,54 @@ describe('tidy --files', () => {
     expect(await exists(join(dune, 'poster.jpg'))).toBe(false);
   });
 });
+
+describe('tidy --subtitles', () => {
+  async function withSubs() {
+    const s = await setup();
+    await put(join(s.dune, 'Subs', '2_French.srt'), 'fr');
+    await put(join(s.dune, 'Subs', '3_French.srt'), 'again');
+    await put(join(s.dune, 'Subs', 'Dune.srt'), 'unknown');
+    return s;
+  }
+
+  it('is a dry run without --apply, and says which files stay and why', async () => {
+    const { h, dune } = await withSubs();
+
+    expect(await h.cli('tidy', '--subtitles')).toBe(0);
+
+    const text = h.out.join('\n');
+    expect(text).toContain('would go to Dune (2021).fr.srt');
+    expect(text).toContain('stays in its folder (that language is already taken)');
+    expect(text).toContain('stays in its folder (no language in its name)');
+    expect(text).toContain('Dry run: nothing was moved');
+    expect(await exists(join(dune, 'Subs', '2_French.srt'))).toBe(true);
+  });
+
+  it('moves them with --apply and undo puts them back', async () => {
+    const { h, dune } = await withSubs();
+
+    expect(await h.cli('tidy', '--subtitles', '--apply')).toBe(0);
+
+    const batch = /kinoshelf undo (\S+) --apply/.exec(h.out.join('\n'))?.[1];
+    expect(await exists(join(dune, 'Dune (2021).fr.srt'))).toBe(true);
+    expect(await exists(join(dune, 'Subs', '2_French.srt'))).toBe(false);
+    // The two that stay keep their folder.
+    expect(await exists(join(dune, 'Subs', 'Dune.srt'))).toBe(true);
+
+    expect(await h.cli('undo', batch ?? '', '--apply')).toBe(0);
+    expect(await exists(join(dune, 'Subs', '2_French.srt'))).toBe(true);
+    expect(await exists(join(dune, 'Dune (2021).fr.srt'))).toBe(false);
+  });
+
+  it('carries codes in the JSON, not text', async () => {
+    const { h } = await withSubs();
+    expect(await h.cli('tidy', '--subtitles', '--json')).toBe(0);
+    const report = JSON.parse(h.out.join('\n')) as {
+      libraries: { id: string; left: { reason: string }[] }[];
+    };
+    expect(report.libraries.find(({ id }) => id === 'films')?.left.map((l) => l.reason)).toEqual([
+      'language-taken',
+      'language-unknown',
+    ]);
+  });
+});
