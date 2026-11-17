@@ -7,6 +7,10 @@ import {
   type ActivityTask,
 } from '../src/activity.js';
 import { join } from 'node:path';
+import type { Config } from '@kinoshelf/core';
+import { scanSource } from '../src/activity-sources.js';
+import type { JobStore } from '../src/jobs.js';
+import type { ProgressTracker } from '../src/progress.js';
 import { cleanup, harness, makeDir, put } from './harness.js';
 
 afterEach(cleanup);
@@ -120,5 +124,43 @@ describe('a task shorter than the time the web takes to ask', () => {
       tasks: { id: string; status: string }[];
     }>();
     expect(tasks.map(({ id, status }) => [id, status])).toContainEqual([`scan:${jobId}`, 'done']);
+  });
+});
+
+describe('where a scan is followed', () => {
+  const config: Config = {
+    libraries: [
+      { id: 'films', name: 'Films', source: '/films', type: 'movie' },
+      {
+        id: 'arrivals',
+        name: 'Arrivals',
+        source: '/in',
+        into: { movie: 'films', series: 'films' },
+      },
+    ],
+  };
+
+  const hrefOf = (libraryId: string | null): string | null => {
+    const source = scanSource({
+      progress: {
+        scans: () => [['job-1', { phase: 'read', found: 1, done: 0, total: 1, current: null }]],
+      } as unknown as ProgressTracker,
+      jobs: { get: () => ({ id: 'job-1', libraryId, path: '/x' }) } as unknown as JobStore,
+      config: () => config,
+    });
+    return source.list()[0]?.href ?? null;
+  };
+
+  it('is the library page for a typed library', () => {
+    expect(hrefOf('films')).toBe('/libraries/films');
+  });
+
+  it('is the Arrivals tab for an arrival folder, which has no page of its own', () => {
+    expect(hrefOf('arrivals')).toBe('/arrivals');
+  });
+
+  it('is the History for a job of no library, or of one deleted since', () => {
+    expect(hrefOf(null)).toBe('/history/job-1');
+    expect(hrefOf('gone')).toBe('/history/job-1');
   });
 });

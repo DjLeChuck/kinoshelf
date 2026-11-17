@@ -31,6 +31,18 @@ function nameOf(config: Config, libraryId: string | null, path: string): string 
   );
 }
 
+/**
+ * Where a scan is followed: a typed library has its own page, an arrival folder is the Arrivals tab
+ * (it has no page of its own), and a job of no library, or of one since deleted, is in the History.
+ */
+function scanHref(config: Config, libraryId: string | null, jobId: string): string {
+  const library = config.libraries?.find(({ id }) => id === libraryId);
+  if (library === undefined) {
+    return `/history/${jobId}`;
+  }
+  return library.into ? '/arrivals' : `/libraries/${library.id}`;
+}
+
 /** Analyses: only the phases that count files have a bar, the walk and the planning do not. */
 export function scanSource(deps: {
   progress: ProgressTracker;
@@ -42,7 +54,7 @@ export function scanSource(deps: {
     return (
       job && {
         params: { name: nameOf(deps.config(), job.libraryId, job.path) },
-        href: job.libraryId ? `/libraries/${job.libraryId}` : `/history/${job.id}`,
+        href: scanHref(deps.config(), job.libraryId, job.id),
       }
     );
   };
