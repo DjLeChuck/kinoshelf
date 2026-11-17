@@ -108,8 +108,10 @@ make docs-build     # the site, in docs/.vitepress/dist (a broken link fails the
 make docs-preview   # build, then serve it as published on http://localhost:4173
 ```
 
-The `Docs` workflow publishes it to GitHub Pages (run by hand for now: Settings › Pages › Source must
-be "GitHub Actions"; it serves from `/kinoshelf/`, set by `DOCS_BASE`).
+The `Docs` workflow publishes it to GitHub Pages when a final release tag (`vX.Y.Z`) is pushed, so the
+site describes the release while `docs/` on `main` follows the code (Settings › Pages › Source must be
+"GitHub Actions"; it serves from `/kinoshelf/`, set by `DOCS_BASE`). It can also be run by hand, from the
+branch it is run on.
 
 Rules that keep both renderings working:
 

@@ -22,6 +22,9 @@ equivalent of tinyMediaManager and a companion to Radarr/Sonarr: it never downlo
   </picture>
 </p>
 
+> The screenshots and the pages in [`docs/`](docs/README.md) describe the `main` branch, which can be ahead
+> of the latest release (see [`[Unreleased]`](CHANGELOG.md)). The documentation site follows the releases.
+
 ## Features
 
 **Identify and organize**

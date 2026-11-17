@@ -17,7 +17,10 @@ Every file goes through the same four steps, and nothing touches the disk before
 validated:
 
 1. **Parse**: the file name (and its folders) is read for a title, a year, a season and episode,
-   a picture size, a language, an id…
+   a picture size, a language, an id… A TMDB id (`{tmdb-<id>}`) or an IMDb id (`{imdb-tt…}`,
+   `[imdbid-tt…]`) in the name is only a hint: the work it names joins the candidates, and counts only if
+   its title, year and type agree. When it designates another work than the best match, nothing is
+   decided automatically.
 2. **Match**: TMDB candidates are searched and scored. A score at or above the **threshold** (85 by
    default) is a match with confidence; below it, or when two candidates are too close, a human
    decides.
@@ -84,7 +87,9 @@ place never lands here. The files are in three states:
 - **Not recognized**: nothing was found.
 
 For each file you see its TMDB candidates and their score, a manual search, and the destination a
-choice would give. When TMDB lacks the season and episode of some files of the series, the panel lists
+choice would give. When the best candidate is under 100 %, the panel says **why**: the title, year or
+type differs, the country or the installment number (`Part 2`) does not match, another candidate is almost as
+good, or an id in the name points elsewhere. When TMDB lacks the season and episode of some files of the series, the panel lists
 them grouped by season, with a link to each season on TMDB (or says the season does not exist there): a
 perfect title still waits for validation, because the numbering may differ.
 

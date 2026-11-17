@@ -28,6 +28,8 @@ export default defineConfig({
   cleanUrls: true,
   lastUpdated: true,
   rewrites: PAGES,
+  // `README.md` is the note GitHub shows when browsing the folder, not a page of the site.
+  srcExclude: ['README.md'],
   // A broken link fails the build, which is the point of building it in CI. Only the addresses of
   // the local test servers in the development guide are not checked.
   ignoreDeadLinks: [/^https?:\/\/localhost/],

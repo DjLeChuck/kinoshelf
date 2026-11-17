@@ -1005,6 +1005,8 @@ Chromium) and runs in its own CI job; `@playwright/test` is pinned to the versio
 - **The release notes are the version's section of `CHANGELOG.md`** (`scripts/changelog-section.sh`, which fails when it
   is missing). Write it before tagging, in the same commit; keep `[Unreleased]` for what comes after. A tag with a dash
   (`v1.1.0-rc.1`) is a pre-release, takes its final version's section, and does not move `latest`.
+- **The documentation site is built from the tag** (`docs.yml`, final tags only): `docs/` and the screenshots
+  must be up to date in the release commit, `main` being allowed to run ahead of the last release between two.
 - **Rehearse with a `-rc` tag** after any change to the workflows. Not published to npm (Docker and the binary are the
   distribution).
 - Durable data: a shipped migration is never edited (see the golden rules), which is what makes an upgrade safe.
