@@ -1,13 +1,13 @@
 name: Docs
 
 # Needs Settings › Pages › Source set to "GitHub Actions".
+# The site follows the releases: `docs/` on `main` is ahead of what is published, and is only built
+# from a final tag (`vX.Y.Z`; a `-rc` tag does not match). A run by hand builds the branch it is run on.
 on:
   workflow_dispatch:
   push:
-    branches: [main]
-    paths:
-      - docs/**
-      - README.md
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
 
 permissions:
   contents: read
