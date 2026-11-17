@@ -12,6 +12,7 @@
     type TidyFile,
     type TidyFolder,
     type TidyRequest,
+    type TidySubtitle,
     type TidyTask,
   } from '../lib/maintenance.js';
   import { baseName } from '../lib/paths.js';
@@ -37,6 +38,7 @@
   // The owner's choice, until they make one the state of the analysis on show (a report read again
   // after a reload still says whether it counted the `<video>.nfo` files).
   let chosenNfo = $state<boolean | undefined>(undefined);
+  let chosenSubtitles = $state<boolean | undefined>(undefined);
 
   const isMovies = $derived(library.type === 'movie');
   const running = $derived(task?.status === 'running' ? task : undefined);
@@ -52,6 +54,8 @@
       ) ??
       false,
   );
+  // Subtitles are off until asked for: the report on show says whether it read them.
+  const subtitles = $derived(chosenSubtitles ?? shown?.subtitles != null);
   // Open while there is something to read or follow (a report, a result, a task, a failure), folded
   // otherwise so a list of libraries stays short; the reader's own choice wins once made.
   let toggled = $state<boolean | undefined>(undefined);
@@ -83,6 +87,10 @@
       tally.removals > 0 &&
         t(result ? 'web.maintenance.removals.done' : 'web.maintenance.removals.todo', {
           count: tally.removals,
+        }),
+      tally.subtitles > 0 &&
+        t(result ? 'web.maintenance.subtitles.done' : 'web.maintenance.subtitles.todo', {
+          count: tally.subtitles,
         }),
       tally.failed > 0 && t('web.maintenance.failed', { count: tally.failed }),
     ]
@@ -117,7 +125,7 @@
       ? {
           kind: 'warn',
           label: t('web.maintenance.state.todo', {
-            count: tally.folders + tally.renames + tally.removals,
+            count: tally.folders + tally.renames + tally.removals + tally.subtitles,
           }),
         }
       : { kind: 'ok', label: t('web.maintenance.state.clean') };
@@ -126,11 +134,11 @@
     running && running.total > 0 ? Math.round((running.done / running.total) * 100) : undefined,
   );
 
-  async function start(dryRun: boolean, withNfo = nfo): Promise<void> {
+  async function start(dryRun: boolean, withNfo = nfo, withSubtitles = subtitles): Promise<void> {
     starting = true;
     failure = undefined;
     try {
-      await onstart({ library: library.id, dryRun, nfo: withNfo });
+      await onstart({ library: library.id, dryRun, nfo: withNfo, subtitles: withSubtitles });
     } catch (error) {
       failure = error;
     } finally {
@@ -143,6 +151,13 @@
     // The report on show would no longer be the one a run does: read it again.
     if (report && !locked) {
       void start(true, checked);
+    }
+  }
+
+  function toggleSubtitles(checked: boolean): void {
+    chosenSubtitles = checked;
+    if (report && !locked) {
+      void start(true, nfo, checked);
     }
   }
 
@@ -159,6 +174,20 @@
   const failedFiles = $derived(
     (shown?.files?.items ?? []).filter(({ status }) => status === 'failed'),
   );
+
+  const doneSubtitles = $derived(
+    (shown?.subtitles?.items ?? []).filter(
+      ({ status }) => status === 'would-do' || status === 'done',
+    ),
+  );
+  const failedSubtitles = $derived(
+    (shown?.subtitles?.items ?? []).filter(({ status }) => status === 'failed'),
+  );
+  const subtitleLine = (file: TidySubtitle): string =>
+    t('web.maintenance.subtitle.row', {
+      name: baseName(file.path),
+      destination: baseName(file.destination),
+    });
 
   function isDone({ status }: TidyFolder): boolean {
     return status === 'would-remove' || status === 'removed';
@@ -263,6 +292,21 @@
     </label>
   {/if}
 
+  <label class="check">
+    <input
+      type="checkbox"
+      checked={subtitles}
+      disabled={locked}
+      onchange={(event) => {
+        toggleSubtitles(event.currentTarget.checked);
+      }}
+    />
+    <span>
+      {t('web.maintenance.subtitles')}
+      <span class="muted hint">{t('web.maintenance.subtitles.hint')}</span>
+    </span>
+  </label>
+
   <div class="body" id={`maintenance-body-${library.id}`} hidden={!open}>
     {#if library.scanning}
       <p class="muted" role="status">{t('web.maintenance.scanning')}</p>
@@ -342,19 +386,50 @@
           </details>
         {/if}
 
+        {#if doneSubtitles.length > 0}
+          <details open={doneSubtitles.length <= 12}>
+            <summary>
+              {t(result ? 'web.maintenance.subtitles.done' : 'web.maintenance.subtitles.todo', {
+                count: doneSubtitles.length,
+              })}
+            </summary>
+            <ul class="rows">
+              {#each doneSubtitles as file (file.path)}
+                <li><span class="name" title={file.path}>{subtitleLine(file)}</span></li>
+              {/each}
+            </ul>
+          </details>
+        {/if}
+
+        {#if (shown.subtitles?.left.length ?? 0) > 0}
+          <details>
+            <summary>
+              {t('web.maintenance.subtitles.left', { count: shown.subtitles?.left.length ?? 0 })}
+            </summary>
+            <ul class="rows">
+              {#each shown.subtitles?.left ?? [] as file (file.path + file.reason)}
+                <li>
+                  <span class="name" title={file.path}>{baseName(file.path)}</span>
+                  <span class="muted">{t(`web.library.run.left.${file.reason}`)}</span>
+                </li>
+              {/each}
+            </ul>
+          </details>
+        {/if}
+
         {#if tally.nfoLeft > 0 && !nfo}
           <p class="muted hint">{t('web.maintenance.nfo.left', { count: tally.nfoLeft })}</p>
         {/if}
 
-        {#if failedFolders.length + failedFiles.length > 0}
+        {#if failedFolders.length + failedFiles.length + failedSubtitles.length > 0}
           <details open>
             <summary
               >{t('web.maintenance.failed', {
-                count: failedFolders.length + failedFiles.length,
+                count: failedFolders.length + failedFiles.length + failedSubtitles.length,
               })}</summary
             >
             <ul class="rows">
-              {#each [...failedFolders, ...failedFiles] as item (item.path)}
+              {#each [...failedFolders, ...failedFiles, ...failedSubtitles] as item (item.path)}
                 <li>
                   <span class="name" title={item.path}>{baseName(item.path)}</span>
                   {#if item.error}
@@ -368,7 +443,7 @@
 
         {#if result}
           <p class="batches">
-            {#each [result.folders?.batch, result.files?.batch].filter((id): id is string => id != null) as batch (batch)}
+            {#each [result.folders?.batch, result.files?.batch, result.subtitles?.batch].filter((id): id is string => id != null) as batch (batch)}
               <Link href={`/history/${batch}`}>{t('web.maintenance.batch.link')}</Link>
             {/each}
           </p>

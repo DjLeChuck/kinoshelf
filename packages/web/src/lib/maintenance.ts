@@ -1,4 +1,5 @@
 import type { ErrorBody } from './arrivals.js';
+import type { LeftBehind } from './library-items.js';
 
 /** What the maintenance cards read (`GET /api/maintenance`). */
 export interface MaintenanceFigures {
@@ -86,6 +87,16 @@ export interface TidyFile {
   readonly error?: ErrorBody;
 }
 
+/** One subtitle of a `Subs` folder (`subtitles.items` of a task). */
+export interface TidySubtitle {
+  readonly path: string;
+  /** Beside the video: `<video>.<language>[.forced][.sdh].<ext>`. */
+  readonly destination: string;
+  readonly status: 'would-do' | 'done' | 'skipped' | 'failed';
+  readonly reason?: 'destination-exists' | 'changed';
+  readonly error?: ErrorBody;
+}
+
 export interface TidyPart<T> {
   /** The batch of the History that undoes it, `null` when nothing was moved. */
   readonly batch: string | null;
@@ -97,7 +108,7 @@ export interface TidyTask {
   readonly library: string;
   readonly dryRun: boolean;
   readonly status: 'running' | 'done' | 'failed';
-  readonly phase: 'reading' | 'folders' | 'files';
+  readonly phase: 'reading' | 'folders' | 'files' | 'subtitles';
   readonly done: number;
   readonly total: number;
   readonly current: string | null;
@@ -105,6 +116,8 @@ export interface TidyTask {
   readonly endedAt: string | null;
   readonly folders: TidyPart<TidyFolder> | null;
   readonly files: TidyPart<TidyFile> | null;
+  /** What stays in its `Subs` folder is in `left`, with the reason. */
+  readonly subtitles: (TidyPart<TidySubtitle> & { readonly left: readonly LeftBehind[] }) | null;
   readonly error: ErrorBody | null;
 }
 
@@ -113,6 +126,7 @@ export interface TidyRequest {
   readonly library: string;
   readonly dryRun: boolean;
   readonly nfo: boolean;
+  readonly subtitles: boolean;
 }
 
 /** What a task found or did, counted for the summary lines and the confirmation. */
@@ -127,6 +141,10 @@ export interface TidyTally {
   readonly removals: number;
   /** `<video>.nfo` files left because they were not asked for. */
   readonly nfoLeft: number;
+  /** Subtitles of a `Subs` folder that go (or went) next to their video. */
+  readonly subtitles: number;
+  /** Subtitles that stay in their `Subs` folder: no language in the name, or that language is taken. */
+  readonly subtitlesLeft: number;
   readonly failed: number;
 }
 
@@ -165,12 +183,31 @@ export function tallyOf(task: TidyTask): TidyTally {
       nfoLeft++;
     }
   }
-  return { folders, left, approximate, renames, removals, nfoLeft, failed };
+  let subtitles = 0;
+  for (const file of task.subtitles?.items ?? []) {
+    if (file.status === 'would-do' || file.status === 'done') {
+      subtitles++;
+    } else if (file.status === 'failed') {
+      failed++;
+    }
+  }
+  const subtitlesLeft = task.subtitles?.left.length ?? 0;
+  return {
+    folders,
+    left,
+    approximate,
+    renames,
+    removals,
+    nfoLeft,
+    subtitles,
+    subtitlesLeft,
+    failed,
+  };
 }
 
 /** Something would be moved: only then is there anything to confirm. */
 export const hasWork = (tally: TidyTally): boolean =>
-  tally.folders + tally.renames + tally.removals > 0;
+  tally.folders + tally.renames + tally.removals + tally.subtitles > 0;
 
 /** Folders that share a parent: a show's seasons, or the folders loose in the library (`parent` empty). */
 export interface FolderGroup {

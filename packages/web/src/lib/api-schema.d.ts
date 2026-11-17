@@ -7300,7 +7300,7 @@ export interface paths {
                                  * @description `reading` while the library is being read: no total is known yet.
                                  * @enum {unknown}
                                  */
-                                phase: "reading" | "folders" | "files";
+                                phase: "reading" | "folders" | "files" | "subtitles";
                                 done: number;
                                 total: number;
                                 current: string | null;
@@ -7356,6 +7356,31 @@ export interface paths {
                                         };
                                     }[];
                                 } | null;
+                                subtitles: {
+                                    /** @description The batch of the History to undo, `null` when nothing was moved. */
+                                    batch: string | null;
+                                    items: {
+                                        path: string;
+                                        /** @description Beside the video: `<video>.<language>[.forced][.sdh].<ext>`. */
+                                        destination: string;
+                                        /** @enum {unknown} */
+                                        status: "would-do" | "done" | "skipped" | "failed";
+                                        /** @enum {unknown} */
+                                        reason?: "destination-exists" | "changed";
+                                        error?: {
+                                            code: string;
+                                            params?: {
+                                                [key: string]: string | number;
+                                            };
+                                        };
+                                    }[];
+                                    /** @description What stays in its `Subs` folder, with the reason. */
+                                    left: {
+                                        path: string;
+                                        /** @enum {unknown} */
+                                        reason: "language-unknown" | "language-taken";
+                                    }[];
+                                } | null;
                                 error: {
                                     code: string;
                                     params?: {
@@ -7387,7 +7412,7 @@ export interface paths {
         put?: never;
         /**
          * Start tidying a library
-         * @description Starts a task and answers 202 at once, `GET /api/maintenance/tidy` tells how it goes. `dryRun` only reports what it would do (the folders holding no video, taken out once a sibling with a video is the same work; in a movie library the metadata named after the video, renamed to Kinoshelf’s names or set aside when those exist). Otherwise `folders` takes the folders out, `files` handles the metadata, `nfo` adding the `<video>.nfo` files. Nothing is deleted: every file is kept in the config folder, and each action is a batch of the History that `POST /api/batches/{id}/undo` reverts. 409 `library.scan-in-progress` while a scan of the library is queued or running, 409 `maintenance.in-progress` while a tidy-up of it runs.
+         * @description Starts a task and answers 202 at once, `GET /api/maintenance/tidy` tells how it goes. `dryRun` only reports what it would do (the folders holding no video, taken out once a sibling with a video is the same work; in a movie library the metadata named after the video, renamed to Kinoshelf’s names or set aside when those exist). Otherwise `folders` takes the folders out, `files` handles the metadata, `nfo` adding the `<video>.nfo` files, `subtitles` (off by default) brings the subtitles of a `Subs` folder next to their video, named by language (what stays, and why, is in `subtitles.left`). Nothing is deleted: every file is kept in the config folder, and each action is a batch of the History that `POST /api/batches/{id}/undo` reverts. 409 `library.scan-in-progress` while a scan of the library is queued or running, 409 `maintenance.in-progress` while a tidy-up of it runs.
          */
         post: {
             parameters: {
@@ -7404,6 +7429,8 @@ export interface paths {
                         folders?: boolean;
                         /** @default true */
                         files?: boolean;
+                        /** @default false */
+                        subtitles?: boolean;
                         /** @default false */
                         nfo?: boolean;
                         /** @default false */
@@ -7427,7 +7454,7 @@ export interface paths {
                              * @description `reading` while the library is being read: no total is known yet.
                              * @enum {unknown}
                              */
-                            phase: "reading" | "folders" | "files";
+                            phase: "reading" | "folders" | "files" | "subtitles";
                             done: number;
                             total: number;
                             current: string | null;
@@ -7481,6 +7508,31 @@ export interface paths {
                                             [key: string]: string | number;
                                         };
                                     };
+                                }[];
+                            } | null;
+                            subtitles: {
+                                /** @description The batch of the History to undo, `null` when nothing was moved. */
+                                batch: string | null;
+                                items: {
+                                    path: string;
+                                    /** @description Beside the video: `<video>.<language>[.forced][.sdh].<ext>`. */
+                                    destination: string;
+                                    /** @enum {unknown} */
+                                    status: "would-do" | "done" | "skipped" | "failed";
+                                    /** @enum {unknown} */
+                                    reason?: "destination-exists" | "changed";
+                                    error?: {
+                                        code: string;
+                                        params?: {
+                                            [key: string]: string | number;
+                                        };
+                                    };
+                                }[];
+                                /** @description What stays in its `Subs` folder, with the reason. */
+                                left: {
+                                    path: string;
+                                    /** @enum {unknown} */
+                                    reason: "language-unknown" | "language-taken";
                                 }[];
                             } | null;
                             error: {

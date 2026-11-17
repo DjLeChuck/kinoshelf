@@ -21,6 +21,10 @@ All notable changes to Kinoshelf are written here. The format follows
   subtitles of a `Subs` folder stay behind and why (no language in the name, language already taken), and
   so does `kinoshelf scan` and `process` (with `leftBehind` in `--json`).
 
+- **Tidy up the subtitles of a `Subs` folder** in a library organized in place (`kinoshelf tidy --subtitles`, and a
+  box in System › Maintenance): they go next to their video as `<video>.<language>.<ext>`, as for an arrival.
+  A video already named as the profile wants never went through those rules. Undoable.
+
 ### Changed
 
 - The folder a move leaves behind is now removed when its sub-folders hold only what Kinoshelf made or

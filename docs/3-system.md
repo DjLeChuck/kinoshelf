@@ -72,6 +72,11 @@ links its batches.
 - In a movie library, metadata named after the video (`<video>-poster.jpg`, `-fanart`, `-clearlogo`)
   is renamed to Kinoshelf's names, or set aside when those exist. `<video>.nfo` is handled only when
   you tick **also handle `<film>.nfo`**, beside a `movie.nfo` and in a folder of a single video.
+- **Also bring the subtitles of the Subs, Sub and Subtitles folders next to their video** (off by
+  default, movie and series libraries): a video already named as the profile wants never went through
+  the arrival rules, so its `Subs` folder stays. The files are named by language (`<video>.fr.srt`,
+  `.forced` and `.sdh` kept). A file with no language in its name, or a second one for a language
+  already taken, stays where it is, and the report lists it with the reason. Undoable from the History.
 - The task runs in the background with a bar, and the page finds it again if you leave and come back.
 
 The same tidy-up is available on the command line (`kinoshelf tidy`, see [Command line](7-cli.md)).

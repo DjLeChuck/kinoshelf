@@ -154,6 +154,11 @@ nowhere: a custom profile file is to be discussed again.
   read from the disk by the page of one item only (`GET .../items/{itemId}`: `versions[].subtitles`, `findSubtitles`, the
   names beside the video, a `Subs` folder not counted, none for a list, which never reads the disk), shown by `VersionsTable`
   under the tracks of ffprobe. They are not stored: Bazarr and the like add them at any time.
+  **A video already in place** never goes through the planner, so its `Subs` folder is brought beside it by the
+  maintenance task `tidySubtitles` (`maintenance/tidy-subtitles.ts`: `sidecarsOf`, so the same rules, one journaled
+  batch of `move`s, `pruneVacated` for the emptied folder), asked with `kinoshelf tidy --subtitles` or `subtitles: true`
+  of `POST /api/maintenance/tidy` (off by default, so the other tidy-ups keep their behaviour; `task.subtitles`:
+  `{ batch, items, left }`). Never inside a request, like the rest of the tidy-up.
   Downloading subtitles (OpenSubtitles) is a project of its own, not built.
 - **A size read from the file** (`PlannerOptions.sizeOf`, `AnalyzeOptions.sizeOf`; the server's is
   `probePictureSize`, ffprobe's frame by `pictureSize(width, height)`, the larger of the sizes the

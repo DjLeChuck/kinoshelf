@@ -47,6 +47,11 @@ interface Task {
   phase: string;
   folders: { batch: string | null; items: Record<string, unknown>[] } | null;
   files: { batch: string | null; items: Record<string, unknown>[] } | null;
+  subtitles: {
+    batch: string | null;
+    items: Record<string, unknown>[];
+    left: { path: string; reason: string }[];
+  } | null;
   error: { code: string } | null;
 }
 
@@ -445,5 +450,74 @@ describe('the log of the maintenance actions', () => {
       'Emptied the files set aside',
       'Forgot the hidden analyses',
     ]);
+  });
+});
+
+describe('POST /api/maintenance/tidy: subtitles', () => {
+  async function withSubs() {
+    const s = await setup();
+    const folder = join(s.source, 'Dune (2021)');
+    await put(join(folder, 'Subs', '2_French.srt'), 'fr');
+    await put(join(folder, 'Subs', '3_French.srt'), 'again');
+    await put(join(folder, 'Subs', 'Dune.srt'), 'unknown');
+    return { ...s, folder };
+  }
+
+  it('is left alone unless asked: the default tidy-up does not touch a Subs folder', async () => {
+    const { h, folder } = await withSubs();
+    const task = await tidy(h, { library: 'films' });
+    expect(task.subtitles).toBeNull();
+    expect(await exists(join(folder, 'Subs', '2_French.srt'))).toBe(true);
+  });
+
+  it('reports what it would bring and what stays, and moves nothing in a dry run', async () => {
+    const { h, folder } = await withSubs();
+
+    const task = await tidy(h, {
+      library: 'films',
+      folders: false,
+      files: false,
+      subtitles: true,
+      dryRun: true,
+    });
+
+    expect(task.status).toBe('done');
+    expect(task.subtitles?.items).toMatchObject([
+      { path: join(folder, 'Subs', '2_French.srt'), status: 'would-do' },
+    ]);
+    expect(task.subtitles?.left.map(({ reason }) => reason)).toEqual([
+      'language-taken',
+      'language-unknown',
+    ]);
+    expect(task.subtitles?.batch).toBeNull();
+    expect(await exists(join(folder, 'Subs', '2_French.srt'))).toBe(true);
+  });
+
+  it('moves them as a batch of the History, which can be undone', async () => {
+    const { h, folder } = await withSubs();
+
+    const task = await tidy(h, { library: 'films', folders: false, files: false, subtitles: true });
+
+    expect(task.subtitles?.items).toMatchObject([{ status: 'done' }]);
+    expect(await exists(join(folder, 'Dune (2021).fr.srt'))).toBe(true);
+    const batch = task.subtitles?.batch ?? '';
+    expect(batch).not.toBe('');
+
+    const undo = await h.request('POST', `/api/batches/${batch}/undo`, {});
+    expect(undo.statusCode).toBe(202);
+    for (let i = 0; i < 200 && (await exists(join(folder, 'Dune (2021).fr.srt'))); i++) {
+      await new Promise((resolve) => setTimeout(resolve, 5));
+    }
+    expect(await exists(join(folder, 'Subs', '2_French.srt'))).toBe(true);
+  });
+
+  it('answers 400 when nothing at all is asked', async () => {
+    const { h } = await setup();
+    const response = await h.request('POST', '/api/maintenance/tidy', {
+      library: 'films',
+      folders: false,
+      files: false,
+    });
+    expect(response.statusCode).toBe(400);
   });
 });

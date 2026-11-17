@@ -2,12 +2,15 @@ import { dirname, join } from 'node:path';
 import {
   removeOrphanFolders,
   tidyForeignFiles,
+  tidySubtitles,
   type Config,
   type Database,
   type Journal,
+  type LeftBehind,
   type LibraryConfig,
   type TidiedFolder,
   type TidiedForeignFile,
+  type TidiedSubtitle,
 } from '@kinoshelf/core';
 import type { FastifyBaseLogger, FastifyInstance } from 'fastify';
 import { ApiError } from './api-error.js';
@@ -172,6 +175,30 @@ const fileSchema = {
   },
 } as const;
 
+const subtitleSchema = {
+  type: 'object',
+  required: ['path', 'destination', 'status'],
+  properties: {
+    path: { type: 'string' },
+    destination: {
+      type: 'string',
+      description: 'Beside the video: `<video>.<language>[.forced][.sdh].<ext>`.',
+    },
+    status: { enum: ['would-do', 'done', 'skipped', 'failed'] },
+    reason: { enum: ['destination-exists', 'changed'] },
+    error: errorInfo,
+  },
+} as const;
+
+const leftBehindSchema = {
+  type: 'object',
+  required: ['path', 'reason'],
+  properties: {
+    path: { type: 'string' },
+    reason: { enum: ['language-unknown', 'language-taken'] },
+  },
+} as const;
+
 const partSchema = (items: object) =>
   ({
     type: ['object', 'null'],
@@ -199,6 +226,7 @@ const taskSchema = {
     'endedAt',
     'folders',
     'files',
+    'subtitles',
     'error',
   ],
   properties: {
@@ -206,7 +234,7 @@ const taskSchema = {
     dryRun: { type: 'boolean' },
     status: { enum: ['running', 'done', 'failed'] },
     phase: {
-      enum: ['reading', 'folders', 'files'],
+      enum: ['reading', 'folders', 'files', 'subtitles'],
       description: '`reading` while the library is being read: no total is known yet.',
     },
     done: { type: 'integer' },
@@ -216,6 +244,22 @@ const taskSchema = {
     endedAt: { type: ['string', 'null'], format: 'date-time' },
     folders: partSchema(folderSchema),
     files: partSchema(fileSchema),
+    subtitles: {
+      type: ['object', 'null'],
+      required: ['batch', 'items', 'left'],
+      properties: {
+        batch: {
+          type: ['string', 'null'],
+          description: 'The batch of the History to undo, `null` when nothing was moved.',
+        },
+        items: { type: 'array', items: subtitleSchema },
+        left: {
+          type: 'array',
+          description: 'What stays in its `Subs` folder, with the reason.',
+          items: leftBehindSchema,
+        },
+      },
+    },
     error: { anyOf: [errorInfo, { type: 'null' }] },
   },
 } as const;
@@ -224,7 +268,7 @@ export interface TidyTask {
   library: string;
   dryRun: boolean;
   status: 'running' | 'done' | 'failed';
-  phase: 'reading' | 'folders' | 'files';
+  phase: 'reading' | 'folders' | 'files' | 'subtitles';
   done: number;
   total: number;
   current: string | null;
@@ -232,6 +276,11 @@ export interface TidyTask {
   endedAt: string | null;
   folders: { batch: string | null; items: readonly TidiedFolder[] } | null;
   files: { batch: string | null; items: readonly TidiedForeignFile[] } | null;
+  subtitles: {
+    batch: string | null;
+    items: readonly TidiedSubtitle[];
+    left: readonly LeftBehind[];
+  } | null;
   error: MatchFailure | null;
 }
 
@@ -266,12 +315,13 @@ export function registerMaintenanceRoutes(api: FastifyInstance, deps: Maintenanc
   const run = async (
     task: TidyTask,
     library: Typed,
-    what: { folders: boolean; files: boolean; nfo: boolean },
+    what: { folders: boolean; files: boolean; subtitles: boolean; nfo: boolean },
   ): Promise<void> => {
     const source = { id: library.id, type: library.type, source: library.source };
     const options = { journal: deps.journal, backupDir, dryRun: task.dryRun };
     const progress =
-      (phase: 'folders' | 'files') => (done: number, total: number, current: string) => {
+      (phase: 'folders' | 'files' | 'subtitles') =>
+      (done: number, total: number, current: string) => {
         Object.assign(task, { phase, done, total, current: current || null });
         deps.progress.announce();
       };
@@ -287,6 +337,15 @@ export function registerMaintenanceRoutes(api: FastifyInstance, deps: Maintenanc
         onProgress: progress('folders'),
       });
       task.folders = { batch: result.batchId, items: result.folders };
+    }
+    if (what.subtitles) {
+      reading();
+      const result = await tidySubtitles(source, {
+        journal: deps.journal,
+        dryRun: task.dryRun,
+        onProgress: progress('subtitles'),
+      });
+      task.subtitles = { batch: result.batchId, items: result.files, left: result.left };
     }
     if (what.files && library.type === 'movie') {
       reading();
@@ -481,7 +540,14 @@ export function registerMaintenanceRoutes(api: FastifyInstance, deps: Maintenanc
   );
 
   api.post<{
-    Body: { library: string; folders?: boolean; files?: boolean; nfo?: boolean; dryRun?: boolean };
+    Body: {
+      library: string;
+      folders?: boolean;
+      files?: boolean;
+      subtitles?: boolean;
+      nfo?: boolean;
+      dryRun?: boolean;
+    };
   }>(
     '/api/maintenance/tidy',
     {
@@ -492,7 +558,9 @@ export function registerMaintenanceRoutes(api: FastifyInstance, deps: Maintenanc
           '`dryRun` only reports what it would do (the folders holding no video, taken out once a ' +
           'sibling with a video is the same work; in a movie library the metadata named after the video, ' +
           'renamed to Kinoshelf’s names or set aside when those exist). Otherwise `folders` takes the ' +
-          'folders out, `files` handles the metadata, `nfo` adding the `<video>.nfo` files. Nothing is ' +
+          'folders out, `files` handles the metadata, `nfo` adding the `<video>.nfo` files, `subtitles` ' +
+          '(off by default) brings the subtitles of a `Subs` folder next to their video, named by ' +
+          'language (what stays, and why, is in `subtitles.left`). Nothing is ' +
           'deleted: every file is kept in the config folder, and each action is a batch of the History ' +
           'that `POST /api/batches/{id}/undo` reverts. 409 `library.scan-in-progress` while a scan of ' +
           'the library is queued or running, 409 `maintenance.in-progress` while a tidy-up of it runs.',
@@ -503,6 +571,7 @@ export function registerMaintenanceRoutes(api: FastifyInstance, deps: Maintenanc
             library: { type: 'string' },
             folders: { type: 'boolean', default: true },
             files: { type: 'boolean', default: true },
+            subtitles: { type: 'boolean', default: false },
             nfo: { type: 'boolean', default: false },
             dryRun: { type: 'boolean', default: false },
           },
@@ -522,10 +591,11 @@ export function registerMaintenanceRoutes(api: FastifyInstance, deps: Maintenanc
         library: id,
         folders = true,
         files = true,
+        subtitles = false,
         nfo = false,
         dryRun = false,
       } = request.body;
-      if (!folders && !files) {
+      if (!folders && !files && !subtitles) {
         throw new ApiError(400, 'request.invalid');
       }
       const library = typedLibrary(id);
@@ -547,11 +617,12 @@ export function registerMaintenanceRoutes(api: FastifyInstance, deps: Maintenanc
         endedAt: null,
         folders: null,
         files: null,
+        subtitles: null,
         error: null,
       };
       tasks.set(library.id, task);
       deps.progress.announce();
-      void run(task, library, { folders, files, nfo })
+      void run(task, library, { folders, files, subtitles, nfo })
         .then(() => {
           task.status = 'done';
         })
@@ -569,13 +640,18 @@ export function registerMaintenanceRoutes(api: FastifyInstance, deps: Maintenanc
                 status: task.status,
                 folders: task.folders?.batch ?? null,
                 files: task.files?.batch ?? null,
+                subtitles: task.subtitles?.batch ?? null,
               },
               'Tidied a library',
             );
           }
           deps.progress.announce();
           // A batch was made, even by a task that failed afterwards: the History lists it.
-          if (task.folders?.batch != null || task.files?.batch != null) {
+          if (
+            task.folders?.batch != null ||
+            task.files?.batch != null ||
+            task.subtitles?.batch != null
+          ) {
             deps.events.emit('history');
           }
         });

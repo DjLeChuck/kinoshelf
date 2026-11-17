@@ -28,6 +28,7 @@
       tally.folders > 0 && t('web.maintenance.confirm.folders', { count: tally.folders }),
       tally.renames > 0 && t('web.maintenance.confirm.renames', { count: tally.renames }),
       tally.removals > 0 && t('web.maintenance.confirm.removals', { count: tally.removals }),
+      tally.subtitles > 0 && t('web.maintenance.confirm.subtitles', { count: tally.subtitles }),
     ].filter((line): line is string => line !== false),
   );
 </script>
