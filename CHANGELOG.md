@@ -25,6 +25,11 @@ All notable changes to Kinoshelf are written here. The format follows
   box in System › Maintenance): they go next to their video as `<video>.<language>.<ext>`, as for an arrival.
   A video already named as the profile wants never went through those rules. Undoable.
 
+- The panel of an arrival now says **why the best match is not a full score**: title, year, type, country,
+  installment, a close runner-up, or an id or installment that contradicts the year.
+
+- A **back to top** button on long pages.
+
 ### Changed
 
 - The folder a move leaves behind is now removed when its sub-folders hold only what Kinoshelf made or
@@ -32,6 +37,19 @@ All notable changes to Kinoshelf are written here. The format follows
 
 - A video `ffprobe` cannot read is now said so: one log line with its path and `ffprobe`'s reason (no
   stack), an Unreadable badge on its version, and a warning on the System page.
+
+### Fixed
+
+- A capitalized word opening an episode title (`Au nom de la mère`) is no longer read as a country (`AU`),
+  which penalized the right series for not being Australian.
+
+- A scan of an arrival folder in the activity panel now links to Arrivals instead of a library page it does
+  not have; a job of no library, or of one deleted since, links to the History.
+
+- A link to a section of the Settings (`/settings#processing`) keeps the section it names, instead of the
+  last one.
+
+- The image dialog keeps a fixed height while its tabs load.
 
 ## [1.0.0] - 2026-11-16
 
