@@ -32,14 +32,14 @@ export interface RenderContext {
   readonly mode: TransferMode;
 }
 
-const rootOf = (roots: DestinationRoots, kind: 'movie' | 'series'): string =>
+const rootOf = (roots: DestinationRoots, kind: 'movie' | 'series'): string | undefined =>
   typeof roots === 'string' ? roots : roots[kind];
 
 function destinationLine(analysis: Analysis, t: Translate): string {
   const roots = analysis.plan.destinationRoot;
   return typeof roots === 'string'
     ? t('report.destination', { destination: roots })
-    : t('report.destinations', { movies: roots.movie, series: roots.series });
+    : t('report.destinations', { movies: roots.movie ?? '—', series: roots.series ?? '—' });
 }
 
 /** The subtitles of a `Subs` folder that stay where they are, one line each with its reason. */
@@ -63,7 +63,7 @@ function describeEntry(entry: AnalysisEntry, analysis: Analysis, t: Translate): 
         const root = rootOf(analysis.plan.destinationRoot, outcome.best.candidate.kind);
         const sidecars = item.operations.length - 1;
         lines.push(
-          `    → ${relative(root, main.destination)}  (${t('entry.score', { score: outcome.best.score })})`,
+          `    → ${root === undefined ? main.destination : relative(root, main.destination)}  (${t('entry.score', { score: outcome.best.score })})`,
         );
         if (sidecars > 0) {
           lines.push(`      ${t('entry.sidecars', { count: sidecars })}`);
