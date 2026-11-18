@@ -51,7 +51,7 @@ A movie library lists movies; a series library reads as a **tree**: show, season
   - **To validate**: files Kinoshelf could not place with confidence;
   - **To rename**: files that do not follow the profile;
   - **Not recognized**: nothing was found for them;
-  - **Incomplete**: a video already in place whose NFO or images are missing (**Refresh…** writes them);
+  - **Incomplete**: a video already in place whose NFO or images are missing (**Complete…** writes them);
   - **Missing NFO** and **Missing images** (poster, fanart, logo, and an episode's thumbnail);
   - **Several versions**, which combines with any of the above;
   - in a series library: **Missing episodes**, **Missing show files** (the show's own NFO and images,
@@ -64,8 +64,12 @@ A movie library lists movies; a series library reads as a **tree**: show, season
   episodes.
 - Filters, sort, open shows and seasons are in the address, so a link keeps them. Changing library
   resets them.
-- A **Rename preview** (and **Refresh**) works on the ticked lines: a dry run lists what would move
-  and what would be written, then you confirm. Only the files to rename (or to refresh) can be ticked.
+- **Organize…**, **Complete…** and **Add the version to the name…** work on the ticked lines (movies in a
+  list, shows in the tree): a dry run lists what would move and what would be written, then you
+  confirm. **Organize** renames and moves the files to rename, **Complete** writes the missing NFO and
+  images, and **Add the version to the name** adds the picture size to a file already in its folder.
+  A button stays grey when nothing in the selection can use it. Hover a button, or focus it with the
+  keyboard, to read what it does (a long press on a phone); Escape closes the tip.
   When a filter lists more than the page loaded, **Select all N, even those not shown** takes every
   one under the filter.
 - Long lists load by themselves as you scroll to the end; a series library lists a release to validate
@@ -97,8 +101,8 @@ expect: `Nightbitch (2024) {tmdb-728949} - 2160p.mkv`. A file that **arrives** i
 label when its name gives a picture size. The label is the size; if two files of the same work share
 it, the source then the release group are added, and files nothing tells apart are a
 `duplicate-destination` conflict (never numbered). A file already in its folder is never renamed
-unless you ask for it from the page of the movie or the episode (**Add the version to the name**: pick
-a size, or "Automatic").
+unless you ask for it, from the page of the movie or the episode or on a selection of movies or shows
+(**Add the version to the name**: pick a size, or "Automatic").
 
 The lists show a movie or an episode **once**, whatever its number of files:
 

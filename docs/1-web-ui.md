@@ -59,7 +59,9 @@ libraries:
     }
 ```
 
-A folder has either a `type` (library) or an `into` (downloads folder), never both. Both are set from
+A folder has either a `type` (library) or an `into` (downloads folder), never both. A downloads folder
+may send to one kind only: a file of a kind with no library waits in Arrivals, with the reason and a link to
+the Settings, and is never sent to another library. Both are set from
 the Settings, with a path picker on the server's disk. A folder cannot contain another one, or lie
 inside it: `/media` as a downloads folder beside `/media/movies` as a library is refused, since every
 file of the library would be offered as an arrival. See
@@ -68,8 +70,8 @@ file of the library would be offered as an arrival. See
 ## Welcome
 
 On a new install, `/` shows a setup in four steps: the TMDB key (your own, tested as soon as you enter
-it), Plex or Jellyfin, your movies and series folders (the first two libraries, organized in place),
-and an downloads folder pointing at them (watched, or scanned once). Each step ticks itself once the
+it), Plex or Jellyfin, your movies and series folders (the first libraries, organized in place; give
+only the one you keep if you have movies or series alone) and a downloads folder pointing at them (watched, or scanned once). Each step ticks itself once the
 configuration says so, and the server remembers what you skipped. The app then opens on Libraries.
 
 If the first job fails, it is not lost: the History lists it with its cause.

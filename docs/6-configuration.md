@@ -104,18 +104,18 @@ it was queued with, shown in the History.
 Each entry of `libraries` is either a library or an downloads folder (see
 [Concepts](1-web-ui.md#two-kinds-of-folders)).
 
-| Key         | Library (`type`)               | Downloads folder (`into`)                      |
-| ----------- | ------------------------------ | ---------------------------------------------- |
-| `id`        | required                       | required                                       |
-| `name`      | required                       | required                                       |
-| `source`    | the folder organized in place  | the folder files arrive in                     |
-| `type`      | `movie` or `series`            | —                                              |
-| `into`      | —                              | `{ movie: <id>, series: <id> }`, both required |
-| `naming`    | overrides the global naming    | — (takes its destination's)                    |
-| `metadata`  | overrides the global metadata  | — (takes its destination's)                    |
-| `mode`      | — (organized in place: `move`) | `copy` (default), `hardlink` or `move`         |
-| `threshold` | overrides the global threshold | overrides the global threshold                 |
-| `watch`     | —                              | `true` to submit what lands in `source`        |
+| Key         | Library (`type`)               | Downloads folder (`into`)                       |
+| ----------- | ------------------------------ | ----------------------------------------------- |
+| `id`        | required                       | required                                        |
+| `name`      | required                       | required                                        |
+| `source`    | the folder organized in place  | the folder files arrive in                      |
+| `type`      | `movie` or `series`            | —                                               |
+| `into`      | —                              | `{ movie?: <id>, series?: <id> }`, one at least |
+| `naming`    | overrides the global naming    | — (takes its destination's)                     |
+| `metadata`  | overrides the global metadata  | — (takes its destination's)                     |
+| `mode`      | — (organized in place: `move`) | `copy` (default), `hardlink` or `move`          |
+| `threshold` | overrides the global threshold | overrides the global threshold                  |
+| `watch`     | —                              | `true` to submit what lands in `source`         |
 
 Rules the file enforces: ids are lowercase letters, digits and dashes and are generated from the
 name; two folders cannot share a source nor contain one another (`library.source-overlaps`); a source cannot be `/`, `/proc`, `/sys` or `/dev`; `into`

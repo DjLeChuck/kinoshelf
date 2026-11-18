@@ -116,4 +116,4 @@ Kodi reads the layout with `metadata: nfo`, if its sources are set up for it:
 2160p.mkv` in its season folder. The label comes from the file name. When the name says none and
   another version is already there, the size is read from the video with `ffprobe` (see
   `detectPictureSize` in the [configuration](6-configuration.md)); a file already in its folder is
-  never renamed unless you ask for it, from its page ("Add the version to the name").
+  never renamed unless you ask for it, from its page or on a selection ("Add the version to the name").
