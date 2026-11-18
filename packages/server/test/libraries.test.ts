@@ -23,7 +23,7 @@ interface LibraryBody {
   name: string;
   source: string;
   type: string | null;
-  into: { movie: string; series: string } | null;
+  into: { movie?: string; series?: string } | null;
   naming: string | null;
   metadata: string | null;
   mode: string | null;
@@ -235,6 +235,8 @@ describe('libraries', () => {
       'library.invalid',
     ]);
     expect(await h.file()).not.toContain('libraries');
+    // An arrival folder names one kind at least.
+    expect(await code({ name: 'L', source, into: {} })).toEqual([400, 'request.invalid']);
 
     await h.request('POST', '/api/libraries', body({}));
     expect(await code(body({ name: 'Other' }))).toEqual([409, 'library.source-taken']);
@@ -301,6 +303,21 @@ describe('libraries', () => {
     });
     expect((await h.request('DELETE', '/api/libraries/downloads')).statusCode).toBe(204);
     expect((await h.request('DELETE', '/api/libraries/films')).statusCode).toBe(204);
+  });
+
+  it('accepts an arrival folder that sends to one kind only', async () => {
+    const h = await served();
+    await typedLibraries(h);
+    const arrival = await h.request('POST', '/api/libraries', {
+      name: 'Movies in',
+      source: await makeDir(),
+      into: { movie: 'films' },
+    });
+    expect(arrival.statusCode, arrival.body).toBe(201);
+    expect(arrival.json<LibraryBody>().into).toEqual({ movie: 'films' });
+    // The series library is no longer pointed at: it can go, the movie one cannot.
+    expect((await h.request('DELETE', '/api/libraries/series')).statusCode).toBe(204);
+    expect((await h.request('DELETE', '/api/libraries/films')).statusCode).toBe(409);
   });
 
   it('tells the event stream that settings changed', async () => {

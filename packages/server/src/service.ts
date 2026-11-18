@@ -506,6 +506,9 @@ export class Service {
       this.chosenLibrary(entry, candidate, libraryId),
     ).destinationRoot;
     const root = typeof roots === 'string' ? roots : roots.series;
+    if (root === undefined) {
+      return null;
+    }
     const [first, ...rest] = relative(root, destination).split('/');
     return first && first !== '..' && rest.length > 0 ? join(root, first) : null;
   }
@@ -587,10 +590,13 @@ export class Service {
     if (kind === null || from?.type !== undefined) {
       return undefined;
     }
-    const id = from?.into?.[kind];
-    return id === undefined
-      ? libraries.find(({ type }) => type === kind)
-      : libraries.find((library) => library.id === id);
+    if (from?.into !== undefined) {
+      // An arrival folder sends only what it names: a kind it leaves out waits in Arrivals, it
+      // does not go to some other library of that kind.
+      const id = from.into[kind];
+      return id === undefined ? undefined : libraries.find((library) => library.id === id);
+    }
+    return libraries.find(({ type }) => type === kind);
   }
 
   /** The library a human picks for a candidate, checked against its kind. */
@@ -727,7 +733,9 @@ export class Service {
         .filter((entry) => !selected || selected.has(entry.id))
         .flatMap((entry) => {
           const root = this.settingsFor(entry).destinationRoot;
-          return typeof root === 'string' ? [root] : [root.movie, root.series];
+          return typeof root === 'string'
+            ? [root]
+            : [root.movie, root.series].filter((one): one is string => one !== undefined);
         });
       return [job.path, ...roots];
     } catch {

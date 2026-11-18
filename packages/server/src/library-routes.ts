@@ -135,7 +135,7 @@ export interface LibraryContext {
 }
 
 type Kind = 'movie' | 'series';
-type Into = { movie: string; series: string };
+type Into = { movie?: string; series?: string };
 type Mode = 'copy' | 'hardlink' | 'move';
 
 interface CreateBody {

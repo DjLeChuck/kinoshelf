@@ -162,7 +162,6 @@ export const jobSchema = {
             { type: 'string' },
             {
               type: 'object',
-              required: ['movie', 'series'],
               properties: { movie: { type: 'string' }, series: { type: 'string' } },
             },
           ],
@@ -1331,7 +1330,7 @@ export const seasonSchema = {
 const libraryModes = ['copy', 'hardlink', 'move'] as const;
 const libraryInto = {
   type: 'object',
-  required: ['movie', 'series'],
+  minProperties: 1,
   additionalProperties: false,
   properties: { movie: { type: 'string', minLength: 1 }, series: { type: 'string', minLength: 1 } },
 } as const;

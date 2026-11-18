@@ -125,6 +125,30 @@ describe('GET /api/arrivals', () => {
     expect(unknown?.destinationOptions.map((o) => o.id)).toEqual(['films', 'films-4k', 'series']);
   });
 
+  it('sends an arrival folder only to the kinds it names', async () => {
+    const { h } = await setup();
+    const films = await makeDir();
+    const created = await h.request('POST', '/api/libraries', {
+      name: 'Films only',
+      source: films,
+      into: { movie: 'films' },
+    });
+    expect(created.statusCode, created.body).toBe(201);
+    await put(join(films, 'Mystery.Home.Video.mkv'));
+    await put(join(films, 'Mystery.Show.S01E01.mkv'));
+    expect((await h.request('POST', '/api/libraries/films-only/scan')).statusCode).toBe(202);
+    await h.app.jobs.idle();
+
+    const found = (await arrivals(h)).items;
+    const movie = found.find(({ file }) => file === 'Mystery.Home.Video.mkv');
+    const episode = found.find(({ file }) => file === 'Mystery.Show.S01E01.mkv');
+    expect(movie?.destination).toEqual({ libraryId: 'films' });
+    // Not the first series library: this folder was told to send movies only. The libraries of the
+    // kind stay offered, so a human can still choose one.
+    expect(episode?.destination).toEqual({ libraryId: null });
+    expect(episode?.destinationOptions.map((o) => o.id)).toEqual(['series']);
+  });
+
   it('leaves out what a library organized in place holds', async () => {
     const { h, roots } = await setup();
     await put(join(roots.films, 'Mystery.Home.Video.mkv'));
