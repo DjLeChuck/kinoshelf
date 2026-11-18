@@ -49,6 +49,7 @@ threshold: 85 # minimum score for an automatic match, 0 to 100 (default 85)
 retentionDays: 30 # days after which a settled job is forgotten, 0 keeps all
 detectPictureSize: true # read a video's size with ffprobe when its name says none (default)
 allowLocalImageUrls: false # let a custom image address point at the local network (default off)
+imdbRatings: false # download IMDb's ratings file and write the rating in the NFO (default off)
 backupKeep: 3 # database backups kept by the Maintenance tab
 replacedRetentionDays: 30 # days before "Empty replaced/" deletes a file set aside, 0 = all
 
@@ -89,6 +90,7 @@ notify:
 | `threshold`             | 0 to 100                    | 85                                       | minimum score for an automatic match                                              |
 | `detectPictureSize`     | `true`, `false`             | `true`                                   | read a size with `ffprobe` when the name gives none and another version is there  |
 | `allowLocalImageUrls`   | `true`, `false`             | `false`                                  | let an image address of your own point at the local network                       |
+| `imdbRatings`           | `true`, `false`             | `false`                                  | download IMDb's ratings file and write its rating in the NFO                      |
 | `retentionDays`         | whole number                | 30                                       | days before a settled job is forgotten (0 keeps all); the journal is never purged |
 | `backupKeep`            | at least 1                  | 3                                        | database backups kept                                                             |
 | `replacedRetentionDays` | whole number                | 30                                       | days before "Empty replaced/" deletes a set-aside file (0 = all)                  |

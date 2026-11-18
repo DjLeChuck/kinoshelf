@@ -89,6 +89,14 @@ A grid of cards, each saying what it does and what it leaves alone, and asking b
   daily purge. Never one with a transfer, a failure, a file still waiting in Arrivals or a row a
   library's list reads.
 - **Clear the caches**: empties the TMDB cache. The journal is untouched.
+- **IMDb ratings**: shows what the database holds of IMDb's ratings file (how many, when it was
+  downloaded, whether the setting is on), even with the setting off, and **Forget** drops it. While the
+  setting is on, it is downloaded again within the hour. The NFO already written keep their rating.
+- **Add IMDb ratings to the NFO**: inserts IMDb's rating in the NFO of every library that writes them
+  (see [IMDb ratings](5-output-options.md#imdb-ratings)), as a background task with a bar. Only an NFO
+  Kinoshelf wrote and nobody edited is changed; the old ones are set aside in `replaced/` and the
+  History undoes the whole batch. It needs the setting on and the file downloaded; it is refused while a
+  scan, a transfer, a tidy-up or an undo runs.
 - **Back up the database**: a consistent copy to `<config>/backups/kinoshelf-YYYYMMDD-HHMM.sqlite`
   (UTC), then the oldest beyond the number to keep (Settings › Retention, 3) are removed.
 - **Compact**: `VACUUM`. Refused while a scan or a transfer runs, since it holds the server for its

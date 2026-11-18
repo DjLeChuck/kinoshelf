@@ -90,8 +90,10 @@ line.
 ## The page of an item
 
 A movie, a show and an episode share one layout: banner (an episode's thumbnail), identity, a line of
-facts (length or counts, genres), the TMDB link, the synopsis, the facts (path, metadata ticks) and
-**Versions**. A movie also has its `ffprobe` details per file; an episode has no action of its own,
+facts (length or counts, genres), the TMDB link, the synopsis, the facts (the ratings of a movie or
+a show, path, metadata ticks) and **Versions**. The **ratings** read `IMDb 8,0 · TMDB 7,8`: hover a value
+to see how many votes stand behind it. IMDb's is there only with [that setting](5-output-options.md#imdb-ratings)
+on, and when its file knows the work. A movie also has its `ffprobe` details per file; an episode has no action of its own,
 it is analyzed and matched with its series.
 
 ## Several versions of a movie or an episode
@@ -141,8 +143,8 @@ An image TMDB has none of is shown as **not available on TMDB** (a plain dash), 
 does not make a work "incomplete".
 
 The NFO carries the basics plus TMDB keywords (`<tag>`, in English), the age rating (`<mpaa>`, with
-the country following the metadata language: `FR:16`, `PG-13`), the series' TheTVDB id and, for a
-movie, its collection (`<set>`).
+the country following the metadata language: `FR:16`, `PG-13`), the series' TheTVDB id, IMDb's rating
+when [that setting](5-output-options.md#imdb-ratings) is on and, for a movie, its collection (`<set>`).
 
 ### Changing an image
 

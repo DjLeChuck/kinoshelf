@@ -71,7 +71,7 @@ file of the library would be offered as an arrival. See
 
 On a new install, `/` shows a setup in four steps: the TMDB key (your own, tested as soon as you enter
 it), Plex or Jellyfin, your movies and series folders (the first libraries, organized in place; give
-only the one you keep if you have movies or series alone) and a downloads folder pointing at them (watched, or scanned once). Each step ticks itself once the
+only the one you keep if you have movies or series alone; it also offers [IMDb ratings](5-output-options.md#imdb-ratings), off unless ticked) and a downloads folder pointing at them (watched, or scanned once). Each step ticks itself once the
 configuration says so, and the server remembers what you skipped. The app then opens on Libraries.
 
 If the first job fails, it is not lost: the History lists it with its cause.
@@ -124,7 +124,8 @@ How a download gets here is explained in [Getting downloads in](4-getting-downlo
 One list for what Kinoshelf did:
 
 - a **batch** is a line (a transfer, a rename, a refresh, an image change, a tidy-up…), with its
-  files, what was written beside them (NFO, images) and what was set aside;
+  files, what was written beside them (NFO, images) and what was set aside (an NFO written again, for
+  instance to add a rating, reads "NFO replaced", and undoing the batch puts the old file back);
 - a **job** is a line only while it has no batch: waiting, running, or failed, with its cause, the
   settings it ran with and **Send again**. A job that made a batch is folded into it.
 - Analyses that finished and moved nothing are hidden until you tick **Show every analysis**. They
@@ -146,7 +147,7 @@ The selected line is in the address (`/history/<id>`), so you can link to it.
 At the bottom right of every page, a pill says how many tasks run in the background. It unfolds to a
 line per task: title, phase, progress bar, current file and a link to where it is followed. It lists
 scans, transfers, undos, arrival validations, tidy-ups, database backup and compaction, emptying
-`replaced/` and sending collection images. A finished task stays a few seconds (ten minutes when it
+`replaced/`, sending collection images, downloading IMDb's ratings and adding them to the NFO. A finished task stays a few seconds (ten minutes when it
 failed) and can be closed by hand.
 
 ## Settings
@@ -193,7 +194,9 @@ or `scan` and `process` on the command line):
 - **Read the picture size with ffprobe** (on by default): when a name says no size and another
   version is in the way, the size is read from the file so both can be kept side by side;
 - **Allow image addresses on the local network** (off by default): see
-  [Changing an image](2-libraries.md#changing-an-image).
+  [Changing an image](2-libraries.md#changing-an-image);
+- **Write IMDb's rating in the NFO** (off by default, and nothing is downloaded while it is): see
+  [IMDb ratings](5-output-options.md#imdb-ratings).
 
 ### Retention
 

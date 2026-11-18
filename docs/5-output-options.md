@@ -58,6 +58,25 @@ The NFO also carries TMDB's keywords (`<tag>`, in English), the age rating (`<mp
 collection (`<set>`) of a movie that has one, and a TMDB `<uniqueid>`. Images are fetched from TMDB at
 `standard` size, and `original` for a fanart or a logo.
 
+### IMDb ratings
+
+TMDB's rating is always written. **Write IMDb's rating in the NFO** (Settings › Default settings, or the
+welcome; `imdbRatings` in `config.yaml`) adds IMDb's beside it (`<rating name="imdb">`, with its vote
+count), TMDB's staying the default one. It is **off by default, and nothing is downloaded while it is**:
+ticked, Kinoshelf fetches IMDb's public ratings file, which IMDb offers for personal, non-commercial
+use, at most once a day, and keeps it in its own database (never shipped in the image or the binary).
+The download shows in the activity panel; a work the file does not know gets no IMDb rating.
+
+An NFO that already exists is never rewritten by a refresh, so only the ones written from then on carry
+the rating. To add it to the others:
+
+- **from the page of a movie or a show**, **Add the IMDb rating to the NFO**;
+- **for every library**, the **Add IMDb ratings to the NFO** card of the [Maintenance](3-system.md#maintenance) tab.
+
+The rating is inserted in the file as it is, with no request to TMDB, and **only if Kinoshelf wrote the
+NFO and nobody edited it since**: one from another tool, or changed by hand, is left alone and counted.
+The old file is set aside in `<config>/replaced/` and the batch can be undone from the History.
+
 A `.nfo` already beside a video (another tool's, edited by hand) is never deleted nor overwritten: when
 Kinoshelf writes its own, the other one stays where it is, and `kinoshelf tidy` reports it. Subtitles
 always travel with their video.
