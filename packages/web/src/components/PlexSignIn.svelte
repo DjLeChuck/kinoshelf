@@ -12,6 +12,7 @@
     type PlexServer,
   } from '../lib/plex.js';
   import type { Settings } from '../lib/settings.js';
+  import Tip from './Tip.svelte';
 
   let {
     account = $bindable(null),
@@ -190,11 +191,20 @@
     {/if}
   {:else}
     <div class="buttons">
-      <button type="button" class="btn btn-primary" disabled={busy} onclick={() => void signIn()}>
-        {t('web.settings.plex.signin')}
-      </button>
+      <Tip text={t('web.settings.plex.signin.hint')}>
+        {#snippet children(describedby)}
+          <button
+            type="button"
+            class="btn btn-primary"
+            disabled={busy}
+            aria-describedby={describedby}
+            onclick={() => void signIn()}
+          >
+            {t('web.settings.plex.signin')}
+          </button>
+        {/snippet}
+      </Tip>
     </div>
-    <span class="muted hint">{t('web.settings.plex.signin.hint')}</span>
   {/if}
 
   {#if timedOut}

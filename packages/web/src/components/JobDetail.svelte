@@ -19,6 +19,7 @@
   import { libraryApi } from '../lib/libraries.js';
   import { router } from '../lib/router.svelte.js';
   import type { ErrorBody } from '../lib/arrivals.js';
+  import Tip from './Tip.svelte';
 
   let {
     id,
@@ -174,13 +175,17 @@
 
     {#if job.status === 'failed' || job.execution?.status === 'failed'}
       <footer>
-        <button
-          type="button"
-          class="btn btn-primary"
-          disabled={resending}
-          onclick={() => void resend()}>{t('web.history.job.resend')}</button
-        >
-        <span class="muted">{t('web.history.job.resend.hint')}</span>
+        <Tip text={t('web.history.job.resend.hint')}>
+          {#snippet children(describedby)}
+            <button
+              type="button"
+              class="btn btn-primary"
+              disabled={resending}
+              aria-describedby={describedby}
+              onclick={() => void resend()}>{t('web.history.job.resend')}</button
+            >
+          {/snippet}
+        </Tip>
       </footer>
     {/if}
   </article>

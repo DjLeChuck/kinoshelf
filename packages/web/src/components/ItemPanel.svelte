@@ -28,6 +28,7 @@
   import VersionsSection from './VersionsSection.svelte';
   import VersionsTable from './VersionsTable.svelte';
   import WorkCard from './WorkCard.svelte';
+  import Tip from './Tip.svelte';
 
   let {
     libraryId,
@@ -270,17 +271,21 @@
     {/if}
     {#if canNameVersion(item)}
       <div>
-        <button
-          type="button"
-          class="btn"
-          disabled={busy}
-          onclick={() => {
-            running = 'version';
-          }}
-        >
-          {t('web.library.run.version')}
-        </button>
-        <p class="muted">{t('web.library.run.version.hint')}</p>
+        <Tip text={t('web.library.run.version.hint')}>
+          {#snippet children(describedby)}
+            <button
+              type="button"
+              class="btn"
+              disabled={busy}
+              aria-describedby={describedby}
+              onclick={() => {
+                running = 'version';
+              }}
+            >
+              {t('web.library.run.version')}
+            </button>
+          {/snippet}
+        </Tip>
       </div>
     {/if}
   </WorkCard>
