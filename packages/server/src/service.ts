@@ -843,7 +843,30 @@ export class Service {
       });
     }
     this.deps.snapshot.transferred(execution.jobId, settled);
+    await this.planWhatIsLeft(this.deps.snapshot.stillToWrite(execution.jobId, settled));
     return { summary: { done, failed }, files };
+  }
+
+  /**
+   * A video moved without everything the profile writes beside it (a version named by hand only
+   * renames): its entry is planned again where the video is now, so "Complete" finds the files
+   * still to write instead of an entry with nothing left to do.
+   */
+  private async planWhatIsLeft(left: readonly { entry: Entry; path: string }[]): Promise<void> {
+    for (const { entry, path } of left) {
+      const stored = entry.candidates.find(({ id }) => id.id === entry.item?.externalId.id);
+      if (!stored) {
+        continue;
+      }
+      const item = await this.planWith(
+        { ...entry, parsed: { ...entry.parsed, path } },
+        toCandidate(stored),
+        { lenient: true },
+      );
+      if (item.status === 'ready' && item.operations.length > 0) {
+        this.deps.entries.setMatch(entry.id, 'to-rename', item);
+      }
+    }
   }
 
   private async transferGroup(

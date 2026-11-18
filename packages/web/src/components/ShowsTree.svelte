@@ -20,6 +20,7 @@
   import SortButton from './SortButton.svelte';
   import {
     PAGE_SIZE,
+    canNameVersion,
     episodeLabel,
     groupSettling,
     libraryItems,
@@ -143,14 +144,14 @@
   let settleLimit = $state(PAGE_SIZE);
   /** The shows ticked to rename or refresh, by TMDB id. */
   let picked = $state<readonly number[]>([]);
-  let running = $state<{ mode: 'rename' | 'refresh'; items: readonly LibraryItem[] } | undefined>(
-    undefined,
-  );
+  let running = $state<
+    { mode: 'rename' | 'refresh' | 'version'; items: readonly LibraryItem[] } | undefined
+  >(undefined);
   let starting = $state(false);
   let runFailure = $state<unknown>(undefined);
 
-  // A show with nothing to rename or refresh has no checkbox.
-  const runnable = $derived((shows?.items ?? []).filter((s) => s.rename + s.refresh > 0));
+  // Every show can be ticked: one with nothing to rename or refresh may still have versions to name.
+  const runnable = $derived(shows?.items ?? []);
   const pickedShows = $derived(runnable.filter((s) => picked.includes(s.tmdbId)));
   const toRename = $derived(pickedShows.reduce((sum, s) => sum + s.rename, 0));
   const toRefresh = $derived(pickedShows.reduce((sum, s) => sum + s.refresh, 0));
@@ -179,7 +180,7 @@
   }
 
   /** The episodes of the ticked shows that the action takes, read from the library's list. */
-  async function start(mode: 'rename' | 'refresh'): Promise<void> {
+  async function start(mode: 'rename' | 'refresh' | 'version'): Promise<void> {
     // The shows ticked when the button was pressed: the list is read for a while, and a box
     // ticked meanwhile is not part of what was asked.
     const wanted = new Set(picked);
@@ -198,7 +199,9 @@
             (item) =>
               item.tmdbId !== null &&
               wanted.has(item.tmdbId) &&
-              item.state === (mode === 'rename' ? 'rename' : 'incomplete'),
+              (mode === 'version'
+                ? canNameVersion(item)
+                : item.state === (mode === 'rename' ? 'rename' : 'incomplete')),
           )
           .map((item) => [item.id, item] as const),
       );
@@ -432,6 +435,14 @@
         >
           {t('web.library.run.refresh')}
         </button>
+        <button
+          type="button"
+          class="btn"
+          disabled={starting || busy}
+          onclick={() => void start('version')}
+        >
+          {t('web.library.run.version')}
+        </button>
       {/if}
     </div>
   {/if}
@@ -572,18 +583,15 @@
             <tr class:current={selection?.kind === 'show' && selection.tmdbId === show.tmdbId}>
               <td>
                 <div class="name">
-                  <!-- Always there, so the titles of the shows without a box stay in line. -->
                   <span class="box">
-                    {#if show.rename + show.refresh > 0}
-                      <input
-                        type="checkbox"
-                        aria-label={t('web.library.run.select', { name: show.title ?? '' })}
-                        checked={picked.includes(show.tmdbId)}
-                        onchange={(event) => {
-                          pick(show.tmdbId, event.currentTarget.checked);
-                        }}
-                      />
-                    {/if}
+                    <input
+                      type="checkbox"
+                      aria-label={t('web.library.run.select', { name: show.title ?? '' })}
+                      checked={picked.includes(show.tmdbId)}
+                      onchange={(event) => {
+                        pick(show.tmdbId, event.currentTarget.checked);
+                      }}
+                    />
                   </span>
                   <button
                     type="button"

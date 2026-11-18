@@ -1763,6 +1763,30 @@ export class LibrarySnapshot {
     this.deps.changed?.(library.id);
   }
 
+  /**
+   * The videos of a library that went through a batch and still lack files to write (a version
+   * named by hand only renames): where each one is now, to plan what is left for "Complete".
+   */
+  stillToWrite(
+    jobId: string,
+    done: readonly { readonly entry: Entry; readonly results: readonly OperationResult[] }[],
+  ): { entry: Entry; path: string }[] {
+    const library = this.libraryOf(this.deps.jobs.get(jobId));
+    if (!library) {
+      return [];
+    }
+    return done.flatMap(({ entry, results }) => {
+      const main = results.find(
+        (r) => r.operation.type === 'transfer' && r.operation.role === 'main',
+      );
+      const path = main?.status === 'done' ? main.operation.destination : undefined;
+      const row = path === undefined ? undefined : this.deps.store.get(library.id, path);
+      return path !== undefined && row?.entryId === entry.id && row.state === 'incomplete'
+        ? [{ entry, path }]
+        : [];
+    });
+  }
+
   /** Transfers of a job ended: each video that went through is where it was sent, and written. */
   transferred(
     jobId: string,

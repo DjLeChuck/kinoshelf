@@ -17,6 +17,8 @@
     PAGE_SIZE,
     SERIES_FILTERS,
     canRun,
+    canNameVersion,
+    versionsToName,
     versionsToRun,
     partition,
     lastScanFailed,
@@ -95,15 +97,18 @@
   let notice = $state<string | undefined>(undefined);
   let starting = $state(false);
   let picked = $state<readonly string[]>([]);
-  let running = $state<'rename' | 'refresh' | undefined>(undefined);
+  let running = $state<'rename' | 'refresh' | 'version' | undefined>(undefined);
   let filing = $state(false);
   /** Bumped when a change reaches the open page without going through it (a bulk filing). */
   let panelVersion = $state(0);
 
   /** A row can be ticked to be renamed or refreshed, or (a library with collections) to be filed. */
   const selectable = (
-    item: Parameters<typeof canRun>[0] & Parameters<typeof canFile>[0],
-  ): boolean => canRun(item) || (page?.library.collections === true && canFile(item));
+    item: Parameters<typeof canRun>[0] &
+      Parameters<typeof canFile>[0] &
+      Parameters<typeof canNameVersion>[0],
+  ): boolean =>
+    canRun(item) || canNameVersion(item) || (page?.library.collections === true && canFile(item));
 
   const pickedIds = $derived(new Set(picked));
   const pickedItems = $derived((page?.items ?? []).filter(({ id }) => pickedIds.has(id)));
@@ -114,6 +119,9 @@
     const mode = running;
     if (mode === undefined) {
       return [];
+    }
+    if (mode === 'version') {
+      return pickedItems.flatMap((item) => versionsToName(item));
     }
     const wanted = new Set(split[mode]);
     return pickedItems
@@ -533,6 +541,16 @@
               }}
             >
               {t('web.library.run.refresh')}
+            </button>
+            <button
+              type="button"
+              class="btn"
+              disabled={!pickedItems.some((item) => versionsToName(item).length > 0) || busy}
+              onclick={() => {
+                running = 'version';
+              }}
+            >
+              {t('web.library.run.version')}
             </button>
             {#if page.library.collections}
               <button

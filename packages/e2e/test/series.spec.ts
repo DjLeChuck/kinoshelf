@@ -53,10 +53,10 @@ test('renames every episode of the ticked shows in one go', async ({ page, reque
   await page.goto('/libraries/series');
   await page.getByRole('checkbox', { name: /Select Severance/ }).check();
   await expect(page.getByText('Selected shows: 1')).toBeVisible();
-  await page.getByRole('button', { name: 'Rename…' }).click();
+  await page.getByRole('button', { name: 'Organize…' }).click();
 
   // One preview for the three episodes, nothing picked one by one.
-  const dialog = page.getByRole('dialog', { name: 'Rename preview' });
+  const dialog = page.getByRole('dialog', { name: 'Organize preview' });
   await expect(dialog.getByText(/[3-9] to move/)).toBeVisible();
 });
 
@@ -94,8 +94,8 @@ test('refreshes a show that only lacks files of its own', async ({ page, request
   await page.goto(`/libraries/${id}`);
   // Only the show's own files are missing, and still there is a box to refresh them with.
   await page.getByRole('checkbox', { name: /Select Severance/ }).check();
-  await page.getByRole('button', { name: 'Refresh…' }).click();
-  const dialog = page.getByRole('dialog', { name: 'Refresh preview' });
+  await page.getByRole('button', { name: 'Complete…' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Missing files preview' });
   await expect(dialog.getByText(/[1-9]\d* to write/)).toBeVisible();
 });
 

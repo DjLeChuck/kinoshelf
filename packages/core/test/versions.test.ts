@@ -322,6 +322,20 @@ describe('the files two versions share', () => {
       'poster.jpg',
     ]);
   });
+
+  it('only renames when asked for by hand: no NFO or image is planned, though none is there', async () => {
+    const lib = await makeDir();
+    const folder = join(lib, 'Nightbitch (2024)');
+    const file = await put(join(folder, 'Nightbitch (2024).mkv'), 'video');
+    const parsed = { ...parser.parse(file), screenSize: '1080p' };
+
+    const { items } = await createPlan(
+      [{ parsed, candidate: nightbitch, details, applyVersion: true }],
+      { profile: kodiProfile, destinationRoot: lib, mode: 'move', newId: counter() },
+    );
+
+    expect(items[0]?.operations.map((op) => op.type)).toEqual(['transfer']);
+  });
 });
 
 describe('naming a version on request', () => {

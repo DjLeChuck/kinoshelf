@@ -467,18 +467,31 @@ export const isListed = (item: LibraryItem): item is ListedItem => 'versions' in
  */
 export function versionsToRun(item: ListedItem, mode: 'rename' | 'refresh'): LibraryItem[] {
   const state = mode === 'rename' ? 'rename' : 'incomplete';
-  return item.versions
-    .filter((version) => version.state === state)
-    .map((version) => ({
-      ...item,
-      id: version.id,
-      path: version.path,
-      state: version.state,
-      resolution: version.resolution,
-      nfo: version.nfo,
-      entryId: version.entryId,
-    }));
+  return eachVersion(item, (version) => version.state === state);
 }
+
+/** The versions of an entry as items of their own, the ones `keep` accepts. */
+function eachVersion(
+  item: ListedItem,
+  keep: (version: ListedItem['versions'][number]) => boolean,
+): LibraryItem[] {
+  return item.versions.filter(keep).map((version) => ({
+    ...item,
+    id: version.id,
+    path: version.path,
+    state: version.state,
+    resolution: version.resolution,
+    nfo: version.nfo,
+    entryId: version.entryId,
+  }));
+}
+
+/**
+ * The files of an entry that can be asked to name their version: each version on its own, since one
+ * already named (`- 2160p`) has nothing to do while its sibling may.
+ */
+export const versionsToName = (item: ListedItem): LibraryItem[] =>
+  eachVersion(item, () => true).filter(canNameVersion);
 
 /**
  * A show image TMDB has none of, shown as unavailable rather than missing. A file on the disk wins:

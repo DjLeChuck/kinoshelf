@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   inChunks,
   canNameVersion,
+  versionsToName,
+  type ListedItem,
   PICTURE_SIZES,
   sizeOfItem,
   canRun,
@@ -118,6 +120,27 @@ describe('canRun and partition', () => {
   it('keeps what has something to run, and splits it by what is asked', () => {
     expect(rows.filter(canRun).map(({ id }) => id)).toEqual(['a', 'b']);
     expect(partition(rows)).toEqual({ rename: ['a'], refresh: ['b'] });
+  });
+});
+
+describe('versionsToName', () => {
+  const version = (id: string, path: string, resolution: string | null) =>
+    ({ id, path, state: 'ok', resolution, nfo: true, entryId: `e-${id}` }) as const;
+
+  it('takes each version on its own, leaving out the one already named', () => {
+    const entry = {
+      id: 'a',
+      kind: 'movie',
+      entryId: 'e-a',
+      state: 'ok',
+      path: '/films/Dune/Dune.mkv',
+      resolution: null,
+      versions: [
+        version('a', '/films/Dune/Dune.mkv', null),
+        version('b', '/films/Dune/Dune - 2160p.mkv', '2160p'),
+      ],
+    } as unknown as ListedItem;
+    expect(versionsToName(entry).map(({ id }) => id)).toEqual(['a']);
   });
 });
 

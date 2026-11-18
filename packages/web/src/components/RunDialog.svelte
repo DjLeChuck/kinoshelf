@@ -51,7 +51,7 @@
   // server reads it from the file; picking one overrides both. It only starts from the item's (the
   // dialog is mounted for one selection); the menu then owns it.
   /* svelte-ignore state_referenced_locally */
-  let size = $state(items[0] ? sizeOfItem(items[0]) : '');
+  let size = $state(items.length === 1 && items[0] ? sizeOfItem(items[0]) : '');
   const version = $derived<VersionRequest | undefined>(
     mode !== 'version' ? undefined : size === '' ? {} : { screenSize: size },
   );

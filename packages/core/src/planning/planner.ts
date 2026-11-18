@@ -405,7 +405,9 @@ async function planItem(
       : { ...base, ...unavailable, status: 'in-place', conflicts: [] };
   }
 
-  const generated = companionOperations(input, place, companionOptions);
+  // Naming a version asked for by hand only renames: the NFO and images are what "Refresh" is for,
+  // and a `.nfo` beside the video then travels with it, since nothing replaces it.
+  const generated = forced ? [] : companionOperations(input, place, companionOptions);
   // The profile writes this item's NFO, so Kinoshelf's is the one players read: a `.nfo` beside the
   // video (another tool's, or one edited by hand) stays where it is, never deleted, never overwritten.
   // Without one (`metadata: none`, a movie written flat) the file is all that is left of what it

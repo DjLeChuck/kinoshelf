@@ -175,3 +175,49 @@ async function h2({ h }: Two): Promise<void> {
   await h.request('POST', '/api/libraries/shows/scan');
   await h.app.jobs.idle();
 }
+
+describe('naming the version of an episode that still lacks its files', () => {
+  it('only renames it: no NFO or image is written beside it', async () => {
+    const root = await makeDir();
+    const season = join(root, 'Foundation (2021) {tmdb-93740}', 'Season 01');
+    const file = await put(join(season, 'Foundation (2021) - s01e01.mkv'), 'video');
+    const h = await harness({
+      config: {
+        libraries: [
+          { id: 'films', name: 'Films', source: await makeDir(), type: 'movie' },
+          {
+            id: 'shows',
+            name: 'Shows',
+            source: root,
+            type: 'series',
+            naming: 'with-id',
+            metadata: 'nfo',
+          },
+        ],
+      },
+      createProvider: provider,
+    });
+    await h.request('POST', '/api/libraries/shows/scan');
+    await h.app.jobs.idle();
+    const run = await h.request('POST', '/api/libraries/shows/execute', {
+      items: [itemId(file)],
+      version: true,
+      screenSize: '1080p',
+    });
+    expect(run.statusCode).toBe(202);
+    await h.app.jobs.idle();
+    expect(await readdir(season)).toEqual(['Foundation (2021) - s01e01 - 1080p.mkv']);
+
+    // What is left to write is still offered, with no new scan in between.
+    const renamed = join(season, 'Foundation (2021) - s01e01 - 1080p.mkv');
+    const refresh = await h.request('POST', '/api/libraries/shows/execute', {
+      items: [itemId(renamed)],
+    });
+    expect(refresh.statusCode).toBe(202);
+    await h.app.jobs.idle();
+    expect((await readdir(season)).sort()).toEqual([
+      'Foundation (2021) - s01e01 - 1080p.mkv',
+      'Foundation (2021) - s01e01 - 1080p.nfo',
+    ]);
+  });
+});

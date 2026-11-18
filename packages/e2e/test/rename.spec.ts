@@ -23,10 +23,10 @@ test('previews a rename from the library, runs it, and finds it in the history',
   await signIn(page);
   await page.goto('/libraries/films');
   await page.getByRole('checkbox', { name: /Select Alien/ }).check();
-  await page.getByRole('button', { name: 'Rename…' }).click();
+  await page.getByRole('button', { name: 'Organize…' }).click();
 
   // The dialog says what would happen, and nothing was written yet.
-  const dialog = page.getByRole('dialog', { name: 'Rename preview' });
+  const dialog = page.getByRole('dialog', { name: 'Organize preview' });
   // One line per movie: the name it has, then the one it gets.
   await expect(dialog.getByText('Alien.1979.1080p.mkv')).toBeVisible();
   await expect(dialog.getByText('Alien (1979) {tmdb-348} - 1080p.mkv')).toBeVisible();

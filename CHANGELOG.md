@@ -8,6 +8,10 @@ All notable changes to Kinoshelf are written here. The format follows
 
 ### Added
 
+- "Add the version to the name…" is now a bulk action: tick movies in a library's list, or shows in its tree,
+  and name every one of their files with its picture size, with a preview first, as the page of one movie or
+  episode already did. Any movie or show can be ticked for it, not only those to rename or refresh (#15).
+
 - The naming choice in the Settings, the library form and the welcome now says that a file whose name gives a
   picture size is named with it (`Movie (2024) - 1080p.mkv`), and points to the "Read the picture size with
   ffprobe" setting (#7).
@@ -35,6 +39,12 @@ All notable changes to Kinoshelf are written here. The format follows
 - A **back to top** button on long pages.
 
 ### Changed
+
+- "Add the version to the name…" now only renames: it no longer writes the NFO and images that are missing
+  (that is what the refresh is for), and a `.nfo` beside the video travels with it.
+- "Rename…" is now "Organize…" and "Refresh…" is "Complete…": the first also writes what the profile expects
+  beside the video, the second only what is missing. The movie page's separate "Write the missing files…"
+  button, which did the same as the refresh, is gone.
 
 - A library whose folder contains another's (or lies inside it) is now refused with a clear error
   (`library.source-overlaps`), the case being a downloads folder that held the whole media folder

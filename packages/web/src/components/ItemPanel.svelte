@@ -131,7 +131,6 @@
     onnotice?.(message);
   }
   const runItems = $derived(isListed(item) ? versionsToRun(item, 'refresh') : [item]);
-  const missingNfo = $derived((detail?.nfoFiles ?? []).filter(({ present: there }) => !there));
   const title = $derived(
     detail
       ? `${detail.title ?? baseName(detail.path)}${detail.year ? ` (${detail.year})` : ''}`
@@ -237,21 +236,7 @@
         <VersionsTable versions={detail.versions} />
       </VersionsSection>
     {/if}
-    {#if missingNfo.length > 0 && canRun(item)}
-      <div>
-        <button
-          type="button"
-          class="btn"
-          disabled={busy}
-          onclick={() => {
-            running = 'refresh';
-          }}
-        >
-          {t('web.library.nfo.generate')}
-        </button>
-      </div>
-    {/if}
-    {#if canRun(item) && !(item.state === 'incomplete' && missingNfo.length > 0)}
+    {#if canRun(item)}
       <div>
         <button
           type="button"
