@@ -420,6 +420,8 @@
 
   .cause {
     color: var(--warn);
+    /* A cause names a folder, which has no place to break: it must not push the card wider. */
+    overflow-wrap: anywhere;
   }
 
   .cause.danger {
