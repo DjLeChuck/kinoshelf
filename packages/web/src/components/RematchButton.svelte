@@ -5,6 +5,7 @@
   import { t } from '../lib/i18n.svelte.js';
   import { libraryApi, type LibraryKind } from '../lib/libraries.js';
   import CandidateList from './CandidateList.svelte';
+  import Tip from './Tip.svelte';
 
   let {
     libraryId,
@@ -90,14 +91,18 @@
 </script>
 
 {#if path !== undefined}
-  <button
-    type="button"
-    class="btn"
-    title={t('web.library.rematch.hint')}
-    onclick={() => {
-      open = true;
-    }}>{t('web.library.rematch')}</button
-  >
+  <Tip text={t('web.library.rematch.hint')}>
+    {#snippet children(describedby)}
+      <button
+        type="button"
+        class="btn"
+        aria-describedby={describedby}
+        onclick={() => {
+          open = true;
+        }}>{t('web.library.rematch')}</button
+      >
+    {/snippet}
+  </Tip>
   {#if open}
     <dialog
       bind:this={dialog}

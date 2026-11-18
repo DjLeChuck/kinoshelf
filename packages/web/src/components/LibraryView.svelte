@@ -13,7 +13,6 @@
   import { oneOf } from '../lib/routes.js';
   import {
     ITEM_FILTERS,
-    MAX_SELECTION,
     PAGE_SIZE,
     SERIES_FILTERS,
     canRun,
@@ -24,6 +23,7 @@
     lastScanFailed,
     libraryItems,
     scanPercent,
+    type BulkAction,
     type ItemFilter,
     type ItemState,
     type ItemsPage,
@@ -63,6 +63,8 @@
   import VersionBadges from './VersionBadges.svelte';
   import ShowsTree from './ShowsTree.svelte';
   import { episodeLabel } from '../lib/library-items.js';
+  import SelectionBar from './SelectionBar.svelte';
+  import { Ticks } from '../lib/ticks.svelte.js';
 
   let { library }: { library: Library } = $props();
 
@@ -96,8 +98,7 @@
   let chosen = $state<string | undefined>(undefined);
   let notice = $state<string | undefined>(undefined);
   let starting = $state(false);
-  let picked = $state<readonly string[]>([]);
-  let running = $state<'rename' | 'refresh' | 'version' | undefined>(undefined);
+  let running = $state<BulkAction | undefined>(undefined);
   let filing = $state(false);
   /** Bumped when a change reaches the open page without going through it (a bulk filing). */
   let panelVersion = $state(0);
@@ -110,8 +111,19 @@
   ): boolean =>
     canRun(item) || canNameVersion(item) || (page?.library.collections === true && canFile(item));
 
-  const pickedIds = $derived(new Set(picked));
-  const pickedItems = $derived((page?.items ?? []).filter(({ id }) => pickedIds.has(id)));
+  const ticks = new Ticks({
+    rows: () => page?.items.filter(selectable) ?? [],
+    key: ({ id }) => id,
+    total: () => page?.total,
+    loaded: () => page?.items.length ?? 0,
+    readAll: async () => {
+      if (page !== undefined) {
+        limit = page.total;
+        await load();
+      }
+    },
+  });
+  const pickedItems = $derived(ticks.picked);
   const split = $derived(partition(pickedItems));
   const filable = $derived(pickedItems.filter(canFile));
   const toFile = $derived(filable.map(({ id }) => id));
@@ -128,33 +140,6 @@
       .filter(({ id }) => wanted.has(id))
       .flatMap((item) => versionsToRun(item, mode));
   });
-
-  /** Past this the server refuses a selection (`MAX_SELECTION`): the list is not read whole for it. */
-  const canPickEverything = $derived(
-    page !== undefined &&
-      page.total > page.items.length &&
-      page.total <= MAX_SELECTION &&
-      pickedItems.length > 0 &&
-      pickedItems.length === page.items.filter(selectable).length,
-  );
-
-  const latestPage = (): ItemsPage | undefined => page;
-
-  /** Reads the whole list under the filter, then ticks every row that can be: what is not on screen counts too. */
-  async function pickEverything(): Promise<void> {
-    if (page === undefined) {
-      return;
-    }
-    limit = page.total;
-    await load();
-    // `load` replaced the page while this waited: read it again, not the one checked above.
-    const whole = latestPage();
-    picked = whole?.items.filter(selectable).map(({ id }) => id) ?? [];
-  }
-
-  function pick(id: string, on: boolean): void {
-    picked = on ? [...picked, id] : picked.filter((other) => other !== id);
-  }
 
   // A series library always reads as a tree of shows, whatever the tab: the tab narrows the shows
   // (and its counts are in shows). A movie library is a flat list of files.
@@ -330,7 +315,7 @@
   function refilter(): void {
     limit = PAGE_SIZE;
     // What was picked under another filter or search is no longer on screen to be unpicked.
-    picked = [];
+    ticks.clear();
     void load();
   }
 </script>
@@ -500,59 +485,31 @@
       </p>
     {:else}
       {#if page.items.some(selectable)}
-        <div class="bar" role="group">
-          <label class="check">
-            <input
-              type="checkbox"
-              checked={pickedItems.length === page.items.filter(selectable).length}
-              indeterminate={pickedItems.length > 0 &&
-                pickedItems.length < page.items.filter(selectable).length}
-              onchange={(event) => {
-                picked = event.currentTarget.checked
-                  ? (page?.items.filter(selectable).map(({ id }) => id) ?? [])
-                  : [];
-              }}
-            />
-            {t('web.library.run.all')}
-          </label>
-          {#if canPickEverything && page}
-            <button type="button" class="btn" onclick={() => void pickEverything()}>
-              {t('web.library.run.everything', { count: page.total })}
-            </button>
-          {/if}
-          {#if pickedItems.length > 0}
-            <span>{t('web.library.run.selected', { count: pickedItems.length })}</span>
-            <button
-              type="button"
-              class="btn btn-primary"
-              disabled={split.rename.length === 0 || busy}
-              onclick={() => {
-                running = 'rename';
-              }}
-            >
-              {t('web.library.run.rename')}
-            </button>
-            <button
-              type="button"
-              class="btn"
-              disabled={split.refresh.length === 0 || busy}
-              onclick={() => {
-                running = 'refresh';
-              }}
-            >
-              {t('web.library.run.refresh')}
-            </button>
-            <button
-              type="button"
-              class="btn"
-              disabled={!pickedItems.some((item) => versionsToName(item).length > 0) || busy}
-              onclick={() => {
-                running = 'version';
-              }}
-            >
-              {t('web.library.run.version')}
-            </button>
-            {#if page.library.collections}
+        <SelectionBar
+          checked={ticks.everyPicked}
+          indeterminate={ticks.somePicked}
+          ontoggle={(all: boolean) => {
+            ticks.all(all);
+          }}
+          everything={ticks.canPickEverything
+            ? {
+                label: t('web.library.run.everything', { count: page.total }),
+                onclick: () => void ticks.pickEverything(),
+              }
+            : undefined}
+          count={pickedItems.length}
+          selected={t('web.library.run.selected', { count: pickedItems.length })}
+          disabled={{
+            rename: split.rename.length === 0 || busy,
+            refresh: split.refresh.length === 0 || busy,
+            version: !pickedItems.some((item) => versionsToName(item).length > 0) || busy,
+          }}
+          onrun={(action: BulkAction) => {
+            running = action;
+          }}
+        >
+          {#snippet extra()}
+            {#if page?.library.collections}
               <button
                 type="button"
                 class="btn"
@@ -565,8 +522,8 @@
                 {t('web.collection.bulk')}
               </button>
             {/if}
-          {/if}
-        </div>
+          {/snippet}
+        </SelectionBar>
         {#if filing && toFile.length > 0}
           <CollectionDialog
             libraryId={library.id}
@@ -578,7 +535,7 @@
             }}
             ondone={(message: string) => {
               notice = message;
-              picked = [];
+              ticks.clear();
               filing = false;
               // The open page may be one of the movies filed: it reads its collection again.
               panelVersion += 1;
@@ -628,9 +585,9 @@
                         aria-label={t('web.library.run.select', {
                           name: item.title ?? baseName(item.path),
                         })}
-                        checked={pickedIds.has(item.id)}
+                        checked={ticks.has(item.id)}
                         onchange={(event) => {
-                          pick(item.id, event.currentTarget.checked);
+                          ticks.toggle(item.id, event.currentTarget.checked);
                         }}
                       />
                     {/if}
@@ -742,7 +699,7 @@
     }}
     ondone={(message: string) => {
       notice = message;
-      picked = [];
+      ticks.clear();
       running = undefined;
       void load();
     }}
@@ -814,19 +771,6 @@
   .empty {
     display: flex;
     flex-wrap: wrap;
-    align-items: center;
-    gap: 8px;
-  }
-
-  /* The count of what is ticked, set apart from the "select all" box before it. */
-  .bar > span {
-    margin-left: 4px;
-    padding-left: 12px;
-    border-left: 1px solid var(--border-strong);
-  }
-
-  .bar {
-    display: flex;
     align-items: center;
     gap: 8px;
   }

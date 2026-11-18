@@ -977,6 +977,15 @@ export const en = {
   'web.library.run.version': 'Add the version to the name…',
   'web.library.run.version.hint':
     'Names the file with its picture size beside its folder’s name, so another quality of the same movie can sit next to it. The size comes from the file name, then from the file itself; you can choose another.',
+  'web.tip.organize':
+    'Renames and moves the ticked files as the profile wants. A preview comes first, and the History can undo it.',
+  'web.tip.complete':
+    'Writes the NFO and images that are missing for the ticked works. Nothing is renamed or overwritten.',
+  'web.tip.version':
+    'Adds the picture size to the file name, so another quality of the same work can sit beside it.',
+  'web.tip.validate': 'Confirms the chosen match and plans the transfer of this file.',
+  'web.tip.transfer': 'Moves or copies this file as planned, to its library.',
+  'web.tip.ignore': 'Leaves this file out of the list. Nothing is moved or deleted.',
   'web.library.run.size': 'Picture size',
   'web.library.run.size.auto': 'Automatic (file name, then the file itself)',
   'web.library.run.title.refresh': 'Missing files preview',

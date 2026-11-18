@@ -13,6 +13,11 @@ All notable changes to Kinoshelf are written here. The format follows
   folder can send to one kind only, and a file of a kind nobody keeps waits in Arrivals with the reason
   (and a link to the settings) instead of going to another library or failing at transfer time (#6).
 
+- The main buttons of a library (Organize, Complete, Add the version to the name, Scan again, Change the
+  match) and of Arrivals (Validate, Transfer, Ignore, Analyse everything again) now explain themselves in a
+  tooltip that opens on hover or keyboard focus, closes on Escape, and opens on a long press on a phone,
+  instead of the browser's slow native one (#27).
+
 - "Add the version to the name…" is now a bulk action: tick movies in a library's list, or shows in its tree,
   and name every one of their files with its picture size, with a preview first, as the page of one movie or
   episode already did. Any movie or show can be ticked for it, not only those to rename or refresh (#15).

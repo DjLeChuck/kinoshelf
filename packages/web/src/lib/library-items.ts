@@ -635,3 +635,6 @@ export const showStatusKey = (
   status: string,
 ): (typeof SHOW_STATUS)[keyof typeof SHOW_STATUS] | undefined =>
   Object.hasOwn(SHOW_STATUS, status) ? SHOW_STATUS[status as keyof typeof SHOW_STATUS] : undefined;
+
+/** What a selection of movies or shows can be asked: the same three for both lists. */
+export type BulkAction = 'rename' | 'refresh' | 'version';

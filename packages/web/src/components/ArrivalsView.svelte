@@ -23,6 +23,7 @@
   import { MAX_SELECTION } from '../lib/library-items.js';
   import type { WatchScan, WatchStatus } from '../lib/watch.js';
   import ArrivalDetail from './ArrivalDetail.svelte';
+  import Tip from './Tip.svelte';
 
   type Filter = 'all' | 'ready' | 'review' | 'unrecognized';
   const FILTERS: readonly Filter[] = ['all', 'ready', 'review', 'unrecognized'];
@@ -152,20 +153,28 @@
 <div class="stack">
   <div class="intro">
     <p class="muted">{t('web.arrivals.intro')}</p>
-    <button
-      type="button"
-      class="btn"
-      disabled={!watch?.scannable || checking}
-      title={watch?.scannable ? undefined : t('web.arrivals.check.none')}
-      onclick={() => void checkNow()}>{t('web.arrivals.check')}</button
-    >
-    <button
-      type="button"
-      class="btn"
-      disabled={!watch?.scannable || checking}
-      title={t('web.arrivals.recheck.hint')}
-      onclick={() => void checkNow(true)}>{t('web.arrivals.recheck')}</button
-    >
+    <Tip text={watch?.scannable ? undefined : t('web.arrivals.check.none')}>
+      {#snippet children(describedby)}
+        <button
+          type="button"
+          class="btn"
+          disabled={!watch?.scannable || checking}
+          aria-describedby={describedby}
+          onclick={() => void checkNow()}>{t('web.arrivals.check')}</button
+        >
+      {/snippet}
+    </Tip>
+    <Tip text={t('web.arrivals.recheck.hint')}>
+      {#snippet children(describedby)}
+        <button
+          type="button"
+          class="btn"
+          disabled={!watch?.scannable || checking}
+          aria-describedby={describedby}
+          onclick={() => void checkNow(true)}>{t('web.arrivals.recheck')}</button
+        >
+      {/snippet}
+    </Tip>
   </div>
 
   <div class="filters" role="group" aria-label={t('web.arrivals.filter.label')}>

@@ -2,6 +2,7 @@
   import { messageOf } from '../lib/errors.js';
   import { t } from '../lib/i18n.svelte.js';
   import { libraryApi } from '../lib/libraries.js';
+  import Tip from './Tip.svelte';
 
   let {
     libraryId,
@@ -44,14 +45,18 @@
 </script>
 
 {#if path !== undefined}
-  <button
-    type="button"
-    class="btn"
-    class:compact
-    disabled={starting}
-    title={t('web.library.rescan.hint')}
-    onclick={() => void start()}>{t('web.library.rescan')}</button
-  >
+  <Tip text={t('web.library.rescan.hint')}>
+    {#snippet children(describedby)}
+      <button
+        type="button"
+        class="btn"
+        class:compact
+        disabled={starting}
+        aria-describedby={describedby}
+        onclick={() => void start()}>{t('web.library.rescan')}</button
+      >
+    {/snippet}
+  </Tip>
   {#if failure !== undefined}
     <span class="alert alert-danger" role="alert">{messageOf(t, failure)}</span>
   {/if}

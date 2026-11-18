@@ -23,6 +23,7 @@
   import type { MessageKey } from '@kinoshelf/i18n';
   import CandidateList from './CandidateList.svelte';
   import Link from './Link.svelte';
+  import Tip from './Tip.svelte';
 
   let {
     entry,
@@ -478,23 +479,38 @@
   {/if}
 
   <footer>
-    <button
-      type="button"
-      class="btn btn-primary"
-      disabled={!canValidate}
-      onclick={() => void confirm()}
-    >
-      {locked
-        ? progress && progress.total > 1
-          ? t('web.queue.validating.progress', progress)
-          : t('web.queue.validating')
-        : asPlanned
-          ? t('web.queue.transfer')
-          : t('web.queue.validate')}
-    </button>
-    <button type="button" class="btn" disabled={locked} onclick={() => void ignore()}>
-      {t('web.queue.ignore')}
-    </button>
+    <Tip text={asPlanned ? t('web.tip.transfer') : t('web.tip.validate')}>
+      {#snippet children(describedby)}
+        <button
+          type="button"
+          class="btn btn-primary"
+          disabled={!canValidate}
+          aria-describedby={describedby}
+          onclick={() => void confirm()}
+        >
+          {locked
+            ? progress && progress.total > 1
+              ? t('web.queue.validating.progress', progress)
+              : t('web.queue.validating')
+            : asPlanned
+              ? t('web.queue.transfer')
+              : t('web.queue.validate')}
+        </button>
+      {/snippet}
+    </Tip>
+    <Tip text={t('web.tip.ignore')}>
+      {#snippet children(describedby)}
+        <button
+          type="button"
+          class="btn"
+          disabled={locked}
+          aria-describedby={describedby}
+          onclick={() => void ignore()}
+        >
+          {t('web.queue.ignore')}
+        </button>
+      {/snippet}
+    </Tip>
   </footer>
 </article>
 

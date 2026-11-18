@@ -1010,6 +1010,15 @@ export const fr: Record<keyof typeof en, string> = {
   'web.library.run.version': 'Ajouter la version au nom…',
   'web.library.run.version.hint':
     'Nomme le fichier avec sa taille d’image à côté du nom de son dossier, pour qu’une autre qualité du même film puisse cohabiter. La taille vient du nom du fichier, puis du fichier lui-même ; vous pouvez en choisir une autre.',
+  'web.tip.organize':
+    'Renomme et déplace les fichiers cochés comme le profil le veut. Un aperçu précède, et l’Historique permet d’annuler.',
+  'web.tip.complete':
+    'Écrit les NFO et les images qui manquent pour les œuvres cochées. Rien n’est renommé ni écrasé.',
+  'web.tip.version':
+    'Ajoute la taille d’image au nom du fichier, pour qu’une autre qualité de la même œuvre puisse le côtoyer.',
+  'web.tip.validate': 'Confirme l’association choisie et prépare le transfert de ce fichier.',
+  'web.tip.transfer': 'Déplace ou copie ce fichier comme prévu, vers sa bibliothèque.',
+  'web.tip.ignore': 'Retire ce fichier de la liste. Rien n’est déplacé ni supprimé.',
   'web.library.run.size': 'Taille d’image',
   'web.library.run.size.auto': 'Automatique (nom du fichier, puis le fichier lui-même)',
   'web.library.run.title.refresh': 'Aperçu des fichiers manquants',

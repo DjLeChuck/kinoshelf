@@ -24,10 +24,10 @@
     episodeLabel,
     groupSettling,
     libraryItems,
-    MAX_SELECTION,
     settleKey,
     lacksOnTmdb,
     thumbOf,
+    type BulkAction,
     type EpisodeState,
     type ShowEpisode,
     type LibraryItem,
@@ -46,6 +46,8 @@
   import RescanButton from './RescanButton.svelte';
   import RunDialog from './RunDialog.svelte';
   import ShowPanel from './ShowPanel.svelte';
+  import SelectionBar from './SelectionBar.svelte';
+  import { Ticks } from '../lib/ticks.svelte.js';
 
   let {
     libraryId,
@@ -143,7 +145,6 @@
   // Groups of files to validate, one row each: a release of sixteen episodes takes one place.
   let settleLimit = $state(PAGE_SIZE);
   /** The shows ticked to rename or refresh, by TMDB id. */
-  let picked = $state<readonly number[]>([]);
   let running = $state<
     { mode: 'rename' | 'refresh' | 'version'; items: readonly LibraryItem[] } | undefined
   >(undefined);
@@ -152,38 +153,27 @@
 
   // Every show can be ticked: one with nothing to rename or refresh may still have versions to name.
   const runnable = $derived(shows?.items ?? []);
-  const pickedShows = $derived(runnable.filter((s) => picked.includes(s.tmdbId)));
+  const ticks = new Ticks({
+    rows: () => runnable,
+    key: (s) => s.tmdbId,
+    total: () => shows?.total,
+    loaded: () => runnable.length,
+    readAll: async () => {
+      if (shows !== undefined) {
+        limit = shows.total;
+        await load();
+      }
+    },
+  });
+  const pickedShows = $derived(ticks.picked);
   const toRename = $derived(pickedShows.reduce((sum, s) => sum + s.rename, 0));
   const toRefresh = $derived(pickedShows.reduce((sum, s) => sum + s.refresh, 0));
 
-  /** Past `MAX_SELECTION` the shows are not read whole: the server would refuse their episodes. */
-  const canPickEverything = $derived(
-    shows !== undefined &&
-      shows.total > shows.items.length &&
-      shows.total <= MAX_SELECTION &&
-      pickedShows.length > 0 &&
-      pickedShows.length === runnable.length,
-  );
-
-  /** Reads every show under the filter, then ticks those with something to run: the ones off screen count too. */
-  async function pickEverything(): Promise<void> {
-    if (shows === undefined) {
-      return;
-    }
-    limit = shows.total;
-    await load();
-    picked = runnable.map((s) => s.tmdbId);
-  }
-
-  function pick(tmdbId: number, on: boolean): void {
-    picked = on ? [...picked, tmdbId] : picked.filter((id) => id !== tmdbId);
-  }
-
   /** The episodes of the ticked shows that the action takes, read from the library's list. */
-  async function start(mode: 'rename' | 'refresh' | 'version'): Promise<void> {
+  async function start(mode: BulkAction): Promise<void> {
     // The shows ticked when the button was pressed: the list is read for a while, and a box
     // ticked meanwhile is not part of what was asked.
-    const wanted = new Set(picked);
+    const wanted = ticks.keys;
     starting = true;
     runFailure = undefined;
     try {
@@ -311,7 +301,7 @@
       }
       limit = PAGE_SIZE;
       settleLimit = PAGE_SIZE;
-      picked = [];
+      ticks.clear();
       void load(wanted);
     });
   });
@@ -400,51 +390,27 @@
     <p class="alert alert-danger" role="alert">{messageOf(t, runFailure)}</p>
   {/if}
   {#if runnable.length > 0}
-    <div class="bar" role="group">
-      <label class="check">
-        <input
-          type="checkbox"
-          checked={pickedShows.length === runnable.length}
-          indeterminate={pickedShows.length > 0 && pickedShows.length < runnable.length}
-          onchange={(event) => {
-            picked = event.currentTarget.checked ? runnable.map((s) => s.tmdbId) : [];
-          }}
-        />
-        {t('web.library.run.all')}
-      </label>
-      {#if canPickEverything && shows}
-        <button type="button" class="btn" onclick={() => void pickEverything()}>
-          {t('web.library.run.everything.shows', { count: shows.total })}
-        </button>
-      {/if}
-      {#if pickedShows.length > 0}
-        <span>{t('web.library.run.shows', { count: pickedShows.length })}</span>
-        <button
-          type="button"
-          class="btn btn-primary"
-          disabled={toRename === 0 || starting || busy}
-          onclick={() => void start('rename')}
-        >
-          {t('web.library.run.rename')}
-        </button>
-        <button
-          type="button"
-          class="btn"
-          disabled={toRefresh === 0 || starting || busy}
-          onclick={() => void start('refresh')}
-        >
-          {t('web.library.run.refresh')}
-        </button>
-        <button
-          type="button"
-          class="btn"
-          disabled={starting || busy}
-          onclick={() => void start('version')}
-        >
-          {t('web.library.run.version')}
-        </button>
-      {/if}
-    </div>
+    <SelectionBar
+      checked={ticks.everyPicked}
+      indeterminate={ticks.somePicked}
+      ontoggle={(all: boolean) => {
+        ticks.all(all);
+      }}
+      everything={ticks.canPickEverything
+        ? {
+            label: t('web.library.run.everything.shows', { count: shows.total }),
+            onclick: () => void ticks.pickEverything(),
+          }
+        : undefined}
+      count={pickedShows.length}
+      selected={t('web.library.run.shows', { count: pickedShows.length })}
+      disabled={{
+        rename: toRename === 0 || starting || busy,
+        refresh: toRefresh === 0 || starting || busy,
+        version: starting || busy,
+      }}
+      onrun={(action: BulkAction) => void start(action)}
+    />
   {/if}
   <div
     class="layout"
@@ -587,9 +553,9 @@
                     <input
                       type="checkbox"
                       aria-label={t('web.library.run.select', { name: show.title ?? '' })}
-                      checked={picked.includes(show.tmdbId)}
+                      checked={ticks.has(show.tmdbId)}
                       onchange={(event) => {
-                        pick(show.tmdbId, event.currentTarget.checked);
+                        ticks.toggle(show.tmdbId, event.currentTarget.checked);
                       }}
                     />
                   </span>
@@ -905,7 +871,7 @@
       running = undefined;
     }}
     ondone={(message: string) => {
-      picked = [];
+      ticks.clear();
       running = undefined;
       onsettled(message);
     }}
@@ -945,19 +911,6 @@
     display: inline-flex;
     flex: none;
     width: 16px;
-  }
-
-  .bar {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  /* The count of what is ticked, set apart from the "select all" box before it. */
-  .bar > span {
-    margin-left: 4px;
-    padding-left: 12px;
-    border-left: 1px solid var(--border-strong);
   }
 
   .layout {
