@@ -128,7 +128,13 @@
         });
         break;
       case 'destination':
-        if (!needsAbsolute(folder.trim()) || !needsAbsolute(seriesFolder.trim())) {
+        // One kind is enough: the other is a library its owner does not keep.
+        if (folder.trim() === '' && seriesFolder.trim() === '') {
+          throw new FormError(t('web.onboarding.form.destination.needs-one'));
+        }
+        if (
+          [folder, seriesFolder].some((path) => path.trim() !== '' && !needsAbsolute(path.trim()))
+        ) {
           throw new FormError(t('web.onboarding.invalid.folder'));
         }
         // The defaults are not written, as in the settings.
@@ -139,15 +145,25 @@
           },
         });
         if (editing) {
-          await setDestination('movie', folder.trim());
-          await setDestination('series', seriesFolder.trim());
+          if (folder.trim() !== '') await setDestination('movie', folder.trim());
+          if (seriesFolder.trim() !== '') await setDestination('series', seriesFolder.trim());
           break;
         }
-        // The first libraries: the two folders the works end up in, organized in place.
+        // The first libraries: the folders the works end up in, organized in place.
         await createDestinations(
           libraryApi,
-          { name: folderName(folder.trim()), source: folder.trim(), type: 'movie' },
-          { name: folderName(seriesFolder.trim()), source: seriesFolder.trim(), type: 'series' },
+          ...(folder.trim() === ''
+            ? []
+            : [{ name: folderName(folder.trim()), source: folder.trim(), type: 'movie' as const }]),
+          ...(seriesFolder.trim() === ''
+            ? []
+            : [
+                {
+                  name: folderName(seriesFolder.trim()),
+                  source: seriesFolder.trim(),
+                  type: 'series' as const,
+                },
+              ]),
         );
         break;
       case 'source':
@@ -165,11 +181,11 @@
   /** The source is a library either way: watched, or scanned once. A failed scan shows on the home page. */
   async function submitSource(path: string): Promise<void> {
     const watch = mode === 'watch';
-    // An arrival folder sends what it receives to the first library of each type.
+    // An arrival folder sends what it receives to the first library of each type that exists.
     const libraries = await libraryApi.list();
     const movie = libraries.find((library) => library.type === 'movie');
     const series = libraries.find((library) => library.type === 'series');
-    if (!movie || !series) {
+    if (!movie && !series) {
       throw new FormError(t('web.onboarding.form.source.needs-destination'));
     }
     const body = {
@@ -180,7 +196,10 @@
     const existing = editing ? libraries.find((library) => library.into) : undefined;
     const library = existing
       ? await libraryApi.update(existing.id, body)
-      : await libraryApi.create({ ...body, into: { movie: movie.id, series: series.id } });
+      : await libraryApi.create({
+          ...body,
+          into: { ...(movie && { movie: movie.id }), ...(series && { series: series.id }) },
+        });
     if (!watch) {
       await libraryApi.scan(library.id);
       return;

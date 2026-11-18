@@ -186,7 +186,7 @@
           <div class="field">
             <label for={`lib-into-${kind}`}>{t(`web.libraries.into.${kind}`)}</label>
             <select id={`lib-into-${kind}`} class="input" bind:value={form.into[kind]}>
-              <option value="" disabled>{t('web.libraries.into.choose')}</option>
+              <option value="">{t('web.libraries.into.none')}</option>
               {#each typed(kind) as option (option.id)}
                 <option value={option.id}>{option.name}</option>
               {/each}

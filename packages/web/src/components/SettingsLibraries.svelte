@@ -55,6 +55,16 @@
   }
 
   const nameOf = (id: string): string => libraries?.find((one) => one.id === id)?.name ?? id;
+  /** Where an arrival folder sends, for the kinds it names only. */
+  const intoSummary = (into: NonNullable<Library['into']>): string =>
+    [
+      into.movie !== undefined &&
+        t('web.libraries.summary.into.movie', { name: nameOf(into.movie) }),
+      into.series !== undefined &&
+        t('web.libraries.summary.into.series', { name: nameOf(into.series) }),
+    ]
+      .filter((part) => part !== false)
+      .join(' · ');
 </script>
 
 <section class="card" aria-labelledby="libraries-title">
@@ -105,10 +115,7 @@
                   <span class="muted mono path">{library.source}</span>
                   <span class="muted hint">
                     {#if library.into}
-                      {t('web.libraries.summary.into', {
-                        movie: nameOf(library.into.movie),
-                        series: nameOf(library.into.series),
-                      })}
+                      {intoSummary(library.into)}
                     {:else}
                       {t('web.libraries.summary.profile', profileLabel(library))}
                     {/if}

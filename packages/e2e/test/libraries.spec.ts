@@ -38,3 +38,33 @@ test('adds an arrival folder in the settings, edits it, then deletes it', async 
   await section.getByRole('button', { name: 'Yes, delete' }).click();
   await expect(section.getByRole('button', { name: /^Downloads/ })).toHaveCount(0);
 });
+
+test('an arrival folder can send to one kind only', async ({ page }) => {
+  const folder = incoming('films-only');
+  await mkdir(folder, { recursive: true });
+  await signIn(page);
+  await page.getByRole('link', { name: 'Settings' }).click();
+
+  const section = page.locator('section', {
+    has: page.getByRole('heading', { name: 'Folders', exact: true }),
+  });
+  await section.getByRole('button', { name: '+ Add' }).nth(1).click();
+  await section.getByRole('textbox', { name: 'Source folder' }).fill(folder);
+  await section.getByLabel('Series go to').selectOption({ label: 'None' });
+  await section.getByRole('button', { name: 'Create the library' }).click();
+
+  const row = section.getByRole('button', { name: /^films-only/ });
+  await expect(row).toContainText('Movies → Films');
+  await expect(row).not.toContainText('Series →');
+
+  // Naming no kind at all is refused: files would have nowhere to go.
+  await row.click();
+  await section.getByLabel('Movies go to').selectOption({ label: 'None' });
+  await section.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(section.getByRole('alert')).toContainText('Choose a destination library');
+  await section.getByLabel('Movies go to').selectOption({ label: 'Films' });
+
+  await section.getByRole('button', { name: 'Delete', exact: true }).click();
+  await section.getByRole('button', { name: 'Yes, delete' }).click();
+  await expect(section.getByRole('button', { name: /^films-only/ })).toHaveCount(0);
+});

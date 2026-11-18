@@ -8,6 +8,11 @@ All notable changes to Kinoshelf are written here. The format follows
 
 ### Added
 
+- Movies and series libraries are now optional: someone who keeps only movies, or only series, no longer
+  has to create a library they will not use. The welcome and the settings accept one folder, an arrival
+  folder can send to one kind only, and a file of a kind nobody keeps waits in Arrivals with the reason
+  (and a link to the settings) instead of going to another library or failing at transfer time (#6).
+
 - "Add the version to the name…" is now a bulk action: tick movies in a library's list, or shows in its tree,
   and name every one of their files with its picture size, with a preview first, as the page of one movie or
   episode already did. Any movie or show can be ticked for it, not only those to rename or refresh (#15).

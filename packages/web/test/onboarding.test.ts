@@ -30,6 +30,12 @@ describe('createDestinations', () => {
     expect(api.made).toEqual(['films', 'series']);
   });
 
+  it('makes only the kind that was given', async () => {
+    const api = libraries(() => false);
+    await createDestinations(api, series);
+    expect(api.made).toEqual(['series']);
+  });
+
   it('takes the first one back when the second is refused', async () => {
     const api = libraries((body) => body.type === 'series');
     await expect(createDestinations(api, movies, series)).rejects.toThrow('refused');

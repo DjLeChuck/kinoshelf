@@ -1136,9 +1136,9 @@ export const en = {
   'web.libraries.into': 'Sent to',
   'web.libraries.into.movie': 'Movies go to',
   'web.libraries.into.series': 'Series go to',
-  'web.libraries.into.choose': 'Choose a library',
+  'web.libraries.into.none': 'None',
   'web.libraries.into.hint':
-    'The default destinations: each file can still be sent to another library when it is validated.',
+    'The default destinations: each file can still be sent to another library when it is validated. Leave a kind on None if you do not keep it: its files then wait in Arrivals.',
   'web.libraries.advanced': 'Advanced',
   'web.libraries.close': 'Close',
   'web.libraries.unsaved': 'Unsaved changes',
@@ -1148,8 +1148,9 @@ export const en = {
   'web.libraries.group.arrival': 'Downloads folders',
   'web.libraries.group.arrival.empty':
     'There is no downloads folder yet. Add one if your downloads land in a folder.',
-  'web.libraries.summary.into': 'Movies → {movie} · Series → {series}',
-  'web.libraries.invalid.into': 'Choose a destination library for the movies and for the series.',
+  'web.libraries.summary.into.movie': 'Movies → {name}',
+  'web.libraries.summary.into.series': 'Series → {name}',
+  'web.libraries.invalid.into': 'Choose a destination library for the movies, the series, or both.',
   'web.settings.libraries.title': 'Folders',
   'web.settings.libraries.intro':
     'The folders Kinoshelf looks after. A library holds your final files, the ones your player shows; a downloads folder receives the files to put away and sends them to your libraries.',
@@ -1219,9 +1220,11 @@ export const en = {
   'web.onboarding.form.destination.movies': 'Movies folder',
   'web.onboarding.form.destination.series': 'Series folder',
   'web.onboarding.form.destination.hint':
-    'Two different folders, as Plex recommends. The naming, the metadata files and more libraries are in the settings.',
+    'Two different folders, as Plex recommends. Leave one empty if you only keep movies, or only series. The naming, the metadata files and more libraries are in the settings.',
+  'web.onboarding.form.destination.needs-one':
+    'Give the movies folder, the series folder, or both.',
   'web.onboarding.form.source.needs-destination':
-    'Give your movies and series folders first (previous step).',
+    'Give your movies or series folder first (previous step).',
   'web.onboarding.form.source': 'Downloads folder',
   'web.onboarding.form.source.hint':
     'The folder where your downloaded videos arrive, not the one that holds your movies and series.',
@@ -1344,6 +1347,9 @@ export const en = {
   'web.queue.validating.progress': 'Validating… {done}/{total}',
   'web.queue.ignore': 'Ignore',
   'web.queue.library': 'Destination library',
+  'web.queue.library.none.movie': 'No movie library is set up, so this file cannot be placed.',
+  'web.queue.library.none.series': 'No series library is set up, so this file cannot be placed.',
+  'web.queue.library.none.link': 'Add a library',
   'web.queue.validated': 'Transfer started for {name}.',
   'web.queue.validated.followed':
     'Transfer started for {name}. {count, plural, one {# other file of the release follows} other {# other files of the release follow}}.',

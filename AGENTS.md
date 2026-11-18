@@ -687,9 +687,14 @@ one of two kinds, told apart by which of `type` / `into` it has (exactly one):
 
 - **Organized in place**: `type: movie | series`. Its source is where the works of that type live,
   so it is also a destination (mode `move` implied, no `mode` allowed). It may set `naming` and `metadata`.
-- **Arrival folder**: `into: { movie, series }`, ids of typed libraries. Never a destination: what
+- **Arrival folder**: `into: { movie?, series? }`, ids of typed libraries, one kind at least (someone may keep
+  only movies, or only series: no library of a kind is a valid setup everywhere). Never a destination: what
   lands in it goes to those libraries, with its own `mode` (default `copy`). No `naming`/`metadata`: it takes
-  those of its destination (until the per-library destination is built, the global one).
+  those of its destination (until the per-library destination is built, the global one). **A kind with no
+  library is held back, never sent elsewhere**: `DestinationRoots` has no root for it
+  (`SettingsOverrides.destMovies`/`destSeries` `null`: no fallback on the first library of that kind), the
+  planner makes the item a conflict with `plan.no-movie-library` / `plan.no-series-library`, and Arrivals says so
+  with a link to the settings. A scan of a typed library keeps laying a stray file of the other kind in place.
 
 `threshold` and `watch` are allowed on both. Ids are generated from the name (`libraryId`) and never
 change; two libraries cannot share a source (`library.source-taken`); neither a source nor a job

@@ -2519,8 +2519,8 @@ export interface paths {
                             /** @enum {string|null} */
                             type: "movie" | "series" | null;
                             into: {
-                                movie: string;
-                                series: string;
+                                movie?: string;
+                                series?: string;
                             } | null;
                             /** @enum {string|null} */
                             naming: "with-id" | "no-id" | null;
@@ -2578,8 +2578,8 @@ export interface paths {
                         /** @enum {string} */
                         type?: "movie" | "series";
                         into?: {
-                            movie: string;
-                            series: string;
+                            movie?: string;
+                            series?: string;
                         };
                         /** @enum {string} */
                         naming?: "with-id" | "no-id";
@@ -2606,8 +2606,8 @@ export interface paths {
                             /** @enum {string|null} */
                             type: "movie" | "series" | null;
                             into: {
-                                movie: string;
-                                series: string;
+                                movie?: string;
+                                series?: string;
                             } | null;
                             /** @enum {string|null} */
                             naming: "with-id" | "no-id" | null;
@@ -2804,8 +2804,8 @@ export interface paths {
                         /** @enum {string} */
                         type?: "movie" | "series";
                         into?: {
-                            movie: string;
-                            series: string;
+                            movie?: string;
+                            series?: string;
                         } | null;
                         /** @enum {string|null} */
                         naming?: "with-id" | "no-id" | null;
@@ -2832,8 +2832,8 @@ export interface paths {
                             /** @enum {string|null} */
                             type: "movie" | "series" | null;
                             into: {
-                                movie: string;
-                                series: string;
+                                movie?: string;
+                                series?: string;
                             } | null;
                             /** @enum {string|null} */
                             naming: "with-id" | "no-id" | null;
@@ -3046,8 +3046,8 @@ export interface paths {
                                 /** @enum {string} */
                                 mode: "copy" | "hardlink" | "move";
                                 destinationRoot: string | {
-                                    movie: string;
-                                    series: string;
+                                    movie?: string;
+                                    series?: string;
                                 };
                             } | null;
                         };
@@ -3241,8 +3241,8 @@ export interface paths {
                                 /** @enum {string} */
                                 mode: "copy" | "hardlink" | "move";
                                 destinationRoot: string | {
-                                    movie: string;
-                                    series: string;
+                                    movie?: string;
+                                    series?: string;
                                 };
                             } | null;
                         };
@@ -8137,8 +8137,8 @@ export interface paths {
                                 /** @enum {string} */
                                 mode: "copy" | "hardlink" | "move";
                                 destinationRoot: string | {
-                                    movie: string;
-                                    series: string;
+                                    movie?: string;
+                                    series?: string;
                                 };
                             } | null;
                         };
@@ -8320,8 +8320,8 @@ export interface paths {
                                 /** @enum {string} */
                                 mode: "copy" | "hardlink" | "move";
                                 destinationRoot: string | {
-                                    movie: string;
-                                    series: string;
+                                    movie?: string;
+                                    series?: string;
                                 };
                             } | null;
                         };

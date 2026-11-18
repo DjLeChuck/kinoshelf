@@ -45,7 +45,7 @@ export interface JobDetail {
   readonly settings: {
     readonly profile: { readonly naming: Naming; readonly metadata: Metadata };
     readonly mode: Mode;
-    readonly destinationRoot: string | { readonly movie: string; readonly series: string };
+    readonly destinationRoot: string | { readonly movie?: string; readonly series?: string };
   } | null;
 }
 
@@ -172,8 +172,8 @@ export const analysed = (summary: JobDetail['summary']): number =>
 
 /** The roots a job planned for, one per kind of work. */
 export function rootsOf(root: NonNullable<JobDetail['settings']>['destinationRoot']): {
-  readonly movies: string;
-  readonly series: string;
+  readonly movies: string | undefined;
+  readonly series: string | undefined;
 } {
   return typeof root === 'string'
     ? { movies: root, series: root }

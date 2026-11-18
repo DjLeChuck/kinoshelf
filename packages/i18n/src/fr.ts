@@ -1174,9 +1174,9 @@ export const fr: Record<keyof typeof en, string> = {
   'web.libraries.into': 'Envoyé vers',
   'web.libraries.into.movie': 'Les films vont dans',
   'web.libraries.into.series': 'Les séries vont dans',
-  'web.libraries.into.choose': 'Choisissez une bibliothèque',
+  'web.libraries.into.none': 'Aucune',
   'web.libraries.into.hint':
-    'Les destinations par défaut : chaque fichier peut encore être envoyé vers une autre bibliothèque au moment de sa validation.',
+    'Les destinations par défaut : chaque fichier peut encore être envoyé vers une autre bibliothèque au moment de sa validation. Laissez « Aucune » pour un type que vous ne gérez pas : ses fichiers attendront alors dans les arrivées.',
   'web.libraries.advanced': 'Avancé',
   'web.libraries.unsaved': 'Modifications non enregistrées',
   'web.libraries.close': 'Fermer',
@@ -1186,9 +1186,10 @@ export const fr: Record<keyof typeof en, string> = {
   'web.libraries.group.arrival': 'Dossiers de téléchargements',
   'web.libraries.group.arrival.empty':
     'Aucun dossier de téléchargements pour l’instant. Ajoutez-en un si vos téléchargements atterrissent dans un dossier.',
-  'web.libraries.summary.into': 'Films → {movie} · Séries → {series}',
+  'web.libraries.summary.into.movie': 'Films → {name}',
+  'web.libraries.summary.into.series': 'Séries → {name}',
   'web.libraries.invalid.into':
-    'Choisissez une bibliothèque de destination pour les films et pour les séries.',
+    'Choisissez une bibliothèque de destination pour les films, les séries, ou les deux.',
   'web.settings.libraries.title': 'Dossiers',
   'web.settings.libraries.intro':
     'Les dossiers dont Kinoshelf s’occupe. Une bibliothèque contient vos fichiers finaux, ceux que votre lecteur affiche ; un dossier de téléchargements reçoit les fichiers à ranger et les envoie vers vos bibliothèques.',
@@ -1260,9 +1261,11 @@ export const fr: Record<keyof typeof en, string> = {
   'web.onboarding.form.destination.movies': 'Dossier des films',
   'web.onboarding.form.destination.series': 'Dossier des séries',
   'web.onboarding.form.destination.hint':
-    'Deux dossiers différents, comme Plex le recommande. Les noms, les fichiers de métadonnées et d’autres bibliothèques se règlent dans les réglages.',
+    'Deux dossiers différents, comme Plex le recommande. Laissez-en un vide si vous ne gérez que des films, ou que des séries. Les noms, les fichiers de métadonnées et d’autres bibliothèques se règlent dans les réglages.',
+  'web.onboarding.form.destination.needs-one':
+    'Indiquez le dossier des films, celui des séries, ou les deux.',
   'web.onboarding.form.source.needs-destination':
-    'Indiquez d’abord vos dossiers de films et de séries (étape précédente).',
+    'Indiquez d’abord votre dossier de films ou de séries (étape précédente).',
   'web.onboarding.form.source': 'Dossier de téléchargements',
   'web.onboarding.form.source.hint':
     'Le dossier où arrivent vos vidéos téléchargées, pas celui de vos films et séries.',
@@ -1389,6 +1392,11 @@ export const fr: Record<keyof typeof en, string> = {
   'web.queue.validating.progress': 'Validation… {done}/{total}',
   'web.queue.ignore': 'Ignorer',
   'web.queue.library': 'Bibliothèque de destination',
+  'web.queue.library.none.movie':
+    'Aucune bibliothèque de films n’est configurée : ce fichier ne peut pas être placé.',
+  'web.queue.library.none.series':
+    'Aucune bibliothèque de séries n’est configurée : ce fichier ne peut pas être placé.',
+  'web.queue.library.none.link': 'Ajouter une bibliothèque',
   'web.queue.validated': 'Transfert lancé pour {name}.',
   'web.queue.validated.followed':
     'Transfert lancé pour {name}. {count, plural, one {# autre fichier de la release suit} other {# autres fichiers de la release suivent}}.',

@@ -120,8 +120,18 @@ describe('the library form', () => {
   it('refuses a relative source and a missing destination', () => {
     const arrival = libraryForm(arrivals);
     expect(libraryBody({ ...arrival, source: 'dl' }, false)).toEqual({ invalid: 'source' });
-    expect(libraryBody({ ...arrival, into: { movie: 'films', series: '' } }, false)).toEqual({
+    expect(libraryBody({ ...arrival, into: { movie: '', series: '' } }, false)).toEqual({
       invalid: 'into',
+    });
+  });
+
+  it('lets an arrival folder send to one kind only', () => {
+    const arrival = libraryForm(arrivals);
+    expect(libraryBody({ ...arrival, into: { movie: 'films', series: '' } }, false)).toMatchObject({
+      into: { movie: 'films' },
+    });
+    expect(libraryBody({ ...arrival, into: { movie: '', series: 'series' } }, true)).toMatchObject({
+      into: { series: 'series' },
     });
   });
 });

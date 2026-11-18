@@ -31,19 +31,23 @@ export const nextStep = (steps: readonly Step[]): StepId | undefined =>
   steps.find((step) => step.state === 'todo')?.id;
 
 /**
- * Creates the movie and the series libraries of the welcome page, both or neither: sent again
- * after a failure, the step would otherwise find the first folder already taken.
+ * Creates the libraries of the welcome page (a movie one, a series one, or both: someone may keep
+ * only one kind), all or none: sent again after a failure, the step would otherwise find the
+ * first folder already taken.
  */
 export async function createDestinations(
   api: Pick<LibraryApi, 'create' | 'remove'>,
-  movies: LibraryBody,
-  series: LibraryBody,
+  ...bodies: readonly LibraryBody[]
 ): Promise<void> {
-  const created = await api.create(movies);
+  const created: string[] = [];
   try {
-    await api.create(series);
+    for (const body of bodies) {
+      created.push((await api.create(body)).id);
+    }
   } catch (error) {
-    await api.remove(created.id).catch(() => undefined);
+    for (const id of created) {
+      await api.remove(id).catch(() => undefined);
+    }
     throw error;
   }
 }

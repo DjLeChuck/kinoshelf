@@ -22,6 +22,7 @@
   import { PICTURE_SIZES, settleKey } from '../lib/library-items.js';
   import type { MessageKey } from '@kinoshelf/i18n';
   import CandidateList from './CandidateList.svelte';
+  import Link from './Link.svelte';
 
   let {
     entry,
@@ -112,6 +113,10 @@
   const reasons = (list: readonly ConflictBody[]): string =>
     list
       .map((c) => {
+        // A kind with no library to receive it says so, rather than "the name cannot be built".
+        if (c.detail?.code.startsWith('plan.no-')) {
+          return messageOf(t, new ApiError(422, c.detail.code, c.detail.params));
+        }
         const reason = t(`conflict.${c.reason}` as MessageKey);
         // Only these two name the destination in `path`; the others point at the source file.
         return c.reason === 'destination-exists' || c.reason === 'duplicate-destination'
@@ -438,7 +443,12 @@
     <p class="alert alert-danger" role="alert">{messageOf(t, shownFailure)}</p>
   {/if}
 
-  {#if entry.destinationOptions.length > 0}
+  {#if entry.kind !== null && entry.destinationOptions.length === 0}
+    <p class="alert alert-warn" role="note">
+      {t(`web.queue.library.none.${entry.kind}`)}
+      <Link href="/settings#libraries">{t('web.queue.library.none.link')}</Link>
+    </p>
+  {:else if entry.destinationOptions.length > 0}
     <section aria-labelledby="library-title">
       <h3 id="library-title">{t('web.queue.library')}</h3>
       <select

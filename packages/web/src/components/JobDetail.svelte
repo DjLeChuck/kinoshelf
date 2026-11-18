@@ -155,10 +155,14 @@
             <dt>{t('web.history.job.used.destination')}</dt>
             <dd class="mono">{roots.movies}</dd>
           {:else}
-            <dt>{t('web.history.job.used.movies')}</dt>
-            <dd class="mono">{roots.movies}</dd>
-            <dt>{t('web.history.job.used.series')}</dt>
-            <dd class="mono">{roots.series}</dd>
+            {#if roots.movies !== undefined}
+              <dt>{t('web.history.job.used.movies')}</dt>
+              <dd class="mono">{roots.movies}</dd>
+            {/if}
+            {#if roots.series !== undefined}
+              <dt>{t('web.history.job.used.series')}</dt>
+              <dd class="mono">{roots.series}</dd>
+            {/if}
           {/if}
         </dl>
       </section>

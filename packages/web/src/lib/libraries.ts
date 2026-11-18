@@ -5,8 +5,8 @@ import { nullIfBlank, thresholdOf, type Metadata, type Mode, type Naming } from 
 export type LibraryKind = 'movie' | 'series';
 /** The ids of the libraries an arrival folder sends its releases to. */
 export interface LibraryInto {
-  readonly movie: string;
-  readonly series: string;
+  readonly movie?: string;
+  readonly series?: string;
 }
 
 /** What `GET /api/libraries` returns. A field that is `null` follows the global setting. */
@@ -95,6 +95,7 @@ export interface LibraryForm {
   /** In place only. */
   type: LibraryKind;
   /** Arrival only: the ids of the libraries it sends to. */
+  /** `''`: this kind is not sent anywhere (someone may keep only movies, or only series). */
   into: { movie: string; series: string };
   /** In place only; `''` follows the global setting. */
   naming: Naming | '';
@@ -119,7 +120,9 @@ export function libraryForm(
     name: library?.name ?? '',
     source: library?.source ?? '',
     type: library?.type ?? 'movie',
-    into: library?.into ?? { movie: first('movie'), series: first('series') },
+    into: library?.into
+      ? { movie: library.into.movie ?? '', series: library.into.series ?? '' }
+      : { movie: first('movie'), series: first('series') },
     naming: library?.naming ?? '',
     metadata: library?.metadata ?? '',
     mode: library?.mode ?? '',
@@ -162,10 +165,15 @@ export function libraryBody(
       body.type = form.type;
     }
   } else {
-    if (form.into.movie === '' || form.into.series === '') {
+    // One kind is enough: the other is a library its owner does not keep.
+    const into = {
+      ...(form.into.movie !== '' && { movie: form.into.movie }),
+      ...(form.into.series !== '' && { series: form.into.series }),
+    };
+    if (Object.keys(into).length === 0) {
       return { invalid: 'into' };
     }
-    body.into = { ...form.into };
+    body.into = into;
     body.mode = form.mode === '' ? null : form.mode;
   }
   return creating
