@@ -1,5 +1,5 @@
 import { access, mkdir, readdir, writeFile } from 'node:fs/promises';
-import { expect, test } from '@playwright/test';
+import { expect, test, type APIRequestContext } from '@playwright/test';
 import { AUTH_HEADERS, incoming, library } from '../support.js';
 import { signIn, signInAt } from './helpers.js';
 
@@ -79,16 +79,32 @@ test('transfers a file Kinoshelf matched but the scan only read, as planned', as
   await expect(row).toHaveCount(0);
 });
 
-test('the Check now button is disabled while no folder is watched', async ({ page }) => {
+/**
+ * The arrival folders the tests above left behind: "Check now" reads every one of them, watched or
+ * not, so a test about what it finds needs the stack without them. Each test makes its own.
+ */
+async function removeArrivalFolders(request: APIRequestContext): Promise<void> {
+  const libraries = (await (
+    await request.get('/api/libraries', { headers: AUTH_HEADERS })
+  ).json()) as { id: string; into?: unknown }[];
+  for (const { id } of libraries.filter((library) => library.into)) {
+    await request.delete(`/api/libraries/${id}`, { headers: AUTH_HEADERS });
+  }
+}
+
+test('has no Arrivals tab while there is no arrival folder', async ({ page, request }) => {
+  await removeArrivalFolders(request);
   await signIn(page);
-  await page.goto('/arrivals');
-  await expect(page.getByRole('button', { name: 'Check now' })).toBeDisabled();
+  await page.goto('/libraries');
+  await expect(page.getByRole('link', { name: 'Films' })).toBeVisible();
+  await expect(page.getByRole('link', { name: /^Arrivals/ })).toHaveCount(0);
 });
 
 test('Check now submits what a watched folder holds without waiting for it to settle', async ({
   page,
   request,
 }) => {
+  await removeArrivalFolders(request);
   const folder = incoming('arrivals-watched');
   await mkdir(folder, { recursive: true });
   const created = await request.post('/api/libraries', {
@@ -115,25 +131,64 @@ test('Check now submits what a watched folder holds without waiting for it to se
       page.getByRole('status').filter({ hasText: 'Releases found: 1 submitted' }),
     ).toBeVisible();
   } finally {
-    // The other tests expect no watched folder.
+    // The other tests expect no arrival folder.
     await request.delete(`/api/libraries/${id}`, { headers: AUTH_HEADERS });
   }
-  await page.reload();
-  await expect(page.getByRole('button', { name: 'Check now' })).toBeDisabled();
+  // With the folder gone, so is the tab.
+  await page.goto('/libraries');
+  await expect(page.getByRole('link', { name: /^Arrivals/ })).toHaveCount(0);
 });
 
-test('keeps the state filter in the address', async ({ page }) => {
-  await signInAt(page, '/arrivals?state=review');
-  const filter = (name: string) => page.getByRole('button', { name, exact: true });
-  await expect(filter('To validate')).toHaveAttribute('aria-pressed', 'true');
+test('Check now also reads an arrival folder that is not watched', async ({ page, request }) => {
+  await removeArrivalFolders(request);
+  const folder = incoming('arrivals-unwatched');
+  await mkdir(`${folder}/Alien.1979.1080p`, { recursive: true });
+  await writeFile(`${folder}/Alien.1979.1080p/Alien.1979.1080p.mkv`, 'video');
+  const created = await request.post('/api/libraries', {
+    headers: AUTH_HEADERS,
+    data: { name: 'Manual drop', source: folder, into: { movie: 'films', series: 'series' } },
+  });
+  expect(created.status()).toBe(201);
+  const { id } = (await created.json()) as { id: string };
+  try {
+    await signInAt(page, '/arrivals');
+    const check = page.getByRole('button', { name: 'Check now' });
+    // Nothing is watched, yet a folder to look at is enough.
+    await expect(check).toBeEnabled();
+    await check.click();
+    await expect(
+      page.getByRole('status').filter({ hasText: 'Releases found: 1 submitted' }),
+    ).toBeVisible();
+  } finally {
+    await request.delete(`/api/libraries/${id}`, { headers: AUTH_HEADERS });
+  }
+});
 
-  await filter('Not recognized').click();
-  await expect(page).toHaveURL(/\/arrivals\?state=unrecognized$/);
-  await page.reload();
-  await expect(filter('Not recognized')).toHaveAttribute('aria-pressed', 'true');
+test('keeps the state filter in the address', async ({ page, request }) => {
+  // The Arrivals tab exists only with an arrival folder.
+  const folder = incoming('arrivals-filter');
+  await mkdir(folder, { recursive: true });
+  const created = await request.post('/api/libraries', {
+    headers: AUTH_HEADERS,
+    data: { name: 'Filter drop', source: folder, into: { movie: 'films', series: 'series' } },
+  });
+  expect(created.status()).toBe(201);
+  const { id } = (await created.json()) as { id: string };
+  try {
+    await signInAt(page, '/arrivals?state=review');
+    const filter = (name: string) => page.getByRole('button', { name, exact: true });
+    await expect(filter('To validate')).toHaveAttribute('aria-pressed', 'true');
 
-  await filter('All').click();
-  await expect(page).toHaveURL(/\/arrivals$/);
+    await filter('Not recognized').click();
+    await expect(page).toHaveURL(/\/arrivals\?state=unrecognized$/);
+    await page.reload();
+    await expect(filter('Not recognized')).toHaveAttribute('aria-pressed', 'true');
+
+    await filter('All').click();
+    await expect(page).toHaveURL(/\/arrivals$/);
+  } finally {
+    await request.delete(`/api/libraries/${id}`, { headers: AUTH_HEADERS });
+  }
 });
 
 test('sets a series folder aside once, and shows the episode of another show set apart', async ({
