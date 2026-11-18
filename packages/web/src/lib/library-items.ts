@@ -233,6 +233,8 @@ export interface Show {
   /** Episodes to rename, and to refresh (NFO or image missing): what the show's checkbox runs. */
   readonly rename: number;
   readonly refresh: number;
+  /** Files "Add the version to the name" could still take: 0 leaves the action off. */
+  readonly nameable: number;
   /** The show's own files; `null`: the profile does not write it, or it was not looked at yet. */
   readonly nfo: boolean | null;
   readonly poster: boolean | null;

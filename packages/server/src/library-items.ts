@@ -1007,6 +1007,7 @@ export class LibraryItemStore {
           missing: row.missing,
           rename: row.rename,
           refresh: row.refresh,
+          nameable: nameableCount(files),
           nfo: flag(row.nfo),
           episodesLackingNfo: lackingNfo(files),
           poster: flag(row.poster),
@@ -1417,6 +1418,8 @@ export interface ShowRow {
   /** Episodes whose video is to rename, and those lacking an NFO or image: what "Rename" and "Refresh" take. */
   readonly rename: number;
   readonly refresh: number;
+  /** Files "Add the version to the name" could still take (the web's `canNameVersion`). */
+  readonly nameable: number;
   /** The show's own files (`tvshow.nfo`, poster, fanart); `null`: not written, or not looked at. */
   readonly nfo: Presence;
   readonly poster: Presence;
@@ -1477,6 +1480,28 @@ export function lackingNfo(files: readonly LibraryItem[]): number {
       .map((item) => `${String(item.season)}:${String(item.episode)}`),
   ).size;
 }
+
+/**
+ * Whether a file can be asked to name its version (`- 2160p`) whatever its state: it is a movie or an
+ * episode an entry holds, not one to validate, and its name does not already end with its size (the
+ * server would answer that there is nothing to do). The web's `canNameVersion` is the same rule.
+ */
+export const canNameVersion = (
+  item: Pick<LibraryItem, 'kind' | 'entryId' | 'state' | 'path' | 'picture'>,
+): boolean => {
+  const resolution = resolutionOfItem(item);
+  return (
+    item.kind !== null &&
+    item.entryId !== null &&
+    item.state !== 'review' &&
+    item.state !== 'unrecognized' &&
+    !(resolution !== null && new RegExp(` - ${resolution}\\.[^./]+$`, 'i').test(item.path))
+  );
+};
+
+/** How many of a show's files could take their version in the name: 0 turns the bulk action off. */
+export const nameableCount = (files: readonly LibraryItem[]): number =>
+  files.filter(canNameVersion).length;
 
 /** Lower case without accents: what titles are ordered and searched by (`sort_key` in SQL). */
 const sortKey = (text: string): string =>

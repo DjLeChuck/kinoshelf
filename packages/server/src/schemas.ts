@@ -1204,6 +1204,7 @@ export const showSchema = {
     'missing',
     'rename',
     'refresh',
+    'nameable',
     'nfo',
     'episodesLackingNfo',
     'poster',
@@ -1232,6 +1233,10 @@ export const showSchema = {
     },
     rename: { type: 'integer', description: 'Episodes whose video is to rename.' },
     refresh: { type: 'integer', description: 'Episodes lacking an NFO or an image of their own.' },
+    nameable: {
+      type: 'integer',
+      description: 'Files that could still be named with their picture size.',
+    },
     nfo: { type: 'boolean', nullable: true, description: presenceDescription('`tvshow.nfo`') },
     poster: {
       type: 'boolean',

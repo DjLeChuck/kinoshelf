@@ -1,7 +1,7 @@
 import { basename, join } from 'node:path';
 import type { MetadataProvider, SeriesDetails } from '@kinoshelf/core';
 import { afterEach, describe, expect, it } from 'vitest';
-import { ITEM_FILTERS, itemId, SHOW_FILTERS } from '../src/library-items.js';
+import { canNameVersion, ITEM_FILTERS, itemId, SHOW_FILTERS } from '../src/library-items.js';
 import { cleanup, fakeProvider, harness, makeDir, put } from './harness.js';
 
 afterEach(cleanup);
@@ -249,6 +249,7 @@ interface ShowRow {
   episodes: number;
   versions: Coverage[];
   episodesLackingNfo: number;
+  nameable: number;
 }
 interface ShowDetail {
   seasons: {
@@ -458,6 +459,12 @@ describe('a series held in two versions', () => {
     expect((await shows(h)).items[0]?.episodesLackingNfo).toBe(3);
   });
 
+  it('counts the files that could still take their version in the name', async () => {
+    const h = await show(FULL);
+    // None of the five names ends with ` - <size>` yet.
+    expect((await shows(h)).items[0]?.nameable).toBe(5);
+  });
+
   it('expects no NFO when the profile writes none', async () => {
     const h = await show(FULL, 'none');
     const detail = (await h.request('GET', '/api/libraries/shows/shows/93740')).json<ShowDetail>();
@@ -499,5 +506,25 @@ describe('a release with a Subs folder, in the preview of a rename', () => {
       { path: join(root, 'Dune.2021', 'Subs', '3_French.srt'), reason: 'language-taken' },
       { path: join(root, 'Dune.2021', 'Subs', 'Dune.srt'), reason: 'language-unknown' },
     ]);
+  });
+});
+
+describe('canNameVersion', () => {
+  const file = {
+    kind: 'series' as const,
+    entryId: 'e1',
+    state: 'ok' as const,
+    path: '/shows/Foundation/Season 01/Foundation - s01e01.mkv',
+    picture: '1080p',
+  };
+
+  it('takes a file whose name does not say its size, the size coming from the picture', () => {
+    expect(canNameVersion(file)).toBe(true);
+  });
+
+  it('leaves a file already named with its size, and one nothing identified', () => {
+    expect(canNameVersion({ ...file, path: '/shows/Foundation - s01e01 - 1080p.mkv' })).toBe(false);
+    expect(canNameVersion({ ...file, state: 'review' })).toBe(false);
+    expect(canNameVersion({ ...file, entryId: null })).toBe(false);
   });
 });

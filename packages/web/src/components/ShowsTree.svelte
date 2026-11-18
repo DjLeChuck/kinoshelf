@@ -168,6 +168,7 @@
   const pickedShows = $derived(ticks.picked);
   const toRename = $derived(pickedShows.reduce((sum, s) => sum + s.rename, 0));
   const toRefresh = $derived(pickedShows.reduce((sum, s) => sum + s.refresh, 0));
+  const toName = $derived(pickedShows.reduce((sum, s) => sum + s.nameable, 0));
 
   /** The episodes of the ticked shows that the action takes, read from the library's list. */
   async function start(mode: BulkAction): Promise<void> {
@@ -407,7 +408,7 @@
       disabled={{
         rename: toRename === 0 || starting || busy,
         refresh: toRefresh === 0 || starting || busy,
-        version: starting || busy,
+        version: toName === 0 || starting || busy,
       }}
       onrun={(action: BulkAction) => void start(action)}
     />

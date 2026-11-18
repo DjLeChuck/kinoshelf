@@ -3968,6 +3968,8 @@ export interface paths {
                                 rename: number;
                                 /** @description Episodes lacking an NFO or an image of their own. */
                                 refresh: number;
+                                /** @description Files that could still be named with their picture size. */
+                                nameable: number;
                                 /** @description `tvshow.nfo` is on the disk. `null`: the profile does not write it, or no scan or change has looked yet. */
                                 nfo: boolean | null;
                                 /** @description The show poster is on the disk. `null`: the profile does not write it, or no scan or change has looked yet. */
