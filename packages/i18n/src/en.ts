@@ -1117,13 +1117,17 @@ export const en = {
     'Starts over: every file of the arrival folders is analysed again, except those already waiting here. Useful after emptying a library.',
   'web.arrivals.check.none': 'There is no arrival folder to look at. Add one in the settings.',
   'web.libraries.title': 'Libraries',
-  'web.libraries.new.in-place': 'New library organized in place',
-  'web.libraries.new.arrival': 'New arrival folder',
+  'web.libraries.new.in-place': 'New library',
+  'web.libraries.new.arrival': 'New downloads folder',
   'web.libraries.in-place.hint':
-    'The works live in this folder: it is also where they are renamed and where their metadata is written.',
+    'The folder that holds your final files, the ones your player shows. This is where they are renamed and where their metadata is written.',
+  'web.libraries.in-place.warning':
+    'Pick the folder that holds your final files, the ones your player (Plex, Jellyfin…) shows.',
   'web.libraries.arrival.hint':
-    'Downloads land here and are sent to your libraries. Nothing is ever kept in this folder.',
-  'web.libraries.source.arrival.hint': 'Where the downloads arrive.',
+    'The folder where the files to put away arrive. They are sent to your libraries; nothing is kept here.',
+  'web.libraries.arrival.warning':
+    'This folder must only hold files to put away. If your movies and series are already sorted, add them as libraries, not here.',
+  'web.libraries.source.arrival.hint': 'Where your download client drops its files.',
   'web.libraries.type': 'Holds',
   'web.libraries.type.movie': 'Movies',
   'web.libraries.type.series': 'Series',
@@ -1137,17 +1141,17 @@ export const en = {
   'web.libraries.advanced': 'Advanced',
   'web.libraries.close': 'Close',
   'web.libraries.unsaved': 'Unsaved changes',
-  'web.libraries.group.in-place': 'Organized in place',
+  'web.libraries.group.in-place': 'Libraries',
   'web.libraries.group.in-place.empty':
     'No library yet. Add the folder where your movies live, and the one for your series.',
-  'web.libraries.group.arrival': 'Arrival folders',
+  'web.libraries.group.arrival': 'Downloads folders',
   'web.libraries.group.arrival.empty':
-    'No arrival folder yet. Add one if your downloads land in a folder.',
+    'There is no downloads folder yet. Add one if your downloads land in a folder.',
   'web.libraries.summary.into': 'Movies → {movie} · Series → {series}',
   'web.libraries.invalid.into': 'Choose a destination library for the movies and for the series.',
-  'web.settings.libraries.title': 'Libraries',
+  'web.settings.libraries.title': 'Folders',
   'web.settings.libraries.intro':
-    'The folders Kinoshelf looks after. A library organized in place holds works already where they belong; an arrival folder receives downloads and sends them to those libraries.',
+    'The folders Kinoshelf looks after. A library holds your final files, the ones your player shows; a downloads folder receives the files to put away and sends them to your libraries.',
   'web.libraries.add': '+ Add',
   'web.libraries.chip.watched': 'Watched',
   'web.libraries.default': 'default',
@@ -1202,12 +1206,12 @@ export const en = {
   'web.onboarding.step.server.title': 'Connect Plex or Jellyfin',
   'web.onboarding.step.server.body':
     'Optional: your library is refreshed automatically after each batch.',
-  'web.onboarding.step.destination.title': 'Set your libraries',
+  'web.onboarding.step.destination.title': 'Where are your movies and series?',
   'web.onboarding.step.destination.body':
-    'The folder of your movies and the folder of your series. This is where Kinoshelf puts files away, and it also organizes what is already there.',
-  'web.onboarding.step.source.title': 'Add a downloads folder',
+    'The folders that already hold your final files (for example /media/movies). Kinoshelf puts new files there and renames those that are not named yet.',
+  'web.onboarding.step.source.title': 'Where do your downloads arrive?',
   'web.onboarding.step.source.body':
-    'Where the files to identify arrive. Kinoshelf analyses them, shows what it proposes, then puts them in your libraries. Nothing changes without your approval.',
+    'Optional. The folder where your download client drops its files, not your media library. Kinoshelf analyses them, shows what it proposes, then puts them in your libraries. Nothing changes without your approval.',
   'web.onboarding.form.tmdb.key': 'TMDB API key',
   'web.onboarding.form.tmdb.hint': 'Create a free key in your TMDB account, under Settings › API.',
   'web.onboarding.form.server.kind': 'Server',
@@ -1218,7 +1222,8 @@ export const en = {
   'web.onboarding.form.source.needs-destination':
     'Give your movies and series folders first (previous step).',
   'web.onboarding.form.source': 'Downloads folder',
-  'web.onboarding.form.source.hint': 'The folder where your downloaded videos arrive.',
+  'web.onboarding.form.source.hint':
+    'The folder where your downloaded videos arrive, not the one that holds your movies and series.',
   'web.onboarding.form.source.once': 'Analyse it once',
   'web.onboarding.form.source.once.hint':
     'Nothing is changed: you will see what Kinoshelf proposes first.',

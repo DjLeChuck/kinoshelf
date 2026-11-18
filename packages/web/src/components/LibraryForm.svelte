@@ -117,6 +117,9 @@
     <p class="muted hint">
       {t(group === 'arrival' ? 'web.libraries.arrival.hint' : 'web.libraries.in-place.hint')}
     </p>
+    <p class="alert alert-warn" role="note">
+      {t(group === 'arrival' ? 'web.libraries.arrival.warning' : 'web.libraries.in-place.warning')}
+    </p>
     <div class="field">
       <label for="lib-name">{t('web.libraries.name')}</label>
       <input id="lib-name" class="input" bind:value={form.name} />

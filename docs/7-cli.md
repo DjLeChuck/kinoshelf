@@ -63,7 +63,7 @@ command line. See [Getting downloads in](4-getting-downloads-in.md).
 ### `tidy`
 
 `kinoshelf tidy [--library <id>] [--json]` is a read-only report on the libraries organized in place
-(never an arrival folder): folders holding no video at the depth of a work, with what is in them, and,
+(never an downloads folder): folders holding no video at the depth of a work, with what is in them, and,
 in a movie library, the metadata another tool named after the video (`<video>.nfo`, `-poster`,
 `-fanart`, `-clearlogo`).
 

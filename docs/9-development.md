@@ -75,7 +75,7 @@ libraries in Jellyfin and Plex.
 
 - `make players-seed` fills `.work/media/arrivals` with two-second clips named like real releases
   (movies, two qualities of one, a bilingual title, series, one in two qualities, a few the matcher
-  cannot tell, one nobody can identify). Add that folder as an arrival folder pointing at the two
+  cannot tell, one nobody can identify). Add that folder as an downloads folder pointing at the two
   libraries; it shares their filesystem, so a hardlink works. Running it again only adds what is
   missing.
 - Jellyfin: <http://localhost:8096>. Plex: <http://localhost:32400/web> (host network; set

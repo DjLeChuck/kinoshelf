@@ -85,7 +85,7 @@ notify:
 | `metadataLanguage`      | a TMDB code (`fr`, `en-US`) | follows the locale                       | language of the titles, overviews and logos asked of TMDB                         |
 | `naming`                | `no-id`, `with-id`          | `no-id`                                  | the `{tmdb-<id>}` tag in names ([Output options](5-output-options.md))            |
 | `metadata`              | `nfo`, `none`               | `nfo`                                    | NFO and artwork beside the videos                                                 |
-| `mode`                  | `copy`, `hardlink`, `move`  | automatic                                | how a file reaches its destination (an arrival folder's own `mode` wins)          |
+| `mode`                  | `copy`, `hardlink`, `move`  | automatic                                | how a file reaches its destination (an downloads folder's own `mode` wins)        |
 | `threshold`             | 0 to 100                    | 85                                       | minimum score for an automatic match                                              |
 | `detectPictureSize`     | `true`, `false`             | `true`                                   | read a size with `ffprobe` when the name gives none and another version is there  |
 | `allowLocalImageUrls`   | `true`, `false`             | `false`                                  | let an image address of your own point at the local network                       |
@@ -101,10 +101,10 @@ it was queued with, shown in the History.
 
 ### Libraries
 
-Each entry of `libraries` is either a library or an arrival folder (see
+Each entry of `libraries` is either a library or an downloads folder (see
 [Concepts](1-web-ui.md#two-kinds-of-folders)).
 
-| Key         | Library (`type`)               | Arrival folder (`into`)                        |
+| Key         | Library (`type`)               | Downloads folder (`into`)                      |
 | ----------- | ------------------------------ | ---------------------------------------------- |
 | `id`        | required                       | required                                       |
 | `name`      | required                       | required                                       |
@@ -118,7 +118,7 @@ Each entry of `libraries` is either a library or an arrival folder (see
 | `watch`     | —                              | `true` to submit what lands in `source`        |
 
 Rules the file enforces: ids are lowercase letters, digits and dashes and are generated from the
-name; two libraries cannot share a source; a source cannot be `/`, `/proc`, `/sys` or `/dev`; `into`
+name; two folders cannot share a source nor contain one another (`library.source-overlaps`); a source cannot be `/`, `/proc`, `/sys` or `/dev`; `into`
 must name existing libraries of the right type. A library's profile is its own `naming`/`metadata`,
 else the global ones, else the defaults.
 

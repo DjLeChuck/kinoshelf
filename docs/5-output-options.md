@@ -107,7 +107,7 @@ Kodi reads the layout with `metadata: nfo`, if its sources are set up for it:
 - `undo` removes the metadata files a batch wrote, only if they are unchanged (a poster you replaced or
   an NFO a player edited is kept).
 - After a **move**, the folder the video left is removed if everything in it is a file Kinoshelf made
-  (NFO and images that were not touched). Anything else keeps the folder. Arrival folders are never
+  (NFO and images that were not touched). Anything else keeps the folder. Downloads folders are never
   cleaned.
 - Changing an image or a collection replaces files on purpose: the old one goes to `<config>/replaced/`
   and the batch can be undone (see [Libraries](2-libraries.md#changing-an-image)).

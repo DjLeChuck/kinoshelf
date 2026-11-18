@@ -264,6 +264,7 @@
     {/if}
   {:else}
     {#if step === 'destination'}
+      <p class="alert alert-warn" role="note">{t('web.libraries.in-place.warning')}</p>
       <div class="field">
         <label for="ob-folder">{t('web.onboarding.form.destination.movies')}</label>
         <PathField id="ob-folder" bind:value={folder} placeholder="/" />
@@ -277,6 +278,7 @@
         <ProfileChoice id="ob" bind:naming bind:metadata examples={settings.namingExamples} />
       {/if}
     {:else}
+      <p class="alert alert-warn" role="note">{t('web.libraries.arrival.warning')}</p>
       <div class="field">
         <label for="ob-folder">{t('web.onboarding.form.source')}</label>
         <PathField id="ob-folder" bind:value={folder} placeholder="/" />

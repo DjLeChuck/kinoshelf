@@ -40,6 +40,11 @@ All notable changes to Kinoshelf are written here. The format follows
   (`library.source-overlaps`), the case being a downloads folder that held the whole media folder
   (`/media` beside `/media/movies`), which made every library file an arrival (#10, #11).
 
+- The Settings, the welcome and the folder forms now tell **final files** from **downloads**: "Library" only names
+  a folder that holds your final files, and the folders where downloads land are "Downloads folders". The
+  Settings section is called "Folders", and a notice in the welcome and in each form says what the folder
+  must hold (#10).
+
 - The folder a move leaves behind is now removed when its sub-folders hold only what Kinoshelf made or
   nothing (an emptied `Subs`).
 

@@ -80,7 +80,7 @@ test('picks the source folder of a library on the server’s disk instead of typ
 }) => {
   await mkdir(library('Documentaries'), { recursive: true });
   const section = page.locator('section', {
-    has: page.getByRole('heading', { name: 'Libraries', exact: true }),
+    has: page.getByRole('heading', { name: 'Folders', exact: true }),
   });
 
   await section.getByRole('button', { name: '+ Add' }).first().click();

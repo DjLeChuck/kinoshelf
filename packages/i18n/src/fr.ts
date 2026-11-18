@@ -1153,13 +1153,17 @@ export const fr: Record<keyof typeof en, string> = {
     'Repart de zéro : chaque fichier des dossiers d’arrivée est réanalysé, sauf ceux qui attendent déjà ici. Utile après avoir vidé une bibliothèque.',
   'web.arrivals.check.none': 'Aucun dossier d’arrivée à examiner. Ajoutez-en un dans les réglages.',
   'web.libraries.title': 'Bibliothèques',
-  'web.libraries.new.in-place': 'Nouvelle bibliothèque rangée sur place',
-  'web.libraries.new.arrival': 'Nouveau dossier d’arrivée',
+  'web.libraries.new.in-place': 'Nouvelle bibliothèque',
+  'web.libraries.new.arrival': 'Nouveau dossier de téléchargements',
   'web.libraries.in-place.hint':
-    'Les œuvres vivent dans ce dossier : c’est aussi là qu’elles sont renommées et que leurs métadonnées sont écrites.',
+    'Le dossier qui contient vos fichiers finaux, ceux que votre lecteur affiche. C’est là qu’ils sont renommés et que leurs métadonnées sont écrites.',
+  'web.libraries.in-place.warning':
+    'Choisissez le dossier qui contient vos fichiers finaux, ceux que votre lecteur (Plex, Jellyfin…) affiche.',
   'web.libraries.arrival.hint':
-    'Les téléchargements arrivent ici et sont envoyés vers vos bibliothèques. Rien n’est jamais conservé dans ce dossier.',
-  'web.libraries.source.arrival.hint': 'Là où arrivent les téléchargements.',
+    'Le dossier où arrivent les fichiers à ranger. Ils sont envoyés vers vos bibliothèques ; rien n’est conservé ici.',
+  'web.libraries.arrival.warning':
+    'Ce dossier ne doit contenir que des fichiers à ranger. Si vos films et séries sont déjà classés, ajoutez-les comme bibliothèques, pas ici.',
+  'web.libraries.source.arrival.hint': 'Là où votre client de téléchargement dépose ses fichiers.',
   'web.libraries.type': 'Contient',
   'web.libraries.type.movie': 'Films',
   'web.libraries.type.series': 'Séries',
@@ -1173,18 +1177,18 @@ export const fr: Record<keyof typeof en, string> = {
   'web.libraries.advanced': 'Avancé',
   'web.libraries.unsaved': 'Modifications non enregistrées',
   'web.libraries.close': 'Fermer',
-  'web.libraries.group.in-place': 'Rangées sur place',
+  'web.libraries.group.in-place': 'Bibliothèques',
   'web.libraries.group.in-place.empty':
     'Aucune bibliothèque pour l’instant. Ajoutez le dossier de vos films, et celui de vos séries.',
-  'web.libraries.group.arrival': 'Dossiers d’arrivée',
+  'web.libraries.group.arrival': 'Dossiers de téléchargements',
   'web.libraries.group.arrival.empty':
-    'Aucun dossier d’arrivée pour l’instant. Ajoutez-en un si vos téléchargements atterrissent dans un dossier.',
+    'Aucun dossier de téléchargements pour l’instant. Ajoutez-en un si vos téléchargements atterrissent dans un dossier.',
   'web.libraries.summary.into': 'Films → {movie} · Séries → {series}',
   'web.libraries.invalid.into':
     'Choisissez une bibliothèque de destination pour les films et pour les séries.',
-  'web.settings.libraries.title': 'Bibliothèques',
+  'web.settings.libraries.title': 'Dossiers',
   'web.settings.libraries.intro':
-    'Les dossiers dont Kinoshelf s’occupe. Une bibliothèque rangée sur place contient des œuvres déjà au bon endroit ; un dossier d’arrivée reçoit les téléchargements et les envoie vers ces bibliothèques.',
+    'Les dossiers dont Kinoshelf s’occupe. Une bibliothèque contient vos fichiers finaux, ceux que votre lecteur affiche ; un dossier de téléchargements reçoit les fichiers à ranger et les envoie vers vos bibliothèques.',
   'web.libraries.add': '+ Ajouter',
   'web.libraries.chip.watched': 'Surveillé',
   'web.libraries.default': 'par défaut',
@@ -1240,12 +1244,12 @@ export const fr: Record<keyof typeof en, string> = {
   'web.onboarding.step.server.title': 'Connecter Plex ou Jellyfin',
   'web.onboarding.step.server.body':
     'Facultatif : votre bibliothèque sera rafraîchie automatiquement après chaque rangement.',
-  'web.onboarding.step.destination.title': 'Indiquer vos bibliothèques',
+  'web.onboarding.step.destination.title': 'Où sont vos films et séries ?',
   'web.onboarding.step.destination.body':
-    'Le dossier de vos films et celui de vos séries. C’est là que Kinoshelf range les fichiers, et il organise aussi ceux qui s’y trouvent déjà.',
-  'web.onboarding.step.source.title': 'Ajouter un dossier de téléchargements',
+    'Les dossiers qui contiennent déjà vos fichiers finaux (par exemple /media/films). Kinoshelf y range les nouveautés et renomme ceux qui ne le sont pas encore.',
+  'web.onboarding.step.source.title': 'Où arrivent vos téléchargements ?',
   'web.onboarding.step.source.body':
-    'Là où arrivent les fichiers à identifier. Kinoshelf les analyse, vous montre ce qu’il propose, puis les range dans vos bibliothèques. Rien n’est modifié sans votre validation.',
+    'Facultatif. Le dossier où votre client de téléchargement dépose ses fichiers, pas votre médiathèque. Kinoshelf les analyse, vous montre ce qu’il propose, puis les range dans vos bibliothèques. Rien n’est modifié sans votre validation.',
   'web.onboarding.form.tmdb.key': 'Clé API TMDB',
   'web.onboarding.form.tmdb.hint':
     'Créez une clé gratuite dans votre compte TMDB, sous Réglages › API.',
@@ -1257,7 +1261,8 @@ export const fr: Record<keyof typeof en, string> = {
   'web.onboarding.form.source.needs-destination':
     'Indiquez d’abord vos dossiers de films et de séries (étape précédente).',
   'web.onboarding.form.source': 'Dossier de téléchargements',
-  'web.onboarding.form.source.hint': 'Le dossier où arrivent vos vidéos téléchargées.',
+  'web.onboarding.form.source.hint':
+    'Le dossier où arrivent vos vidéos téléchargées, pas celui de vos films et séries.',
   'web.onboarding.form.source.once': 'Analyser une fois',
   'web.onboarding.form.source.once.hint':
     'Rien n’est modifié : vous verrez d’abord ce que Kinoshelf propose.',

@@ -29,7 +29,7 @@ equivalent of tinyMediaManager and a companion to Radarr/Sonarr: it never downlo
 
 **Identify and organize**
 
-- **Libraries** organized in place, and **arrival folders** whose files are identified then copied,
+- **Libraries** organized in place, and **downloads folders** whose files are identified then copied,
   hardlinked or moved into them. Movies and series can live in separate libraries.
 - A matcher built on [guessit](https://github.com/opensubtitles/guessit-js) and TMDB, tuned on a corpus
   of real release names: a score and a threshold decide, and anything uncertain waits for you. A

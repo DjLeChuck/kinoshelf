@@ -20,7 +20,7 @@ features:
   - title: Plex, Jellyfin and Kodi
     details: One layout read the same by all three, with Kodi-format NFO and artwork (poster, background, logo, thumbnails) if you want them.
   - title: Libraries and arrivals
-    details: Libraries organized in place, arrival folders whose files are identified then transferred, several versions of a movie or an episode side by side.
+    details: Libraries organized in place, downloads folders whose files are identified then transferred, several versions of a movie or an episode side by side.
   - title: Artwork and collections
     details: Change a poster, a background or a logo from TMDB or an address of yours, and set the collections that Plex and Jellyfin show.
   - title: Getting downloads in

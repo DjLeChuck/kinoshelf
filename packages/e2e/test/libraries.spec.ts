@@ -10,7 +10,7 @@ test('adds an arrival folder in the settings, edits it, then deletes it', async 
   await page.getByRole('link', { name: 'Settings' }).click();
 
   const section = page.locator('section', {
-    has: page.getByRole('heading', { name: 'Libraries', exact: true }),
+    has: page.getByRole('heading', { name: 'Folders', exact: true }),
   });
   // The two libraries of the stack are organized in place.
   await expect(section.getByRole('button', { name: /^Films/ })).toBeVisible();

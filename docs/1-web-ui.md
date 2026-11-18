@@ -44,7 +44,7 @@ Kinoshelf distinguishes **where files arrive** from **where they belong**.
 
 - A **library** (movies or series) is organized in place. Kinoshelf scans it, renames what does not
   follow the profile and writes the missing metadata. Its files never leave it.
-- An **arrival folder** (your downloads) is a source. Each file is identified, then transferred
+- An **downloads folder** (your downloads) is a source. Each file is identified, then transferred
   into a library by copy, hardlink or move.
 
 ```yaml
@@ -59,15 +59,17 @@ libraries:
     }
 ```
 
-A folder has either a `type` (library) or an `into` (arrival folder), never both. Both are set from
-the Settings, with a path picker on the server's disk. See
+A folder has either a `type` (library) or an `into` (downloads folder), never both. Both are set from
+the Settings, with a path picker on the server's disk. A folder cannot contain another one, or lie
+inside it: `/media` as a downloads folder beside `/media/movies` as a library is refused, since every
+file of the library would be offered as an arrival. See
 [Configuration](6-configuration.md#libraries) for every key.
 
 ## Welcome
 
 On a new install, `/` shows a setup in four steps: the TMDB key (your own, tested as soon as you enter
 it), Plex or Jellyfin, your movies and series folders (the first two libraries, organized in place),
-and an arrival folder pointing at them (watched, or scanned once). Each step ticks itself once the
+and an downloads folder pointing at them (watched, or scanned once). Each step ticks itself once the
 configuration says so, and the server remembers what you skipped. The app then opens on Libraries.
 
 If the first job fails, it is not lost: the History lists it with its cause.
@@ -110,7 +112,7 @@ perfect title still waits for validation, because the numbering may differ.
   [Default settings](#default-settings)).
 - **Check now**, at the top of the tab, scans the watched folders without waiting for files to settle
   (disabled when no folder is watched).
-- **Analyse everything again** starts over: every file of the arrival folders is analysed again, except
+- **Analyse everything again** starts over: every file of the downloads folders is analysed again, except
   those already waiting here. Useful after emptying a library.
 
 How a download gets here is explained in [Getting downloads in](4-getting-downloads-in.md).
@@ -152,8 +154,8 @@ again: a field says that a value is set and leaves it alone when empty. A value 
 environment variable (`TMDB_API_KEY`, `KINOSHELF_API_KEY`) is disabled with an explanation, and the
 API refuses to change it.
 
-![The Settings: libraries and arrival folders](images/settings.png#gh-dark-mode-only)
-![The Settings: libraries and arrival folders](images/settings-light.png#gh-light-mode-only)
+![The Settings: libraries and downloads folders](images/settings.png#gh-dark-mode-only)
+![The Settings: libraries and downloads folders](images/settings-light.png#gh-light-mode-only)
 
 ### TMDB and languages
 
@@ -162,13 +164,13 @@ API refuses to change it.
 - **Language**: the language of notifications and of the tool.
 - **TMDB titles language** (advanced): a code such as `fr` or `en-US`; empty follows the language.
 
-### Libraries
+### Folders
 
-Libraries and arrival folders, added with a server-side path picker (a browser cannot see the
+Libraries (your final files) and downloads folders (the files to put away), added with a server-side path picker (a browser cannot see the
 server's disk, and in Docker only mounted folders exist). A library sets its own names and metadata
-options and threshold; an arrival folder sets its mode (copy, hardlink, move), its destination
+options and threshold; an downloads folder sets its mode (copy, hardlink, move), its destination
 libraries and whether it is watched. Ids are generated from the name and never change; two
-libraries cannot share a source. A library an arrival folder points at cannot be deleted.
+libraries cannot share a source, nor contain one another. A library an downloads folder points at cannot be deleted.
 
 ### Folder watching
 
