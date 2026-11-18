@@ -62,8 +62,29 @@ export interface FolderStatus {
   readonly sentLastDay: number;
 }
 
+/** Arrival folders that are not watched: only a person's "check now" looks at them. */
+export interface ManualFolders {
+  readonly folders: readonly string[];
+  readonly libraryIds: ReadonlyMap<string, string>;
+  readonly apply: boolean;
+}
+
+const NO_MANUAL: ManualFolders = { folders: [], libraryIds: new Map(), apply: false };
+
+/** The arrival folders (`into`) no library watches, which a manual scan still reads. */
+export function manualFolders(config: Config): ManualFolders {
+  const arrivals = (config.libraries ?? []).filter(({ into, watch }) => into && watch !== true);
+  return {
+    folders: arrivals.map(({ source }) => source),
+    libraryIds: new Map(arrivals.map((l) => [l.source, l.id])),
+    apply: config.watch?.apply ?? false,
+  };
+}
+
 export interface WatchStatus {
   readonly enabled: boolean;
+  /** A manual scan has a folder to look at: a watched one, or an arrival folder left unwatched. */
+  readonly scannable: boolean;
   readonly mode: 'events' | 'poll';
   readonly folders: readonly FolderStatus[];
   /** Releases seen but not yet submitted: still being written, or settling. */
@@ -116,6 +137,7 @@ interface Release {
  */
 export class FolderWatcher {
   private config: WatcherSettings | undefined;
+  private manual: ManualFolders = NO_MANUAL;
   private watchers: FSWatcher[] = [];
   private timer: NodeJS.Timeout | undefined;
   private safetyTimer: NodeJS.Timeout | undefined;
@@ -130,10 +152,14 @@ export class FolderWatcher {
 
   constructor(private readonly deps: WatcherDeps) {}
 
-  /** (Re)starts with the given settings; none (or no folder) stops it. */
-  configure(config: WatcherSettings | undefined): void {
+  /**
+   * (Re)starts with the given settings; none (or no folder) stops it. `manual` are the arrival
+   * folders nobody watches: they are scanned only when a person asks.
+   */
+  configure(config: WatcherSettings | undefined, manual: ManualFolders = NO_MANUAL): void {
     this.halt();
     this.config = config;
+    this.manual = manual;
     this.available = new Map();
     if (!config) {
       this.pending = 0;
@@ -155,6 +181,7 @@ export class FolderWatcher {
   status(): WatchStatus {
     return {
       enabled: this.config !== undefined,
+      scannable: this.config !== undefined || this.manual.folders.length > 0,
       mode: this.polling ? 'poll' : 'events',
       folders: (this.config?.folders ?? []).map((path) => ({
         path,
@@ -212,6 +239,7 @@ export class FolderWatcher {
   stop(): void {
     this.halt();
     this.config = undefined;
+    this.manual = NO_MANUAL;
   }
 
   private halt(): void {
@@ -262,12 +290,25 @@ export class FolderWatcher {
     const config = this.config;
     let submitted = 0;
     let pending = 0;
+    // The events and the periodic pass never look at an unwatched folder; a person's click does.
+    const targets: { folder: string; settings: WatcherSettings }[] = [];
     if (config) {
-      for (const folder of config.folders) {
-        const result = await this.scanFolder(folder, config, force, all);
-        submitted += result.submitted;
-        pending += result.pending;
-      }
+      targets.push(...config.folders.map((folder) => ({ folder, settings: config })));
+    }
+    if (force) {
+      const { folders, libraryIds, apply } = this.manual;
+      const settings: WatcherSettings = {
+        ...(config ?? {}),
+        folders,
+        libraryIds,
+        apply: config?.apply ?? apply,
+      };
+      targets.push(...folders.map((folder) => ({ folder, settings })));
+    }
+    for (const { folder, settings } of targets) {
+      const result = await this.scanFolder(folder, settings, force, all);
+      submitted += result.submitted;
+      pending += result.pending;
     }
     this.pending = pending;
     this.lastScan = this.now();

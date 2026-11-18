@@ -284,12 +284,52 @@ describe('FolderWatcher', () => {
 });
 
 describe('the watch API', () => {
-  it('refuses a manual scan when no folder is watched', async () => {
+  it('scans an arrival folder nobody watches when asked, and never on its own', async () => {
+    const folder = await makeDir();
+    const h = await harness({
+      config: {
+        libraries: [
+          ...librariesAt(await makeDir()),
+          {
+            id: 'downloads',
+            name: 'Downloads',
+            source: folder,
+            into: { movie: 'films', series: 'shows' },
+          },
+        ],
+      },
+    });
+    await h.app.watcher.idle();
+    await put(join(folder, 'Dune.2021.mkv'));
+
+    expect((await h.request('GET', '/api/watch')).json()).toMatchObject({
+      enabled: false,
+      scannable: true,
+    });
+    // Nothing is looked at by itself.
+    expect(await h.app.watcher.scan()).toEqual({ submitted: 0, pending: 0 });
+
+    const scan = await h.request('POST', '/api/watch/scan');
+    expect(scan.statusCode).toBe(200);
+    expect(scan.json()).toEqual({ submitted: 1, pending: 0 });
+    await h.app.jobs.idle();
+    const jobs = new JobStore(
+      h.database,
+      new EntryStore(h.database),
+      new ExecutionStore(h.database),
+    ).list(10);
+    expect(jobs).toMatchObject([{ path: join(folder, 'Dune.2021.mkv'), libraryId: 'downloads' }]);
+  });
+
+  it('refuses a manual scan when there is no arrival folder', async () => {
     const h = await harness();
     const response = await h.request('POST', '/api/watch/scan');
     expect(response.statusCode).toBe(409);
     expect(response.json()).toEqual({ error: { code: 'watch.not-configured' } });
-    expect((await h.request('GET', '/api/watch')).json()).toMatchObject({ enabled: false });
+    expect((await h.request('GET', '/api/watch')).json()).toMatchObject({
+      enabled: false,
+      scannable: false,
+    });
   });
 
   it('queues a job for what a manual scan finds, settled or not', async () => {

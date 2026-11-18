@@ -155,14 +155,14 @@
     <button
       type="button"
       class="btn"
-      disabled={!watch?.enabled || checking}
-      title={watch?.enabled ? undefined : t('web.arrivals.check.none')}
+      disabled={!watch?.scannable || checking}
+      title={watch?.scannable ? undefined : t('web.arrivals.check.none')}
       onclick={() => void checkNow()}>{t('web.arrivals.check')}</button
     >
     <button
       type="button"
       class="btn"
-      disabled={!watch?.enabled || checking}
+      disabled={!watch?.scannable || checking}
       title={t('web.arrivals.recheck.hint')}
       onclick={() => void checkNow(true)}>{t('web.arrivals.recheck')}</button
     >

@@ -382,7 +382,7 @@ export const fr: Record<keyof typeof en, string> = {
   'error.settings.webhook-not-found': 'Ce webhook n’existe plus. Rechargez les réglages.',
   'error.settings.webhook-url-required': 'Un nouveau webhook a besoin d’une URL.',
   'error.watch.not-configured':
-    'Aucun dossier n’est surveillé. Configurez-en un dans les réglages.',
+    'Aucun dossier d’arrivée à examiner. Ajoutez-en un dans les réglages.',
   'web.skip-to-content': 'Aller au contenu',
   'web.nav.label': 'Navigation principale',
   'web.nav.libraries': 'Bibliothèques',
@@ -1149,8 +1149,7 @@ export const fr: Record<keyof typeof en, string> = {
   'web.arrivals.recheck': 'Tout réanalyser',
   'web.arrivals.recheck.hint':
     'Repart de zéro : chaque fichier des dossiers d’arrivée est réanalysé, sauf ceux qui attendent déjà ici. Utile après avoir vidé une bibliothèque.',
-  'web.arrivals.check.none':
-    'Aucun dossier n’est surveillé. Activez la surveillance d’un dossier d’arrivée dans les réglages.',
+  'web.arrivals.check.none': 'Aucun dossier d’arrivée à examiner. Ajoutez-en un dans les réglages.',
   'web.libraries.title': 'Bibliothèques',
   'web.libraries.new.in-place': 'Nouvelle bibliothèque rangée sur place',
   'web.libraries.new.arrival': 'Nouveau dossier d’arrivée',

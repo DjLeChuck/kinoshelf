@@ -6102,6 +6102,8 @@ export interface paths {
                         "application/json": {
                             /** @description At least one library is watched. */
                             enabled: boolean;
+                            /** @description A manual scan has a folder to look at: a watched one or an arrival folder. */
+                            scannable: boolean;
                             /** @enum {string} */
                             mode: "events" | "poll";
                             folders: {
@@ -6160,7 +6162,7 @@ export interface paths {
         put?: never;
         /**
          * Look at the watched folders now
-         * @description Submits what is there without waiting for it to settle: whoever asks knows it is complete. A file still carrying a download suffix (`.part`, `.!qB`) is left alone. With `all`, starts over: every file is analysed again, except those a job is working on or that already wait in the arrivals (the libraries were emptied, say). 409 `watch.not-configured` when no folder is watched.
+         * @description Submits what is there without waiting for it to settle: whoever asks knows it is complete. A file still carrying a download suffix (`.part`, `.!qB`) is left alone. With `all`, starts over: every file is analysed again, except those a job is working on or that already wait in the arrivals (the libraries were emptied, say). Arrival folders that are not watched are looked at too. 409 `watch.not-configured` when there is no arrival folder nor watched library.
          */
         post: {
             parameters: {

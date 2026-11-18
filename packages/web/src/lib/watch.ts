@@ -1,6 +1,8 @@
 /** `GET /api/watch`: what the watcher is doing. */
 export interface WatchStatus {
   readonly enabled: boolean;
+  /** An arrival folder exists, watched or not: "Check now" has something to read. */
+  readonly scannable: boolean;
   readonly mode: 'events' | 'poll';
   readonly folders: readonly {
     path: string;

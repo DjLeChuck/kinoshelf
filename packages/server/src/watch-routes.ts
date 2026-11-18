@@ -7,6 +7,7 @@ const statusSchema = {
   type: 'object',
   required: [
     'enabled',
+    'scannable',
     'mode',
     'folders',
     'pending',
@@ -16,6 +17,10 @@ const statusSchema = {
   ],
   properties: {
     enabled: { type: 'boolean', description: 'At least one library is watched.' },
+    scannable: {
+      type: 'boolean',
+      description: 'A manual scan has a folder to look at: a watched one or an arrival folder.',
+    },
     mode: { type: 'string', enum: ['events', 'poll'] },
     folders: {
       type: 'array',
@@ -69,7 +74,8 @@ export function registerWatchRoutes(api: FastifyInstance, watcher: FolderWatcher
           'complete. A file still carrying a download suffix (`.part`, `.!qB`) is left alone. ' +
           'With `all`, starts over: every file is analysed again, except those a job is working ' +
           'on or that already wait in the arrivals (the libraries were emptied, say). ' +
-          '409 `watch.not-configured` when no folder is watched.',
+          'Arrival folders that are not watched are looked at too. ' +
+          '409 `watch.not-configured` when there is no arrival folder nor watched library.',
         body: {
           type: ['object', 'null'],
           properties: { all: { type: 'boolean' } },
@@ -90,7 +96,7 @@ export function registerWatchRoutes(api: FastifyInstance, watcher: FolderWatcher
       },
     },
     async (request) => {
-      if (!watcher.status().enabled) {
+      if (!watcher.status().scannable) {
         throw new ApiError(409, 'watch.not-configured');
       }
       const body = request.body as { all?: boolean } | null | undefined;

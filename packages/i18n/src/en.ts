@@ -362,7 +362,8 @@ export const en = {
   'error.plex.unreachable': 'plex.tv cannot be reached ({detail}). Try again in a moment.',
   'error.settings.webhook-not-found': 'This webhook no longer exists. Reload the settings.',
   'error.settings.webhook-url-required': 'A new webhook needs a URL.',
-  'error.watch.not-configured': 'No folder is watched. Set one in the settings first.',
+  'error.watch.not-configured':
+    'There is no arrival folder to look at. Add one in the settings first.',
   'web.skip-to-content': 'Skip to content',
   'web.nav.label': 'Main navigation',
   'web.nav.libraries': 'Libraries',
@@ -1112,8 +1113,7 @@ export const en = {
   'web.arrivals.recheck': 'Analyse everything again',
   'web.arrivals.recheck.hint':
     'Starts over: every file of the arrival folders is analysed again, except those already waiting here. Useful after emptying a library.',
-  'web.arrivals.check.none':
-    'No folder is watched. Turn on watching for an arrival folder in the settings.',
+  'web.arrivals.check.none': 'There is no arrival folder to look at. Add one in the settings.',
   'web.libraries.title': 'Libraries',
   'web.libraries.new.in-place': 'New library organized in place',
   'web.libraries.new.arrival': 'New arrival folder',

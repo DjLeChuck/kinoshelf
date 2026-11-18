@@ -73,7 +73,7 @@ import {
 } from './activity-sources.js';
 import { registerActivityRoutes } from './activity-routes.js';
 import { registerWatchRoutes } from './watch-routes.js';
-import { FolderWatcher, watcherSettings } from './watcher.js';
+import { FolderWatcher, manualFolders, watcherSettings } from './watcher.js';
 import { registerWeb } from './web.js';
 import { allowedHosts } from './local-host.js';
 import { AttemptLimiter } from './attempts.js';
@@ -287,7 +287,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     ...(options.delivery && { delivery: options.delivery }),
   });
   const configStore = new ConfigStore(options.configDir, options.config, (config) => {
-    watcher.configure(watcherSettings(config));
+    watcher.configure(watcherSettings(config), manualFolders(config));
     notifier.configure(
       config,
       createTranslator(detectLocale(undefined, config.locale, options.env)),
@@ -461,7 +461,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     typed.forEach((id) => {
       seriesFiles.touch(id);
     });
-    watcher.configure(watcherSettings(options.config));
+    watcher.configure(watcherSettings(options.config), manualFolders(options.config));
     health.start();
     purge();
     // Not kept alive by the timer: the process leaves when the server closes.
