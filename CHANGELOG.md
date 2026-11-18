@@ -16,7 +16,8 @@ All notable changes to Kinoshelf are written here. The format follows
 - The main buttons of a library (Organize, Complete, Add the version to the name, Scan again, Change the
   match) and of Arrivals (Validate, Transfer, Ignore, Analyse everything again) now explain themselves in a
   tooltip that opens on hover or keyboard focus, closes on Escape, and opens on a long press on a phone,
-  instead of the browser's slow native one (#27).
+  instead of the browser's slow native one (#27). The other hints (the counts of missing episodes, the
+  metadata marks, the subtitle languages, a webhook's attempts, the time of a log line) use it too.
 
 - "Add the version to the name…" is now a bulk action: tick movies in a library's list, or shows in its tree,
   and name every one of their files with its picture size, with a preview first, as the page of one movie or

@@ -22,6 +22,7 @@
   import type { Settings } from '../lib/settings.js';
   import type { WatchScan, WatchStatus } from '../lib/watch.js';
   import Link from './Link.svelte';
+  import Tip from './Tip.svelte';
 
   const TOPICS = ['health', 'jobs', 'history', 'settings', 'ready'] as const;
   const report = resource<HealthReport>(() => api.get<HealthReport>('/api/health/report'), TOPICS);
@@ -287,16 +288,22 @@
                       <span class="mono">{record.target}</span>
                       <span class="muted">· {record.event}</span>
                     </span>
-                    <span
-                      class="chip"
-                      class:chip-ok={record.ok}
-                      class:chip-danger={!record.ok}
-                      title={record.attempts === undefined
+                    <Tip
+                      text={record.attempts === undefined
                         ? undefined
                         : t('web.health.webhooks.attempts', { count: record.attempts })}
                     >
-                      {record.ok ? t('web.health.webhooks.sent') : (record.error ?? 'HTTP')}
-                    </span>
+                      {#snippet children(describedby)}
+                        <span
+                          class="chip"
+                          class:chip-ok={record.ok}
+                          class:chip-danger={!record.ok}
+                          aria-describedby={describedby}
+                        >
+                          {record.ok ? t('web.health.webhooks.sent') : (record.error ?? 'HTTP')}
+                        </span>
+                      {/snippet}
+                    </Tip>
                   </li>
                 {/each}
               {/if}

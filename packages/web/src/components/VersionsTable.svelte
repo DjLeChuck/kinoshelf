@@ -5,6 +5,7 @@
   import { baseName } from '../lib/paths.js';
   import { HDR_LABEL, languageName, languageShort } from '../lib/versions.js';
   import type { ExternalSubtitle, Version } from '../lib/library-items.js';
+  import Tip from './Tip.svelte';
 
   // One column per version, titled by its resolution (a single one for a single version), shared
   // by the movie and the episode. From three versions on it scrolls sideways inside its frame
@@ -102,9 +103,7 @@
             <td class:mono={row.key === 'file'}>
               {#if row.key === 'status'}
                 {#if version.file?.unreadable}
-                  <span class="chip chip-danger" title={version.file.unreadable}
-                    >{t('web.library.version.status.unreadable')}</span
-                  >
+                  <span class="chip chip-danger">{t('web.library.version.status.unreadable')}</span>
                   <span class="reason">{version.file.unreadable}</span>
                 {/if}
                 <span class="chip chip-{versionStatus(version) === 'complete' ? 'ok' : 'warn'}"
@@ -116,7 +115,11 @@
                     ? trackTags(version.file?.subtitleLanguages ?? [])
                     : fileTags(version.subtitles ?? [])}
                 {#each tags as tag (tag.text + tag.title)}
-                  <abbr class="lang" title={tag.title}>{tag.text}</abbr>
+                  <Tip text={tag.title}>
+                    {#snippet children(describedby)}
+                      <abbr class="lang" aria-describedby={describedby}>{tag.text}</abbr>
+                    {/snippet}
+                  </Tip>
                 {:else}
                   {dash}
                 {/each}

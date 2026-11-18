@@ -1,5 +1,6 @@
 <script lang="ts">
   import { t } from '../lib/i18n.svelte.js';
+  import Tip from './Tip.svelte';
 
   // The line of ticks the three sheets share: present is a green tick, absent an orange cross with
   // the label in grey, and a screen reader hears "missing". `value` is `null` when the profile
@@ -24,19 +25,27 @@
 
 <span class="marks">
   {#each marks as mark (mark.label)}
-    <span class="mark" class:absent={!mark.unavailable && mark.value === false} title={mark.title}>
-      <span
-        aria-hidden="true"
-        class:ok={!mark.unavailable && mark.value === true}
-        class:ko={!mark.unavailable && mark.value === false}
-        >{mark.unavailable || mark.value === null ? '—' : mark.value ? '✓' : '✗'}</span
-      >
-      {mark.label}<span class="sr-only"
-        >{mark.value === false && !mark.unavailable
-          ? ` (${stateOf(mark)})`
-          : `: ${stateOf(mark)}`}</span
-      >
-    </span>
+    <Tip text={mark.title}>
+      {#snippet children(describedby)}
+        <span
+          class="mark"
+          class:absent={!mark.unavailable && mark.value === false}
+          aria-describedby={describedby}
+        >
+          <span
+            aria-hidden="true"
+            class:ok={!mark.unavailable && mark.value === true}
+            class:ko={!mark.unavailable && mark.value === false}
+            >{mark.unavailable || mark.value === null ? '—' : mark.value ? '✓' : '✗'}</span
+          >
+          {mark.label}<span class="sr-only"
+            >{mark.value === false && !mark.unavailable
+              ? ` (${stateOf(mark)})`
+              : `: ${stateOf(mark)}`}</span
+          >
+        </span>
+      {/snippet}
+    </Tip>
   {/each}
 </span>
 

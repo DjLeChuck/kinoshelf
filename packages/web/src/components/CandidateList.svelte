@@ -2,6 +2,7 @@
   import { t } from '../lib/i18n.svelte.js';
   import { sameCandidate, type Candidate } from '../lib/arrivals.js';
   import Poster from './Poster.svelte';
+  import Tip from './Tip.svelte';
 
   let {
     candidates,
@@ -40,14 +41,16 @@
           </span>
         </span>
         <!-- Inside the label, a link does not select the card: it only opens the page. -->
-        <a
-          class="tmdb"
-          href={`https://www.themoviedb.org/${candidate.kind === 'movie' ? 'movie' : 'tv'}/${candidate.id.id}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label={t('web.queue.tmdb-link')}
-          title={t('web.queue.tmdb-link')}>TMDB ↗</a
-        >
+        <Tip text={t('web.queue.tmdb-link')}>
+          <!-- The label already names the link: the tip is only for the pointer. -->
+          <a
+            class="tmdb"
+            href={`https://www.themoviedb.org/${candidate.kind === 'movie' ? 'movie' : 'tv'}/${candidate.id.id}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={t('web.queue.tmdb-link')}>TMDB ↗</a
+          >
+        </Tip>
         {#if candidate.score !== undefined}
           <span class="chip chip-neutral">{t('web.queue.score', { score: candidate.score })}</span>
         {/if}

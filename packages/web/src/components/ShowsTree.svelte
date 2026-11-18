@@ -48,6 +48,7 @@
   import ShowPanel from './ShowPanel.svelte';
   import SelectionBar from './SelectionBar.svelte';
   import { Ticks } from '../lib/ticks.svelte.js';
+  import Tip from './Tip.svelte';
 
   let {
     libraryId,
@@ -590,15 +591,19 @@
                 <td>
                   <Presence value={show.nfo} />
                   {#if show.episodesLackingNfo > 0}
-                    <span
-                      class="chip chip-warn"
-                      title={t('web.library.shows.nfo-lacking.hint', {
+                    <Tip
+                      text={t('web.library.shows.nfo-lacking.hint', {
                         count: show.episodesLackingNfo,
                       })}
-                      >{t('web.library.shows.nfo-lacking', {
-                        count: show.episodesLackingNfo,
-                      })}</span
                     >
+                      {#snippet children(describedby)}
+                        <span class="chip chip-warn" aria-describedby={describedby}
+                          >{t('web.library.shows.nfo-lacking', {
+                            count: show.episodesLackingNfo,
+                          })}</span
+                        >
+                      {/snippet}
+                    </Tip>
                   {/if}
                 </td>
               {/if}
@@ -613,11 +618,13 @@
               <td>
                 {#if show.missing}
                   <!-- The column's header says what it counts; the tooltip spells it out. -->
-                  <span
-                    class="chip chip-warn"
-                    title={t('web.library.shows.missing', { count: show.missing })}
-                    >{show.missing}</span
-                  >
+                  <Tip text={t('web.library.shows.missing', { count: show.missing })}>
+                    {#snippet children(describedby)}
+                      <span class="chip chip-warn" aria-describedby={describedby}
+                        >{show.missing}</span
+                      >
+                    {/snippet}
+                  </Tip>
                 {/if}
               </td>
             </tr>
@@ -704,11 +711,13 @@
                     {#if writes.thumb}<td></td>{/if}
                     <td>
                       {#if season.missing > 0}
-                        <span
-                          class="chip chip-warn"
-                          title={t('web.library.shows.missing', { count: season.missing })}
-                          >{season.missing}</span
-                        >
+                        <Tip text={t('web.library.shows.missing', { count: season.missing })}>
+                          {#snippet children(describedby)}
+                            <span class="chip chip-warn" aria-describedby={describedby}
+                              >{season.missing}</span
+                            >
+                          {/snippet}
+                        </Tip>
                       {/if}
                     </td>
                   </tr>

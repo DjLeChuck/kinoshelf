@@ -24,7 +24,11 @@ test('browses a series library as a tree and finds the episode it lacks', async 
 
   // The count is made in the background, then shown on the line of the show (the number alone,
   // the column says what it counts; the tooltip spells it out).
-  await expect(page.getByTitle('Missing: 1').first()).toBeVisible();
+  await page
+    .getByRole('row', { name: /Severance/ })
+    .locator('.chip-warn', { hasText: /^1$/ })
+    .hover();
+  await expect(page.getByRole('tooltip')).toHaveText('Missing: 1');
 
   await show.click();
   await page.getByRole('button', { name: /Season 1/ }).click();
@@ -131,7 +135,7 @@ test('shows which NFO and images a show and its seasons have', async ({ page, re
   await expect(row).toBeVisible();
   // NFO, poster, fanart, logo: the files are looked for after the scan, not when the page reads.
   // The show's NFO is there, but its one episode has none of its own: the orange count says so.
-  await expect(row.getByRole('cell').filter({ hasText: /^✓ present\s*1 ep\.$/ })).toHaveCount(1);
+  await expect(row.getByRole('cell').filter({ hasText: /^✓ present\s*1 ep\.\s*$/ })).toHaveCount(1);
   await expect(row.getByRole('cell').filter({ hasText: /^✓ present$/ })).toHaveCount(1);
   await expect(row.getByRole('cell').filter({ hasText: /^✗ missing$/ })).toHaveCount(2);
 

@@ -28,6 +28,7 @@
   import { oneOf } from '../lib/routes.js';
   import Chevron from './Chevron.svelte';
   import Link from './Link.svelte';
+  import Tip from './Tip.svelte';
 
   // The filters are in the URL, so a link ("see the TMDB lines") opens the page already filtered.
   const filters = $derived<LogFilters>({
@@ -299,9 +300,13 @@
                   toggle(entry.seq);
                 }}
               >
-                <span class="time muted" title={formatFull(entry.time, locale.value)}>
-                  {formatLogTime(entry.time, locale.value)}
-                </span>
+                <Tip text={formatFull(entry.time, locale.value)}>
+                  {#snippet children(describedby)}
+                    <span class="time muted" aria-describedby={describedby}>
+                      {formatLogTime(entry.time, locale.value)}
+                    </span>
+                  {/snippet}
+                </Tip>
                 <span class="level"
                   ><span class="chip {LEVEL_CHIP[entry.level]}"
                     >{t(`web.logs.chip.${entry.level}`)}</span

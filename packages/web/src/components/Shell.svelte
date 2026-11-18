@@ -14,6 +14,7 @@
   import BackToTop from './BackToTop.svelte';
   import Link from './Link.svelte';
   import Logo from './Logo.svelte';
+  import Tip from './Tip.svelte';
 
   let { children }: { children: Snippet } = $props();
 
@@ -80,13 +81,17 @@
         {#if route.id === 'libraries' && (shell.arrivals ?? 0) > 0}<span class="chip chip-warn"
             >{shell.arrivals}</span
           >{/if}
-        {#if route.id === 'system' && (shell.healthErrors ?? 0) > 0}<span
-            class="chip chip-danger"
-            title={t('web.nav.systemErrors', { count: shell.healthErrors ?? 0 })}
-            >{shell.healthErrors}<span class="sr-only"
-              >{t('web.nav.systemErrors', { count: shell.healthErrors ?? 0 })}</span
-            ></span
-          >{/if}
+        {#if route.id === 'system' && (shell.healthErrors ?? 0) > 0}<Tip
+            text={t('web.nav.systemErrors', { count: shell.healthErrors ?? 0 })}
+          >
+            {#snippet children(describedby)}
+              <span class="chip chip-danger" aria-describedby={describedby}
+                >{shell.healthErrors}<span class="sr-only"
+                  >{t('web.nav.systemErrors', { count: shell.healthErrors ?? 0 })}</span
+                ></span
+              >
+            {/snippet}
+          </Tip>{/if}
       </Link>
     {/each}
   </nav>

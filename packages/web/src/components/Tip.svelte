@@ -30,6 +30,20 @@
   // A long press ends in a click on the button: the one that follows is not an action.
   let swallowClick = false;
 
+  /**
+   * The bubble lives in `<body>`, not beside the control: a cell or a row then keeps the text it
+   * had (a test, a copy or a screen reader reading the row hears no help in the middle of it), and
+   * `aria-describedby` still finds it by its id.
+   */
+  function inBody(node: HTMLElement): { destroy: () => void } {
+    document.body.appendChild(node);
+    return {
+      destroy: () => {
+        node.remove();
+      },
+    };
+  }
+
   function place(): void {
     if (!host || !bubble) {
       return;
@@ -136,7 +150,9 @@
 >
   {@render children(text ? id : undefined)}
   {#if text}
-    <span bind:this={bubble} {id} class="tip" role="tooltip" popover="manual">{text}</span>
+    <span use:inBody bind:this={bubble} {id} class="tip" role="tooltip" popover="manual"
+      >{text}</span
+    >
   {/if}
 </span>
 

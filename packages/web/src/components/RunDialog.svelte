@@ -17,6 +17,7 @@
   import { previewOf, type PreviewFile, type PreviewItem } from '../lib/run-preview.js';
   import type { ChangeRow } from '../lib/change-list.js';
   import ChangeList from './ChangeList.svelte';
+  import Tip from './Tip.svelte';
 
   let {
     libraryId,
@@ -165,9 +166,13 @@
   {#if file.operation.status === 'skipped'}
     <span class="chip chip-neutral">{t('web.library.run.exists')}</span>
   {:else if file.operation.status === 'failed'}
-    <span class="chip chip-danger" title={blocked(file.operation)}
-      >{t('web.library.run.blocked')}</span
-    >
+    <Tip text={blocked(file.operation)}>
+      {#snippet children(describedby)}
+        <span class="chip chip-danger" aria-describedby={describedby}
+          >{t('web.library.run.blocked')}</span
+        >
+      {/snippet}
+    </Tip>
   {/if}
 {/snippet}
 

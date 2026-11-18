@@ -25,7 +25,7 @@
 
 {#snippet chips(row: ChangeRow)}
   {#each row.chips as chip (chip.text)}
-    <span class="chip chip-{chip.tone}" title={row.note}>{chip.text}</span>
+    <span class="chip chip-{chip.tone}">{chip.text}</span>
   {/each}
 {/snippet}
 

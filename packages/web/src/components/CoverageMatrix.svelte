@@ -3,6 +3,7 @@
   import { t } from '../lib/i18n.svelte.js';
   import { libraryItems, type ShowDetail } from '../lib/library-items.js';
   import { isIncomplete, slotsOf, type SlotStatus } from '../lib/versions.js';
+  import Tip from './Tip.svelte';
 
   // Per season, a line per version and a square per episode: which version holds which episode,
   // and where its NFO is missing. Only the episodes some file holds are squares; an episode no
@@ -55,14 +56,18 @@
             >{t('web.library.coverage.accepted.undo')}</button
           >
         {:else if season.versions.some(isIncomplete)}
-          <button
-            type="button"
-            class="link"
-            title={t('web.library.coverage.accept.hint')}
-            disabled={busy === season.season}
-            onclick={() => void accept(season.season, true)}
-            >{t('web.library.coverage.accept')}</button
-          >
+          <Tip text={t('web.library.coverage.accept.hint')}>
+            {#snippet children(describedby)}
+              <button
+                type="button"
+                class="link"
+                disabled={busy === season.season}
+                aria-describedby={describedby}
+                onclick={() => void accept(season.season, true)}
+                >{t('web.library.coverage.accept')}</button
+              >
+            {/snippet}
+          </Tip>
         {/if}
       </p>
       {#each season.versions as version, index (version.resolution ?? '')}
@@ -78,6 +83,7 @@
                 version: name,
                 status: t(`web.library.version.status.${status}`),
               })}
+              <!-- Native on purpose: a season draws hundreds of these, one popover each would weigh the page. -->
               <span class="cell {status}" title={words}><span class="sr-only">{words}</span></span>
             {/each}
           </span>
