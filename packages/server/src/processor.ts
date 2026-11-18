@@ -16,6 +16,7 @@ import {
   type MetadataProvider,
 } from '@kinoshelf/core';
 import { tmdbUsageOf } from './tmdb-usage.js';
+import { imdbRatingsOf, withImdbRatings } from './imdb-ratings.js';
 import { RequestPool, SqliteHttpCache, tmdbFromEnv } from '@kinoshelf/provider-tmdb';
 import { CollectionStore } from './collections.js';
 import type { Job, ProcessedJob } from './jobs.js';
@@ -172,9 +173,14 @@ export function defaultMetadataLanguage(deps: ProcessorDeps): string {
 }
 
 export function makeProvider(deps: ProcessorDeps, language: string): MetadataProvider {
-  if (deps.createProvider) {
-    return deps.createProvider({ language });
-  }
+  const provider = deps.createProvider ? deps.createProvider({ language }) : tmdbOf(deps, language);
+  // Opt-in, read at each call: the configuration is updated in place.
+  return deps.config.imdbRatings
+    ? withImdbRatings(provider, imdbRatingsOf(deps.database))
+    : provider;
+}
+
+function tmdbOf(deps: ProcessorDeps, language: string): MetadataProvider {
   let common = shared.get(deps.database);
   if (!common) {
     common = { cache: new SqliteHttpCache(deps.database), pool: new RequestPool() };

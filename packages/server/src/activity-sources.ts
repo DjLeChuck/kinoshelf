@@ -5,6 +5,8 @@ import type { JobStore } from './jobs.js';
 import type { ProgressTracker } from './progress.js';
 import type { SendTasks } from './collection-tasks.js';
 import type { DatabaseTasks } from './database-tasks.js';
+import type { ImdbRatings } from './imdb-ratings.js';
+import type { ImdbNfoTasks } from './imdb-nfo.js';
 import type { TidyTask } from './maintenance-routes.js';
 import type { MatchTracker } from './matches.js';
 import type { ReplacedFiles } from './replaced-files.js';
@@ -261,5 +263,42 @@ export function collectionSendSource(sends: SendTasks, config: () => Config): Ac
           error: send.error,
         }),
       ),
+  };
+}
+
+/** The download of IMDb's ratings and the run that adds them to the NFO: both start when asked. */
+export function imdbSource(ratings: ImdbRatings, nfoTasks: ImdbNfoTasks): ActivitySource {
+  return {
+    list: () => {
+      const download = ratings.task();
+      const adding = nfoTasks.task();
+      return [
+        ...(download
+          ? [
+              task({
+                id: `imdb:${download.startedAt}`,
+                kind: 'imdb',
+                code: 'imdb-ratings',
+                status: download.status,
+                href: '/settings',
+                error: download.error,
+              }),
+            ]
+          : []),
+        ...(adding
+          ? [
+              task({
+                id: `imdb-nfo:${adding.startedAt}`,
+                kind: 'imdb',
+                code: 'imdb-nfo',
+                status: adding.status,
+                ...counted(adding.done, adding.total),
+                href: '/system?tab=maintenance',
+                error: adding.error,
+              }),
+            ]
+          : []),
+      ];
+    },
   };
 }

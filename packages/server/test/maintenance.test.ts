@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { Database } from '@kinoshelf/core';
 import { LogStore } from '../src/logs.js';
 import { DatabaseTasks } from '../src/database-tasks.js';
+import { imdbRatingsOf } from '../src/imdb-ratings.js';
 import { ReplacedFiles } from '../src/replaced-files.js';
 import { ProgressTracker } from '../src/progress.js';
 import { cleanup, harness, makeDir, put, type Harness } from './harness.js';
@@ -519,5 +520,30 @@ describe('POST /api/maintenance/tidy: subtitles', () => {
       files: false,
     });
     expect(response.statusCode).toBe(400);
+  });
+});
+
+describe('IMDb ratings', () => {
+  interface Figures {
+    imdbRatings: { enabled: boolean; entries: number; fetchedAt: string | null };
+  }
+
+  it('shows what the database holds even with the setting off, and forgets it', async () => {
+    const { h } = await setup();
+    const read = async () =>
+      (await h.request('GET', '/api/maintenance')).json<Figures>().imdbRatings;
+    expect(await read()).toEqual({ enabled: false, entries: 0, fetchedAt: null, task: null });
+
+    const ratings = imdbRatingsOf(h.database);
+    h.database.exec("INSERT INTO imdb_ratings (id, rating, votes) VALUES ('tt1', 7, 10)");
+    h.database.exec(
+      'INSERT INTO imdb_ratings_info (singleton, fetched_at, entries) VALUES (1, 0, 1)',
+    );
+    expect(await read()).toMatchObject({ enabled: false, entries: 1 });
+
+    const response = await h.request('DELETE', '/api/maintenance/imdb-ratings');
+    expect(response.json()).toEqual({ removed: 1 });
+    expect(ratings.rating('tt1')).toBeUndefined();
+    expect(await read()).toMatchObject({ entries: 0, fetchedAt: null });
   });
 });

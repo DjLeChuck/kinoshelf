@@ -355,6 +355,14 @@ export const fr: Record<keyof typeof en, string> = {
     'Un transfert contient déjà certains de ces éléments. Attendez qu’il se termine avant de les relancer.',
   'error.maintenance.replaced-busy':
     'Un scan, un transfert, un nettoyage, une annulation ou un autre vidage est en cours : attendez qu’il se termine pour vider les fichiers mis de côté.',
+  'error.maintenance.imdb-busy':
+    'Les notes IMDb sont en cours de téléchargement : attendez la fin avant de les oublier.',
+  'error.maintenance.imdb-nfo-busy':
+    'Un scan, un transfert, un nettoyage ou une annulation est en cours : attendez qu’il se termine avant d’ajouter les notes aux NFO.',
+  'error.maintenance.imdb-nfo-running': 'L’ajout des notes aux NFO est déjà en cours.',
+  'error.imdb.not-enabled': 'Les notes IMDb sont désactivées : activez d’abord le réglage.',
+  'error.imdb.not-downloaded':
+    'Les notes IMDb ne sont pas encore téléchargées : réessayez quand le téléchargement sera terminé.',
   'error.maintenance.busy':
     'Un scan ou un transfert est en cours : la base ne peut pas être compactée maintenant. Réessayez quand il sera terminé.',
   'error.maintenance.database-task-running':
@@ -450,6 +458,45 @@ export const fr: Record<keyof typeof en, string> = {
   'web.maintenance.caches.button': 'Vider',
   'web.maintenance.caches.done':
     '{count, plural, =0 {Le cache était vide.} one {# réponse oubliée.} other {# réponses oubliées.}}',
+  'web.activity.task.imdb-nfo': 'Ajout des notes IMDb aux NFO',
+  'web.maintenance.imdb-nfo.title': 'Ajouter les notes IMDb aux NFO',
+  'web.maintenance.imdb-nfo.text':
+    'Seulement les NFO écrits par Kinoshelf et que personne n’a modifiés.',
+  'web.maintenance.imdb-nfo.does':
+    'Réécrit les NFO avec la note IMDb, dans chaque bibliothèque qui en écrit. Les anciens fichiers sont mis de côté dans replaced/ et l’Historique peut annuler tout le lot. Un NFO d’un autre outil, ou modifié à la main, est laissé tel quel.',
+  'web.maintenance.imdb-nfo.button': 'Ajouter',
+  'web.maintenance.imdb-nfo.state.off': 'Activez d’abord le réglage des notes IMDb.',
+  'web.maintenance.imdb-nfo.state.waiting': 'En attente du téléchargement des notes.',
+  'web.maintenance.imdb-nfo.state.ready': 'Le fichier de notes est prêt.',
+  'web.maintenance.imdb-nfo.done':
+    '{count, plural, =0 {Aucun NFO mis à jour} one {# NFO mis à jour} other {# NFO mis à jour}} · déjà présentes : {already} · sans note : {noRating} · laissés tels quels : {kept}',
+  'web.imdb-nfo.button': 'Ajouter la note IMDb au NFO',
+  'web.imdb-nfo.hint':
+    'Réécrit le NFO avec la note IMDb, si Kinoshelf l’a écrit et que personne ne l’a modifié depuis. L’ancien fichier est gardé et l’Historique peut annuler.',
+  'web.imdb-nfo.history': 'Voir le lot',
+  'web.imdb-nfo.done': '{count, plural, one {# NFO mis à jour.} other {# NFO mis à jour.}}',
+  'web.imdb-nfo.kept':
+    'Laissé tel quel : le NFO n’a pas été écrit par Kinoshelf, ou a été modifié depuis.',
+  'web.imdb-nfo.already': 'Le NFO a déjà la note IMDb.',
+  'web.imdb-nfo.no-rating': 'IMDb n’a pas de note pour cette œuvre.',
+  'web.imdb-nfo.missing': 'Pas encore de NFO : « Compléter » l’écrit, avec la note.',
+  'web.maintenance.imdb.title': 'Notes IMDb',
+  'web.maintenance.imdb.text': 'Les NFO déjà écrits gardent leur note.',
+  'web.maintenance.imdb.does':
+    'Oublie le fichier de notes téléchargé depuis IMDb. Si le réglage est activé, il est téléchargé de nouveau à la prochaine vérification (dans l’heure).',
+  'web.maintenance.imdb.state.none': 'Rien de téléchargé. Le réglage est désactivé.',
+  'web.maintenance.imdb.state.waiting':
+    'Rien de téléchargé pour l’instant : le téléchargement va démarrer.',
+  'web.maintenance.imdb.state.downloading':
+    'Téléchargement… {count, plural, one {{amount} note} other {{amount} notes}} pour l’instant',
+  'web.maintenance.imdb.state.held':
+    '{count, plural, one {{amount} note} other {{amount} notes}} · téléchargées {date} · {setting}',
+  'web.maintenance.imdb.setting.on': 'réglage activé',
+  'web.maintenance.imdb.setting.off': 'réglage désactivé',
+  'web.maintenance.imdb.button': 'Oublier',
+  'web.maintenance.imdb.settings': 'Réglage',
+  'web.maintenance.imdb.done':
+    '{count, plural, =0 {Rien à oublier.} one {# note oubliée.} other {# notes oubliées.}}',
   'web.maintenance.backup.title': 'Sauvegarder la base du journal',
   'web.maintenance.backup.text': 'La donnée à ne pas perdre. Ne modifie rien.',
   'web.maintenance.backup.does':
@@ -1108,6 +1155,7 @@ export const fr: Record<keyof typeof en, string> = {
   'web.activity.task.tidy': 'Rangement de {name}',
   'web.activity.task.tidy-report': 'Analyse de {name} avant un rangement',
   'web.activity.task.backup': 'Sauvegarde de la base de données',
+  'web.activity.task.imdb-ratings': 'Téléchargement des notes IMDb',
   'web.activity.task.vacuum': 'Compactage de la base de données',
   'web.activity.task.empty-replaced': 'Vidage de replaced/',
   'web.activity.task.adopt-collections': 'Choix des images TMDB des collections de {name}',
@@ -1134,6 +1182,8 @@ export const fr: Record<keyof typeof en, string> = {
   'web.library.present': 'présent',
   'web.library.missing': 'manquant',
   'web.library.unavailable': 'indisponible sur TMDB',
+  'web.library.ratings': 'Notes',
+  'web.library.rating.votes': 'Sur {count, plural, one {{amount} vote} other {{amount} votes}}',
   'web.library.runtime': '{minutes} min',
   'web.library.no-overview': 'Aucun résumé disponible.',
   'web.library.path': 'Chemin',
@@ -1511,6 +1561,11 @@ export const fr: Record<keyof typeof en, string> = {
   'web.history.extra.generated': 'NFO généré',
   'web.history.extra.downloaded': 'Image téléchargée',
   'web.history.extra.replaced': 'Image remplacée',
+  'web.history.extra.replaced-nfo': 'NFO remplacé',
+  'web.history.extras.count.replaced-nfo':
+    '{count, plural, one {# NFO remplacé} other {# NFO remplacés}}',
+  'web.history.extras.hint.replaced':
+    'Fichiers remplacés par une version plus récente : les anciens sont conservés dans le dossier de configuration de Kinoshelf, et annuler le lot les remet en place.',
   'web.history.from': 'Chemin d’origine',
   'web.history.to': 'Emplacement final',
   'web.history.item.done': 'Fait',
@@ -1643,6 +1698,9 @@ export const fr: Record<keyof typeof en, string> = {
   'web.settings.processing.local-images': 'Autoriser les adresses d’image du réseau local',
   'web.settings.processing.local-images.hint':
     'Quand vous remplacez une image par une adresse, Kinoshelf la télécharge depuis le serveur. Les adresses de votre propre réseau (un NAS, une autre machine chez vous) sont refusées tant que vous ne cochez pas cette case : toute personne détenant la clé d’accès pourrait sinon faire joindre vos services internes par le serveur.',
+  'web.settings.processing.imdb-ratings': 'Écrire la note IMDb dans le NFO',
+  'web.settings.processing.imdb-ratings.hint':
+    'Désactivé par défaut, et rien n’est téléchargé tant qu’il l’est. Coché, Kinoshelf télécharge le fichier public des notes d’IMDb (quelques mégaoctets, renouvelé une fois par jour au plus), proposé par IMDb pour un usage personnel et non commercial, et écrit la note à côté de celle de TMDB dans les NFO créés à partir de là. Un NFO déjà présent n’est jamais réécrit, et celui écrit avant la fin du téléchargement n’a pas de note IMDb.',
   'web.settings.processing.threshold.hint':
     'Une correspondance sous ce score vous attend dans les Arrivées. Vide : la valeur par défaut.',
   'web.settings.invalid.threshold': 'Le seuil est un nombre de 0 à 100.',

@@ -11,6 +11,7 @@
     formatDate,
     originOf,
     shortId,
+    extraLabelOf,
     tally,
     type BatchDetail,
     type BatchExtra,
@@ -152,9 +153,12 @@
       id: `extra:${extra.destination}`,
       group: work.key,
       groupLabel: work.name,
+      // A batch of extras alone (an NFO rewritten, images changed) has a line per file and no group
+      // header: the name of the work says which movie `movie.nfo` is.
+      ...(batch?.items.length === 0 && { title: work.name }),
       after: baseName(extra.destination),
       afterTitle: extra.destination,
-      chips: [{ text: t(`web.history.extra.${extra.kind}`), tone: 'neutral' }],
+      chips: [{ text: t(`web.history.extra.${extraLabelOf(extra)}`), tone: 'neutral' }],
       problem: false,
       detailCount: 0,
     };
@@ -191,8 +195,11 @@
     failed: batch?.items.filter(({ status }) => status === 'failed').length ?? 0,
   });
   const extrasSummary = $derived(
-    (['generated', 'downloaded', 'replaced', 'removed'] as const)
-      .map((kind) => ({ kind, count: batch?.extras.filter((e) => e.kind === kind).length ?? 0 }))
+    (['generated', 'downloaded', 'replaced-nfo', 'replaced', 'removed'] as const)
+      .map((kind) => ({
+        kind,
+        count: batch?.extras.filter((e) => extraLabelOf(e) === kind).length ?? 0,
+      }))
       .filter(({ count }) => count > 0)
       .map(({ kind, count }) => t(`web.history.extras.count.${kind}`, { count }))
       .join(' · '),
@@ -260,7 +267,10 @@
         {#if batch.extras.some((extra) => extra.kind === 'removed')}
           <p class="muted hint">{t('web.history.extras.hint.removed')}</p>
         {/if}
-        {#if batch.extras.some((extra) => extra.kind !== 'removed')}
+        {#if batch.extras.some((extra) => extra.kind === 'replaced')}
+          <p class="muted hint">{t('web.history.extras.hint.replaced')}</p>
+        {/if}
+        {#if batch.extras.some((extra) => extra.kind === 'generated' || extra.kind === 'downloaded')}
           <p class="muted hint">{t('web.history.extras.hint')}</p>
         {/if}
       {/if}

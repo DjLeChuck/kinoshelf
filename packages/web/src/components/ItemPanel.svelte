@@ -27,6 +27,8 @@
   import RunDialog from './RunDialog.svelte';
   import VersionsSection from './VersionsSection.svelte';
   import VersionsTable from './VersionsTable.svelte';
+  import ImdbNfoButton from './ImdbNfoButton.svelte';
+  import RatingsFact from './RatingsFact.svelte';
   import WorkCard from './WorkCard.svelte';
   import Tip from './Tip.svelte';
 
@@ -227,6 +229,7 @@
           </button>
         </dd>
       {/if}
+      <RatingsFact ratings={detail.ratings} />
       <dt class="muted">{t('web.library.path')}</dt>
       <dd class="mono">{dirName(detail.path)}</dd>
       <dt class="muted">{t('web.library.metadata')}</dt>
@@ -267,6 +270,9 @@
           year={item.year}
           {ondone}
         />
+        {#if detail.ratings.imdb !== null && item.tmdbId !== null && detail.nfoFiles.some((nfo) => nfo.present)}
+          <ImdbNfoButton {libraryId} tmdbId={item.tmdbId} />
+        {/if}
       </div>
     {/if}
     {#if canNameVersion(item)}

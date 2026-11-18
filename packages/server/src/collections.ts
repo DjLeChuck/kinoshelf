@@ -265,7 +265,7 @@ export class CollectionEditor {
       // The NFO a real run would write, counted before anything is read or changed.
       let planned = 0;
       for (const id of movieIds) {
-        for (const paths of this.nfoPlaces(library, profile, rows, id).values()) {
+        for (const paths of movieNfoPlaces(this.deps.items, library, profile, rows, id).values()) {
           planned += paths.length;
         }
       }
@@ -301,7 +301,7 @@ export class CollectionEditor {
       const content = renderMovieNfo(details, {
         imageUrl: (path) => this.deps.imageUrl(path, 'preview'),
       });
-      for (const [folder, paths] of this.nfoPlaces(library, profile, rows, id)) {
+      for (const [folder, paths] of movieNfoPlaces(this.deps.items, library, profile, rows, id)) {
         for (const destination of paths) {
           const result = await rewriteNfo({
             journal: this.deps.journal,
@@ -326,40 +326,38 @@ export class CollectionEditor {
       batchId: totals.rewritten > 0 ? batchId : null,
     };
   }
-  /**
-   * The NFO of a movie, by folder: the versions of a movie sit in its folder, and each folder holds
-   * one movie.
-   */
-  private nfoPlaces(
-    library: LibraryConfig,
-    profile: ReturnType<typeof buildProfile>,
-    rows: readonly LibraryItem[],
-    id: number,
-  ): Map<string, string[]> {
-    const { items } = this.deps;
-    const places = new Map<string, string[]>();
-    for (const row of rows.filter((candidate) => candidate.tmdbId === id)) {
-      const folder = dirname(row.path);
-      for (const file of items
-        .inFolder(library.id, folder)
-        .filter((other) => other.kind === 'movie' && other.tmdbId === id && !isUnsettled(other))) {
-        places.set(folder, [
-          ...(places.get(folder) ?? []),
-          basename(file.path, extname(file.path)),
-        ]);
-      }
+}
+
+/**
+ * The NFO of a movie, by folder: the versions of a movie sit in its folder, and each folder holds
+ * one movie.
+ */
+export function movieNfoPlaces(
+  items: LibraryItemStore,
+  library: LibraryConfig,
+  profile: ReturnType<typeof buildProfile>,
+  rows: readonly LibraryItem[],
+  id: number,
+): Map<string, string[]> {
+  const places = new Map<string, string[]>();
+  for (const row of rows.filter((candidate) => candidate.tmdbId === id)) {
+    const folder = dirname(row.path);
+    for (const file of items
+      .inFolder(library.id, folder)
+      .filter((other) => other.kind === 'movie' && other.tmdbId === id && !isUnsettled(other))) {
+      places.set(folder, [...(places.get(folder) ?? []), basename(file.path, extname(file.path))]);
     }
-    return new Map(
-      [...places].map(([folder, stems]) => [
-        folder,
-        expectedNfoPaths(
-          profile,
-          'movie',
-          // A movie directly in the library's folder has none of its own: nothing is shared.
-          folder === resolve(library.source) ? [] : [folder],
-          stems,
-        ),
-      ]),
-    );
   }
+  return new Map(
+    [...places].map(([folder, stems]) => [
+      folder,
+      expectedNfoPaths(
+        profile,
+        'movie',
+        // A movie directly in the library's folder has none of its own: nothing is shared.
+        folder === resolve(library.source) ? [] : [folder],
+        stems,
+      ),
+    ]),
+  );
 }

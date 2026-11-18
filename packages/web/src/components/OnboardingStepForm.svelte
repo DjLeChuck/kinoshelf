@@ -48,6 +48,7 @@
   let mode = $state<'once' | 'watch'>('once');
   let naming = $state<Naming>(DEFAULT_NAMING);
   let metadata = $state<Metadata>(DEFAULT_METADATA);
+  let imdbRatings = $state(false);
   let settings = $state<Settings>();
 
   const needsAbsolute = (path: string): boolean => path.startsWith('/');
@@ -76,6 +77,7 @@
     } else if (step === 'destination') {
       naming = settings?.processing.naming ?? DEFAULT_NAMING;
       metadata = settings?.processing.metadata ?? DEFAULT_METADATA;
+      imdbRatings = settings?.processing.imdbRatings ?? false;
       if (!editing) return;
       const libraries = await libraryApi.list();
       folder = libraries.find((library) => library.type === 'movie')?.source ?? '';
@@ -142,6 +144,8 @@
           processing: {
             naming: naming === DEFAULT_NAMING ? null : naming,
             metadata: metadata === DEFAULT_METADATA ? null : metadata,
+            // Opt-in: only a ticked box (and only with NFO) downloads anything.
+            imdbRatings: imdbRatings && metadata === 'nfo' ? true : null,
           },
         });
         if (editing) {
@@ -295,6 +299,15 @@
       </div>
       {#if settings}
         <ProfileChoice id="ob" bind:naming bind:metadata examples={settings.namingExamples} />
+        {#if metadata === 'nfo'}
+          <div class="field">
+            <label class="check">
+              <input type="checkbox" bind:checked={imdbRatings} />
+              {t('web.settings.processing.imdb-ratings')}
+            </label>
+            <span class="muted hint">{t('web.settings.processing.imdb-ratings.hint')}</span>
+          </div>
+        {/if}
       {/if}
     {:else}
       <p class="alert alert-warn" role="note">{t('web.libraries.arrival.warning')}</p>

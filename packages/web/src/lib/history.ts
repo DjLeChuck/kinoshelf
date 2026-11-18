@@ -70,6 +70,12 @@ export interface BatchItem {
 }
 
 /** A metadata file written beside a video: an NFO Kinoshelf generated, or an image it downloaded. */
+/** An NFO written again reads differently from an image changed: the file's kind tells them apart. */
+export type ExtraLabel = BatchExtra['kind'] | 'replaced-nfo';
+
+export const extraLabelOf = (extra: BatchExtra): ExtraLabel =>
+  extra.kind === 'replaced' && extra.destination.endsWith('.nfo') ? 'replaced-nfo' : extra.kind;
+
 export interface BatchExtra {
   readonly kind: 'generated' | 'downloaded' | 'replaced' | 'removed';
   readonly destination: string;

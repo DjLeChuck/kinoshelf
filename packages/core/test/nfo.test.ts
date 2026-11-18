@@ -1,7 +1,9 @@
 import { XMLParser, XMLValidator } from 'fast-xml-parser';
 import { describe, expect, it } from 'vitest';
 import {
+  addImdbRating,
   buildProfile,
+  imdbIdOf,
   renderEpisodeNfo,
   renderMovieNfo,
   renderProfileTemplate,
@@ -101,6 +103,64 @@ describe('the collection of a movie', () => {
   it('writes no <set> without a collection, and never the short form', () => {
     expect(renderMovieNfo(withCollection(movie, { mode: 'none' }))).not.toContain('<set');
     expect(renderMovieNfo(movie)).not.toMatch(/<set>[^<]+<\/set>/);
+  });
+});
+
+describe('IMDb rating added in place', () => {
+  const imdb = { value: 8.04, votes: 900123 };
+
+  it('gives what the writer would have written with the rating', () => {
+    expect(addImdbRating(renderMovieNfo(movie), imdb)).toBe(
+      renderMovieNfo({ ...movie, imdbRating: imdb }),
+    );
+  });
+
+  it('does the same for a show', () => {
+    expect(addImdbRating(renderSeriesNfo(series), imdb)).toBe(
+      renderSeriesNfo({ ...series, imdbRating: imdb }),
+    );
+  });
+
+  it('does the same for a movie TMDB gave no rating', () => {
+    const unrated: MovieDetails = { ...movie };
+    delete (unrated as { rating?: unknown }).rating;
+    expect(addImdbRating(renderMovieNfo(unrated), imdb)).toBe(
+      renderMovieNfo({ ...unrated, imdbRating: imdb }),
+    );
+  });
+
+  it('leaves an NFO that has one, and one it cannot place', () => {
+    const done = renderMovieNfo({ ...movie, imdbRating: imdb });
+    expect(addImdbRating(done, imdb)).toBeUndefined();
+    expect(addImdbRating('<movie></movie>\n', imdb)).toBeUndefined();
+    expect(addImdbRating(renderMovieNfo(movie), { value: Number.NaN, votes: 1 })).toBeUndefined();
+  });
+
+  it('reads the IMDb id an NFO names', () => {
+    expect(imdbIdOf(renderMovieNfo({ ...movie, imdbId: 'tt1160419' }))).toBe('tt1160419');
+    expect(imdbIdOf(renderMovieNfo({ ...movie, imdbId: undefined } as never))).toBeUndefined();
+  });
+});
+
+describe('IMDb rating', () => {
+  it("is listed beside TMDB's, which stays the default", () => {
+    const xml = renderMovieNfo({ ...movie, imdbRating: { value: 8.04, votes: 900123 } });
+    expect(xml).toContain('<rating name="themoviedb" max="10" default="true">');
+    expect(xml).toContain('<rating name="imdb" max="10">');
+    expect(xml).toContain('<value>8.04</value>');
+    expect(xml).toContain('<votes>900123</votes>');
+  });
+
+  it('is the default when TMDB has no rating', () => {
+    const unrated: MovieDetails = { ...movie };
+    delete (unrated as { rating?: unknown }).rating;
+    expect(renderMovieNfo({ ...unrated, imdbRating: { value: 6, votes: 10 } })).toContain(
+      '<rating name="imdb" max="10" default="true">',
+    );
+  });
+
+  it('writes nothing without it', () => {
+    expect(renderMovieNfo(movie)).not.toContain('name="imdb"');
   });
 });
 

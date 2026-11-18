@@ -23,6 +23,7 @@ import {
 } from '@kinoshelf/core';
 import type { FastifyInstance } from 'fastify';
 import { ApiError } from './api-error.js';
+import type { ImdbNfo } from './imdb-nfo.js';
 import { hasCollections, type CollectionEditor, type CollectionStore } from './collections.js';
 import { toCandidate, type CandidateBody } from './candidate-body.js';
 import { isSystemPath } from './system-paths.js';
@@ -106,6 +107,7 @@ export interface LibraryContext {
   readonly collections: CollectionStore;
   /** Changes the collection of movies and writes their NFO again. */
   readonly collectionEditor: CollectionEditor;
+  readonly imdbNfo: ImdbNfo;
   /** Plans and queues the transfers of a scan's files (see `POST /api/plans/{id}/execute`). */
   readonly batch: {
     readonly dryRun: (
@@ -346,6 +348,21 @@ const imagesSchema = {
     fanart: { type: 'boolean' },
     logo: { type: 'boolean' },
   },
+} as const;
+
+const ratingSchema = {
+  type: 'object',
+  nullable: true,
+  required: ['value', 'votes'],
+  properties: { value: { type: 'number' }, votes: { type: 'integer' } },
+} as const;
+
+const ratingsSchema = {
+  type: 'object',
+  description:
+    "The vote averages on a scale of 10. IMDb's is there only when the setting is on and the work is in the downloaded file.",
+  required: ['tmdb', 'imdb'],
+  properties: { tmdb: ratingSchema, imdb: ratingSchema },
 } as const;
 
 export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext): void {
@@ -841,6 +858,7 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
               ...libraryItemSchema.required,
               'overview',
               'runtime',
+              'ratings',
               'genres',
               'posterPath',
               'backdropPath',
@@ -892,6 +910,7 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
               },
               overview: { type: 'string', nullable: true },
               runtime: { type: 'integer', nullable: true },
+              ratings: ratingsSchema,
               genres: { type: 'array', items: { type: 'string' } },
               posterPath: { type: 'string', nullable: true },
               backdropPath: { type: 'string', nullable: true },
@@ -970,6 +989,7 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
         ...(presentItem(item) as object),
         overview: details?.overview ?? null,
         runtime: details?.kind === 'movie' ? (details.runtime ?? null) : null,
+        ratings: { tmdb: details?.rating ?? null, imdb: details?.imdbRating ?? null },
         genres: details?.genres ?? [],
         posterPath: details?.posterPath ?? null,
         backdropPath: details?.backdropPath ?? null,
@@ -1086,6 +1106,65 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
       }
       events.emit('jobs');
       return result;
+    },
+  );
+
+  api.post<{ Params: { id: string }; Body: { tmdbId: number } }>(
+    '/api/libraries/:id/imdb-nfo',
+    {
+      schema: {
+        summary: 'Add IMDb’s rating to the NFO of one movie or show',
+        description:
+          'Adds IMDb’s rating to the NFO of the work, in the file as it is (the IMDb id is the one ' +
+          'the NFO names, TMDB is not asked), on the same terms as a collection change: only an ' +
+          'NFO Kinoshelf wrote and nobody edited since (`kept` otherwise), the old one set aside, ' +
+          'the batch undoable from the history. An NFO that already has the rating (`already`) or ' +
+          'whose work the downloaded file does not know (`noRating`) is left alone. ' +
+          '409 `imdb.not-enabled` / `imdb.not-downloaded` while the setting is off or the file ' +
+          'is not there yet.',
+        params: idParams,
+        body: {
+          type: 'object',
+          required: ['tmdbId'],
+          properties: { tmdbId: { type: 'integer' } },
+          additionalProperties: false,
+        },
+        response: {
+          200: {
+            type: 'object',
+            required: ['rewritten', 'already', 'noRating', 'kept', 'missing', 'batchId'],
+            properties: {
+              rewritten: { type: 'integer' },
+              already: { type: 'integer' },
+              noRating: { type: 'integer' },
+              kept: { type: 'integer' },
+              missing: { type: 'integer' },
+              batchId: { type: 'string', nullable: true },
+            },
+          },
+          401: errorSchema,
+          404: errorSchema,
+          409: errorSchema,
+        },
+      },
+    },
+    async (request) => {
+      const library = find(store.config, request.params.id);
+      if (library.type === undefined) {
+        throw new ApiError(409, 'library.not-typed');
+      }
+      const { tmdbId } = request.body;
+      if (!ctx.imdbNfo.works(library).includes(tmdbId)) {
+        throw new ApiError(404, 'library.item-not-found');
+      }
+      const { rewritten, already, noRating, kept, missing, batchId } = await ctx.imdbNfo.apply(
+        library,
+        { tmdbIds: [tmdbId] },
+      );
+      if (batchId !== null) {
+        events.emit('history');
+      }
+      return { rewritten, already, noRating, kept, missing, batchId };
     },
   );
 
@@ -1209,6 +1288,7 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
               'title',
               'year',
               'overview',
+              'ratings',
               'genres',
               'posterPath',
               'backdropPath',
@@ -1225,6 +1305,7 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
               title: { type: 'string', nullable: true },
               year: { type: 'integer', nullable: true },
               overview: { type: 'string', nullable: true },
+              ratings: ratingsSchema,
               genres: { type: 'array', items: { type: 'string' } },
               posterPath: { type: 'string', nullable: true },
               backdropPath: { type: 'string', nullable: true },
@@ -1267,6 +1348,7 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
         title: details?.title ?? files[0]?.title ?? null,
         year: yearOf(details?.firstAirDate) ?? files[0]?.year ?? null,
         overview: details?.overview ?? null,
+        ratings: { tmdb: details?.rating ?? null, imdb: details?.imdbRating ?? null },
         genres: details?.genres ?? [],
         posterPath: details?.posterPath ?? null,
         backdropPath: details?.backdropPath ?? null,

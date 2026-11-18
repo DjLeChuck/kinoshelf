@@ -135,6 +135,11 @@ const configSchema = z
      * local network, a NAS for instance. Off by default: the server downloads what it is given.
      */
     allowLocalImageUrls: z.boolean().optional(),
+    /**
+     * Server: download IMDb's public ratings dataset (non-commercial use) and write the rating in
+     * the NFO. Off by default: nothing is fetched unless the owner asks for it.
+     */
+    imdbRatings: z.boolean().optional(),
     /** Server: who is told what happened, and which media servers are asked to look again. */
     notify: z
       .strictObject({

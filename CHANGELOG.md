@@ -8,6 +8,15 @@ All notable changes to Kinoshelf are written here. The format follows
 
 ### Added
 
+- The NFO can now carry IMDb's rating beside TMDB's (`<rating name="imdb">`, with its vote count). It is opt-in
+  (Settings › Processing, `imdbRatings` in `config.yaml`) and nothing is downloaded until it is ticked: Kinoshelf
+  then fetches IMDb's public ratings file, offered for personal, non-commercial use, at most once a day, and
+  shows the download in the activity panel. Only the NFO written afterwards carry it. The Maintenance tab shows
+  what was downloaded (whether the setting is on or not) and can forget it. The sheet of a movie or a show now lists
+  its ratings (IMDb's when available, TMDB's), the number of votes in a tip. An NFO written before the setting
+  was on gets the rating on request: one work from its sheet, or every library from the Maintenance tab. Only an
+  NFO Kinoshelf wrote and nobody edited is rewritten (the old one is set aside, the History undoes the batch) (#13).
+
 - Movies and series libraries are now optional: someone who keeps only movies, or only series, no longer
   has to create a library they will not use. The welcome and the settings accept one folder, an arrival
   folder can send to one kind only, and a file of a kind nobody keeps waits in Arrivals with the reason

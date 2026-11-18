@@ -82,3 +82,44 @@ export const versionStatus = (version: Pick<Version, 'nfo'>): Exclude<SlotStatus
 /** `25 sur 30`, or the bare number when the total is not known. */
 export const missingOfKnown = (missing: number, known: number | null, t: Translate): string =>
   known === null ? String(missing) : t('web.library.show.missing.of', { missing, known });
+
+export interface RatingLine {
+  readonly source: string;
+  /** `8,0`, in the reader's number format. */
+  readonly value: string;
+  /** What the tip says: how many votes stand behind the value. */
+  readonly votes: string;
+}
+
+/** What the sources gave, IMDb first: the value shows, the number of votes goes in a tip. */
+export function ratingLines(
+  ratings: {
+    readonly tmdb: { readonly value: number; readonly votes: number } | null;
+    readonly imdb: { readonly value: number; readonly votes: number } | null;
+  },
+  locale: string,
+  t: Translate,
+): RatingLine[] {
+  const value = new Intl.NumberFormat(locale, {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  });
+  const count = new Intl.NumberFormat(locale);
+  return [
+    { source: 'IMDb', rating: ratings.imdb },
+    { source: 'TMDB', rating: ratings.tmdb },
+  ].flatMap(({ source, rating }) =>
+    rating
+      ? [
+          {
+            source,
+            value: value.format(rating.value),
+            votes: t('web.library.rating.votes', {
+              count: rating.votes,
+              amount: count.format(rating.votes),
+            }),
+          },
+        ]
+      : [],
+  );
+}

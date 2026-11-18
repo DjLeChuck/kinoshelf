@@ -21,6 +21,8 @@ import { registerLogRoutes } from './log-routes.js';
 import { UndoTasks } from './undo-tasks.js';
 import { registerMaintenanceRoutes, type TidyTask } from './maintenance-routes.js';
 import { DatabaseTasks } from './database-tasks.js';
+import { imdbRatingsOf } from './imdb-ratings.js';
+import { ImdbNfo, ImdbNfoTasks } from './imdb-nfo.js';
 import { ReplacedFiles } from './replaced-files.js';
 import { DEFAULT_BACKUP_KEEP, DEFAULT_REPLACED_RETENTION_DAYS } from './settings.js';
 import { registerTmdbRoutes } from './tmdb-routes.js';
@@ -65,6 +67,7 @@ import { Activity } from './activity.js';
 import {
   collectionSendSource,
   maintenanceSource,
+  imdbSource,
   matchSource,
   scanSource,
   tidySource,
@@ -213,11 +216,27 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
   tmdbUsage.onChange = () => {
     events.emit('tmdb');
   };
+  // Opt-in: nothing is downloaded unless `imdbRatings` is on (see `refreshImdb`).
+  const imdbRatings = imdbRatingsOf(options.database);
+  imdbRatings.log = app.log;
+  const refreshImdb = (): void => {
+    if (options.config.imdbRatings) {
+      // A side feature must never keep the server from starting.
+      try {
+        imdbRatings.refreshIfStale();
+      } catch (error) {
+        app.log.warn({ error: String(error) }, 'Could not check the IMDb ratings');
+      }
+    }
+  };
   // Where each analysis is, told to the clients at most twice a second (see `ProgressTracker`).
   // A topic of its own: `jobs` makes every list reload, which a scan must not do twice a second.
   const progress = new ProgressTracker(() => {
     events.emit('progress');
   });
+  imdbRatings.onChange = () => {
+    progress.announce();
+  };
   const undos = new UndoTasks(() => {
     progress.announce();
   });
@@ -424,6 +443,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
   events.subscribe((topic) => {
     if (topic === 'settings') {
       void health.check();
+      refreshImdb();
     }
   });
   app.decorate('jobs', runner);
@@ -435,6 +455,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
 
   let purgeTimer: NodeJS.Timeout | undefined;
   let collectionTimer: NodeJS.Timeout | undefined;
+  let imdbTimer: NodeJS.Timeout | undefined;
   let closeStreams = (): void => undefined;
   const purge = (): void => {
     const purged = purgeHistory(options.database, {
@@ -464,6 +485,8 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     watcher.configure(watcherSettings(options.config), manualFolders(options.config));
     health.start();
     purge();
+    refreshImdb();
+    imdbTimer = setInterval(refreshImdb, 3_600_000).unref();
     // Not kept alive by the timer: the process leaves when the server closes.
     purgeTimer = setInterval(purge, 86_400_000).unref();
     // A media server creates a collection when it scans, which happens without us: look again.
@@ -478,6 +501,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
   app.addHook('onClose', async () => {
     clearInterval(purgeTimer);
     clearInterval(collectionTimer);
+    clearInterval(imdbTimer);
     health.stop();
     tmdbUsage.close();
     progress.close();
@@ -648,6 +672,23 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
         notifier.foldersChanged([folder]);
       },
     });
+    const imdbNfo = new ImdbNfo({
+      config: () => options.config,
+      journal,
+      items,
+      ratings: imdbRatings,
+      showFolder: (library, tmdbId) => {
+        try {
+          return artwork.show(library, tmdbId).folder;
+        } catch {
+          return undefined;
+        }
+      },
+      backupDir: join(options.configDir, 'replaced'),
+      changed: (folders) => {
+        notifier.foldersChanged(folders);
+      },
+    });
     const collectionScreen = new CollectionScreen({
       config: () => options.config,
       items,
@@ -693,6 +734,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
       artwork,
       collections: collectionStore,
       collectionEditor,
+      imdbNfo,
       jobs,
       entries,
       items,
@@ -752,6 +794,16 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
       busy: () => runner.busy,
       keep: () => configStore.config.backupKeep ?? DEFAULT_BACKUP_KEEP,
     });
+    const imdbNfoTasks = new ImdbNfoTasks({
+      writer: imdbNfo,
+      config: () => options.config,
+      progress,
+      log: noted('maintenance'),
+      busy: () =>
+        runner.busy ||
+        undos.anyRunning() ||
+        [...tidyTasks.values()].some(({ status }) => status === 'running'),
+    });
     const replaced = new ReplacedFiles({
       log: noted('maintenance'),
       database: options.database,
@@ -768,6 +820,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
       tmdbUsage,
       databaseTasks,
       replaced,
+      imdbNfoTasks,
       log: noted('maintenance'),
       backupKeep: () => configStore.config.backupKeep ?? DEFAULT_BACKUP_KEEP,
       snapshot,
@@ -784,6 +837,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
       matchSource(matches),
       tidySource(tidyTasks, () => configStore.config),
       maintenanceSource({ databaseTasks, replaced }),
+      imdbSource(imdbRatings, imdbNfoTasks),
       collectionSendSource(collectionSends, () => configStore.config),
     ]);
     // A task is only known to have run if someone looked while it did, and a short one is over

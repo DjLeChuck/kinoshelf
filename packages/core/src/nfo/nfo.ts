@@ -90,23 +90,70 @@ function leaf(
 const repeated = (tag: string, values: readonly string[] | undefined): XmlNode[] =>
   (values ?? []).flatMap((value) => leaf(tag, value));
 
-function ratings(rating: Rating | undefined): XmlNode[] {
-  if (!rating || !Number.isFinite(rating.value) || !Number.isFinite(rating.votes)) return [];
-  return [
-    {
-      tag: 'ratings',
-      children: [
-        {
-          tag: 'rating',
-          attributes: { name: 'themoviedb', max: '10', default: 'true' },
-          children: [
-            ...leaf('value', rating.value.toFixed(2)),
-            ...leaf('votes', Math.round(rating.votes)),
-          ],
-        },
-      ],
-    },
+function ratingNode(name: string, rating: Rating, isDefault: boolean): XmlNode {
+  return {
+    tag: 'rating',
+    attributes: { name, max: '10', ...(isDefault && { default: 'true' }) },
+    children: [
+      ...leaf('value', rating.value.toFixed(2)),
+      ...leaf('votes', Math.round(rating.votes)),
+    ],
+  };
+}
+
+const usable = (rating: Rating | undefined): rating is Rating =>
+  rating !== undefined && Number.isFinite(rating.value) && Number.isFinite(rating.votes);
+
+/** TMDB's rating stays the default; IMDb's, when the server has it, is listed beside it. */
+function ratings(rating: Rating | undefined, imdb?: Rating): XmlNode[] {
+  const nodes = [
+    ...(usable(rating) ? [ratingNode('themoviedb', rating, true)] : []),
+    ...(usable(imdb) ? [ratingNode('imdb', imdb, !usable(rating))] : []),
   ];
+  return nodes.length > 0 ? [{ tag: 'ratings', children: nodes }] : [];
+}
+
+/** The IMDb id an NFO names (`<uniqueid type="imdb">tt…</uniqueid>`), if it names one. */
+export function imdbIdOf(xml: string): string | undefined {
+  return /<uniqueid\b[^>]*\btype="imdb"[^>]*>\s*(tt\d+)\s*<\/uniqueid>/.exec(xml)?.[1];
+}
+
+/**
+ * An NFO this module wrote, with IMDb's rating added in place: what `renderMovieNfo` would give
+ * for the same details with that rating, so the file reads as if it had been written with the
+ * setting on. `undefined` when there is nothing to do (it already has one, the rating is
+ * unusable) or nowhere sensible to put it (not the shape this module writes).
+ */
+export function addImdbRating(xml: string, imdb: Rating): string | undefined {
+  if (!usable(imdb) || xml.includes('name="imdb"')) {
+    return undefined;
+  }
+  const lineStart = (index: number): number => xml.lastIndexOf('\n', index) + 1;
+  const lineEnd = (index: number): number => {
+    const end = xml.indexOf('\n', index);
+    return end === -1 ? xml.length : end + 1;
+  };
+
+  const close = xml.indexOf('</ratings>');
+  if (close !== -1) {
+    const open = xml.lastIndexOf('<ratings>', close);
+    const isDefault = open === -1 || !/<rating\b[^>]*\bdefault="true"/.test(xml.slice(open, close));
+    const at = lineStart(close);
+    return xml.slice(0, at) + serialize(ratingNode('imdb', imdb, isDefault), 2) + xml.slice(at);
+  }
+  // Where the writer puts the block: after the show's title, else the original title, else the title.
+  const after = ['</showtitle>', '</originaltitle>', '</title>']
+    .map((tag) => xml.indexOf(tag))
+    .find((index) => index !== -1);
+  if (after === undefined) {
+    return undefined;
+  }
+  const at = lineEnd(after);
+  return (
+    xml.slice(0, at) +
+    serialize({ tag: 'ratings', children: [ratingNode('imdb', imdb, true)] }, 1) +
+    xml.slice(at)
+  );
 }
 
 /**
@@ -162,7 +209,7 @@ export function renderMovieNfo(details: MovieDetails, options: NfoOptions = {}):
       children: [
         ...leaf('title', details.title),
         ...leaf('originaltitle', details.originalTitle),
-        ...ratings(details.rating),
+        ...ratings(details.rating, details.imdbRating),
         ...leaf('plot', details.overview),
         ...leaf('tagline', details.tagline),
         ...leaf('runtime', details.runtime),
@@ -206,7 +253,7 @@ export function renderSeriesNfo(details: SeriesDetails, options: NfoOptions = {}
         ...leaf('title', details.title),
         ...leaf('originaltitle', details.originalTitle),
         ...leaf('showtitle', details.title),
-        ...ratings(details.rating),
+        ...ratings(details.rating, details.imdbRating),
         ...leaf('plot', details.overview),
         ...leaf('tagline', details.tagline),
         ...mpaa(details.certification),

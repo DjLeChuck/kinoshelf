@@ -48,6 +48,7 @@ export interface Settings {
     readonly threshold: number | null;
     readonly detectPictureSize: boolean;
     readonly allowLocalImageUrls: boolean;
+    readonly imdbRatings: boolean;
   };
   /** What the Maintenance tab keeps: the values in use. */
   readonly retention: { readonly backupKeep: number; readonly replacedRetentionDays: number };

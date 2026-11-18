@@ -22,6 +22,37 @@ export interface MaintenanceFigures {
     readonly days: number;
   };
   readonly replacedTask: ReplacedTask | null;
+  /** The latest run that added IMDb's ratings to the NFO already written, since the start. */
+  readonly imdbNfoTask: {
+    readonly status: 'running' | 'done' | 'failed';
+    readonly done: number;
+    readonly total: number;
+    readonly startedAt: string;
+    readonly endedAt: string | null;
+    readonly result: {
+      readonly works: number;
+      readonly rewritten: number;
+      readonly already: number;
+      readonly noRating: number;
+      readonly kept: number;
+      readonly missing: number;
+      readonly batchId: string | null;
+    } | null;
+    readonly error: ErrorBody | null;
+  } | null;
+  /** IMDb's ratings file as the database holds it, whether the setting is on or not. */
+  readonly imdbRatings: {
+    readonly enabled: boolean;
+    readonly entries: number;
+    readonly fetchedAt: string | null;
+    readonly task: {
+      readonly status: 'running' | 'done' | 'failed';
+      readonly done: number;
+      readonly startedAt: string;
+      readonly endedAt: string | null;
+      readonly error: ErrorBody | null;
+    } | null;
+  };
 }
 
 export interface ReplacedTask {

@@ -294,6 +294,12 @@ export function expectedNfoPaths(
   ];
 }
 
+/** The show's own NFO (`tvshow.nfo`), or `undefined` when the profile writes none. */
+export function seriesNfoName(profile: Profile): string | undefined {
+  const { nfo } = profile;
+  return nfo?.series === undefined ? undefined : companionName(profile, nfo.series, { file: '' });
+}
+
 /** What a library page reads of the NFO of a work: how many are wanted and how many exist. */
 export interface NfoCoverage {
   readonly expected: readonly string[];

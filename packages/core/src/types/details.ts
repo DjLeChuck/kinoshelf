@@ -43,6 +43,8 @@ interface DetailsBase {
   /** Country names (not codes): what Kodi-format files carry. */
   readonly countries: readonly string[];
   readonly rating?: Rating;
+  /** IMDb's, added by the server when the owner turned the dataset on (`imdbRatings`). */
+  readonly imdbRating?: Rating;
   readonly certification?: Certification;
   /** Billing order. */
   readonly cast: readonly Person[];

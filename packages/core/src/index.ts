@@ -40,6 +40,7 @@ export {
   companionsWritten,
   expectedNfoPaths,
   nfoCoverage,
+  seriesNfoName,
   episodeThumbName,
   showFileNames,
   type CompanionKind,
@@ -154,5 +155,12 @@ export {
   type TidyReport,
 } from './maintenance/tidy-report.js';
 export { applyMigrations } from './journal/migrations.js';
-export { renderMovieNfo, renderSeriesNfo, renderEpisodeNfo, type NfoOptions } from './nfo/nfo.js';
+export {
+  renderMovieNfo,
+  renderSeriesNfo,
+  renderEpisodeNfo,
+  addImdbRating,
+  imdbIdOf,
+  type NfoOptions,
+} from './nfo/nfo.js';
 export { Database, Statement, type RunResult, type Transaction } from './sqlite/database.js';

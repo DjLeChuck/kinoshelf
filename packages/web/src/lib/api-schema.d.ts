@@ -413,6 +413,7 @@ export interface paths {
                                 threshold: number | null;
                                 detectPictureSize: boolean;
                                 allowLocalImageUrls: boolean;
+                                imdbRatings: boolean;
                             };
                             /** @description What the Maintenance tab keeps: the values in use. */
                             retention: {
@@ -528,6 +529,7 @@ export interface paths {
                             threshold?: number | null;
                             detectPictureSize?: boolean | null;
                             allowLocalImageUrls?: boolean | null;
+                            imdbRatings?: boolean | null;
                         };
                         retention?: {
                             backupKeep?: number | null;
@@ -600,6 +602,7 @@ export interface paths {
                                 threshold: number | null;
                                 detectPictureSize: boolean;
                                 allowLocalImageUrls: boolean;
+                                imdbRatings: boolean;
                             };
                             /** @description What the Maintenance tab keeps: the values in use. */
                             retention: {
@@ -3656,6 +3659,17 @@ export interface paths {
                             } | null;
                             overview: string | null;
                             runtime: number | null;
+                            /** @description The vote averages on a scale of 10. IMDb's is there only when the setting is on and the work is in the downloaded file. */
+                            ratings: {
+                                tmdb: {
+                                    value: number;
+                                    votes: number;
+                                } | null;
+                                imdb: {
+                                    value: number;
+                                    votes: number;
+                                } | null;
+                            };
                             genres: string[];
                             posterPath: string | null;
                             backdropPath: string | null;
@@ -3904,6 +3918,108 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/libraries/{id}/imdb-nfo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add IMDb’s rating to the NFO of one movie or show
+         * @description Adds IMDb’s rating to the NFO of the work, in the file as it is (the IMDb id is the one the NFO names, TMDB is not asked), on the same terms as a collection change: only an NFO Kinoshelf wrote and nobody edited since (`kept` otherwise), the old one set aside, the batch undoable from the history. An NFO that already has the rating (`already`) or whose work the downloaded file does not know (`noRating`) is left alone. 409 `imdb.not-enabled` / `imdb.not-downloaded` while the setting is off or the file is not there yet.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        tmdbId: number;
+                    };
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            rewritten: number;
+                            already: number;
+                            noRating: number;
+                            kept: number;
+                            missing: number;
+                            batchId: string | null;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Default Response */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Default Response */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/libraries/{id}/shows": {
         parameters: {
             query?: never;
@@ -4076,6 +4192,17 @@ export interface paths {
                             title: string | null;
                             year: number | null;
                             overview: string | null;
+                            /** @description The vote averages on a scale of 10. IMDb's is there only when the setting is on and the work is in the downloaded file. */
+                            ratings: {
+                                tmdb: {
+                                    value: number;
+                                    votes: number;
+                                } | null;
+                                imdb: {
+                                    value: number;
+                                    votes: number;
+                                } | null;
+                            };
                             genres: string[];
                             posterPath: string | null;
                             backdropPath: string | null;
@@ -6793,6 +6920,49 @@ export interface paths {
                                 /** @description The retention in force (0: every file). */
                                 days: number;
                             };
+                            imdbNfoTask: {
+                                /** @enum {string} */
+                                status: "running" | "done" | "failed";
+                                done: number;
+                                total: number;
+                                startedAt: string;
+                                endedAt: string | null;
+                                result: {
+                                    works: number;
+                                    rewritten: number;
+                                    already: number;
+                                    noRating: number;
+                                    kept: number;
+                                    missing: number;
+                                    batchId: string | null;
+                                } | null;
+                                error: {
+                                    code: string;
+                                    params?: {
+                                        [key: string]: string | number;
+                                    };
+                                } | null;
+                            } | null;
+                            /** @description IMDb's ratings file, as the database holds it: shown whether the setting is on or not. */
+                            imdbRatings: {
+                                enabled: boolean;
+                                /** @description Ratings held. */
+                                entries: number;
+                                fetchedAt: string | null;
+                                task: {
+                                    /** @enum {string} */
+                                    status: "running" | "done" | "failed";
+                                    done: number;
+                                    startedAt: string;
+                                    endedAt: string | null;
+                                    error: {
+                                        code: string;
+                                        params?: {
+                                            [key: string]: string | number;
+                                        };
+                                    } | null;
+                                } | null;
+                            };
                             replacedTask: {
                                 /** @enum {unknown} */
                                 status: "running" | "done" | "failed";
@@ -6881,6 +7051,172 @@ export interface paths {
         put?: never;
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/maintenance/imdb-nfo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add IMDb’s rating to the NFO already written
+         * @description Starts a task and answers 202 at once; `GET /api/maintenance` tells how it goes. Adds IMDb’s rating to the NFO of every library that writes them, in the files as they are (no request to TMDB), on the terms of a collection change: only an NFO Kinoshelf wrote and nobody edited since, the old one set aside in `replaced/`, one batch the history can undo. 409 `imdb.not-enabled` or `imdb.not-downloaded` until the setting is on and the file is there, `maintenance.imdb-nfo-busy` while a scan, a transfer, a tidy-up or an undo runs.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                202: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @enum {string} */
+                            status: "running" | "done" | "failed";
+                            done: number;
+                            total: number;
+                            startedAt: string;
+                            endedAt: string | null;
+                            result: {
+                                works: number;
+                                rewritten: number;
+                                already: number;
+                                noRating: number;
+                                kept: number;
+                                missing: number;
+                                batchId: string | null;
+                            } | null;
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            } | null;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Default Response */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/maintenance/imdb-ratings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Forget IMDb's ratings file
+         * @description Drops the ratings downloaded from IMDb (a disposable table: nothing else reads it). The NFO already written keep their rating. While `processing.imdbRatings` is on, the file is downloaded again at the next check. 409 `maintenance.imdb-busy` while it downloads.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            removed: number;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Default Response */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
         options?: never;
         head?: never;
         patch?: never;

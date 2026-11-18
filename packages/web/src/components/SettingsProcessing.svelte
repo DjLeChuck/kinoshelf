@@ -27,6 +27,7 @@
   let threshold = $state(processing.threshold === null ? '' : String(processing.threshold));
   let detectPictureSize = $state(processing.detectPictureSize);
   let allowLocalImageUrls = $state(processing.allowLocalImageUrls);
+  let imdbRatings = $state(processing.imdbRatings);
 
   async function submit(): Promise<void> {
     const limit = thresholdOf(threshold);
@@ -44,6 +45,8 @@
         detectPictureSize: detectPictureSize ? null : false,
         // Off is the default: a box left unticked writes nothing.
         allowLocalImageUrls: allowLocalImageUrls ? true : null,
+        // Off is the default: a box left unticked writes nothing, and nothing is downloaded.
+        imdbRatings: imdbRatings ? true : null,
       },
     });
   }
@@ -98,6 +101,14 @@
       {t('web.settings.processing.local-images')}
     </label>
     <span class="muted hint">{t('web.settings.processing.local-images.hint')}</span>
+  </div>
+
+  <div class="field">
+    <label class="check">
+      <input type="checkbox" bind:checked={imdbRatings} />
+      {t('web.settings.processing.imdb-ratings')}
+    </label>
+    <span class="muted hint">{t('web.settings.processing.imdb-ratings.hint')}</span>
   </div>
 </SettingsSection>
 

@@ -14,6 +14,8 @@ import {
 } from '@kinoshelf/core';
 import type { FastifyBaseLogger, FastifyInstance } from 'fastify';
 import { ApiError } from './api-error.js';
+import { imdbRatingsOf } from './imdb-ratings.js';
+import type { ImdbNfoTasks } from './imdb-nfo.js';
 import type { EventBus } from './events.js';
 import type { JobStore } from './jobs.js';
 import type { LibrarySnapshot } from './library-items.js';
@@ -31,6 +33,7 @@ export interface MaintenanceDeps {
   readonly journal: Journal;
   readonly database: Database;
   readonly tmdbUsage: TmdbUsage;
+  readonly imdbNfoTasks: ImdbNfoTasks;
   readonly databaseTasks: DatabaseTasks;
   readonly replaced: ReplacedFiles;
   readonly log: Pick<FastifyBaseLogger, 'info' | 'warn'>;
@@ -108,6 +111,33 @@ const replacedTaskSchema = {
         bytes: { type: 'integer' },
         batches: { type: 'integer', description: 'Batches that can no longer restore a file.' },
         failed: { type: 'integer', description: 'Files that could not be deleted.' },
+      },
+    },
+    error: { anyOf: [errorInfo, { type: 'null' }] },
+  },
+} as const;
+
+const imdbNfoTaskSchema = {
+  type: 'object',
+  required: ['status', 'done', 'total', 'startedAt', 'endedAt', 'result', 'error'],
+  properties: {
+    status: { type: 'string', enum: ['running', 'done', 'failed'] },
+    done: { type: 'integer' },
+    total: { type: 'integer' },
+    startedAt: { type: 'string' },
+    endedAt: { type: 'string', nullable: true },
+    result: {
+      type: 'object',
+      nullable: true,
+      required: ['works', 'rewritten', 'already', 'noRating', 'kept', 'missing', 'batchId'],
+      properties: {
+        works: { type: 'integer' },
+        rewritten: { type: 'integer' },
+        already: { type: 'integer' },
+        noRating: { type: 'integer' },
+        kept: { type: 'integer' },
+        missing: { type: 'integer' },
+        batchId: { type: 'string', nullable: true },
       },
     },
     error: { anyOf: [errorInfo, { type: 'null' }] },
@@ -384,6 +414,8 @@ export function registerMaintenanceRoutes(api: FastifyInstance, deps: Maintenanc
               'databaseTasks',
               'replaced',
               'replacedTask',
+              'imdbRatings',
+              'imdbNfoTask',
             ],
             properties: {
               hiddenAnalyses: { type: 'integer' },
@@ -391,6 +423,34 @@ export function registerMaintenanceRoutes(api: FastifyInstance, deps: Maintenanc
               backups: { type: 'array', items: backupFileSchema, description: 'Newest first.' },
               backupKeep: { type: 'integer', description: 'How many backups are kept.' },
               replaced: replacedFiguresSchema,
+              imdbNfoTask: { anyOf: [imdbNfoTaskSchema, { type: 'null' }] },
+              imdbRatings: {
+                type: 'object',
+                description:
+                  "IMDb's ratings file, as the database holds it: shown whether the setting is on or not.",
+                required: ['enabled', 'entries', 'fetchedAt', 'task'],
+                properties: {
+                  enabled: { type: 'boolean' },
+                  entries: { type: 'integer', description: 'Ratings held.' },
+                  fetchedAt: { type: 'string', nullable: true },
+                  task: {
+                    anyOf: [
+                      {
+                        type: 'object',
+                        required: ['status', 'done', 'startedAt', 'endedAt', 'error'],
+                        properties: {
+                          status: { type: 'string', enum: ['running', 'done', 'failed'] },
+                          done: { type: 'integer' },
+                          startedAt: { type: 'string' },
+                          endedAt: { type: 'string', nullable: true },
+                          error: { anyOf: [errorInfo, { type: 'null' }] },
+                        },
+                      },
+                      { type: 'null' },
+                    ],
+                  },
+                },
+              },
               replacedTask: { anyOf: [replacedTaskSchema, { type: 'null' }] },
               databaseTasks: {
                 type: 'array',
@@ -419,7 +479,62 @@ export function registerMaintenanceRoutes(api: FastifyInstance, deps: Maintenanc
       databaseTasks: deps.databaseTasks.tasks(),
       replaced: await deps.replaced.figures(),
       replacedTask: deps.replaced.task(),
+      imdbNfoTask: deps.imdbNfoTasks.task() ?? null,
+      imdbRatings: {
+        enabled: deps.config().imdbRatings ?? false,
+        ...imdbRatingsOf(deps.database).figures(),
+      },
     }),
+  );
+
+  api.post(
+    '/api/maintenance/imdb-nfo',
+    {
+      schema: {
+        summary: 'Add IMDb’s rating to the NFO already written',
+        description:
+          'Starts a task and answers 202 at once; `GET /api/maintenance` tells how it goes. ' +
+          'Adds IMDb’s rating to the NFO of every library that writes them, in the files as they are ' +
+          '(no request to TMDB), on the ' +
+          'terms of a collection change: only an NFO Kinoshelf wrote and nobody edited since, the ' +
+          'old one set aside in `replaced/`, one batch the history can undo. 409 `imdb.not-enabled` ' +
+          'or `imdb.not-downloaded` until the setting is on and the file is there, ' +
+          '`maintenance.imdb-nfo-busy` while a scan, a transfer, a tidy-up or an undo runs.',
+        response: { 202: imdbNfoTaskSchema, 401: errorSchema, 409: errorSchema },
+      },
+    },
+    (_request, reply) => reply.code(202).send(deps.imdbNfoTasks.start()),
+  );
+
+  api.delete(
+    '/api/maintenance/imdb-ratings',
+    {
+      schema: {
+        summary: "Forget IMDb's ratings file",
+        description:
+          'Drops the ratings downloaded from IMDb (a disposable table: nothing else reads it). The ' +
+          'NFO already written keep their rating. While `processing.imdbRatings` is on, the file ' +
+          'is downloaded again at the next check. 409 `maintenance.imdb-busy` while it downloads.',
+        response: {
+          200: {
+            type: 'object',
+            required: ['removed'],
+            properties: { removed: { type: 'integer' } },
+          },
+          401: errorSchema,
+          409: errorSchema,
+        },
+      },
+    },
+    () => {
+      const ratings = imdbRatingsOf(deps.database);
+      if (ratings.downloading) {
+        throw new ApiError(409, 'maintenance.imdb-busy');
+      }
+      const removed = ratings.clear();
+      deps.log.info({ removed }, 'Forgot the IMDb ratings');
+      return { removed };
+    },
   );
 
   api.post(

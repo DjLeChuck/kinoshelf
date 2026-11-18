@@ -11,6 +11,8 @@ const LABELS: Readonly<Record<string, MessageKey>> = {
   'tidy-report': 'web.activity.task.tidy-report',
   backup: 'web.activity.task.backup',
   vacuum: 'web.activity.task.vacuum',
+  'imdb-ratings': 'web.activity.task.imdb-ratings',
+  'imdb-nfo': 'web.activity.task.imdb-nfo',
   'empty-replaced': 'web.activity.task.empty-replaced',
   'send-collections': 'web.activity.task.send-collections',
   'adopt-collections': 'web.activity.task.adopt-collections',

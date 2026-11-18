@@ -58,6 +58,7 @@ export interface SettingsPatch {
     threshold?: Nullable<number>;
     detectPictureSize?: Nullable<boolean>;
     allowLocalImageUrls?: Nullable<boolean>;
+    imdbRatings?: Nullable<boolean>;
   };
   /** What the Maintenance tab keeps; `null` goes back to the default. */
   retention?: {
@@ -140,6 +141,7 @@ export function presentSettings(config: Config, env: Env): unknown {
       // Read from the file when it is named, so on unless turned off.
       detectPictureSize: config.detectPictureSize ?? true,
       allowLocalImageUrls: config.allowLocalImageUrls ?? false,
+      imdbRatings: config.imdbRatings ?? false,
     },
     // The values in use: the form shows them rather than an empty field.
     retention: {

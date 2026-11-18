@@ -637,6 +637,7 @@ export const settingsSchema = {
         'threshold',
         'detectPictureSize',
         'allowLocalImageUrls',
+        'imdbRatings',
       ],
       properties: {
         naming: { type: 'string', enum: [...namings, null], nullable: true },
@@ -645,6 +646,7 @@ export const settingsSchema = {
         threshold: { type: 'number', nullable: true },
         detectPictureSize: { type: 'boolean' },
         allowLocalImageUrls: { type: 'boolean' },
+        imdbRatings: { type: 'boolean' },
       },
     },
     retention: {
@@ -760,6 +762,8 @@ export const settingsPatchSchema = {
         detectPictureSize: nullable({ type: 'boolean' }),
         // Off unless turned on: `null` goes back to that default.
         allowLocalImageUrls: nullable({ type: 'boolean' }),
+        // Off unless turned on: `null` goes back to that default.
+        imdbRatings: nullable({ type: 'boolean' }),
       },
     },
     retention: {

@@ -10,6 +10,8 @@
   import VersionsSection from './VersionsSection.svelte';
   import RescanButton from './RescanButton.svelte';
   import RematchButton from './RematchButton.svelte';
+  import ImdbNfoButton from './ImdbNfoButton.svelte';
+  import RatingsFact from './RatingsFact.svelte';
   import WorkCard from './WorkCard.svelte';
 
   let {
@@ -129,6 +131,7 @@
           ? t('web.library.show.none-missing')
           : missingOfKnown(missing, detail.known, t)}
       </dd>
+      <RatingsFact ratings={detail.ratings} />
       {#if folder}
         <dt class="muted">{t('web.library.path')}</dt>
         <dd class="mono">{folder}</dd>
@@ -152,6 +155,9 @@
         year={show.year}
         {ondone}
       />
+      {#if detail.ratings.imdb !== null}
+        <ImdbNfoButton {libraryId} tmdbId={show.tmdbId} />
+      {/if}
     </div>
   {/if}
 </WorkCard>

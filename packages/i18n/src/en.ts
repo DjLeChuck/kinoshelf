@@ -336,6 +336,14 @@ export const en = {
     'A transfer already holds some of these items. Wait for it to end before running them again.',
   'error.maintenance.replaced-busy':
     'A scan, a transfer, a tidy-up, an undo or another emptying is running: wait for it to end before emptying the files set aside.',
+  'error.maintenance.imdb-busy':
+    'The IMDb ratings are being downloaded: wait for it to end before forgetting them.',
+  'error.maintenance.imdb-nfo-busy':
+    'A scan, a transfer, a tidy-up or an undo is running: wait for it to end before adding the ratings to the NFO.',
+  'error.maintenance.imdb-nfo-running': 'The ratings are already being added to the NFO.',
+  'error.imdb.not-enabled': 'IMDb ratings are off: turn on the setting first.',
+  'error.imdb.not-downloaded':
+    'The IMDb ratings are not downloaded yet: try again once the download has ended.',
   'error.maintenance.busy':
     'A scan or a transfer is running: the database cannot be compacted now. Try again when it ends.',
   'error.maintenance.database-task-running':
@@ -428,6 +436,42 @@ export const en = {
   'web.maintenance.caches.button': 'Clear',
   'web.maintenance.caches.done':
     '{count, plural, =0 {The cache was empty.} one {# answer forgotten.} other {# answers forgotten.}}',
+  'web.activity.task.imdb-nfo': 'Adding IMDb ratings to the NFO',
+  'web.maintenance.imdb-nfo.title': 'Add IMDb ratings to the NFO',
+  'web.maintenance.imdb-nfo.text': 'Only the NFO Kinoshelf wrote and nobody edited.',
+  'web.maintenance.imdb-nfo.does':
+    'Writes the NFO again with IMDb’s rating, in every library that writes NFO. The old files are set aside in replaced/ and the History can undo the whole batch. An NFO from another tool, or edited by hand, is left as it is.',
+  'web.maintenance.imdb-nfo.button': 'Add',
+  'web.maintenance.imdb-nfo.state.off': 'Turn on the IMDb ratings setting first.',
+  'web.maintenance.imdb-nfo.state.waiting': 'Waiting for the ratings download.',
+  'web.maintenance.imdb-nfo.state.ready': 'The ratings file is ready.',
+  'web.maintenance.imdb-nfo.done':
+    '{count, plural, =0 {No NFO updated} one {# NFO updated} other {# NFOs updated}} · already there: {already} · no rating: {noRating} · left as they are: {kept}',
+  'web.imdb-nfo.button': 'Add the IMDb rating to the NFO',
+  'web.imdb-nfo.hint':
+    'Writes the NFO again with IMDb’s rating, if Kinoshelf wrote it and nobody edited it since. The old file is kept and the History can undo it.',
+  'web.imdb-nfo.history': 'See the batch',
+  'web.imdb-nfo.done': '{count, plural, one {# NFO updated.} other {# NFO updated.}}',
+  'web.imdb-nfo.kept': 'Left as it is: the NFO was not written by Kinoshelf, or was edited since.',
+  'web.imdb-nfo.already': 'The NFO already has the IMDb rating.',
+  'web.imdb-nfo.no-rating': 'IMDb has no rating for this work.',
+  'web.imdb-nfo.missing': 'No NFO yet: Refresh writes it, with the rating.',
+  'web.maintenance.imdb.title': 'IMDb ratings',
+  'web.maintenance.imdb.text': 'The NFO already written keep their rating.',
+  'web.maintenance.imdb.does':
+    'Forgets the ratings file downloaded from IMDb. If the setting is on, it is downloaded again at the next check (within the hour).',
+  'web.maintenance.imdb.state.none': 'Nothing downloaded. The setting is off.',
+  'web.maintenance.imdb.state.waiting': 'Nothing downloaded yet: the download starts shortly.',
+  'web.maintenance.imdb.state.downloading':
+    'Downloading… {count, plural, one {{amount} rating} other {{amount} ratings}} so far',
+  'web.maintenance.imdb.state.held':
+    '{count, plural, one {{amount} rating} other {{amount} ratings}} · downloaded {date} · {setting}',
+  'web.maintenance.imdb.setting.on': 'setting on',
+  'web.maintenance.imdb.setting.off': 'setting off',
+  'web.maintenance.imdb.button': 'Forget',
+  'web.maintenance.imdb.settings': 'Setting',
+  'web.maintenance.imdb.done':
+    '{count, plural, =0 {Nothing to forget.} one {# rating forgotten.} other {# ratings forgotten.}}',
   'web.maintenance.backup.title': 'Back up the journal database',
   'web.maintenance.backup.text': 'The data you must not lose. Changes nothing.',
   'web.maintenance.backup.does':
@@ -1073,6 +1117,7 @@ export const en = {
   'web.activity.task.tidy': 'Tidy-up of {name}',
   'web.activity.task.tidy-report': 'Analysis of {name} before a tidy-up',
   'web.activity.task.backup': 'Backup of the database',
+  'web.activity.task.imdb-ratings': 'Download of the IMDb ratings',
   'web.activity.task.vacuum': 'Compaction of the database',
   'web.activity.task.empty-replaced': 'Emptying of replaced/',
   'web.activity.task.adopt-collections': 'Choosing the TMDB images of the collections of {name}',
@@ -1098,6 +1143,9 @@ export const en = {
   'web.library.missing': 'missing',
   'web.library.unavailable': 'not available on TMDB',
   'web.library.runtime': '{minutes} min',
+  'web.library.ratings': 'Ratings',
+  'web.library.rating.votes':
+    'Based on {count, plural, one {{amount} vote} other {{amount} votes}}',
   'web.library.no-overview': 'No summary available.',
   'web.library.path': 'Path',
   'web.library.metadata': 'Metadata',
@@ -1463,6 +1511,11 @@ export const en = {
   'web.history.extra.generated': 'NFO generated',
   'web.history.extra.downloaded': 'Image downloaded',
   'web.history.extra.replaced': 'Image replaced',
+  'web.history.extra.replaced-nfo': 'NFO replaced',
+  'web.history.extras.count.replaced-nfo':
+    '{count, plural, one {# NFO replaced} other {# NFOs replaced}}',
+  'web.history.extras.hint.replaced':
+    'Files replaced by a newer version: the old ones are kept in Kinoshelf’s configuration folder, and undoing the batch puts them back.',
   'web.history.from': 'Original path',
   'web.history.to': 'Placed at',
   'web.history.item.done': 'Done',
@@ -1596,6 +1649,9 @@ export const en = {
   'web.settings.processing.local-images': 'Allow image addresses on the local network',
   'web.settings.processing.local-images.hint':
     'When you replace an image by an address, Kinoshelf downloads it from the server. Addresses of your own network (a NAS, another machine at home) are refused unless you tick this: anyone holding the access key could then make the server reach your internal services.',
+  'web.settings.processing.imdb-ratings': 'Write IMDb’s rating in the NFO',
+  'web.settings.processing.imdb-ratings.hint':
+    'Off by default, and nothing is downloaded while it is. Ticked, Kinoshelf downloads IMDb’s public ratings file (a few megabytes, refreshed once a day at most), which IMDb offers for personal, non-commercial use, and writes the rating beside TMDB’s in the NFO it creates from then on. An NFO that already exists is never rewritten, and one written before the download ends has no IMDb rating.',
   'web.settings.processing.threshold.hint':
     'A match scoring below it waits for you in Arrivals. Empty: the default.',
   'web.settings.invalid.threshold': 'The threshold is a number from 0 to 100.',

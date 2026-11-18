@@ -106,6 +106,11 @@ export interface ListedItem extends LibraryItem {
 export interface ItemDetail extends LibraryItem {
   readonly overview: string | null;
   readonly runtime: number | null;
+  /** The vote averages out of 10; IMDb's only when the server has it. */
+  readonly ratings: {
+    readonly tmdb: { readonly value: number; readonly votes: number } | null;
+    readonly imdb: { readonly value: number; readonly votes: number } | null;
+  };
   readonly genres: readonly string[];
   readonly posterPath: string | null;
   readonly backdropPath: string | null;
@@ -281,6 +286,10 @@ export interface ShowDetail {
   readonly title: string | null;
   readonly year: number | null;
   readonly overview: string | null;
+  readonly ratings: {
+    readonly tmdb: { readonly value: number; readonly votes: number } | null;
+    readonly imdb: { readonly value: number; readonly votes: number } | null;
+  };
   readonly genres: readonly string[];
   readonly posterPath: string | null;
   readonly backdropPath: string | null;

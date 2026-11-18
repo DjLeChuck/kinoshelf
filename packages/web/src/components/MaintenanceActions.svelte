@@ -18,36 +18,89 @@
   );
 
   let failure = $state<unknown>(undefined);
-  let busy = $state<'purge' | 'caches' | 'backup' | 'vacuum' | undefined>(undefined);
-  let results = $state<{ purge?: string; caches?: string }>({});
+  let busy = $state<'purge' | 'caches' | 'imdb' | 'backup' | 'vacuum' | undefined>(undefined);
+  let results = $state<{ purge?: string; caches?: string; imdb?: string }>({});
 
   const known = $derived(figures.value);
+  const number = (value: number): string => new Intl.NumberFormat(locale.value).format(value);
   const size = (bytes: number): string => formatBytes(bytes, locale.value);
   const taskOf = (kind: DatabaseTask['kind']): DatabaseTask | undefined =>
     known?.databaseTasks.find((task) => task.kind === kind);
   const running = $derived(
     (known?.databaseTasks.some(({ status }) => status === 'running') ?? false) ||
-      known?.replacedTask?.status === 'running',
+      known?.replacedTask?.status === 'running' ||
+      known?.imdbNfoTask?.status === 'running',
+  );
+  const imdb = $derived(known?.imdbRatings);
+  const nfoTask = $derived(known?.imdbNfoTask ?? undefined);
+  const nfoRunning = $derived(nfoTask?.status === 'running');
+  const nfoReady = $derived((imdb?.enabled ?? false) && (imdb?.entries ?? 0) > 0);
+  const nfoFigure = $derived(
+    imdb &&
+      t(
+        !imdb.enabled
+          ? 'web.maintenance.imdb-nfo.state.off'
+          : imdb.entries === 0
+            ? 'web.maintenance.imdb-nfo.state.waiting'
+            : 'web.maintenance.imdb-nfo.state.ready',
+      ),
+  );
+  const nfoResult = $derived(
+    nfoTask?.status === 'done' && nfoTask.result
+      ? t('web.maintenance.imdb-nfo.done', {
+          count: nfoTask.result.rewritten,
+          already: nfoTask.result.already,
+          noRating: nfoTask.result.noRating,
+          kept: nfoTask.result.kept,
+        })
+      : undefined,
+  );
+  const imdbDownloading = $derived(imdb?.task?.status === 'running');
+  const imdbFigure = $derived(
+    imdb &&
+      (imdbDownloading
+        ? t('web.maintenance.imdb.state.downloading', {
+            count: imdb.task?.done ?? 0,
+            amount: number(imdb.task?.done ?? 0),
+          })
+        : imdb.fetchedAt === null
+          ? t(
+              imdb.enabled
+                ? 'web.maintenance.imdb.state.waiting'
+                : 'web.maintenance.imdb.state.none',
+            )
+          : t('web.maintenance.imdb.state.held', {
+              count: imdb.entries,
+              amount: number(imdb.entries),
+              date: formatDate(imdb.fetchedAt, locale.value),
+              setting: t(
+                imdb.enabled
+                  ? 'web.maintenance.imdb.setting.on'
+                  : 'web.maintenance.imdb.setting.off',
+              ),
+            })),
   );
 
   // A backup or a compaction goes on in the server: follow it, also when started from another tab.
   // Between the click and the first answer the task may end, and announce it, before the answer comes.
   let starting = $state(false);
   const stopProgress = onTopics(['progress'], () => {
-    if (running || starting) {
+    if (running || starting || imdbDownloading) {
       void figures.reload();
     }
   });
   onDestroy(stopProgress);
 
-  async function run(action: 'purge' | 'caches'): Promise<void> {
+  async function run(action: 'purge' | 'caches' | 'imdb'): Promise<void> {
     busy = action;
     failure = undefined;
     try {
       const { removed } =
         action === 'purge'
           ? await api.post<{ removed: number }>('/api/maintenance/purge-hidden')
-          : await api.delete<{ removed: number }>('/api/tmdb/cache');
+          : action === 'imdb'
+            ? await api.delete<{ removed: number }>('/api/maintenance/imdb-ratings')
+            : await api.delete<{ removed: number }>('/api/tmdb/cache');
       results[action] = t(`web.maintenance.${action}.done`, { count: removed });
       await figures.reload();
     } catch (error) {
@@ -62,6 +115,19 @@
     failure = undefined;
     try {
       await api.post<DatabaseTask>(`/api/maintenance/${kind}`);
+      await figures.reload();
+    } catch (error) {
+      failure = error;
+    } finally {
+      starting = false;
+    }
+  }
+
+  async function addImdbToNfo(): Promise<void> {
+    starting = true;
+    failure = undefined;
+    try {
+      await api.post('/api/maintenance/imdb-nfo');
       await figures.reload();
     } catch (error) {
       failure = error;
@@ -143,6 +209,41 @@
       busy={busy === 'caches'}
       disabled={busy !== undefined || known?.tmdbCache.entries === 0}
       onrun={() => void run('caches')}
+    />
+    <ActionCard
+      title={t('web.maintenance.imdb.title')}
+      text={t('web.maintenance.imdb.text')}
+      does={t('web.maintenance.imdb.does')}
+      button={t('web.maintenance.imdb.button')}
+      figure={imdbFigure}
+      result={results.imdb}
+      failure={imdb?.task?.status === 'failed' && imdb.task.error
+        ? describeError(t, imdb.task.error)
+        : undefined}
+      busy={busy === 'imdb' || imdbDownloading}
+      disabled={busy !== undefined || imdbDownloading || imdb?.entries === 0}
+      link={{ href: '/settings#processing', label: t('web.maintenance.imdb.settings') }}
+      onrun={() => void run('imdb')}
+    />
+    <ActionCard
+      title={t('web.maintenance.imdb-nfo.title')}
+      text={t('web.maintenance.imdb-nfo.text')}
+      does={t('web.maintenance.imdb-nfo.does')}
+      button={t('web.maintenance.imdb-nfo.button')}
+      figure={nfoFigure}
+      result={nfoResult}
+      failure={nfoTask?.status === 'failed' && nfoTask.error
+        ? describeError(t, nfoTask.error)
+        : undefined}
+      busy={nfoRunning}
+      percent={nfoTask && nfoTask.total > 0 && nfoRunning
+        ? Math.round((nfoTask.done / nfoTask.total) * 100)
+        : null}
+      disabled={!nfoReady || running || starting || busy !== undefined}
+      link={nfoTask?.result?.batchId
+        ? { href: `/history/${nfoTask.result.batchId}`, label: t('web.imdb-nfo.history') }
+        : { href: '/settings#processing', label: t('web.maintenance.imdb.settings') }}
+      onrun={() => void addImdbToNfo()}
     />
     <ActionCard
       title={t('web.maintenance.vacuum.title')}
