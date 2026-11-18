@@ -1,4 +1,4 @@
-import { readFile, rm } from 'node:fs/promises';
+import { mkdir, readFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { loadConfig } from '@kinoshelf/core';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -242,6 +242,40 @@ describe('libraries', () => {
     expect(missing.json()).toEqual({ error: { code: 'library.not-found' } });
     const bad = await h.request('PATCH', '/api/libraries/l', { source: file });
     expect(bad.statusCode).toBe(422);
+  });
+
+  it('refuses a source that contains another one, or lies inside it', async () => {
+    const h = await served();
+    const media = await makeDir();
+    const movies = join(media, 'movies');
+    await mkdir(movies);
+    const code = async (payload: object): Promise<[number, string | undefined]> => {
+      const response = await h.request('POST', '/api/libraries', payload);
+      return [response.statusCode, response.json<{ error?: { code: string } }>().error?.code];
+    };
+
+    expect(await code({ name: 'Movies', source: movies, type: 'movie' })).toEqual([201, undefined]);
+    // The downloads folder that holds a whole library: what its owner meant to declare as one.
+    const around = await h.request('POST', '/api/libraries', {
+      name: 'Everything',
+      source: media,
+      into: { movie: 'movies', series: 'movies' },
+    });
+    expect(around.statusCode).toBe(409);
+    expect(around.json()).toEqual({
+      error: { code: 'library.source-overlaps', params: { name: 'Movies' } },
+    });
+    // The other way round: a library inside a folder another one reads. A sibling whose name only
+    // starts the same is no overlap.
+    const inside = join(movies, 'kids');
+    await mkdir(inside);
+    expect(await code({ name: 'Kids', source: inside, type: 'movie' })).toEqual([
+      409,
+      'library.source-overlaps',
+    ]);
+    const sibling = join(media, 'movies-4k');
+    await mkdir(sibling);
+    expect(await code({ name: '4K', source: sibling, type: 'movie' })).toEqual([201, undefined]);
   });
 
   it('keeps a library an arrival folder points at', async () => {

@@ -344,6 +344,8 @@ export const en = {
   'error.maintenance.in-progress': 'A tidy-up of this library is already running.',
   'error.library.scan-in-progress': 'A scan of this library is already queued or running.',
   'error.library.source-taken': 'The library “{name}” already reads this folder.',
+  'error.library.source-overlaps':
+    'This folder overlaps the one of “{name}”: one contains the other. Declare each folder on its own, without nesting (for example /media/movies as a library, not /media).',
   'error.library.wrong-type': 'The library “{name}” does not hold this kind of work.',
   'error.queue.entry-not-found': 'This file is not in the queue any more.',
   'error.queue.entry-held': 'A transfer of this file is waiting or running: wait for it to end.',

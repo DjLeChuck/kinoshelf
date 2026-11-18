@@ -36,6 +36,10 @@ All notable changes to Kinoshelf are written here. The format follows
 
 ### Changed
 
+- A library whose folder contains another's (or lies inside it) is now refused with a clear error
+  (`library.source-overlaps`), the case being a downloads folder that held the whole media folder
+  (`/media` beside `/media/movies`), which made every library file an arrival (#10, #11).
+
 - The folder a move leaves behind is now removed when its sub-folders hold only what Kinoshelf made or
   nothing (an emptied `Subs`).
 

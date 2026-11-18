@@ -76,6 +76,7 @@ export const API_ERROR_CODES = [
   'maintenance.vacuum-failed',
   'maintenance.backup-failed',
   'library.source-taken',
+  'library.source-overlaps',
   'library.wrong-type',
   'plex.not-signed-in',
   'plex.pin-unknown',

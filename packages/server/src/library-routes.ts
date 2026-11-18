@@ -194,9 +194,18 @@ function requireSourceFree(
   source: string,
   own?: string,
 ): void {
-  const other = libraries.find((library) => library.source === source && library.id !== own);
-  if (other) {
-    throw new ApiError(409, 'library.source-taken', { name: other.name });
+  const others = libraries.filter((library) => library.id !== own);
+  const same = others.find((library) => library.source === source);
+  if (same) {
+    throw new ApiError(409, 'library.source-taken', { name: same.name });
+  }
+  // A folder inside another is read by both: the files of the inner one belong to two scans, and
+  // a downloads folder holding a library would offer the library's own files as arrivals.
+  const nested = others.find(
+    (library) => isInside(source, library.source) || isInside(library.source, source),
+  );
+  if (nested) {
+    throw new ApiError(409, 'library.source-overlaps', { name: nested.name });
   }
 }
 
@@ -401,8 +410,8 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
         summary: 'Add a library',
         description:
           'The id is made from the name. The source must be an existing ' +
-          'folder (422 `fs.not-found`, `fs.not-a-directory`, `fs.unreadable`), exactly one of `type` and `into` is given and `into` names libraries of the right type (422 `library.invalid`), and no other library may have the same source (409 ' +
-          '`library.source-taken`).',
+          'folder (422 `fs.not-found`, `fs.not-a-directory`, `fs.unreadable`), exactly one of `type` and `into` is given and `into` names libraries of the right type (422 `library.invalid`), no other library may have the same source (409 ' +
+          '`library.source-taken`) nor one that contains it or lies inside it (409 `library.source-overlaps`).',
         body: libraryCreateSchema,
         response: {
           201: librarySchema,

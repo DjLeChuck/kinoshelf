@@ -362,6 +362,8 @@ export const fr: Record<keyof typeof en, string> = {
   'error.library.scan-in-progress':
     'Une analyse de cette bibliothèque est déjà en attente ou en cours.',
   'error.library.source-taken': 'La bibliothèque « {name} » lit déjà ce dossier.',
+  'error.library.source-overlaps':
+    'Ce dossier chevauche celui de « {name} » : l’un contient l’autre. Déclarez chaque dossier séparément, sans imbrication (par exemple /media/films comme bibliothèque, pas /media).',
   'error.library.wrong-type': 'La bibliothèque « {name} » ne contient pas ce type d’œuvre.',
   'error.queue.entry-not-found': 'Ce fichier n’est plus dans la file.',
   'error.queue.entry-held':
