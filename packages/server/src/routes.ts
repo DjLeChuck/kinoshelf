@@ -100,11 +100,56 @@ function arrivalState(entry: Entry): 'ready' | 'review' | 'unrecognized' {
 }
 
 /** One file of an arrival: what it is called, how sure the match is, where it would go. */
+interface UnknownEpisode {
+  readonly file: string;
+  readonly season: number | null;
+  readonly seasonKnown: boolean;
+}
+
+const unknownEpisodeOf = (file: Entry): UnknownEpisode | undefined =>
+  file.candidates[0]?.episodeUnknown === true
+    ? {
+        file: basename(file.path),
+        season: file.parsed.season ?? null,
+        seasonKnown: file.candidates[0].seasonUnknown !== true,
+      }
+    : undefined;
+
+const byFile = (a: UnknownEpisode, b: UnknownEpisode): number => (a.file < b.file ? -1 : 1);
+
+/**
+ * The files of the release TMDB has no season and episode for, said once for the group a
+ * validation covers. The group is read and sorted **once per release and series**, whatever the
+ * number of files asked for: a release of thousands of files must not cost one read of the whole
+ * release for each of them.
+ */
+function unknownEpisodesOf(entries: EntryStore): (entry: Entry) => UnknownEpisode[] {
+  const groups = new Map<string, { ids: Set<string>; unknown: UnknownEpisode[] }>();
+  return (entry) => {
+    const own = unknownEpisodeOf(entry);
+    if (entry.release === null || entry.parsed.kind !== 'episode') {
+      return own ? [own] : [];
+    }
+    const key = `${entry.jobId}|${entry.release}|${entry.cluster}`;
+    let group = groups.get(key);
+    if (!group) {
+      const files = entries.releaseGroup(entry);
+      group = {
+        ids: new Set(files.map(({ id }) => id)),
+        unknown: files.flatMap((file) => unknownEpisodeOf(file) ?? []).sort(byFile),
+      };
+      groups.set(key, group);
+    }
+    // A file the group leaves out (a failed transfer, say) still counts for itself.
+    return own && !group.ids.has(entry.id) ? [own, ...group.unknown].sort(byFile) : group.unknown;
+  };
+}
+
 function presentArrival(
   entry: Entry,
   service: Service,
   jobOf: (id: string) => Job | undefined,
-  mates: (entry: Entry) => Entry[],
+  unknownEpisodes: (entry: Entry) => UnknownEpisode[],
 ): unknown {
   const job = jobOf(entry.jobId);
   const destination = service.destinationOf(entry, job);
@@ -130,14 +175,7 @@ function presentArrival(
     candidates: entry.candidates,
     // The files of the release TMDB has no season and episode for: what keeps the choice under the
     // threshold, said once for the whole group the validation covers.
-    unknownEpisodes: [entry, ...mates(entry)]
-      .filter((file) => file.candidates[0]?.episodeUnknown === true)
-      .map((file) => ({
-        file: basename(file.path),
-        season: file.parsed.season ?? null,
-        seasonKnown: file.candidates[0]?.seasonUnknown !== true,
-      }))
-      .sort((a, b) => (a.file < b.file ? -1 : 1)),
+    unknownEpisodes: unknownEpisodes(entry),
     // Why the best candidate is not a full score, in the words of the web: the country is the one
     // the file named, since a wrong one is the odd cause to find.
     limits: (entry.candidates[0]?.limits ?? []).map((code) => ({
@@ -285,6 +323,7 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
         }
         return known.get(id);
       };
+      const unknownOf = unknownEpisodesOf(entries);
       const sources = service.arrivalFolders();
       const page = entries.arrivals({
         arrivalIds: sources.map(({ id }) => id),
@@ -295,9 +334,7 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
       return {
         total: page.total,
         sources: sources.map(({ id, name, source }) => ({ id, name, path: source })),
-        items: page.entries.map((entry) =>
-          presentArrival(entry, service, jobOf, (file) => entries.releaseMates(file)),
-        ),
+        items: page.entries.map((entry) => presentArrival(entry, service, jobOf, unknownOf)),
       };
     },
   );
@@ -323,12 +360,7 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
       if (!entry) {
         throw new ApiError(404, 'queue.entry-not-found');
       }
-      return presentArrival(
-        entry,
-        service,
-        (id) => jobs.get(id),
-        (file) => entries.releaseMates(file),
-      );
+      return presentArrival(entry, service, (id) => jobs.get(id), unknownEpisodesOf(entries));
     },
   );
 

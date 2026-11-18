@@ -1,7 +1,8 @@
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { loadConfig } from '@kinoshelf/core';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { EntryStore } from '../src/entries.js';
 import { cleanup, harness, jobEntries, makeDir, put, type Harness } from './harness.js';
 
 afterEach(cleanup);
@@ -222,5 +223,31 @@ describe('choosing where a file goes', () => {
       entry.path.endsWith('Dune.2021.1080p.mkv'),
     );
     expect(dune?.destination.startsWith(roots.uhd)).toBe(false);
+  });
+});
+
+describe('a release of many files', () => {
+  it('reads its group once, not once per file', async () => {
+    const h = await harness({});
+    h.database
+      .prepare(`INSERT INTO jobs (id, path, status, created_at) VALUES ('j', '/d', 'done', 'x')`)
+      .run();
+    const insert = h.database.prepare(
+      `INSERT INTO job_entries (id, job_id, path, classification, parsed, outcome, release, cluster)
+       VALUES (?, 'j', ?, 'ambiguous', ?, '{"reason":"ambiguous","candidates":[]}', '/d/Show', 0)`,
+    );
+    for (let episode = 1; episode <= 60; episode++) {
+      const parsed = JSON.stringify({ kind: 'episode', title: 'Show', season: 1, episode });
+      insert.run(`e${String(episode)}`, `/d/Show/e${String(episode)}.mkv`, parsed);
+    }
+    const reads = vi.spyOn(EntryStore.prototype, 'releaseGroup');
+    try {
+      const answer = await h.request('GET', '/api/arrivals?limit=50');
+      expect(answer.json<Arrivals>().items).toHaveLength(60);
+      // One read of the release for its 60 files: it was one per file, 60 reads of 60 rows.
+      expect(reads).toHaveBeenCalledTimes(1);
+    } finally {
+      reads.mockRestore();
+    }
   });
 });

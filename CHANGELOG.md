@@ -44,6 +44,9 @@ All notable changes to Kinoshelf are written here. The format follows
 
 ### Fixed
 
+- Arrivals no longer slow down with the size of a release: the episodes TMDB has no number for were
+  read once per file, so a release of thousands of files cost thousands of reads of the whole release (#10).
+
 - A capitalized word opening an episode title (`Au nom de la mère`) is no longer read as a country (`AU`),
   which penalized the right series for not being Australian.
 

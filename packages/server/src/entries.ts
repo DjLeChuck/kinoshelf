@@ -302,6 +302,27 @@ export class EntryStore {
   }
 
   /**
+   * The episodes a validation of this one settles, itself included when it is open: the same
+   * rule as `releaseMates`, read once for a whole release and series, not once per file. A page of
+   * Arrivals asks for each of its files, which made a release of n files cost n reads of n rows.
+   */
+  releaseGroup(entry: Entry): Entry[] {
+    if (entry.release === null || entry.parsed.kind !== 'episode') {
+      return [];
+    }
+    return this.database
+      .prepare<[string, string, number], EntryRow>(
+        `SELECT ${COLUMNS} FROM job_entries
+         WHERE job_id = ? AND release = ? AND cluster = ?
+           AND resolution IS NULL AND classification != 'compliant'
+         ORDER BY seq`,
+      )
+      .all(entry.jobId, entry.release, entry.cluster)
+      .map(toEntry)
+      .filter((other) => other.parsed.kind === 'episode');
+  }
+
+  /**
    * The release and series of each entry, and how many files a validation of it settles (itself and
    * its `releaseMates`), for the lists that group files the way Arrivals does.
    */
