@@ -22,6 +22,8 @@ export const ERROR_CODES = [
   'main-not-done',
   'move.verification-failed',
   'plan.episode-numbers-missing',
+  'plan.no-movie-library',
+  'plan.no-series-library',
   'plan.outside-root',
   'plan.unsafe-segment',
   'plan.version-unavailable',

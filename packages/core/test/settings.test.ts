@@ -74,9 +74,25 @@ describe('resolveSettings destinations from the libraries', () => {
     ).toEqual({ movie: '/m/films', series: '/m/shows' });
   });
 
-  it('needs both kinds: a library of one type is not enough', () => {
-    expect(() => resolveSettings({}, { libraries: libraries.slice(0, 1) }, context)).toThrow(
+  it('copes with one kind only: the other has no root', () => {
+    expect(resolveSettings({}, { libraries: libraries.slice(0, 1) }, context).destinations).toEqual(
+      { movie: '/m/films' },
+    );
+    expect(resolveSettings({}, { libraries: libraries.slice(1) }, context).destinations).toEqual({
+      series: '/m/shows',
+    });
+  });
+
+  it('still needs a library of some kind', () => {
+    expect(() => resolveSettings({}, { libraries: [] }, context)).toThrow(
       expect.objectContaining({ info: { code: 'config.destination-required' } }) as Error,
     );
+  });
+
+  it('does not fall back on a library of a kind the caller set aside', () => {
+    expect(
+      resolveSettings({ destMovies: '/m/films', destSeries: null }, { libraries }, context)
+        .destinations,
+    ).toEqual({ movie: '/m/films' });
   });
 });

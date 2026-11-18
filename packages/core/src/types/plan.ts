@@ -60,9 +60,11 @@ export interface PlanItem {
 
 /**
  * Where files go. Plex asks for movies and TV shows in separate libraries, so a destination
- * can be one root for everything or one per kind.
+ * can be one root for everything or one per kind. A kind with no root has no library to receive
+ * it (someone may keep only movies, or only series): its files are held back, never written
+ * elsewhere.
  */
-export type DestinationRoots = string | { readonly movie: string; readonly series: string };
+export type DestinationRoots = string | { readonly movie?: string; readonly series?: string };
 
 export interface Plan {
   readonly id: string;

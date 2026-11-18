@@ -285,11 +285,14 @@ async function planItem(
     return unresolvable({ code: 'plan.unsafe-segment' });
   }
   const roots = options.destinationRoot;
-  const root = resolve(
-    typeof roots === 'string'
-      ? roots
-      : roots[input.candidate.kind === 'movie' ? 'movie' : 'series'],
-  );
+  const rootKind = input.candidate.kind === 'movie' ? 'movie' : 'series';
+  const configured = typeof roots === 'string' ? roots : roots[rootKind];
+  if (configured === undefined) {
+    return unresolvable({
+      code: rootKind === 'movie' ? 'plan.no-movie-library' : 'plan.no-series-library',
+    });
+  }
+  const root = resolve(configured);
   const pathOf = (t: { folders: string[]; stem: string }): string =>
     join(root, ...t.folders, `${t.stem}${extension}`);
   let destination = pathOf(target);
@@ -698,8 +701,12 @@ export async function createPlan(
       typeof options.destinationRoot === 'string'
         ? resolve(options.destinationRoot)
         : {
-            movie: resolve(options.destinationRoot.movie),
-            series: resolve(options.destinationRoot.series),
+            ...(options.destinationRoot.movie !== undefined && {
+              movie: resolve(options.destinationRoot.movie),
+            }),
+            ...(options.destinationRoot.series !== undefined && {
+              series: resolve(options.destinationRoot.series),
+            }),
           },
     mode: options.mode,
     items: shareCompanions(items),

@@ -6,7 +6,9 @@ import type { DestinationRoots } from '../types/plan.js';
 function rootsOf(destinationRoot: DestinationRoots): string[] {
   return typeof destinationRoot === 'string'
     ? [destinationRoot]
-    : [destinationRoot.movie, destinationRoot.series];
+    : [destinationRoot.movie, destinationRoot.series].filter(
+        (root): root is string => root !== undefined,
+      );
 }
 
 /** Strictly below a root: a root itself is a library, never ours to remove. */

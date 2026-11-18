@@ -64,8 +64,13 @@ const librarySchema = z
     name: z.string().min(1),
     source: z.string().min(1),
     type: libraryKindSchema.optional(),
-    /** Ids of typed libraries; both kinds, so a release always has a default destination. */
-    into: z.strictObject({ movie: z.string().min(1), series: z.string().min(1) }).optional(),
+    /**
+     * Ids of typed libraries, one per kind it sends to. A kind left out is one the owner does not
+     * keep: its files wait in Arrivals with the reason instead of going to another library.
+     */
+    into: z
+      .strictObject({ movie: z.string().min(1).optional(), series: z.string().min(1).optional() })
+      .optional(),
     /** Typed libraries only: an arrival folder takes the naming and metadata of its destination. */
     naming: namingSchema.optional(),
     metadata: metadataSchema.optional(),
@@ -81,6 +86,12 @@ const librarySchema = z
     };
     if ((library.type === undefined) === (library.into === undefined)) {
       problem('needs exactly one of "type" and "into"');
+    } else if (
+      library.into !== undefined &&
+      library.into.movie === undefined &&
+      library.into.series === undefined
+    ) {
+      problem('"into" needs a movie library, a series library, or both');
     } else if (
       library.into !== undefined &&
       (library.naming !== undefined || library.metadata !== undefined)

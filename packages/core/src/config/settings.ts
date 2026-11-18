@@ -14,8 +14,9 @@ export const metadataLanguageFor = (locale: string | undefined): string =>
 
 export interface SettingsOverrides {
   readonly dest?: string;
-  readonly destMovies?: string;
-  readonly destSeries?: string;
+  /** `null`: no library for this kind, with no fallback on the first one of its type. */
+  readonly destMovies?: string | null;
+  readonly destSeries?: string | null;
   readonly naming?: Naming;
   readonly metadata?: Metadata;
   readonly mode?: TransferMode;
@@ -57,15 +58,28 @@ export function resolveSettings(
   const firstOf = (type: 'movie' | 'series'): string | undefined =>
     config.libraries?.find((library) => library.type === type)?.source;
   const fallback = context.defaultToSource ? sourceDir : undefined;
-  const movie = overrides.destMovies ?? overrides.dest ?? firstOf('movie') ?? fallback;
-  const series = overrides.destSeries ?? overrides.dest ?? firstOf('series') ?? fallback;
-  if (movie === undefined || series === undefined) {
+  const rootOf = (
+    given: string | null | undefined,
+    type: 'movie' | 'series',
+  ): string | undefined =>
+    given === null ? undefined : (given ?? overrides.dest ?? firstOf(type) ?? fallback);
+  const movie = rootOf(overrides.destMovies, 'movie');
+  const series = rootOf(overrides.destSeries, 'series');
+  // One kind may have no library (only movies, or only series): its files are held back by the
+  // planner. Nothing at all is a configuration the caller must fix.
+  if (movie === undefined && series === undefined) {
     throw new KinoshelfError('config.destination-required');
   }
-  const roots = { movie: resolve(movie), series: resolve(series) };
-  const destinations: DestinationRoots = roots.movie === roots.series ? roots.movie : roots;
+  const roots = {
+    ...(movie !== undefined && { movie: resolve(movie) }),
+    ...(series !== undefined && { series: resolve(series) }),
+  };
+  const destinations: DestinationRoots =
+    roots.movie !== undefined && roots.movie === roots.series ? roots.movie : roots;
 
-  const inPlace = roots.movie === sourceDir && roots.series === sourceDir;
+  const inPlace = [roots.movie, roots.series].every(
+    (root) => root === undefined || root === sourceDir,
+  );
   const threshold = overrides.threshold ?? config.threshold;
 
   return {

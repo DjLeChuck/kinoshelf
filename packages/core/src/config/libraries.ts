@@ -23,13 +23,13 @@ function destinationOverrides(
     // shows before anything moves.
     return { dest: library.source };
   }
-  const sourceOf = (id: string): string | undefined =>
-    libraries.find((candidate) => candidate.id === id)?.source;
-  const movies = sourceOf(library.into.movie);
-  const series = sourceOf(library.into.series);
+  const sourceOf = (id: string | undefined): string | null =>
+    libraries.find((candidate) => candidate.id === id)?.source ?? null;
+  // A kind the folder does not send anywhere is `null`, not unset: unset would fall back on the
+  // first library of that kind, which the owner left out of this folder on purpose.
   return {
-    ...(movies !== undefined && { destMovies: movies }),
-    ...(series !== undefined && { destSeries: series }),
+    destMovies: sourceOf(library.into.movie),
+    destSeries: sourceOf(library.into.series),
   };
 }
 

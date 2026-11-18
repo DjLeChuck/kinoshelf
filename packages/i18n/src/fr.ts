@@ -19,6 +19,10 @@ export const fr: Record<keyof typeof en, string> = {
   'error.move.verification-failed':
     'La copie déplacée de {source} ne correspond pas à l’original ; la source a été conservée.',
   'error.plan.episode-numbers-missing': 'Le numéro de saison ou d’épisode est introuvable.',
+  'error.plan.no-movie-library':
+    'Aucune bibliothèque de films n’est configurée pour recevoir ce fichier.',
+  'error.plan.no-series-library':
+    'Aucune bibliothèque de séries n’est configurée pour recevoir ce fichier.',
   'error.plan.outside-root': 'Le chemin cible sortirait du dossier de destination.',
   'error.plan.unsafe-segment': 'Le titre produirait un nom de dossier ou de fichier dangereux.',
   'error.plan.version-unavailable':
@@ -61,7 +65,7 @@ export const fr: Record<keyof typeof en, string> = {
     '{path} est conservé : le fichier dont il a été copié ou lié a disparu ou a été remplacé, c’est donc la seule copie restante.',
 
   'error.config.destination-required':
-    'Indiquez une destination avec --dest (ou --dest-movies et --dest-series, ou --library).',
+    'Indiquez une destination avec --dest (ou --dest-movies et/ou --dest-series, ou --library).',
   'error.config.dir-not-writable':
     'Impossible d’écrire dans le dossier de configuration {path} (exécuté avec l’uid {uid}). Rendez-le accessible en écriture à cet utilisateur.',
   'error.config.invalid': 'Fichier de configuration invalide {path} : {detail}',

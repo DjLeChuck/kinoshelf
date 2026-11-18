@@ -46,6 +46,13 @@ describe('libraries', () => {
     });
   });
 
+  it('gives no root, and no fallback, to a kind an arrival folder does not send anywhere', () => {
+    expect(libraryOverrides({ ...arrival, into: { movie: 'films' } }, libraries)).toEqual({
+      destMovies: '/m/films',
+      destSeries: null,
+    });
+  });
+
   it('lists the sources of the watched libraries only', () => {
     expect(
       watchedFolders({
@@ -104,7 +111,13 @@ describe('libraries', () => {
       await rejected(
         `${head}  - {id: a, name: A, source: /a, into: {movie: shows, series: films}}\n`,
       );
-      await rejected(`${head}  - {id: a, name: A, source: /a, into: {movie: films}}\n`);
+    });
+
+    it('lets an arrival folder send to one kind only, but not to none', async () => {
+      const movies = await load(`${head}  - {id: a, name: A, source: /a, into: {movie: films}}\n`);
+      expect(movies.libraries?.[2]?.into).toEqual({ movie: 'films' });
+      await load(`${head}  - {id: a, name: A, source: /a, into: {series: shows}}\n`);
+      await rejected(`${head}  - {id: a, name: A, source: /a, into: {}}\n`);
     });
 
     it('no longer reads a global destination or watch.folders', async () => {

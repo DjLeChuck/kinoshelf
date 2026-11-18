@@ -24,6 +24,8 @@ export const en = {
   'error.move.verification-failed':
     'The moved copy of {source} does not match the original; the source was kept.',
   'error.plan.episode-numbers-missing': 'The season or episode number could not be determined.',
+  'error.plan.no-movie-library': 'No movie library is set up to receive this file.',
+  'error.plan.no-series-library': 'No series library is set up to receive this file.',
   'error.plan.outside-root': 'The target path would leave the destination folder.',
   'error.plan.unsafe-segment': 'The title would produce an unsafe folder or file name.',
   'error.plan.version-unavailable':
@@ -61,7 +63,7 @@ export const en = {
     'Kept {path}: the file it was copied or linked from is gone or was replaced, so it is the only copy left.',
 
   'error.config.destination-required':
-    'Give a destination with --dest (or --dest-movies and --dest-series, or --library).',
+    'Give a destination with --dest (or --dest-movies and/or --dest-series, or --library).',
   'error.config.dir-not-writable':
     'Cannot write to the config directory {path} (running as uid {uid}). Make it writable for that user.',
   'error.config.invalid': 'Invalid configuration file {path}: {detail}',

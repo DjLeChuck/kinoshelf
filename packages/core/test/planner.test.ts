@@ -232,6 +232,42 @@ describe('createPlan: separate libraries', () => {
   });
 });
 
+describe('createPlan: a kind with no library', () => {
+  it('holds back a series when only movies have a root, and the other way round', async () => {
+    const src = await makeDir();
+    const movies = await makeDir();
+    const film = await put(join(src, 'Dune.2021.mkv'));
+    const episode = await put(join(src, 'The.Bear.S03E04.mkv'));
+    const inputs = [
+      { parsed: parsedMovie(film), candidate: dune },
+      { parsed: parsedEpisode(episode, 3, [4]), candidate: bear },
+    ];
+
+    const result = await createPlan(inputs, {
+      profile: plex,
+      destinationRoot: { movie: movies },
+      mode: 'copy',
+    });
+    expect(result.items[0]?.status).toBe('ready');
+    expect(result.items[1]).toMatchObject({
+      status: 'conflict',
+      conflicts: [{ reason: 'unresolvable-name', detail: { code: 'plan.no-series-library' } }],
+    });
+    expect(result.destinationRoot).toEqual({ movie: movies });
+
+    const shows = await makeDir();
+    const other = await createPlan(inputs, {
+      profile: plex,
+      destinationRoot: { series: shows },
+      mode: 'copy',
+    });
+    expect(other.items[0]).toMatchObject({
+      conflicts: [{ detail: { code: 'plan.no-movie-library' } }],
+    });
+    expect(other.items[1]?.status).toBe('ready');
+  });
+});
+
 describe('createPlan: state of the disk', () => {
   it('holds back a file whose destination already exists', async () => {
     const [src, lib] = [await makeDir(), await makeDir()];
