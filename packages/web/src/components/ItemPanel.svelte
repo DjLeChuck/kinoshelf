@@ -241,7 +241,7 @@
       </VersionsSection>
     {/if}
     {#if canRun(item)}
-      <div>
+      <div class="actions">
         <button
           type="button"
           class="btn btn-primary"
@@ -255,7 +255,7 @@
       </div>
     {/if}
     {#if item.kind === 'movie'}
-      <div>
+      <div class="actions">
         <RescanButton
           {libraryId}
           path={rescanPath([item.path], source)}
@@ -276,7 +276,7 @@
       </div>
     {/if}
     {#if canNameVersion(item)}
-      <div>
+      <div class="actions">
         <Tip text={t('web.library.run.version.hint')}>
           {#snippet children(describedby)}
             <button
@@ -359,6 +359,13 @@
     min-height: 36px;
     padding: 0 12px;
     font-size: 13px;
+  }
+
+  /* Buttons side by side wrap onto a line of their own with a gap, not edge to edge. */
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
   }
 
   .show {
