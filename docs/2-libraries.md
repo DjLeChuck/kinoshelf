@@ -13,6 +13,10 @@ shows the phase (discover, read, identify, plan), the count and the file being r
 without news the page says "still running". The scan only runs one at a time per library (a second
 is refused), and it does not move files: a rename is a separate, previewed step.
 
+**Cancel the scan** (beside the button, and in the [activity panel](1-web-ui.md#activity-panel)) stops a scan that
+is waiting or running. Nothing is stored, so the library keeps what its last scan saw; the History lists the job as
+**Cancelled** and offers **Send again**.
+
 What the scan saw is kept as a **snapshot**: the lists read it, never the disk and never TMDB, so
 they are instant. It is patched after each transfer, undo or manual match, and replaced as a whole by
 the next scan. Nothing scans on its own: a scan comes from a click, from the folder watcher or from

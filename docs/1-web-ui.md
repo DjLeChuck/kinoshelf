@@ -126,7 +126,7 @@ One list for what Kinoshelf did:
 - a **batch** is a line (a transfer, a rename, a refresh, an image change, a tidy-up…), with its
   files, what was written beside them (NFO, images) and what was set aside (an NFO written again, for
   instance to add a rating, reads "NFO replaced", and undoing the batch puts the old file back);
-- a **job** is a line only while it has no batch: waiting, running, or failed, with its cause, the
+- a **job** is a line only while it has no batch: waiting, running, failed or cancelled, with its cause, the
   settings it ran with and **Send again**. A job that made a batch is folded into it.
 - Analyses that finished and moved nothing are hidden until you tick **Show every analysis**. They
   stay in the database until the daily purge (see [Retention](#retention)), but the journal is never
@@ -145,7 +145,7 @@ The selected line is in the address (`/history/<id>`), so you can link to it.
 ## Activity panel
 
 At the bottom right of every page, a pill says how many tasks run in the background. It unfolds to a
-line per task: title, phase, progress bar, current file and a link to where it is followed. It lists
+line per task: title, phase, progress bar, current file and a link to where it is followed; a running scan has a **Cancel** button. It lists
 scans, transfers, undos, arrival validations, tidy-ups, database backup and compaction, emptying
 `replaced/`, sending collection images, downloading IMDb's ratings and adding them to the NFO. A finished task stays a few seconds (ten minutes when it
 failed) and can be closed by hand.

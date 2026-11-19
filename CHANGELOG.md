@@ -8,6 +8,10 @@ All notable changes to Kinoshelf are written here. The format follows
 
 ### Added
 
+- A scan, or any analysis, can now be cancelled while it is queued or running, from the library page
+  ("Cancel the scan") and from the activity panel. Nothing is stored: the library keeps the rows its last scan
+  left, and the History lists the job as cancelled, not failed, where "Send again" is offered (#8).
+
 - The NFO can now carry IMDb's rating beside TMDB's (`<rating name="imdb">`, with its vote count). It is opt-in
   (Settings › Processing, `imdbRatings` in `config.yaml`) and nothing is downloaded until it is ticked: Kinoshelf
   then fetches IMDb's public ratings file, offered for personal, non-commercial use, at most once a day, and

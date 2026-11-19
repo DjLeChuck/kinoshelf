@@ -40,7 +40,7 @@ key) is the reference for parameters and responses; this is the map.
 | Area            | Routes                                                                                                                                                                                    |
 | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Public          | `GET /health`, the sign-in (`/api/session`) and first-key setup (`POST /api/setup/api-key`)                                                                                               |
-| Jobs            | `POST /api/jobs` (analyze a path, `apply` to transfer), `GET /api/jobs/{id}`                                                                                                              |
+| Jobs            | `POST /api/jobs` (analyze a path, `apply` to transfer), `GET /api/jobs/{id}`, `POST /api/jobs/{id}/cancel`                                                                                |
 | Arrivals        | `GET /api/arrivals` (`?state=ready\|review\|unrecognized`), `GET /api/search` (TMDB candidates)                                                                                           |
 | Entries         | `POST /api/entries/{id}/match`, `/preview`, `/ignore`; `GET .../match` follows a validation                                                                                               |
 | Plans           | `POST /api/plans/{id}/execute` (with `entries`) transfers what a plan holds                                                                                                               |
