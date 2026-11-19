@@ -10,6 +10,7 @@
     STATUS_LABEL,
     releaseName,
     startPlanned,
+    goesAsPlanned,
     statusOf,
     toMatchBody,
     validate,
@@ -97,8 +98,7 @@
    * picked: that is a new choice, which "Validate" matches again.
    */
   const asPlanned = $derived(
-    status === 'ready' &&
-      selected === entry.candidates[0] &&
+    goesAsPlanned(status === 'ready', selected, entry.candidates[0]) &&
       chosenLibrary === undefined &&
       chosenSize === undefined,
   );

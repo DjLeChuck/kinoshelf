@@ -235,6 +235,19 @@ export function toMatchBody(candidate: Candidate): Omit<Candidate, 'score'> {
 export const sameCandidate = (a: Candidate, b: Candidate): boolean =>
   a.kind === b.kind && a.id.id === b.id.id;
 
+/**
+ * Whether "Transfer" (the plan as it is) applies rather than "Validate" (a new choice): the file
+ * was matched with confidence and the candidate chosen is still the first. Compared by work, never
+ * by object: the list is read again on each event, and the candidate held by the panel is then
+ * another object for the same work.
+ */
+export const goesAsPlanned = (
+  ready: boolean,
+  selected: Candidate | undefined,
+  first: Candidate | undefined,
+): boolean =>
+  ready && selected !== undefined && first !== undefined && sameCandidate(selected, first);
+
 type Post = <T>(url: string, body?: unknown) => Promise<T>;
 
 /**

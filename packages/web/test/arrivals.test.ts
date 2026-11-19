@@ -7,6 +7,7 @@ import {
   groupReleases,
   readArrivals,
   releaseName,
+  goesAsPlanned,
   sameCandidate,
   statusOf,
   toMatchBody,
@@ -102,6 +103,17 @@ describe('candidates', () => {
   it('tells two candidates apart by kind and id: a movie and a series may share an id', () => {
     expect(sameCandidate(dune, toMatchBody(dune))).toBe(true);
     expect(sameCandidate(dune, { ...dune, kind: 'series' })).toBe(false);
+  });
+
+  it('goes as planned while the first candidate stays chosen, even once the list was read again', () => {
+    // The panel holds the object it was opened with; a later read hands back an equal, new one.
+    const reread = structuredClone(dune);
+    expect(reread).not.toBe(dune);
+    expect(goesAsPlanned(true, dune, reread)).toBe(true);
+    expect(goesAsPlanned(true, dune, { ...dune, id: { provider: 'tmdb', id: 1 } })).toBe(false);
+    expect(goesAsPlanned(false, dune, reread)).toBe(false);
+    expect(goesAsPlanned(true, undefined, reread)).toBe(false);
+    expect(goesAsPlanned(true, dune, undefined)).toBe(false);
   });
 });
 
