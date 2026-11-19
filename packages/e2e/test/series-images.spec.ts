@@ -33,6 +33,9 @@ test('changes the poster and adds a logo of a show from its panel', async ({ pag
     )
     .toBe('done');
 
+  // Wide enough for the panel to stay beside the tree once the seasons are open: stacked, it is a
+  // sheet that opening a row's seasons leaves closed.
+  await page.setViewportSize({ width: 1600, height: 900 });
   await signIn(page);
   await page.goto(`/libraries/${id}`);
   await page.getByRole('button', { name: 'Show the seasons of Severance' }).click();
