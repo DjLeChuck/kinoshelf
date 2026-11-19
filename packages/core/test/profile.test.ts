@@ -354,6 +354,15 @@ describe('checkNaming', () => {
     );
   });
 
+  it('accepts the variables the file itself tells, in a file name only', () => {
+    expect(
+      codeOf(() => checkNaming(movie('{title} ({year}) {audioCodec} {videoCodec} [{hdr}]'))),
+    ).toBeUndefined();
+    expect(codeOf(() => checkNaming(movie('{title}', '{title} {hdr}')))).toBe(
+      'profile.unknown-variable',
+    );
+  });
+
   it('shows the default names of a type that is not customised', () => {
     const report = checkNaming(movie('{title} ({year}) {screenSize}'));
     expect(report.preview.complete.episode.path).toEqual([

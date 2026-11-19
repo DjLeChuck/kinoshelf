@@ -15,6 +15,7 @@ import {
   probePictureSize,
   sizeFromStreams,
   summarize,
+  traitsOf,
   type Probe,
   type Prober,
 } from '../src/probe.js';
@@ -74,6 +75,37 @@ describe('summarize', () => {
         mtime: 2,
       }).audio,
     ).toBe('dts 3ch');
+  });
+});
+
+describe('traitsOf', () => {
+  const probe = (video: string | null, audio: string | null, hdr: Probe['hdr']): Probe => ({
+    video,
+    audio,
+    hdr,
+    audioLanguages: [],
+    subtitleLanguages: [],
+    picture: null,
+    size: 1,
+    mtime: 2,
+  });
+
+  it('writes the codecs in capitals, tells eac3 from ac3, and names the dynamic range', () => {
+    expect(traitsOf(probe('hevc', 'eac3 5.1', 'dolby-vision'))).toEqual({
+      videoCodec: 'HEVC',
+      audioCodec: 'EAC3',
+      hdr: 'Dolby Vision',
+    });
+    expect(traitsOf(probe('h264', 'ac3 5.1', 'hdr10-plus'))).toEqual({
+      videoCodec: 'H264',
+      audioCodec: 'AC3',
+      hdr: 'HDR10+',
+    });
+  });
+
+  it('leaves out what the file does not have: SDR, no audio', () => {
+    expect(traitsOf(probe('av1', null, null))).toEqual({ videoCodec: 'AV1' });
+    expect(traitsOf(probe(null, null, null))).toEqual({});
   });
 });
 

@@ -26,6 +26,8 @@ export const fr: Record<keyof typeof en, string> = {
     'Aucune bibliothèque de séries n’est configurée pour recevoir ce fichier.',
   'error.plan.outside-root': 'Le chemin cible sortirait du dossier de destination.',
   'error.plan.unsafe-segment': 'Le titre produirait un nom de dossier ou de fichier dangereux.',
+  'error.plan.probe-unavailable':
+    'Le nom utilise le contenu du fichier (codec, HDR) et ffprobe n’a pas pu le lire.',
   'error.plan.version-unavailable':
     'Le nom du fichier n’indique pas sa taille d’image, ou le profil ne prévoit pas de nom pour plusieurs versions.',
   'error.profile.double-quoted-escape':

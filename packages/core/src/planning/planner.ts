@@ -7,8 +7,10 @@ import { VIDEO_EXTENSIONS } from '../pipeline/discover.js';
 import {
   parseTemplate,
   renderProfileTemplate,
+  templateVariables,
   type TemplateVariables,
 } from '../profiles/template.js';
+import { PROBE_VARIABLES } from '../profiles/variables.js';
 import type { CollectionOverride } from '../collections.js';
 import type { Details, ImageSize } from '../types/details.js';
 import type { ErrorInfo } from '../types/errors.js';
@@ -42,6 +44,16 @@ export interface PlanInput {
   readonly applyVersion?: boolean;
 }
 
+/**
+ * What the file itself says of its streams, written as a name would (`HEVC`, `EAC3`, `HDR10`). A
+ * field is absent when the file has none (an SDR video has no `hdr`).
+ */
+export interface FileTraits {
+  readonly videoCodec?: string;
+  readonly audioCodec?: string;
+  readonly hdr?: string;
+}
+
 export interface PlannerOptions {
   readonly profile: Profile;
   readonly destinationRoot: DestinationRoots;
@@ -57,6 +69,12 @@ export interface PlannerOptions {
    * the file collides with one. Absent, or `undefined` as an answer, the file stays unlabelled.
    */
   readonly sizeOf?: (path: string) => Promise<string | undefined>;
+  /**
+   * Reads what the file says of its streams (`{videoCodec}`, `{audioCodec}`, `{hdr}` in a name).
+   * Asked only for a file whose name template uses one of them. `undefined` as an answer, or no
+   * reader, leaves the file unnamed: the name would silently lack what the owner asked for.
+   */
+  readonly traitsOf?: (path: string) => Promise<FileTraits | undefined>;
   /**
    * Whether a file is one Kinoshelf wrote and nobody touched since (`Journal.madeFileIdentity`).
    * An NFO that is one does not follow its video to a new name when the plan writes the NFO of
@@ -98,6 +116,12 @@ const blocked = (conflict: Conflict, base: Omit<PlanItem, 'status' | 'conflicts'
 const versionTemplateOf = (profile: Profile, kind: 'movie' | 'series'): string | undefined =>
   kind === 'movie' ? profile.templates.movieVersion : profile.templates.episodeVersion;
 
+/** Whether the file name of this kind of work uses something only the file itself can tell. */
+function readsStreams(profile: Profile, kind: 'movie' | 'series'): boolean {
+  const template = kind === 'movie' ? profile.templates.movieFile : profile.templates.episodeFile;
+  return templateVariables(parseTemplate(template)).some((name) => PROBE_VARIABLES.includes(name));
+}
+
 /** The text of the version template that comes before `{version}`: what a labelled name shows. */
 function versionPrefixOf(template: string): string {
   const first = parseTemplate(template).tokens[0];
@@ -117,6 +141,7 @@ function targetSegments(
   profile: Profile,
   extensionBytes: number,
   version?: string,
+  traits?: FileTraits,
 ): { folders: string[]; stem: string; workDepth: number } {
   const { parsed, candidate } = input;
   // The provider's title for the (first) episode, else what the file name says.
@@ -129,6 +154,9 @@ function targetSegments(
     ...(parsed.screenSize !== undefined && { screenSize: parsed.screenSize }),
     ...(parsed.source !== undefined && { source: parsed.source }),
     ...(parsed.releaseGroup !== undefined && { releaseGroup: parsed.releaseGroup }),
+    ...(traits?.videoCodec !== undefined && { videoCodec: traits.videoCodec }),
+    ...(traits?.audioCodec !== undefined && { audioCodec: traits.audioCodec }),
+    ...(traits?.hdr !== undefined && { hdr: traits.hdr }),
     ...(parsed.season !== undefined && { season: parsed.season }),
     ...(parsed.episodes.length > 0 && { episode: parsed.episodes }),
     ...(episodeTitle !== undefined && { episodeTitle }),
@@ -275,8 +303,16 @@ async function planItem(
   const extension = input.parsed.extension ? `.${input.parsed.extension}` : '';
   let target: { folders: string[]; stem: string; workDepth: number };
   const reserveBytes = Math.max(Buffer.byteLength(extension), STEM_SUFFIX_RESERVE_BYTES);
+  let traits: FileTraits | undefined;
+  if (readsStreams(profile, kind)) {
+    traits = await options.traitsOf?.(source);
+    if (traits === undefined) {
+      // The name is asked to say what the file holds: without it, it would be wrong, not shorter.
+      return unresolvable({ code: 'plan.probe-unavailable' });
+    }
+  }
   try {
-    target = targetSegments(input, profile, reserveBytes);
+    target = targetSegments(input, profile, reserveBytes, undefined, traits);
   } catch (error) {
     if (error instanceof KinoshelfError) {
       return unresolvable(error.info);
@@ -341,7 +377,7 @@ async function planItem(
           break;
         }
         try {
-          target = targetSegments(input, profile, reserveBytes, label);
+          target = targetSegments(input, profile, reserveBytes, label, traits);
         } catch (error) {
           if (error instanceof KinoshelfError) {
             return unresolvable(error.info);

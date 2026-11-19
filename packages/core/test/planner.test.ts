@@ -325,6 +325,63 @@ describe('createPlan: a custom name is kept as written', () => {
   });
 });
 
+describe('createPlan: names that use what the file holds', () => {
+  const streams = buildProfile({
+    naming: 'no-id',
+    metadata: 'none',
+    names: {
+      movieFolder: '{title} ({year})',
+      movieFile: '{title} ({year}) {screenSize} {audioCodec} [{hdr}]',
+    },
+  });
+  const wanted = async (traitsOf: PlannerOptions['traitsOf'], profile = streams) => {
+    const [src, lib] = [await makeDir(), await makeDir()];
+    const source = await put(join(src, 'Dune.mkv'));
+    const result = await createPlan(
+      [{ parsed: { ...parsedMovie(source), screenSize: '2160p' }, candidate: dune }],
+      {
+        profile,
+        destinationRoot: lib,
+        mode: 'copy',
+        newId: counter(),
+        ...(traitsOf && { traitsOf }),
+      },
+    );
+    return { item: result.items[0], lib };
+  };
+
+  it('writes what the file says, and leaves out what it has not', async () => {
+    const full = await wanted(() => Promise.resolve({ audioCodec: 'EAC3', hdr: 'HDR10' }));
+    expect(destinationOf(full.item)).toBe(
+      join(full.lib, 'Dune (2021)', 'Dune (2021) 2160p EAC3 [HDR10].mkv'),
+    );
+    const sdr = await wanted(() => Promise.resolve({ audioCodec: 'AC3' }));
+    expect(destinationOf(sdr.item)).toBe(join(sdr.lib, 'Dune (2021)', 'Dune (2021) 2160p AC3.mkv'));
+  });
+
+  it('holds a file back when it could not be read, rather than naming it without', async () => {
+    for (const traitsOf of [() => Promise.resolve(undefined), undefined]) {
+      const { item } = await wanted(traitsOf);
+      expect(item?.status).toBe('conflict');
+      expect(item?.conflicts[0]).toMatchObject({
+        reason: 'unresolvable-name',
+        detail: { code: 'plan.probe-unavailable' },
+      });
+    }
+  });
+
+  it('never reads a file for a name that does not use the streams', async () => {
+    let reads = 0;
+    const plain = buildProfile({ naming: 'no-id', metadata: 'none' });
+    const { item } = await wanted(() => {
+      reads += 1;
+      return Promise.resolve({});
+    }, plain);
+    expect(item?.status).toBe('ready');
+    expect(reads).toBe(0);
+  });
+});
+
 describe('createPlan: separate libraries', () => {
   it('sends movies and series to their own roots', async () => {
     const src = await makeDir();

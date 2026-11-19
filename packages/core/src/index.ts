@@ -61,6 +61,7 @@ export {
   createPlan,
   selectItems,
   type PlanInput,
+  type FileTraits,
   type PlannerOptions,
   hasVersionSibling,
 } from './planning/planner.js';

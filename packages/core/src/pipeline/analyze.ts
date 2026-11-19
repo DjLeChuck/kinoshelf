@@ -1,7 +1,7 @@
 import { throwIfCancelled } from '../errors.js';
 import { Matcher } from '../matching/matcher.js';
 import type { MatchingConfig } from '../matching/config.js';
-import { createPlan, type PlanInput } from '../planning/planner.js';
+import { createPlan, type PlanInput, type PlannerOptions } from '../planning/planner.js';
 import type { CollectionOverride } from '../collections.js';
 import type { CollectionInfo } from '../types/details.js';
 import type { MatchOutcome } from '../types/matching.js';
@@ -76,6 +76,8 @@ export interface AnalyzeOptions {
   readonly collectionOverride?: (candidate: Candidate) => CollectionOverride | undefined;
   /** Reads a picture size from a file, for a name that says none (see `PlannerOptions.sizeOf`). */
   readonly sizeOf?: (path: string) => Promise<string | undefined>;
+  /** Reads the streams of a file for a name that uses them (see `PlannerOptions.traitsOf`). */
+  readonly traitsOf?: PlannerOptions['traitsOf'];
   /** Whether a file is one Kinoshelf wrote and left alone (see `PlannerOptions.madeByUs`). */
   readonly madeByUs?: (path: string) => Promise<boolean>;
   /** Files matched at the same time (each may issue several provider requests). */
@@ -280,6 +282,7 @@ export async function analyze(
     ...(loader.needsMetadata && { imageUrl: options.provider.imageUrl.bind(options.provider) }),
     ...(options.sidecarExtensions && { sidecarExtensions: options.sidecarExtensions }),
     ...(options.sizeOf && { sizeOf: options.sizeOf }),
+    ...(options.traitsOf && { traitsOf: options.traitsOf }),
     ...(options.madeByUs && { madeByUs: options.madeByUs }),
     // A work corrected by hand: what Kinoshelf wrote for the former one is written again.
     ...(options.forced && { replaces: true }),

@@ -25,6 +25,7 @@ export const ERROR_CODES = [
   'plan.no-movie-library',
   'plan.no-series-library',
   'plan.outside-root',
+  'plan.probe-unavailable',
   'plan.unsafe-segment',
   'plan.version-unavailable',
   'profile.double-quoted-escape',

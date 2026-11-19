@@ -2,7 +2,17 @@
  * What says something of one video, not of the work: a folder holds several versions of a work, so
  * only a file's name may carry them.
  */
-const FILE_VARIABLES = ['screenSize', 'source', 'releaseGroup'] as const;
+const FILE_VARIABLES = [
+  'screenSize',
+  'source',
+  'releaseGroup',
+  'videoCodec',
+  'audioCodec',
+  'hdr',
+] as const;
+
+/** The ones the file itself tells (ffprobe), not its name: reading them is what they cost. */
+export const PROBE_VARIABLES: readonly string[] = ['videoCodec', 'audioCodec', 'hdr'];
 
 /**
  * Variables that may have no value (an id TMDB lacks, a size the name does not give). A template

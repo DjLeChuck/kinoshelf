@@ -29,6 +29,8 @@ export const en = {
   'error.plan.no-series-library': 'No series library is set up to receive this file.',
   'error.plan.outside-root': 'The target path would leave the destination folder.',
   'error.plan.unsafe-segment': 'The title would produce an unsafe folder or file name.',
+  'error.plan.probe-unavailable':
+    'The name uses what the file holds (codec, HDR), and ffprobe could not read it.',
   'error.plan.version-unavailable':
     'The file name does not say its picture size, or the profile has no naming for several versions.',
   'error.profile.double-quoted-escape':

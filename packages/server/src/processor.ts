@@ -20,7 +20,7 @@ import { imdbRatingsOf, withImdbRatings } from './imdb-ratings.js';
 import { RequestPool, SqliteHttpCache, tmdbFromEnv } from '@kinoshelf/provider-tmdb';
 import { CollectionStore } from './collections.js';
 import type { Job, ProcessedJob } from './jobs.js';
-import { probePictureSize, type SizeReader } from './probe.js';
+import { probePictureSize, probeTraits, type SizeReader, type TraitReader } from './probe.js';
 import type { ProgressTracker } from './progress.js';
 
 export interface ProcessorDeps {
@@ -32,6 +32,8 @@ export interface ProcessorDeps {
   readonly createProvider?: (options: { language: string }) => MetadataProvider;
   /** Replaces `ffprobe` for the size of a file whose name says none, for tests. */
   readonly sizeReader?: SizeReader;
+  /** Replaces `ffprobe` for a name that uses the codecs or the HDR of the file, for tests. */
+  readonly traitReader?: TraitReader;
   /** Told where each analysis is; none for the CLI and the tests that do not look. */
   readonly progress?: ProgressTracker;
   /** Told of a folder a scan had to leave out because it could not be read. */
@@ -60,6 +62,17 @@ export function withSizeReader(deps: Pick<ProcessorDeps, 'config' | 'sizeReader'
 } {
   const sizeOf = sizeReaderOf(deps);
   return sizeOf ? { sizeOf } : {};
+}
+
+/**
+ * The `traitsOf` option of the core: a library whose names use `{audioCodec}`, `{videoCodec}` or
+ * `{hdr}` needs the file read to be named, whatever `detectPictureSize` says (that one only decides
+ * on a size the owner may give by hand).
+ */
+export function withTraitReader(deps: Pick<ProcessorDeps, 'traitReader'>): {
+  traitsOf: TraitReader;
+} {
+  return { traitsOf: deps.traitReader ?? probeTraits };
 }
 
 export function createProcessor(
@@ -146,6 +159,7 @@ async function process(
     ...(job.candidate && { forced: job.candidate }),
     ...(settings.threshold !== undefined && { matching: { threshold: settings.threshold } }),
     ...withSizeReader(deps),
+    ...withTraitReader(deps),
     madeByUs: (path) => madeByUs(journal, path),
     // What the owner decided for a movie outlives the provider's record, which a scan rewrites.
     collectionOverride: (candidate) => collections.override(job.libraryId, candidate.id.id),

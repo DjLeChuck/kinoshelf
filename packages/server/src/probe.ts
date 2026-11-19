@@ -3,7 +3,7 @@ import { existsSync } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { isSea } from 'node:sea';
-import { errnoCode, pictureSize } from '@kinoshelf/core';
+import { errnoCode, pictureSize, type FileTraits } from '@kinoshelf/core';
 import type { LibraryItemStore } from './library-items.js';
 
 /**
@@ -206,6 +206,38 @@ export const probePictureSize: SizeReader = (path) =>
       },
     );
   });
+
+const HDR_NAMES: Readonly<Record<Hdr, string>> = {
+  'dolby-vision': 'Dolby Vision',
+  'hdr10-plus': 'HDR10+',
+  hdr10: 'HDR10',
+  hlg: 'HLG',
+};
+
+/**
+ * What a name may say of a probe: the codec as ffprobe names it, in capitals (`HEVC`, `EAC3`, which
+ * a release name's `Dolby Digital` does not tell from `AC3`), and the dynamic range. An SDR video
+ * has none, so `{hdr}` is left out of its name.
+ */
+export function traitsOf(probe: Probe): FileTraits {
+  const audioCodec = probe.audio?.split(' ')[0];
+  return {
+    ...(probe.video && { videoCodec: probe.video.toUpperCase() }),
+    ...(audioCodec && { audioCodec: audioCodec.toUpperCase() }),
+    ...(probe.hdr && { hdr: HDR_NAMES[probe.hdr] }),
+  };
+}
+
+/** Reads a file's streams for a name that uses them; nothing when it cannot be read. */
+export type TraitReader = (path: string) => Promise<FileTraits | undefined>;
+
+export const probeTraits: TraitReader = async (path) => {
+  try {
+    return traitsOf(await ffprobe(path));
+  } catch {
+    return undefined;
+  }
+};
 
 let knownVersion: string | undefined;
 
