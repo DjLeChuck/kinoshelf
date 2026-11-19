@@ -1,6 +1,6 @@
 import { lstat, readdir, stat } from 'node:fs/promises';
 import { basename, dirname, extname, join, relative, resolve, sep } from 'node:path';
-import { KinoshelfError } from '../errors.js';
+import { KinoshelfError, throwIfCancelled } from '../errors.js';
 
 export const VIDEO_EXTENSIONS: readonly string[] = [
   'mkv',
@@ -63,13 +63,17 @@ export interface DiscoverOptions {
    * left out: one such folder must not fail the scan of a whole library. The root itself still does.
    */
   readonly onUnreadable?: (path: string, error: unknown) => void;
+  /** Aborted by a caller that gave up: the walk stops with `task.cancelled`. */
+  readonly signal?: AbortSignal;
 }
 
 async function* walk(
   directory: string,
   onUnreadable: DiscoverOptions['onUnreadable'],
+  signal: AbortSignal | undefined,
   isRoot = true,
 ): AsyncGenerator<string> {
+  throwIfCancelled(signal);
   let entries;
   try {
     entries = await readdir(directory, { withFileTypes: true });
@@ -88,7 +92,7 @@ async function* walk(
     const path = join(directory, entry.name);
     if (entry.isDirectory()) {
       // Symbolic links are not followed: no loops, no escaping the root.
-      yield* walk(path, onUnreadable, false);
+      yield* walk(path, onUnreadable, signal, false);
     } else if (entry.isFile()) {
       yield path;
     }
@@ -123,7 +127,7 @@ export async function discoverVideos(
     extensions.includes(extname(path).slice(1).toLowerCase()) && !isSample(relative(base, path));
   const paths: string[] = [];
   if (info.isDirectory()) {
-    for await (const path of walk(root, options.onUnreadable)) {
+    for await (const path of walk(root, options.onUnreadable, options.signal)) {
       if (isVideo(path)) {
         paths.push(path);
         onFound?.(paths.length);

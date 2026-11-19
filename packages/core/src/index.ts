@@ -9,7 +9,7 @@ export type * from './types/plan.js';
 export type * from './types/journal.js';
 export type * from './types/errors.js';
 export { ERROR_CODES, type ErrorCode } from './error-codes.js';
-export { errnoCode, KinoshelfError } from './errors.js';
+export { errnoCode, KinoshelfError, throwIfCancelled } from './errors.js';
 export { packageVersion } from './version.js';
 export { effectiveCollection, withCollection, type CollectionOverride } from './collections.js';
 export { loadProfileFile, parseProfile } from './profiles/loader.js';

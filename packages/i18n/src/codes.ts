@@ -50,6 +50,7 @@ export const API_ERROR_CODES = [
   'image.url-too-large',
   'image.url-too-many-redirects',
   'internal.unexpected',
+  'job.not-cancellable',
   'job.not-done',
   'job.not-found',
   'library.in-use',

@@ -131,7 +131,7 @@ export const jobSchema = {
     path: { type: 'string' },
     /** The library this job scans, or a release of its watched folder. */
     libraryId: { type: 'string', nullable: true },
-    status: { type: 'string', enum: ['queued', 'running', 'done', 'failed'] },
+    status: { type: 'string', enum: ['queued', 'running', 'done', 'failed', 'cancelled'] },
     apply: { type: 'boolean' },
     startedAt: { type: 'string', format: 'date-time', nullable: true },
     finishedAt: { type: 'string', format: 'date-time', nullable: true },
@@ -472,7 +472,10 @@ export const activitySchema = {
     },
     kind: { type: 'string', enum: ['batch', 'job'] },
     at: { type: 'string', format: 'date-time' },
-    status: { type: 'string', enum: ['queued', 'running', 'done', 'undone', 'failed'] },
+    status: {
+      type: 'string',
+      enum: ['queued', 'running', 'done', 'undone', 'failed', 'cancelled'],
+    },
     path: {
       type: 'string',
       nullable: true,
@@ -1380,7 +1383,7 @@ export const librarySchema = {
       required: ['jobId', 'status'],
       properties: {
         jobId: { type: 'string', format: 'uuid' },
-        status: { type: 'string', enum: ['queued', 'running', 'done', 'failed'] },
+        status: { type: 'string', enum: ['queued', 'running', 'done', 'failed', 'cancelled'] },
       },
     },
     /** A scan of the whole source is queued or running. */

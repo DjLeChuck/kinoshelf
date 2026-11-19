@@ -292,6 +292,32 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
     },
   );
 
+  api.post<{ Params: { id: string } }>(
+    '/api/jobs/:id/cancel',
+    {
+      schema: {
+        summary: 'Cancel an analysis, queued or running',
+        description:
+          'A queued job is cancelled at once; a running one stops at its next check and ends as ' +
+          '`cancelled` (announced by the `jobs` event). Nothing is stored, so a library keeps the ' +
+          'rows its last scan left. 409 `job.not-cancellable` once the job ended.',
+        params: idParams,
+        response: { 202: jobSchema, 401: errorSchema, 404: errorSchema, 409: errorSchema },
+      },
+    },
+    (request, reply) => {
+      const job = jobs.get(request.params.id);
+      if (!job) {
+        return reply.code(404).send({ error: { code: 'job.not-found' } });
+      }
+      if (!runner.cancel(job.id)) {
+        throw new ApiError(409, 'job.not-cancellable');
+      }
+      events.emit('jobs');
+      return reply.code(202).send(presentJob(jobs.get(job.id) ?? job));
+    },
+  );
+
   api.get<{ Querystring: Paging & { state?: 'ready' | 'review' | 'unrecognized' } }>(
     '/api/arrivals',
     {

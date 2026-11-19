@@ -62,18 +62,24 @@ export function withSizeReader(deps: Pick<ProcessorDeps, 'config' | 'sizeReader'
   return sizeOf ? { sizeOf } : {};
 }
 
-export function createProcessor(deps: ProcessorDeps): (job: Job) => Promise<ProcessedJob> {
-  return async (job) => {
+export function createProcessor(
+  deps: ProcessorDeps,
+): (job: Job, signal?: AbortSignal) => Promise<ProcessedJob> {
+  return async (job, signal) => {
     deps.progress?.start(job.id);
     try {
-      return await process(deps, job);
+      return await process(deps, job, signal);
     } finally {
       deps.progress?.finish(job.id);
     }
   };
 }
 
-async function process(deps: ProcessorDeps, job: Job): Promise<ProcessedJob> {
+async function process(
+  deps: ProcessorDeps,
+  job: Job,
+  signal: AbortSignal | undefined,
+): Promise<ProcessedJob> {
   let isFile: boolean;
   try {
     isFile = (await stat(job.path)).isFile();
@@ -112,6 +118,7 @@ async function process(deps: ProcessorDeps, job: Job): Promise<ProcessedJob> {
       // A folder of the library read alone is parsed as it would be inside a scan of the source.
       ...(library && job.rescan && { parserRoot: library.source }),
       ...(deps.onUnreadable && { onUnreadable: deps.onUnreadable }),
+      ...(signal && { signal }),
     },
   );
   progress?.discovered(job.id, files.length);
@@ -119,6 +126,7 @@ async function process(deps: ProcessorDeps, job: Job): Promise<ProcessedJob> {
   const collections = new CollectionStore(deps.database);
   const analysis = await analyze(files, {
     parser: new GuessitParser(),
+    ...(signal && { signal }),
     provider: makeProvider(deps, settings.metadataLanguage),
     profile: settings.profile,
     destinationRoot: settings.destinations,

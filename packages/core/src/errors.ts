@@ -12,6 +12,13 @@ export class KinoshelfError extends Error {
   }
 }
 
+/** Stops a long task the caller asked to cancel: throws `task.cancelled` once `signal` is aborted. */
+export function throwIfCancelled(signal: AbortSignal | undefined): void {
+  if (signal?.aborted) {
+    throw new KinoshelfError('task.cancelled');
+  }
+}
+
 /** The system error code of a failed file or process call (`ENOENT`, `EACCES`…), if it has one. */
 export function errnoCode(error: unknown): string | undefined {
   return typeof error === 'object' &&

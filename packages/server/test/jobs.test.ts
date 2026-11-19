@@ -1,7 +1,7 @@
 import { readdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { Database } from '@kinoshelf/core';
+import { Database, throwIfCancelled } from '@kinoshelf/core';
 import { migrated } from '../src/database.js';
 import { EntryStore } from '../src/entries.js';
 import { ExecutionStore } from '../src/executions.js';
@@ -165,6 +165,41 @@ function newQueue(): { jobs: JobStore; executions: ExecutionStore } {
 
 const done = { summary: { done: 0, failed: 0 }, files: [] };
 
+describe('POST /api/jobs/:id/cancel', () => {
+  it('cancels a running and a queued job, then refuses to cancel them again', async () => {
+    const h = await harness({
+      processor: async (_job, signal) => {
+        await new Promise<void>((resolve) => {
+          signal.addEventListener('abort', () => {
+            resolve();
+          });
+        });
+        throwIfCancelled(signal);
+        return empty;
+      },
+    });
+    const running = (await h.request('POST', '/api/jobs', { path: '/a' })).json<JobBody>();
+    const queued = (await h.request('POST', '/api/jobs', { path: '/b' })).json<JobBody>();
+
+    const first = await h.request('POST', `/api/jobs/${queued.id}/cancel`);
+    expect(first.statusCode).toBe(202);
+    expect(first.json<JobBody>().status).toBe('cancelled');
+    expect((await h.request('POST', `/api/jobs/${running.id}/cancel`)).statusCode).toBe(202);
+    await h.app.jobs.idle();
+
+    const ended = (await h.request('GET', `/api/jobs/${running.id}`)).json<JobBody>();
+    expect(ended).toMatchObject({ status: 'cancelled', error: null });
+    const again = await h.request('POST', `/api/jobs/${running.id}/cancel`);
+    expect(again.statusCode).toBe(409);
+    expect(again.json<{ error: { code: string } }>().error.code).toBe('job.not-cancellable');
+  });
+
+  it('answers 404 for an unknown job', async () => {
+    const h = await harness({ processor: () => Promise.resolve(empty) });
+    expect((await h.request('POST', '/api/jobs/nope/cancel')).statusCode).toBe(404);
+  });
+});
+
 describe('GET /api/jobs', () => {
   it('answers 404 for an unknown job', async () => {
     const h = await harness({
@@ -176,6 +211,79 @@ describe('GET /api/jobs', () => {
 
 describe('JobRunner', () => {
   const idle = () => Promise.resolve(done);
+
+  describe('cancelling', () => {
+    it('cancels a queued job without ever running it', async () => {
+      const { jobs, executions } = newQueue();
+      const ran: string[] = [];
+      const runner = new JobRunner(
+        jobs,
+        executions,
+        (job) => {
+          ran.push(job.path);
+          return Promise.resolve(empty);
+        },
+        idle,
+      );
+      const queued = jobs.create('/a');
+      expect(runner.cancel(queued.id)).toBe(true);
+      runner.kick();
+      await runner.idle();
+      expect(ran).toEqual([]);
+      expect(jobs.get(queued.id)).toMatchObject({ status: 'cancelled', error: null });
+      expect(runner.cancel(queued.id)).toBe(false);
+    });
+
+    it('stops a running job through its signal and stores nothing', async () => {
+      const { jobs, executions } = newQueue();
+      let started = (): void => undefined;
+      const begun = new Promise<void>((resolve) => {
+        started = resolve;
+      });
+      const failed: string[] = [];
+      const runner = new JobRunner(
+        jobs,
+        executions,
+        async (job, signal) => {
+          if (job.path === '/b') {
+            return empty;
+          }
+          started();
+          await new Promise<void>((resolve) => {
+            signal.addEventListener('abort', () => {
+              resolve();
+            });
+          });
+          throwIfCancelled(signal);
+          return empty;
+        },
+        idle,
+        { jobFailed: (job) => failed.push(job.id) },
+      );
+      const job = jobs.create('/a', true);
+      jobs.create('/b');
+      runner.kick();
+      await begun;
+      expect(runner.cancel(job.id)).toBe(true);
+      await runner.idle();
+      expect(jobs.get(job.id)).toMatchObject({ status: 'cancelled', error: null });
+      // Cancelled is not failed: nobody is told of a failure, and no transfer was queued.
+      expect(failed).toEqual([]);
+      expect(executions.unfinished().size).toBe(0);
+      // The next job still runs.
+      expect(jobs.list(10).find(({ path }) => path === '/b')?.status).toBe('done');
+    });
+
+    it('does not cancel a job that ended', async () => {
+      const { jobs, executions } = newQueue();
+      const runner = new JobRunner(jobs, executions, () => Promise.resolve(empty), idle);
+      const job = jobs.create('/a');
+      runner.kick();
+      await runner.idle();
+      expect(runner.cancel(job.id)).toBe(false);
+      expect(jobs.get(job.id)?.status).toBe('done');
+    });
+  });
 
   it('serves jobs in submission order, one at a time', async () => {
     const { jobs, executions } = newQueue();

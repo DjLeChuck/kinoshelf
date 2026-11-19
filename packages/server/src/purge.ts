@@ -23,7 +23,7 @@ export interface LibraryScan {
  */
 const SUPERSEDED = `
   j.library_id IS NOT NULL
-  AND j.status IN ('done', 'failed')
+  AND j.status IN ('done', 'failed', 'cancelled')
   AND EXISTS (
     SELECT 1 FROM jobs k
     WHERE k.library_id = j.library_id AND k.path = j.path AND k.status = 'done' AND k.seq > j.seq
@@ -43,7 +43,7 @@ const WITHOUT_PENDING_TRANSFER = `
  */
 const FORGOTTEN_JOBS = `
   SELECT j.id FROM jobs j
-  WHERE j.status IN ('done', 'failed')
+  WHERE j.status IN ('done', 'failed', 'cancelled')
     AND COALESCE(j.finished_at, j.created_at) < ?
     AND ${WITHOUT_PENDING_TRANSFER}
     AND (

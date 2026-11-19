@@ -14,6 +14,39 @@ import { cleanup, makeDir, put } from './workspace.js';
 
 afterEach(cleanup);
 
+describe('cancelling', () => {
+  it('stops the walk of a folder once the signal is aborted', async () => {
+    const root = await makeDir();
+    await put(join(root, 'Film.mp4'));
+    const controller = new AbortController();
+    controller.abort();
+    await expect(
+      discoverVideos(root, undefined, undefined, { signal: controller.signal }),
+    ).rejects.toMatchObject({ info: { code: 'task.cancelled' } });
+  });
+
+  it('stops an analysis between two files', async () => {
+    const root = await makeDir();
+    await put(join(root, 'Dune.2021.mkv'));
+    await put(join(root, 'Arrival.2016.mkv'));
+    const files = await discoverVideos(root);
+    const controller = new AbortController();
+    await expect(
+      analyze(files, {
+        parser: new GuessitParser(),
+        provider: new FakeProvider([], {}),
+        profile: buildProfile({ naming: 'no-id', metadata: 'none' }),
+        destinationRoot: await makeDir(),
+        mode: 'copy',
+        signal: controller.signal,
+        onParsing: () => {
+          controller.abort();
+        },
+      }),
+    ).rejects.toMatchObject({ info: { code: 'task.cancelled' } });
+  });
+});
+
 describe('discoverVideos', () => {
   it('finds videos recursively, skipping hidden, non-video files and symlinked folders', async () => {
     const root = await makeDir();

@@ -6,7 +6,8 @@ import type { Job, JobStore, ProcessedJob } from './jobs.js';
 import type { EventTopic } from './events.js';
 import type { ExecutionOutcome } from './notify/message.js';
 
-export type JobProcessor = (job: Job) => Promise<ProcessedJob>;
+/** `signal` is aborted when the job is cancelled: the processor stops and throws `task.cancelled`. */
+export type JobProcessor = (job: Job, signal: AbortSignal) => Promise<ProcessedJob>;
 /** Transfers the files of an execution. */
 export type ExecutionRunner = (execution: Execution) => Promise<ExecutionOutcome>;
 
@@ -44,6 +45,7 @@ export class JobRunner {
   private readonly running = new Set<Promise<void>>();
   private runningExecution: Execution | undefined;
   private runningJob: Job | undefined;
+  private cancelling: AbortController | undefined;
   private stopping = false;
 
   constructor(
@@ -85,6 +87,22 @@ export class JobRunner {
     }
   }
 
+  /**
+   * Cancels a queued job at once, or tells the running one to stop (it ends as soon as its next
+   * check: `cancelled` is stored then, not now). False when the job is neither.
+   */
+  cancel(jobId: string): boolean {
+    if (this.runningJob?.id === jobId) {
+      this.cancelling?.abort();
+      return true;
+    }
+    if (!this.jobs.cancel(jobId)) {
+      return false;
+    }
+    this.tell(() => this.hooks.changed?.('jobs', 'history'));
+    return true;
+  }
+
   /** Lets the running tasks finish, starts no other. */
   async stop(): Promise<void> {
     this.stopping = true;
@@ -124,6 +142,7 @@ export class JobRunner {
       );
       if (job) {
         this.runningJob = job;
+        this.cancelling = new AbortController();
         this.launch(this.runJob(job), () => {
           this.runningJob = undefined;
         });
@@ -187,14 +206,25 @@ export class JobRunner {
   }
 
   private async runJob(job: Job): Promise<void> {
+    const signal = this.cancelling?.signal ?? new AbortController().signal;
     this.tell(() => this.hooks.changed?.('jobs'));
     try {
-      this.jobs.complete(job, await this.process(job));
+      const processed = await this.process(job, signal);
+      // Asked to stop just as it ended: nothing is stored, as for any other cancellation.
+      if (signal.aborted) {
+        throw new KinoshelfError('task.cancelled');
+      }
+      this.jobs.complete(job, processed);
       // A snapshot that fails to follow is a log line, not a failed scan: the files are stored.
       await Promise.resolve(this.hooks.scanned?.(job)).catch(this.onError);
       this.tell(() => this.hooks.jobDone?.(job));
       this.tell(() => this.hooks.changed?.('jobs', 'arrivals'));
     } catch (error) {
+      if (signal.aborted) {
+        this.jobs.cancel(job.id);
+        this.tell(() => this.hooks.changed?.('jobs', 'history'));
+        return;
+      }
       const info = this.describe(error);
       this.jobs.fail(job.id, info);
       this.tell(() => this.hooks.jobFailed?.(job, info));

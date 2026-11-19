@@ -1,3 +1,4 @@
+import { throwIfCancelled } from '../errors.js';
 import { Matcher } from '../matching/matcher.js';
 import type { MatchingConfig } from '../matching/config.js';
 import { createPlan, type PlanInput } from '../planning/planner.js';
@@ -87,6 +88,8 @@ export interface AnalyzeOptions {
   readonly onMatching?: () => void;
   /** Every file is matched: the details of the works are fetched and the plan is built. */
   readonly onPlanning?: () => void;
+  /** Aborted by a caller that gave up: the analysis stops with `task.cancelled`, nothing is kept. */
+  readonly signal?: AbortSignal;
 }
 
 /** Longest stretch of synchronous parsing before other work (requests, timers) may run. */
@@ -99,11 +102,13 @@ async function mapLimited<T, R>(
   items: readonly T[],
   limit: number,
   task: (item: T, index: number) => Promise<R>,
+  signal?: AbortSignal,
 ): Promise<R[]> {
   const results = new Array<R>(items.length);
   let next = 0;
   const worker = async (): Promise<void> => {
     while (next < items.length) {
+      throwIfCancelled(signal);
       const index = next++;
       results[index] = await task(items[index] as T, index);
     }
@@ -210,6 +215,7 @@ export async function analyze(
   const parsedFiles: ParsedMedia[] = [];
   let sliceStart = performance.now();
   for (const file of files) {
+    throwIfCancelled(options.signal);
     parsedFiles.push({ ...options.parser.parse(file.parserPath), path: file.path });
     options.onParsing?.(parsedFiles.length, files.length);
     if (performance.now() - sliceStart > PARSE_SLICE_MS) {
@@ -220,19 +226,24 @@ export async function analyze(
   const { units, clusterOf } = matchingUnits(files, parsedFiles);
   options.onMatching?.();
   const outcomes = new Array<MatchOutcome>(files.length);
-  await mapLimited(units, concurrency, async (unit) => {
-    const { forced } = options;
-    const flat =
-      forced && unit.every((index) => fits(forced, parsedFiles[index] as ParsedMedia))
-        ? unit.map((): MatchOutcome => chosen(forced))
-        : unit.length === 1
-          ? [await matcher.match(parsedFiles[unit[0] as number] as ParsedMedia)]
-          : await matcher.matchRelease(unit.map((index) => parsedFiles[index] as ParsedMedia));
-    unit.forEach((index, position) => {
-      outcomes[index] = flat[position] as MatchOutcome;
-      options.onProgress?.(++done, files.length, files[index] as DiscoveredFile);
-    });
-  });
+  await mapLimited(
+    units,
+    concurrency,
+    async (unit) => {
+      const { forced } = options;
+      const flat =
+        forced && unit.every((index) => fits(forced, parsedFiles[index] as ParsedMedia))
+          ? unit.map((): MatchOutcome => chosen(forced))
+          : unit.length === 1
+            ? [await matcher.match(parsedFiles[unit[0] as number] as ParsedMedia)]
+            : await matcher.matchRelease(unit.map((index) => parsedFiles[index] as ParsedMedia));
+      unit.forEach((index, position) => {
+        outcomes[index] = flat[position] as MatchOutcome;
+        options.onProgress?.(++done, files.length, files[index] as DiscoveredFile);
+      });
+    },
+    options.signal,
+  );
   const matched = files.map((file, index) => ({
     file,
     cluster: clusterOf.get(index) ?? 0,
@@ -250,12 +261,18 @@ export async function analyze(
     }
   }
   const collections: (CollectionInfo | null | undefined)[] = [];
-  const inputs = await mapLimited(picks, concurrency, async (pick, index): Promise<PlanInput> => {
-    const { collection, ...loaded } = await loader.forCandidate(pick.candidate, pick.parsed);
-    collections[index] = collection;
-    const override = options.collectionOverride?.(pick.candidate);
-    return { ...pick, ...loaded, ...(override && { collectionOverride: override }) };
-  });
+  const inputs = await mapLimited(
+    picks,
+    concurrency,
+    async (pick, index): Promise<PlanInput> => {
+      const { collection, ...loaded } = await loader.forCandidate(pick.candidate, pick.parsed);
+      collections[index] = collection;
+      const override = options.collectionOverride?.(pick.candidate);
+      return { ...pick, ...loaded, ...(override && { collectionOverride: override }) };
+    },
+    options.signal,
+  );
+  throwIfCancelled(options.signal);
   const plan = await createPlan(inputs, {
     profile: options.profile,
     destinationRoot: options.destinationRoot,

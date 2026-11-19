@@ -3,6 +3,7 @@ import type { en } from './en.js';
 /** French catalog: same keys and same `{parameters}` as `en.ts` (the type enforces the keys). */
 export const fr: Record<keyof typeof en, string> = {
   'error.destination.exists': 'Un fichier existe déjà à {path} ; il n’a pas été touché.',
+  'error.task.cancelled': 'Annulé.',
   'error.discover.not-found': 'Chemin introuvable : {path}',
   'error.execute.download-failed': 'Impossible de télécharger {url} ({status}).',
   'error.execute.download-not-image': '{url} n’est pas une image ({type}).',
@@ -328,6 +329,7 @@ export const fr: Record<keyof typeof en, string> = {
   'error.internal.unexpected':
     'Une erreur est survenue sur le serveur. Consultez son journal pour les détails.',
   'error.job.not-done': 'L’analyse de ce travail n’est pas terminée ({status}).',
+  'error.job.not-cancellable': 'Ce travail est déjà terminé : il n’y a rien à annuler.',
   'error.job.not-found': 'Ce travail n’existe pas.',
   'error.library.in-use':
     'Le dossier d’arrivée « {name} » envoie ses fichiers dans cette bibliothèque.',
@@ -832,6 +834,7 @@ export const fr: Record<keyof typeof en, string> = {
   'web.library.rematch.confirm': 'Relire avec cette œuvre',
   'web.library.rematch.started': 'Analyse de « {name} » lancée avec la nouvelle association.',
   'web.library.scan': 'Mettre à jour la source',
+  'web.library.scan.cancel': 'Annuler le scan',
   'web.library.scan.running': 'Scan…',
   'web.library.scan.running.percent': 'Scan · {percent} %',
   'web.library.scanned': 'Scannée le {date}',
@@ -1145,6 +1148,7 @@ export const fr: Record<keyof typeof en, string> = {
   'web.activity.recent': 'Activité récente',
   'web.activity.expand': 'Afficher le détail',
   'web.activity.collapse': 'Masquer le détail',
+  'web.activity.cancel': 'Annuler',
   'web.activity.dismiss': 'Fermer',
   'web.activity.open': 'Ouvrir',
   'web.activity.count': '{done} sur {total}',
@@ -1525,6 +1529,7 @@ export const fr: Record<keyof typeof en, string> = {
   'web.history.status.done': 'Terminé',
   'web.history.status.undone': 'Annulé',
   'web.history.status.failed': 'Échec',
+  'web.history.status.cancelled': 'Interrompu',
   'web.history.status.queued': 'En attente',
   'web.history.status.running': 'En cours',
   'web.history.files': '{count, plural, one {# fichier} other {# fichiers}}',

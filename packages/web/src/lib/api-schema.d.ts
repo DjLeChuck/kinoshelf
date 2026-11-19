@@ -2537,7 +2537,7 @@ export interface paths {
                                 /** Format: uuid */
                                 jobId: string;
                                 /** @enum {string} */
-                                status: "queued" | "running" | "done" | "failed";
+                                status: "queued" | "running" | "done" | "failed" | "cancelled";
                             } | null;
                             scanning: boolean;
                         }[];
@@ -2624,7 +2624,7 @@ export interface paths {
                                 /** Format: uuid */
                                 jobId: string;
                                 /** @enum {string} */
-                                status: "queued" | "running" | "done" | "failed";
+                                status: "queued" | "running" | "done" | "failed" | "cancelled";
                             } | null;
                             scanning: boolean;
                         };
@@ -2850,7 +2850,7 @@ export interface paths {
                                 /** Format: uuid */
                                 jobId: string;
                                 /** @enum {string} */
-                                status: "queued" | "running" | "done" | "failed";
+                                status: "queued" | "running" | "done" | "failed" | "cancelled";
                             } | null;
                             scanning: boolean;
                         };
@@ -2976,7 +2976,7 @@ export interface paths {
                             path: string;
                             libraryId: string | null;
                             /** @enum {string} */
-                            status: "queued" | "running" | "done" | "failed";
+                            status: "queued" | "running" | "done" | "failed" | "cancelled";
                             apply: boolean;
                             /** Format: date-time */
                             startedAt: string | null;
@@ -3171,7 +3171,7 @@ export interface paths {
                             path: string;
                             libraryId: string | null;
                             /** @enum {string} */
-                            status: "queued" | "running" | "done" | "failed";
+                            status: "queued" | "running" | "done" | "failed" | "cancelled";
                             apply: boolean;
                             /** Format: date-time */
                             startedAt: string | null;
@@ -8402,7 +8402,7 @@ export interface paths {
                             path: string;
                             libraryId: string | null;
                             /** @enum {string} */
-                            status: "queued" | "running" | "done" | "failed";
+                            status: "queued" | "running" | "done" | "failed" | "cancelled";
                             apply: boolean;
                             /** Format: date-time */
                             startedAt: string | null;
@@ -8585,7 +8585,7 @@ export interface paths {
                             path: string;
                             libraryId: string | null;
                             /** @enum {string} */
-                            status: "queued" | "running" | "done" | "failed";
+                            status: "queued" | "running" | "done" | "failed" | "cancelled";
                             apply: boolean;
                             /** Format: date-time */
                             startedAt: string | null;
@@ -8701,6 +8701,178 @@ export interface paths {
         };
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/jobs/{id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel an analysis, queued or running
+         * @description A queued job is cancelled at once; a running one stops at its next check and ends as `cancelled` (announced by the `jobs` event). Nothing is stored, so a library keeps the rows its last scan left. 409 `job.not-cancellable` once the job ended.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                202: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            path: string;
+                            libraryId: string | null;
+                            /** @enum {string} */
+                            status: "queued" | "running" | "done" | "failed" | "cancelled";
+                            apply: boolean;
+                            /** Format: date-time */
+                            startedAt: string | null;
+                            /** Format: date-time */
+                            finishedAt: string | null;
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            } | null;
+                            execution: {
+                                /** Format: uuid */
+                                id: string;
+                                /** Format: uuid */
+                                jobId: string;
+                                /** @enum {string} */
+                                status: "queued" | "running" | "done" | "failed";
+                                progress?: {
+                                    done: number;
+                                    total: number;
+                                    current: string | null;
+                                } | null;
+                                /** Format: date-time */
+                                createdAt: string;
+                                /** Format: date-time */
+                                startedAt: string | null;
+                                /** Format: date-time */
+                                finishedAt: string | null;
+                                batchId: string | null;
+                                summary: {
+                                    done: number;
+                                    failed: number;
+                                } | null;
+                                error: {
+                                    code: string;
+                                    params?: {
+                                        [key: string]: string | number;
+                                    };
+                                } | null;
+                            } | null;
+                            summary: {
+                                compliant: number;
+                                "to-rename": number;
+                                conflict: number;
+                                ambiguous: number;
+                                unrecognized: number;
+                            } | null;
+                            progress: {
+                                /** @enum {string} */
+                                phase: "discover" | "read" | "identify" | "plan";
+                                found: number;
+                                done: number;
+                                total: number;
+                                current: string | null;
+                                idleSeconds: number;
+                            } | null;
+                            transfer?: {
+                                done: number;
+                                total: number;
+                                current: string | null;
+                            } | null;
+                            settings: {
+                                profile: {
+                                    /** @enum {string} */
+                                    naming: "with-id" | "no-id";
+                                    /** @enum {string} */
+                                    metadata: "none" | "nfo";
+                                };
+                                /** @enum {string} */
+                                mode: "copy" | "hardlink" | "move";
+                                destinationRoot: string | {
+                                    movie?: string;
+                                    series?: string;
+                                };
+                            } | null;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Default Response */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Default Response */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;
@@ -9767,7 +9939,7 @@ export interface paths {
                                 /** Format: date-time */
                                 at: string;
                                 /** @enum {string} */
-                                status: "queued" | "running" | "done" | "undone" | "failed";
+                                status: "queued" | "running" | "done" | "undone" | "failed" | "cancelled";
                                 /** @description What was submitted; absent for the CLI. */
                                 path: string | null;
                                 operations: number;

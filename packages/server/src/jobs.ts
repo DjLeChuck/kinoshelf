@@ -10,7 +10,7 @@ import type { Database } from '@kinoshelf/core';
 import type { StoredError, EntryStore } from './entries.js';
 import type { ExecutionStore } from './executions.js';
 
-export type JobStatus = 'queued' | 'running' | 'done' | 'failed';
+export type JobStatus = 'queued' | 'running' | 'done' | 'failed' | 'cancelled';
 
 /**
  * What the plan was built with. Kept with the job so a file matched by hand later is planned the
@@ -214,6 +214,20 @@ export class JobStore {
     this.database
       .prepare("UPDATE jobs SET status = 'failed', finished_at = ?, error = ? WHERE id = ?")
       .run(new Date().toISOString(), JSON.stringify(error), id);
+  }
+
+  /**
+   * Stops a job that was queued or running, whichever it was: no file is stored, so a library's
+   * snapshot stays as it was. Returns false when the job already ended (or does not exist).
+   */
+  cancel(id: string): boolean {
+    return (
+      this.database
+        .prepare(
+          "UPDATE jobs SET status = 'cancelled', finished_at = ? WHERE id = ? AND status IN ('queued', 'running')",
+        )
+        .run(new Date().toISOString(), id).changes > 0
+    );
   }
 
   /** A crash leaves jobs `running`; nothing was written (analysis is read-only), so rerun them. */

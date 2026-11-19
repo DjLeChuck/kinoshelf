@@ -35,6 +35,7 @@ export const ERROR_CODES = [
   'profile.yaml-syntax',
   'provider.foreign-id',
   'source.missing',
+  'task.cancelled',
   'template.empty-segment',
   'template.invalid-escape',
   'template.invalid-variable',
