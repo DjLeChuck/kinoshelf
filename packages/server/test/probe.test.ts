@@ -1,4 +1,5 @@
 import { execFile } from 'node:child_process';
+import { stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
 import { Database } from '@kinoshelf/core';
@@ -14,6 +15,7 @@ import {
   probeFailure,
   probePictureSize,
   sizeFromStreams,
+  storedTraitReader,
   summarize,
   traitsOf,
   type Probe,
@@ -595,5 +597,56 @@ describe('the probe queue', () => {
     store.replace('films', [item('/nonexistent/a.mkv')]);
     expect(await probes.now('films', '/nonexistent/a.mkv')).toBeUndefined();
     expect(calls).toEqual([]);
+  });
+});
+
+describe('storedTraitReader', () => {
+  const stored = async (change: Partial<Probe> = {}) => {
+    const file = await put(join(await makeDir(), 'Dune.mkv'), 'video');
+    const info = await stat(file);
+    const store = new LibraryItemStore(migrated(new Database(':memory:')));
+    store.replace('films', [item(file)]);
+    store.setProbe('films', file, {
+      video: 'hevc',
+      audio: 'eac3 5.1',
+      hdr: 'hdr10',
+      audioLanguages: [],
+      subtitleLanguages: [],
+      picture: '2160p',
+      size: info.size,
+      mtime: Math.floor(info.mtimeMs),
+      ...change,
+    });
+    const reads: string[] = [];
+    const live = (path: string) => {
+      reads.push(path);
+      return Promise.resolve({ videoCodec: 'LIVE' });
+    };
+    return { file, store, reads, live };
+  };
+
+  it('answers from what the library stored while the file is the one that was read', async () => {
+    const { file, store, reads, live } = await stored();
+    const read = storedTraitReader(store, 'films', live);
+    expect(await read(file)).toEqual({ videoCodec: 'HEVC', audioCodec: 'EAC3', hdr: 'HDR10' });
+    expect(reads).toEqual([]);
+  });
+
+  it('reads the file when it changed, when the probe failed, or when nothing is stored', async () => {
+    const changed = await stored({ size: 1 });
+    expect(await storedTraitReader(changed.store, 'films', changed.live)(changed.file)).toEqual({
+      videoCodec: 'LIVE',
+    });
+
+    const unreadable = await stored({ video: null, audio: null, unreadable: 'Invalid data' });
+    await storedTraitReader(unreadable.store, 'films', unreadable.live)(unreadable.file);
+    expect(unreadable.reads).toEqual([unreadable.file]);
+
+    // A path of no library (an arrival), a library that is not its own, or no store at all.
+    const { file, store, reads, live } = await stored();
+    await storedTraitReader(store, undefined, live)(file);
+    await storedTraitReader(store, 'series', live)(file);
+    await storedTraitReader(undefined, 'films', live)(file);
+    expect(reads).toEqual([file, file, file]);
   });
 });

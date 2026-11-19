@@ -20,7 +20,14 @@ import { imdbRatingsOf, withImdbRatings } from './imdb-ratings.js';
 import { RequestPool, SqliteHttpCache, tmdbFromEnv } from '@kinoshelf/provider-tmdb';
 import { CollectionStore } from './collections.js';
 import type { Job, ProcessedJob } from './jobs.js';
-import { probePictureSize, probeTraits, type SizeReader, type TraitReader } from './probe.js';
+import {
+  probePictureSize,
+  probeTraits,
+  storedTraitReader,
+  type SizeReader,
+  type TraitReader,
+} from './probe.js';
+import { LibraryItemStore } from './library-items.js';
 import type { ProgressTracker } from './progress.js';
 
 export interface ProcessorDeps {
@@ -64,15 +71,35 @@ export function withSizeReader(deps: Pick<ProcessorDeps, 'config' | 'sizeReader'
   return sizeOf ? { sizeOf } : {};
 }
 
+/** One store per database: building it registers an SQL function, and only its reads are wanted. */
+const stores = new WeakMap<Database, LibraryItemStore>();
+const storeOf = (database: Database): LibraryItemStore => {
+  let store = stores.get(database);
+  if (!store) {
+    store = new LibraryItemStore(database);
+    stores.set(database, store);
+  }
+  return store;
+};
+
 /**
  * The `traitsOf` option of the core: a library whose names use `{audioCodec}`, `{videoCodec}` or
  * `{hdr}` needs the file read to be named, whatever `detectPictureSize` says (that one only decides
- * on a size the owner may give by hand).
+ * on a size the owner may give by hand). What the library's background probe already stored for the
+ * file is used while it is still true of it (`storedTraitReader`); `libraryId` is the library the
+ * file lies in, none for a path sent by hand.
  */
-export function withTraitReader(deps: Pick<ProcessorDeps, 'traitReader'>): {
-  traitsOf: TraitReader;
-} {
-  return { traitsOf: deps.traitReader ?? probeTraits };
+export function withTraitReader(
+  deps: Pick<ProcessorDeps, 'traitReader' | 'database'>,
+  libraryId?: string | null,
+): { traitsOf: TraitReader } {
+  return {
+    traitsOf: storedTraitReader(
+      deps.traitReader ? undefined : storeOf(deps.database),
+      libraryId,
+      deps.traitReader ?? probeTraits,
+    ),
+  };
 }
 
 export function createProcessor(
@@ -159,7 +186,7 @@ async function process(
     ...(job.candidate && { forced: job.candidate }),
     ...(settings.threshold !== undefined && { matching: { threshold: settings.threshold } }),
     ...withSizeReader(deps),
-    ...withTraitReader(deps),
+    ...withTraitReader(deps, job.libraryId),
     madeByUs: (path) => madeByUs(journal, path),
     // What the owner decided for a movie outlives the provider's record, which a scan rewrites.
     collectionOverride: (candidate) => collections.override(job.libraryId, candidate.id.id),

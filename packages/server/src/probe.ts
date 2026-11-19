@@ -239,6 +239,35 @@ export const probeTraits: TraitReader = async (path) => {
   }
 };
 
+/** What the library snapshot remembers of a file's probe (`LibraryItemStore.probeOf`). */
+export interface StoredProbes {
+  probeOf(libraryId: string, path: string): (Probe & { probedAt: string | null }) | undefined;
+}
+
+/**
+ * Reads a file's streams from what the background probe already stored for it, and from the file
+ * only when that is missing or no longer true. The size and the date say whether the file is the one
+ * that was read (one `stat`, no `ffprobe`): a rescan of a library named after its codecs then costs
+ * what a scan costs, not a probe per file. A file that is not in a library's snapshot (an arrival)
+ * has nothing stored and is read.
+ */
+export function storedTraitReader(
+  stored: StoredProbes | undefined,
+  libraryId: string | null | undefined,
+  live: TraitReader,
+): TraitReader {
+  return async (path) => {
+    const known = libraryId ? stored?.probeOf(libraryId, path) : undefined;
+    if (known?.probedAt && !known.unreadable && known.video !== null) {
+      const info = await stat(path).catch(() => undefined);
+      if (info?.size === known.size && Math.floor(info.mtimeMs) === known.mtime) {
+        return traitsOf(known);
+      }
+    }
+    return live(path);
+  };
+}
+
 let knownVersion: string | undefined;
 
 /**

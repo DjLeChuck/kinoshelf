@@ -303,7 +303,7 @@ export class Service {
       mode: settings.mode,
       ...(loader.needsMetadata && { imageUrl: provider.imageUrl.bind(provider) }),
       ...withSizeReader(this.deps),
-      ...withTraitReader(this.deps),
+      ...withTraitReader(this.deps, libraryId),
       madeByUs: (path) => madeByUs(this.deps.journal, path),
     });
     return planned.map((file, index) => {
@@ -458,7 +458,7 @@ export class Service {
         mode: settings.mode,
         ...(loader.needsMetadata && { imageUrl: provider.imageUrl.bind(provider) }),
         ...withSizeReader(this.deps),
-        ...withTraitReader(this.deps),
+        ...withTraitReader(this.deps, options.libraryId),
         madeByUs: (path) => madeByUs(this.deps.journal, path),
       },
     );
