@@ -1,7 +1,7 @@
 import { access } from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
 import { AUTH_HEADERS, library } from '../support.js';
-import { signIn, signInAt, submit } from './helpers.js';
+import { navLink, signIn, signInAt, submit } from './helpers.js';
 
 const ALIEN = library('films', 'Alien (1979) {tmdb-348}', 'Alien (1979) {tmdb-348} - 1080p.mkv');
 
@@ -17,7 +17,7 @@ test('lists a batch, previews its undo, then undoes it', async ({ page, request 
   await expect.poll(() => exists(ALIEN)).toBe(true);
 
   await signIn(page);
-  await page.getByRole('link', { name: 'History' }).click();
+  await navLink(page, 'History').click();
   await expect(page.getByText('Alien.1979.1080p.mkv').first()).toBeVisible();
 
   await page.getByRole('button', { name: 'Undo this batch' }).click();
@@ -40,7 +40,7 @@ test('lists a failed job with its cause, and sends it again', async ({ page, req
   expect(created.status()).toBe(202);
 
   await signIn(page);
-  await page.getByRole('link', { name: 'History' }).click();
+  await navLink(page, 'History').click();
   await page
     .getByRole('button', { name: new RegExp(path) })
     .first()
@@ -64,7 +64,7 @@ test('keeps the routine analyses out of the list until asked', async ({ page, re
   await submit(request, 'history-routine', ['Zzzqx.Unknown.Title.2001.mkv']);
 
   await signIn(page);
-  await page.getByRole('link', { name: 'History' }).click();
+  await navLink(page, 'History').click();
   const routine = page.getByRole('button', { name: /history-routine/ });
   await expect(routine).toHaveCount(0);
 

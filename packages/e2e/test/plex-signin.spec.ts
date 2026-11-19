@@ -1,11 +1,11 @@
 import { expect, test } from '@playwright/test';
-import { signIn } from './helpers.js';
+import { navLink, signIn } from './helpers.js';
 
 test('signs in with Plex, picks the server, and stays signed in after a reload', async ({
   page,
 }) => {
   await signIn(page);
-  await page.getByRole('link', { name: 'Settings' }).click();
+  await navLink(page, 'Settings').click();
   const form = () =>
     page.locator('form', { has: page.getByRole('heading', { name: 'Plex server' }) });
   await form().getByLabel('Tell Plex about each transfer').check();

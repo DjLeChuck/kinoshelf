@@ -1,7 +1,7 @@
 import { access, mkdir, rm, writeFile } from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
 import { incoming, library } from '../support.js';
-import { signIn, submit } from './helpers.js';
+import { navLink, signIn, submit } from './helpers.js';
 
 const exists = (path: string): Promise<boolean> =>
   access(path).then(
@@ -28,7 +28,7 @@ test('analyses a library, takes the leftover folder out and finds the batch in t
   await writeFile(`${LEFTOVER}/Dune (2021) - 1080p-poster.jpg`, 'image');
 
   await signIn(page);
-  await page.getByRole('navigation').getByRole('link', { name: 'System' }).click();
+  await navLink(page, 'System').click();
   await page
     .getByRole('navigation', { name: 'Sections of the System page' })
     .getByRole('link', { name: 'Maintenance' })

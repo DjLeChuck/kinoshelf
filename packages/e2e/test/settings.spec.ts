@@ -1,13 +1,13 @@
 import { expect, test } from '@playwright/test';
 import { mkdir } from 'node:fs/promises';
 import { library } from '../support.js';
-import { signIn } from './helpers.js';
+import { navLink, scrollSettled, signIn } from './helpers.js';
 
 const SECRET = 'very-secret-token-4242';
 
 test.beforeEach(async ({ page }) => {
   await signIn(page);
-  await page.getByRole('link', { name: 'Settings' }).click();
+  await navLink(page, 'Settings').click();
   await expect(page.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible();
 });
 
@@ -173,13 +173,7 @@ test('jumps to a section from the side menu and follows the scroll', async ({ pa
 
   // Webhooks is too near the end to reach the top: the highlight must stay on it once the scroll
   // is over, not move to the sections crossed or to the last one.
-  await expect
-    .poll(async () => {
-      const before = await page.evaluate('window.scrollY');
-      await page.waitForTimeout(200);
-      return before === (await page.evaluate('window.scrollY'));
-    })
-    .toBe(true);
+  await scrollSettled(page);
   await expect(menu.getByRole('button', { name: 'Webhooks' })).toHaveAttribute(
     'aria-current',
     'true',
@@ -202,16 +196,12 @@ test('puts the section in the address as it is reached, and opens on the one in 
   await menu.getByRole('button', { name: 'Webhooks' }).click();
   await expect(page).toHaveURL(/\/settings#webhooks$/);
   // The smooth scroll of the click must be over, or Home is swallowed by it.
-  await expect
-    .poll(async () => {
-      const before = await page.evaluate('window.scrollY');
-      await page.waitForTimeout(200);
-      return before === (await page.evaluate('window.scrollY'));
-    })
-    .toBe(true);
+  await scrollSettled(page);
 
   await page.keyboard.press('Home');
   await expect(page).toHaveURL(/\/settings#general$/);
+  // Home scrolls smoothly too: a link followed while it runs would be scrolled back to the top.
+  await scrollSettled(page);
 
   // A link to a section lands on it and keeps its anchor, whatever the page highlights on the way.
   await page.goto('/settings#plex');

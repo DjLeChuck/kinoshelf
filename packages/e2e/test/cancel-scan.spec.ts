@@ -1,7 +1,7 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
 import { AUTH_HEADERS, incoming } from '../support.js';
-import { signInAt } from './helpers.js';
+import { navLink, signInAt } from './helpers.js';
 
 test('cancels a running scan: the library is untouched and the History says cancelled', async ({
   page,
@@ -40,7 +40,7 @@ test('cancels a running scan: the library is untouched and the History says canc
   expect(last?.lastScan?.status).toBe('cancelled');
 
   // The History lists it as cancelled, not failed.
-  await page.getByRole('navigation').getByRole('link', { name: 'History' }).click();
+  await navLink(page, 'History').click();
   await page.getByLabel('Show every analysis').check();
   await expect(page.getByText('Cancelled').first()).toBeVisible();
 });

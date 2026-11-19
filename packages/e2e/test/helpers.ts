@@ -1,6 +1,15 @@
 import { mkdir, writeFile } from 'node:fs/promises';
-import { expect, type APIRequestContext, type Page } from '@playwright/test';
+import { expect, type APIRequestContext, type Locator, type Page } from '@playwright/test';
 import { API_KEY, AUTH_HEADERS, incoming } from '../support.js';
+
+/**
+ * A link of the main navigation. A page can hold other links of the same name (a banner's "See the
+ * history" while a transfer runs): which ones are there depends on timing, so a bare
+ * `getByRole('link', { name: 'History' })` is a race. Not `exact`: a badge ("System 1") is part
+ * of a link's name.
+ */
+export const navLink = (page: Page, name: string): Locator =>
+  page.getByRole('navigation', { name: 'Main navigation' }).getByRole('link', { name });
 
 /** Opens `path` and signs in: the page asked for is the one shown afterwards. */
 export async function signInAt(page: Page, path: string): Promise<void> {
@@ -50,4 +59,28 @@ export async function submit(
     )
     .toBe(true);
   return id;
+}
+
+/**
+ * Resolves once the page has stopped scrolling (a smooth scroll, a key's or a click's, runs for
+ * hundreds of milliseconds, longer on a loaded machine). Counted in frames, not in time: a fixed
+ * sleep is too short exactly when the machine is slow. Whatever is asked of the page next, an
+ * animation still running would take the scroll back.
+ */
+export async function scrollSettled(page: Page): Promise<void> {
+  // A string: this package has no DOM types, which the page's own code does not need here.
+  await page.evaluate(`new Promise((resolve) => {
+    let last = window.scrollY;
+    let still = 0;
+    const frame = () => {
+      still = window.scrollY === last ? still + 1 : 0;
+      last = window.scrollY;
+      if (still >= 12) {
+        resolve(undefined);
+      } else {
+        requestAnimationFrame(frame);
+      }
+    };
+    requestAnimationFrame(frame);
+  })`);
 }

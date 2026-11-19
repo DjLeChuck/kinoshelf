@@ -1,13 +1,13 @@
 import { mkdir } from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
 import { incoming } from '../support.js';
-import { signIn } from './helpers.js';
+import { navLink, signIn } from './helpers.js';
 
 test('adds an arrival folder in the settings, edits it, then deletes it', async ({ page }) => {
   const folder = incoming('finished');
   await mkdir(folder, { recursive: true });
   await signIn(page);
-  await page.getByRole('link', { name: 'Settings' }).click();
+  await navLink(page, 'Settings').click();
 
   const section = page.locator('section', {
     has: page.getByRole('heading', { name: 'Folders', exact: true }),
@@ -43,7 +43,7 @@ test('an arrival folder can send to one kind only', async ({ page }) => {
   const folder = incoming('films-only');
   await mkdir(folder, { recursive: true });
   await signIn(page);
-  await page.getByRole('link', { name: 'Settings' }).click();
+  await navLink(page, 'Settings').click();
 
   const section = page.locator('section', {
     has: page.getByRole('heading', { name: 'Folders', exact: true }),

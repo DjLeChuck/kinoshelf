@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { signIn } from './helpers.js';
+import { navLink, signIn } from './helpers.js';
 
 // A real task is too short to catch: the list is the server's to say, so it is faked here and the
 // page is asked to show it wherever the person goes.
@@ -40,7 +40,7 @@ test('shows the tasks that run on every page, and keeps a failure until it is cl
   await panel.getByRole('button', { name: /1 task running/ }).click();
   await expect(panel.getByText('Scan of Films')).toBeVisible();
   await expect(panel.getByText('4 of 10')).toBeVisible();
-  await page.getByRole('navigation').getByRole('link', { name: 'History' }).click();
+  await navLink(page, 'History').click();
   await expect(page).toHaveURL(/\/history/);
   await expect(panel.getByText('Scan of Films')).toBeVisible();
 

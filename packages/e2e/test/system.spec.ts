@@ -1,10 +1,10 @@
 import { readFile } from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
-import { signIn } from './helpers.js';
+import { navLink, signIn } from './helpers.js';
 
 test('reads the log of the server, filters it and opens a line', async ({ page }) => {
   await signIn(page);
-  await page.getByRole('navigation').getByRole('link', { name: 'System' }).click();
+  await navLink(page, 'System').click();
   await expect(page.getByRole('heading', { level: 1, name: 'System' })).toBeVisible();
   await page
     .getByRole('navigation', { name: 'Sections of the System page' })
@@ -70,7 +70,7 @@ test('downloads the log as a file', async ({ page }) => {
 
 test('shows what was sent to TMDB, by period', async ({ page }) => {
   await signIn(page);
-  await page.getByRole('navigation').getByRole('link', { name: 'System' }).click();
+  await navLink(page, 'System').click();
   await page
     .getByRole('navigation', { name: 'Sections of the System page' })
     .getByRole('link', { name: 'TMDB' })
@@ -91,7 +91,7 @@ test('shows what was sent to TMDB, by period', async ({ page }) => {
 
 test('opens on the health of the server, card by card', async ({ page }) => {
   await signIn(page);
-  await page.getByRole('navigation').getByRole('link', { name: 'System' }).click();
+  await navLink(page, 'System').click();
   await expect(page).not.toHaveURL(/tab=/);
 
   for (const title of [

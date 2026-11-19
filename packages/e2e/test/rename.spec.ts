@@ -1,7 +1,7 @@
 import { access, mkdir, writeFile } from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
 import { AUTH_HEADERS, library } from '../support.js';
-import { signIn } from './helpers.js';
+import { navLink, signIn } from './helpers.js';
 
 const exists = (path: string): Promise<boolean> =>
   access(path).then(
@@ -36,6 +36,6 @@ test('previews a rename from the library, runs it, and finds it in the history',
   await expect(page.getByRole('status').filter({ hasText: 'Started' })).toBeVisible();
   await expect.poll(() => exists(ALIEN)).toBe(true);
 
-  await page.getByRole('link', { name: 'History' }).click();
+  await navLink(page, 'History').click();
   await expect(page.getByText(/Alien/).first()).toBeVisible();
 });

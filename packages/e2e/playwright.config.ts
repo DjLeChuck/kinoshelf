@@ -7,7 +7,10 @@ export default defineConfig({
   workers: 1,
   fullyParallel: false,
   forbidOnly: Boolean(process.env.CI),
-  retries: process.env.CI ? 1 : 0,
+  // No retry: the tests share one server and one disk, so a second attempt starts from what the
+  // first one changed (a file already renamed...) and fails on that instead, hiding the real cause.
+  // A test that fails sometimes is a bug to fix, not to replay.
+  retries: 0,
   reporter: process.env.CI ? [['github'], ['html', { open: 'never' }]] : 'list',
   use: {
     baseURL: BASE_URL,
