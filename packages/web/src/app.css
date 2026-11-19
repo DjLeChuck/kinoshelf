@@ -511,8 +511,11 @@ input[type='radio']:disabled {
   overflow-wrap: anywhere;
 }
 
-/* A work's page open as a sheet (`PanelSheet`, when it has no room beside the list): the list
-   behind it must not scroll, or a swipe on the sheet's edge moves the page. */
+/* Nothing behind an overlay may scroll: any modal `<dialog>` (all of them go through `showModal`),
+   and a work's page open as a sheet (`PanelSheet`, when it has no room beside the list), where a
+   swipe on the sheet's edge would otherwise move the page. */
+html:has(dialog[open]:modal),
 html:has(.side.stacked.sheet) {
   overflow: hidden;
+  scrollbar-gutter: stable;
 }
