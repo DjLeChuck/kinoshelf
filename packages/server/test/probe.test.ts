@@ -588,7 +588,10 @@ describe('the probe queue', () => {
 
     const broken = queue({ prober: () => Promise.reject(new Error('invalid data')) });
     broken.store.replace('films', [item(b)]);
-    expect(await broken.probes.now('films', b)).toBeUndefined();
+    // The first answer is the one the next call finds stored.
+    const first = await broken.probes.now('films', b);
+    expect(first).toMatchObject({ video: null, unreadable: 'invalid data' });
+    expect(await broken.probes.now('films', b)).toMatchObject({ unreadable: 'invalid data' });
     expect(broken.store.unprobed('films')).toEqual([]);
     expect(broken.errors).toHaveLength(1);
     // The reason is kept with the row, so a page can say the file is damaged.

@@ -420,7 +420,8 @@ export class ProbeQueue {
 
   /**
    * What a page asks for: the file is read now unless the row is already up to date. Returns what
-   * is known, `undefined` when nothing could be learned (no `ffprobe`, a damaged file).
+   * is known (a file ffprobe cannot read gives its empty probe with the reason), `undefined` when
+   * nothing could be learned (no `ffprobe`, a file gone).
    */
   async now(libraryId: string, path: string): Promise<Probe | undefined> {
     this.waiting.delete(ProbeQueue.key({ libraryId, path }));
@@ -469,7 +470,9 @@ export class ProbeQueue {
           };
           store.setProbe(libraryId, path, empty);
           this.deps.onError?.(error, path);
-          return undefined;
+          // The same answer as the next call, which finds it stored: a page must not say less the
+          // first time it asks than the second.
+          return empty;
         }
       }
       return undefined;
