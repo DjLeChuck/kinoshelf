@@ -127,6 +127,33 @@ describe('GuessitParser', () => {
       expect(parsed.title).toBe('Blade Runner');
     });
 
+    it('reads the tags of a custom layout back, and never takes them for a release group', () => {
+      const parsed = parser.parse(
+        'La Vache et le Prisonnier (1959) [imdbid-tt0053403] [tmdbtvid-58736]/' +
+          'La Vache et le Prisonnier (1959) 1080p AC3 [imdbid-tt0053403] [tmdbtvid-58736].mkv',
+      );
+      expect(parsed).toMatchObject({
+        title: 'La Vache et le Prisonnier',
+        year: 1959,
+        screenSize: '1080p',
+        imdbIds: ['tt0053403'],
+        knownIds: [{ provider: 'tmdb', id: 58736 }],
+      });
+      expect(parsed.releaseGroup).toBeUndefined();
+      expect(parsed.subtitle).toBeUndefined();
+      expect(parser.parse('Dune (2021) [tmdbmovieid-438631].mkv').knownIds).toEqual([
+        { provider: 'tmdb', id: 438631 },
+      ]);
+    });
+
+    it('leaves the codec and HDR of a custom name alone', () => {
+      const parsed = parser.parse(
+        'Dune (2021) 2160p EAC3 [HDR10]/Dune (2021) 2160p EAC3 [HDR10].mkv',
+      );
+      expect(parsed).toMatchObject({ title: 'Dune', year: 2021, screenSize: '2160p' });
+      expect(parsed.releaseGroup).toBeUndefined();
+    });
+
     it('ignores an imdb tag that is not an id', () => {
       expect(parser.parse('Blade Runner (1982) {imdb-1234}.mkv').imdbIds).toBeUndefined();
     });

@@ -13,9 +13,11 @@ export interface GuessitParserOptions {
 }
 
 // Ids and editions embedded in names by Plex (`{tmdb-1}`, `{edition-X}`) and Jellyfin
-// (`[tmdbid-1]`). guessit would read them as titles, so they are removed before parsing.
-const TAG = /\s*[{[](?:tmdb|tvdb|imdb)(?:id)?-[^}\]]*[}\]]|\s*\{edition-[^}]*\}/gi;
-const TMDB_TAG = /[{[]tmdb(?:id)?-(\d+)[}\]]/i;
+// (`[tmdbid-1]`). guessit would read them as titles, so they are removed before parsing. `tmdbtvid`
+// and `tmdbmovieid` are spellings people write in their own names (a custom layout): not documented
+// by any player, but read back so that such a name never turns into a release group.
+const TAG = /\s*[{[](?:tmdb(?:tv|movie)?|tvdb|imdb)(?:id)?-[^}\]]*[}\]]|\s*\{edition-[^}]*\}/gi;
+const TMDB_TAG = /[{[]tmdb(?:tv|movie)?(?:id)?-(\d+)[}\]]/i;
 const IMDB_TAG = /[{[]imdb(?:id)?-(tt\d{7,10})[}\]]/i;
 
 const toList = <T>(value: T | readonly T[] | undefined): readonly T[] =>
