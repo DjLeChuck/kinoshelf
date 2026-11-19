@@ -25,6 +25,7 @@ export {
 export {
   checkNaming,
   CUSTOM_NAME_FIELDS,
+  NAME_KINDS,
   namingProblem,
   type CustomNames,
   type NamingExample,

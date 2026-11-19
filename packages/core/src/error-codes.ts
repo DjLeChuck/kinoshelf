@@ -31,6 +31,7 @@ export const ERROR_CODES = [
   'profile.invalid',
   'profile.invalid-path',
   'profile.name-not-unique',
+  'profile.names-incomplete',
   'profile.not-a-file',
   'profile.unknown-variable',
   'profile.yaml-syntax',

@@ -1,5 +1,5 @@
 import type { Profile } from '../types/profile.js';
-import type { CustomNames } from './naming.js';
+import { customizes, type CustomNames } from './names.js';
 
 /** Whether the `{tmdb-<id>}` tag is in the folder names (and the movie file). */
 export type Naming = 'with-id' | 'no-id';
@@ -49,11 +49,13 @@ export function buildProfile(choice: ProfileChoice): Profile {
     templates: {
       movieFolder: choice.names?.movieFolder ?? `{title} ({year})${tag}`,
       movieFile: choice.names?.movieFile ?? `{title} ({year})${tag}`,
-      movieVersion: ' - {version}',
+      // A type the owner named is kept as written: no label is added behind its names, so two files
+      // that they do not tell apart are a conflict, never a version nobody asked for.
+      ...(!customizes(choice.names, 'movie') && { movieVersion: ' - {version}' }),
       seriesFolder: choice.names?.seriesFolder ?? `{title} ({year})${tag}`,
       seasonFolder: choice.names?.seasonFolder ?? 'Season {season:02}',
       episodeFile: choice.names?.episodeFile ?? '{title} ({year}) - s{season:02}e{episode:02}',
-      episodeVersion: ' - {version}',
+      ...(!customizes(choice.names, 'series') && { episodeVersion: ' - {version}' }),
     },
     nfo:
       choice.metadata === 'nfo'

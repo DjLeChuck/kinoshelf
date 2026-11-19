@@ -108,10 +108,13 @@ describe('libraries', () => {
 
     it('reads a typed library’s own names, checks them, and refuses them on an arrival folder', async () => {
       const config = await load(
-        `${head}  - {id: a, name: A, source: /a, type: movie, names: {movieFile: '{title} ({year}) {screenSize}'}}\n`,
+        `${head}  - {id: a, name: A, source: /a, type: movie, names: {movieFolder: '{title} ({year})', movieFile: '{title} ({year}) {screenSize}'}}\n`,
       );
       const library = config.libraries?.[2];
-      expect(library?.names).toEqual({ movieFile: '{title} ({year}) {screenSize}' });
+      expect(library?.names).toEqual({
+        movieFolder: '{title} ({year})',
+        movieFile: '{title} ({year}) {screenSize}',
+      });
       expect(libraryOverrides(library as LibraryConfig, config.libraries ?? []).names).toEqual(
         library?.names,
       );
@@ -119,13 +122,16 @@ describe('libraries', () => {
         '{title} ({year}) {screenSize}',
       );
       await rejected(
-        `${head}  - {id: a, name: A, source: /a, type: movie, names: {movieFile: '{year}'}}\n`,
+        `${head}  - {id: a, name: A, source: /a, type: movie, names: {movieFolder: '{title}', movieFile: '{year}'}}\n`,
       );
       await rejected(
-        `${head}  - {id: a, name: A, source: /a, type: movie, names: {movieFile: '{title} {x}'}}\n`,
+        `${head}  - {id: a, name: A, source: /a, type: movie, names: {movieFolder: '{title}', movieFile: '{title} {x}'}}\n`,
       );
       await rejected(
-        `${head}  - {id: a, name: A, source: /a, into: {movie: films}, names: {movieFile: '{title}'}}\n`,
+        `${head}  - {id: a, name: A, source: /a, type: movie, names: {movieFile: '{title}'}}\n`,
+      );
+      await rejected(
+        `${head}  - {id: a, name: A, source: /a, into: {movie: films}, names: {movieFolder: '{title}', movieFile: '{title}'}}\n`,
       );
     });
 

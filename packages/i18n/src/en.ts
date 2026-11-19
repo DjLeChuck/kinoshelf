@@ -37,6 +37,7 @@ export const en = {
   'error.profile.invalid-path': 'Invalid template in {field}: "{template}"',
   'error.profile.name-not-unique':
     'The {field} name must use the variable {variable}, or two works would share one name.',
+  'error.profile.names-incomplete': 'The {kind} names go together: also set {missing}.',
   'error.profile.not-a-file':
     'Cannot use {path} as a profile: give an existing .yaml file of at most {max} KB.',
   'error.profile.unknown-variable': 'Unknown variable {variable} in {field}.',

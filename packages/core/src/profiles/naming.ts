@@ -1,26 +1,11 @@
 import { KinoshelfError } from '../errors.js';
 import type { ErrorInfo } from '../types/errors.js';
 import { buildProfile, DEFAULT_PROFILE_CHOICE } from './build.js';
+import { CUSTOM_NAME_FIELDS, NAME_KINDS, type CustomNames } from './names.js';
 import { checkTemplates } from './loader.js';
 import { renderProfileTemplate, type TemplateVariables } from './template.js';
 
-/**
- * The names a library may write its own way: the work's folder, the video's file name and the
- * season's folder. What goes beside the video (NFO, images) keeps the names every player reads.
- */
-export type CustomNames = {
-  readonly [
-    Field in 'movieFolder' | 'movieFile' | 'seriesFolder' | 'seasonFolder' | 'episodeFile'
-  ]?: string | undefined;
-};
-
-export const CUSTOM_NAME_FIELDS = [
-  'movieFolder',
-  'movieFile',
-  'seriesFolder',
-  'seasonFolder',
-  'episodeFile',
-] as const satisfies readonly (keyof CustomNames)[];
+export { CUSTOM_NAME_FIELDS, NAME_KINDS, customizes, type CustomNames } from './names.js';
 
 /** What a name must say for two works (or two episodes) never to share one. */
 const REQUIRED: Readonly<Record<keyof CustomNames, string>> = {
@@ -82,6 +67,12 @@ const BARE: TemplateVariables = {
  * its folder's name, which Jellyfin wants) is a warning of the report.
  */
 export function checkNaming(names: CustomNames): NamingReport {
+  for (const [kind, fields] of Object.entries(NAME_KINDS)) {
+    const missing = fields.filter((field) => names[field] === undefined);
+    if (missing.length > 0 && missing.length < fields.length) {
+      throw new KinoshelfError('profile.names-incomplete', { kind, missing: missing.join(', ') });
+    }
+  }
   const profile = buildProfile({ ...DEFAULT_PROFILE_CHOICE, names });
   checkTemplates(profile);
 

@@ -257,6 +257,74 @@ filesystem: { forbidden: windows, replacement: '', maxSegmentBytes: 255 }
   });
 });
 
+describe('createPlan: a custom name is kept as written', () => {
+  const sized = buildProfile({
+    naming: 'no-id',
+    metadata: 'none',
+    names: { movieFolder: '{title} ({year})', movieFile: '{title} ({year}) {screenSize}' },
+  });
+  const namesOf = (result: Awaited<ReturnType<typeof plan>>): (string | undefined)[] =>
+    result.items.map((item) => destinationOf(item)?.split('/').slice(-1)[0]);
+
+  it('tells files apart only by what the name writes', async () => {
+    const [src, lib] = [await makeDir(), await makeDir()];
+    const a = await put(join(src, 'a.mkv'), 'a');
+    const b = await put(join(src, 'b.mkv'), 'bb');
+    const result = await plan(
+      [
+        { parsed: { ...parsedMovie(a), screenSize: '2160p' }, candidate: dune },
+        { parsed: { ...parsedMovie(b), screenSize: '1080p' }, candidate: dune },
+      ],
+      lib,
+      { profile: sized },
+    );
+    expect(namesOf(result)).toEqual(['Dune (2021) 2160p.mkv', 'Dune (2021) 1080p.mkv']);
+  });
+
+  it('holds back two files the name does not tell apart, instead of adding the source or group', async () => {
+    const [src, lib] = [await makeDir(), await makeDir()];
+    const a = await put(join(src, 'a.mkv'), 'a');
+    const b = await put(join(src, 'b.mkv'), 'bb');
+    const result = await plan(
+      [
+        { parsed: { ...parsedMovie(a), screenSize: '2160p', source: 'Blu-ray' }, candidate: dune },
+        { parsed: { ...parsedMovie(b), screenSize: '2160p', source: 'Web' }, candidate: dune },
+      ],
+      lib,
+      { profile: sized },
+    );
+    expect(result.items.map((item) => item.status)).toEqual(['conflict', 'conflict']);
+    expect(result.items.flatMap((item) => item.conflicts.map((c) => c.reason))).toEqual([
+      'duplicate-destination',
+      'duplicate-destination',
+    ]);
+  });
+
+  it('holds back a file whose name is taken, even with another size on disk', async () => {
+    const [src, lib] = [await makeDir(), await makeDir()];
+    const a = await put(join(src, 'a.mkv'), 'a');
+    await put(join(lib, 'Dune (2021)', 'Dune (2021).mkv'), 'bb');
+    const custom = buildProfile({
+      naming: 'no-id',
+      metadata: 'none',
+      names: { movieFolder: '{title} ({year})', movieFile: '{title} ({year})' },
+    });
+    const result = await plan([{ parsed: parsedMovie(a), candidate: dune }], lib, {
+      profile: custom,
+    });
+    expect(result.items[0]?.conflicts[0]?.reason).toBe('destination-exists');
+  });
+
+  it('keeps the labels of the default naming', () => {
+    expect(buildProfile({ naming: 'no-id', metadata: 'none' }).templates.movieVersion).toBe(
+      ' - {version}',
+    );
+    expect(sized.templates.movieVersion).toBeUndefined();
+    // Only the movies are customised: the episodes keep theirs.
+    expect(sized.templates.episodeVersion).toBe(' - {version}');
+  });
+});
+
 describe('createPlan: separate libraries', () => {
   it('sends movies and series to their own roots', async () => {
     const src = await makeDir();

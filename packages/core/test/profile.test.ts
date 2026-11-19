@@ -314,10 +314,23 @@ describe('loadProfileFile: parsed once', () => {
 });
 
 describe('checkNaming', () => {
+  const movie = (movieFile: string, movieFolder = '{title} ({year})') => ({
+    movieFolder,
+    movieFile,
+  });
+  const show = {
+    seriesFolder: '{title} ({year})',
+    seasonFolder: 'Season {season:02}',
+    episodeFile: '{title} ({year}) - s{season:02}e{episode:02}',
+  };
+
   it('previews a template with everything given, and with only the work', () => {
     const report = checkNaming({
-      movieFolder: '{title} ({year}) [imdbid-{imdb}] [tmdbtvid-{tmdb}]',
-      movieFile: '{title} ({year}) {screenSize} [imdbid-{imdb}] [tmdbtvid-{tmdb}]',
+      ...movie(
+        '{title} ({year}) {screenSize} [imdbid-{imdb}] [tmdbtvid-{tmdb}]',
+        '{title} ({year}) [imdbid-{imdb}] [tmdbtvid-{tmdb}]',
+      ),
+      ...show,
     });
     expect(report.preview.complete.movie.path).toEqual([
       'Dune (2021) [imdbid-tt1160419] [tmdbtvid-438631]',
@@ -336,50 +349,82 @@ describe('checkNaming', () => {
     expect(report.warnings.map((warning) => warning.code)).toEqual([
       'movie-file-not-in-folder-name',
     ]);
-    expect(
-      checkNaming({ movieFile: '{title} ({year}) {screenSize} [imdbid-{imdb}]' }).warnings,
-    ).toEqual([]);
+    expect(checkNaming(movie('{title} ({year}) {screenSize} [imdbid-{imdb}]')).warnings).toEqual(
+      [],
+    );
+  });
+
+  it('shows the default names of a type that is not customised', () => {
+    const report = checkNaming(movie('{title} ({year}) {screenSize}'));
+    expect(report.preview.complete.episode.path).toEqual([
+      'Dune (2021)',
+      'Season 01',
+      'Dune (2021) - s01e02.mkv',
+    ]);
   });
 
   it('warns, without refusing, when a movie file does not start with its folder’s name', () => {
-    const report = checkNaming({ movieFile: '{title} - {year}' });
+    const report = checkNaming(movie('{title} - {year}'));
     expect(report.warnings.map((warning) => warning.code)).toEqual([
       'movie-file-not-in-folder-name',
     ]);
   });
 
+  it('wants every name of a type once one is set', () => {
+    expect(codeOf(() => checkNaming({ movieFile: '{title}' }))).toBe('profile.names-incomplete');
+    expect(codeOf(() => checkNaming({ movieFolder: '{title}' }))).toBe('profile.names-incomplete');
+    expect(codeOf(() => checkNaming({ seasonFolder: 'Season {season}' }))).toBe(
+      'profile.names-incomplete',
+    );
+    expect(
+      codeOf(() => checkNaming({ seriesFolder: '{title}', episodeFile: '{title} {episode}' })),
+    ).toBe('profile.names-incomplete');
+    expect(codeOf(() => checkNaming({ ...movie('{title}') }))).toBeUndefined();
+    expect(codeOf(() => checkNaming({ ...show }))).toBeUndefined();
+  });
+
   it('refuses a name that would give two works the same one', () => {
-    expect(codeOf(() => checkNaming({ movieFile: '{year}' }))).toBe('profile.name-not-unique');
-    expect(codeOf(() => checkNaming({ seasonFolder: 'Saison' }))).toBe('profile.name-not-unique');
-    expect(codeOf(() => checkNaming({ episodeFile: '{title} {season:02}' }))).toBe(
+    expect(codeOf(() => checkNaming(movie('{year}')))).toBe('profile.name-not-unique');
+    expect(codeOf(() => checkNaming({ ...show, seasonFolder: 'Saison' }))).toBe(
+      'profile.name-not-unique',
+    );
+    expect(codeOf(() => checkNaming({ ...show, episodeFile: '{title} {season:02}' }))).toBe(
       'profile.name-not-unique',
     );
   });
 
   it('refuses an unknown variable, one a folder cannot have, and a path that leaves the library', () => {
-    expect(codeOf(() => checkNaming({ movieFile: '{title} {nope}' }))).toBe(
-      'profile.unknown-variable',
-    );
+    expect(codeOf(() => checkNaming(movie('{title} {nope}')))).toBe('profile.unknown-variable');
     // A folder holds several versions: only a file may say the picture size.
-    expect(codeOf(() => checkNaming({ movieFolder: '{title} {screenSize}' }))).toBe(
+    expect(codeOf(() => checkNaming(movie('{title}', '{title} {screenSize}')))).toBe(
       'profile.unknown-variable',
     );
-    expect(codeOf(() => checkNaming({ movieFolder: '../{title}' }))).toBe('profile.invalid-path');
-    expect(codeOf(() => checkNaming({ movieFolder: '/{title}' }))).toBe('profile.invalid-path');
-    expect(codeOf(() => checkNaming({ movieFile: '{title}/{year}' }))).toBe('profile.invalid-path');
+    expect(codeOf(() => checkNaming(movie('{title}', '../{title}')))).toBe('profile.invalid-path');
+    expect(codeOf(() => checkNaming(movie('{title}', '/{title}')))).toBe('profile.invalid-path');
+    expect(codeOf(() => checkNaming(movie('{title}/{year}')))).toBe('profile.invalid-path');
     // A slash hidden in a group is a slash all the same.
-    expect(codeOf(() => checkNaming({ movieFile: '{title} [../{imdb}]' }))).toBe(
-      'profile.invalid-path',
-    );
+    expect(codeOf(() => checkNaming(movie('{title} [../{imdb}]')))).toBe('profile.invalid-path');
   });
 
-  it('is applied by buildProfile over the naming axis', () => {
-    const profile = buildProfile({
-      naming: 'with-id',
-      metadata: 'none',
-      names: { seasonFolder: 'Saison {season:02}' },
-    });
-    expect(profile.templates.seasonFolder).toBe('Saison {season:02}');
+  it('is applied by buildProfile over the naming axis, one type at a time', () => {
+    const profile = buildProfile({ naming: 'with-id', metadata: 'none', names: show });
+    expect(profile.templates.seasonFolder).toBe('Season {season:02}');
+    expect(profile.templates.seriesFolder).toBe('{title} ({year})');
+    // The other type keeps the naming axis, and its labels.
     expect(profile.templates.movieFolder).toBe('{title} ({year}) \\{tmdb-{tmdb}\\}');
+    expect(profile.templates.movieVersion).toBe(' - {version}');
+    // The customised one is left as written.
+    expect(profile.templates.episodeVersion).toBeUndefined();
+  });
+
+  it('leaves a type as written as soon as one of its names is set', () => {
+    // checkNaming refuses a partial set; buildProfile must still never label what is the owner's.
+    const profile = buildProfile({
+      naming: 'no-id',
+      metadata: 'none',
+      names: { movieFile: '{title} ({year}) {screenSize}' },
+    });
+    expect(profile.templates.movieVersion).toBeUndefined();
+    expect(profile.templates.episodeVersion).toBe(' - {version}');
   });
 });

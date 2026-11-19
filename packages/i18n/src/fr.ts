@@ -34,6 +34,8 @@ export const fr: Record<keyof typeof en, string> = {
   'error.profile.invalid-path': 'Template invalide dans {field} : « {template} »',
   'error.profile.name-not-unique':
     'Le nom {field} doit utiliser la variable {variable}, sinon deux œuvres porteraient le même nom.',
+  'error.profile.names-incomplete':
+    'Les noms du type {kind} vont ensemble : renseignez aussi {missing}.',
   'error.profile.not-a-file':
     'Impossible d’utiliser {path} comme profil : indiquez un fichier .yaml existant d’au plus {max} Ko.',
   'error.profile.unknown-variable': 'Variable inconnue {variable} dans {field}.',
