@@ -22,6 +22,15 @@ test('shows the tasks that run on every page, and keeps a failure until it is cl
 }) => {
   let tasks: object[] = [task({})];
   await page.route('**/api/activity', (route) => route.fulfill({ json: { tasks } }));
+  // The panel reads the list on a server event, and a real server sends none at the moment the test
+  // changes it. A stream that says `ready` and closes is opened again by the browser after `retry`,
+  // which makes the page read the list again, whatever else the server is doing.
+  await page.route('**/api/events', (route) =>
+    route.fulfill({
+      contentType: 'text/event-stream',
+      body: 'retry: 300\nevent: ready\ndata: {}\n\n',
+    }),
+  );
   await signIn(page);
 
   const panel = page.getByRole('complementary', { name: 'Background activity' });
@@ -45,8 +54,6 @@ test('shows the tasks that run on every page, and keeps a failure until it is cl
       current: null,
     }),
   ];
-  // Changing page reads the list again.
-  await page.getByRole('navigation').getByRole('link', { name: 'Settings' }).click();
   await expect(panel.getByText(/✗/)).toBeVisible();
   await panel.getByRole('button', { name: 'Dismiss' }).click();
   await expect(panel).toHaveCount(0);
