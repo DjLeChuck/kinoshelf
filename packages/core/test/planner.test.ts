@@ -382,6 +382,61 @@ describe('createPlan: names that use what the file holds', () => {
   });
 });
 
+describe('createPlan: a folder named after the video', () => {
+  const perVersion = buildProfile({
+    naming: 'no-id',
+    metadata: 'none',
+    names: {
+      movieFolder: '{title} ({year}) - {screenSize} {hdr}',
+      movieFile: '{title} ({year}) - {screenSize} {hdr}',
+    },
+  });
+
+  it('makes one folder per version, and reads the file for what only it tells', async () => {
+    const [src, lib] = [await makeDir(), await makeDir()];
+    const a = await put(join(src, 'a.mkv'), 'a');
+    const b = await put(join(src, 'b.mkv'), 'bb');
+    const traits: Record<string, { hdr?: string }> = { [a]: { hdr: 'HDR10' }, [b]: {} };
+    const result = await createPlan(
+      [
+        { parsed: { ...parsedMovie(a), screenSize: '2160p' }, candidate: dune },
+        { parsed: { ...parsedMovie(b), screenSize: '1080p' }, candidate: dune },
+      ],
+      {
+        profile: perVersion,
+        destinationRoot: lib,
+        mode: 'copy',
+        newId: counter(),
+        traitsOf: (path) => Promise.resolve(traits[path]),
+      },
+    );
+    expect(result.items.map((item) => destinationOf(item))).toEqual([
+      join(lib, 'Dune (2021) - 2160p HDR10', 'Dune (2021) - 2160p HDR10.mkv'),
+      join(lib, 'Dune (2021) - 1080p', 'Dune (2021) - 1080p.mkv'),
+    ]);
+  });
+
+  it('reads the file when only the folder uses what it tells', async () => {
+    const [src, lib] = [await makeDir(), await makeDir()];
+    const a = await put(join(src, 'a.mkv'), 'a');
+    const onlyFolder = buildProfile({
+      naming: 'no-id',
+      metadata: 'none',
+      names: { movieFolder: '{title} [{hdr}]', movieFile: '{title}' },
+    });
+    const result = await createPlan([{ parsed: parsedMovie(a), candidate: dune }], {
+      profile: onlyFolder,
+      destinationRoot: lib,
+      mode: 'copy',
+      newId: counter(),
+    });
+    expect(result.items[0]?.conflicts[0]).toMatchObject({
+      reason: 'unresolvable-name',
+      detail: { code: 'plan.probe-unavailable' },
+    });
+  });
+});
+
 describe('createPlan: separate libraries', () => {
   it('sends movies and series to their own roots', async () => {
     const src = await makeDir();

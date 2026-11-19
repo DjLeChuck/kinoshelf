@@ -1,6 +1,6 @@
 /**
- * What says something of one video, not of the work: a folder holds several versions of a work, so
- * only a file's name may carry them.
+ * What says something of one video, not of the work. A name that uses one is the owner's to write,
+ * a folder's included (`Dune (2021) - 2160p/`: one folder per version); the default naming uses none.
  */
 const FILE_VARIABLES = [
   'screenSize',
@@ -15,29 +15,29 @@ const FILE_VARIABLES = [
 export const PROBE_VARIABLES: readonly string[] = ['videoCodec', 'audioCodec', 'hdr'];
 
 /**
- * Variables that may have no value (an id TMDB lacks, a size the name does not give). A template
+ * Variables that may have no value (an id or an episode title TMDB lacks, a size the name does not give). A template
  * leaves them out, with the separator before them, rather than failing: the others are required.
  */
-export const OPTIONAL_VARIABLES: readonly string[] = ['imdb', ...FILE_VARIABLES];
+export const OPTIONAL_VARIABLES: readonly string[] = ['imdb', 'episodeTitle', ...FILE_VARIABLES];
 
-/** Variables each profile template may use; anything else is rejected when loading a profile. */
+/** What says something of the work, in any name. */
+const WORK_VARIABLES = ['title', 'year', 'tmdb', 'imdb'] as const;
+/** A series' names also know where the episode is: any of them may use these. */
+const SERIES_VARIABLES = ['season', 'episode', 'episodeTitle'] as const;
+
+/**
+ * Variables each profile template may use; anything else is rejected when loading a profile. Within
+ * a type every name takes every variable of the type (a movie's, or a series'), the file's and the
+ * folders': the owner decides what is useful where, `checkNaming` only asks each name to stay unique.
+ */
 export const VARIABLES = {
-  movieFolder: ['title', 'year', 'tmdb', 'imdb'],
-  movieFile: ['title', 'year', 'tmdb', 'imdb', ...FILE_VARIABLES],
+  movieFolder: [...WORK_VARIABLES, ...FILE_VARIABLES],
+  movieFile: [...WORK_VARIABLES, ...FILE_VARIABLES],
   movieVersion: ['version'],
   episodeVersion: ['version'],
-  seriesFolder: ['title', 'year', 'tmdb', 'imdb'],
-  seasonFolder: ['title', 'year', 'tmdb', 'imdb', 'season'],
-  episodeFile: [
-    'title',
-    'year',
-    'tmdb',
-    'imdb',
-    'season',
-    'episode',
-    'episodeTitle',
-    ...FILE_VARIABLES,
-  ],
+  seriesFolder: [...WORK_VARIABLES, ...SERIES_VARIABLES, ...FILE_VARIABLES],
+  seasonFolder: [...WORK_VARIABLES, ...SERIES_VARIABLES, ...FILE_VARIABLES],
+  episodeFile: [...WORK_VARIABLES, ...SERIES_VARIABLES, ...FILE_VARIABLES],
   nfoName: ['file'],
   artworkName: [],
   seasonArtworkName: ['season'],

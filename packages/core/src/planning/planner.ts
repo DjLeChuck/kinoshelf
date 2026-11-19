@@ -116,10 +116,16 @@ const blocked = (conflict: Conflict, base: Omit<PlanItem, 'status' | 'conflicts'
 const versionTemplateOf = (profile: Profile, kind: 'movie' | 'series'): string | undefined =>
   kind === 'movie' ? profile.templates.movieVersion : profile.templates.episodeVersion;
 
-/** Whether the file name of this kind of work uses something only the file itself can tell. */
+/** Whether a name of this kind of work (a folder's or the file's) uses something only the file can tell. */
 function readsStreams(profile: Profile, kind: 'movie' | 'series'): boolean {
-  const template = kind === 'movie' ? profile.templates.movieFile : profile.templates.episodeFile;
-  return templateVariables(parseTemplate(template)).some((name) => PROBE_VARIABLES.includes(name));
+  const { templates } = profile;
+  const used =
+    kind === 'movie'
+      ? [templates.movieFolder, templates.movieFile]
+      : [templates.seriesFolder, templates.seasonFolder, templates.episodeFile];
+  return used.some((template) =>
+    templateVariables(parseTemplate(template)).some((name) => PROBE_VARIABLES.includes(name)),
+  );
 }
 
 /** The text of the version template that comes before `{version}`: what a labelled name shows. */

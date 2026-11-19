@@ -39,26 +39,30 @@ export interface NamingReport {
   readonly warnings: readonly NamingWarning[];
 }
 
-const COMPLETE: TemplateVariables = {
-  title: 'Dune',
-  year: 2021,
-  tmdb: 438631,
-  imdb: 'tt1160419',
+/** A video's own traits, the same for a film and an episode: the part of a sample that varies least. */
+const TRAITS: TemplateVariables = {
   screenSize: '2160p',
   source: 'Blu-ray',
   releaseGroup: 'GRP',
-  season: 1,
-  episode: 2,
-  episodeTitle: 'Pilot',
+  videoCodec: 'HEVC',
+  audioCodec: 'EAC3',
+  hdr: 'HDR10',
 };
 
-const BARE: TemplateVariables = {
-  title: 'Dune',
-  year: 2021,
-  tmdb: 438631,
-  season: 1,
-  episode: 2,
-};
+/** A film and a series of their own: a series' names are never shown with a film's title. */
+const MOVIE = { title: 'Dune', year: 2021, tmdb: 438631 } as const;
+const SERIES = { title: 'The Bear', year: 2022, tmdb: 136315, season: 1, episode: 2 } as const;
+
+/** What a video that gave everything, and one that gave only the work, would be written with. */
+const COMPLETE = {
+  movie: { ...MOVIE, imdb: 'tt1160419', ...TRAITS },
+  series: { ...SERIES, imdb: 'tt14452776', episodeTitle: 'Hands', ...TRAITS },
+} as const satisfies Record<'movie' | 'series', TemplateVariables>;
+
+const BARE = { movie: MOVIE, series: SERIES } as const satisfies Record<
+  'movie' | 'series',
+  TemplateVariables
+>;
 
 /**
  * Checks the names a library asks for, and shows what they give. Throws a {@link KinoshelfError}
@@ -85,23 +89,23 @@ export function checkNaming(names: CustomNames): NamingReport {
   }
 
   const example = (
-    variables: TemplateVariables,
+    samples: Record<'movie' | 'series', TemplateVariables>,
   ): { movie: NamingExample; episode: NamingExample } => {
-    const file = (template: string): string =>
-      renderProfileTemplate(profile, template, variables).join('');
     const { templates } = profile;
+    const render = (template: string, variables: TemplateVariables): string[] =>
+      renderProfileTemplate(profile, template, variables);
     return {
       movie: {
         path: [
-          ...renderProfileTemplate(profile, templates.movieFolder, variables),
-          `${file(templates.movieFile)}.mkv`,
+          ...render(templates.movieFolder, samples.movie),
+          `${render(templates.movieFile, samples.movie).join('')}.mkv`,
         ],
       },
       episode: {
         path: [
-          ...renderProfileTemplate(profile, templates.seriesFolder, variables),
-          ...renderProfileTemplate(profile, templates.seasonFolder, variables),
-          `${file(templates.episodeFile)}.mkv`,
+          ...render(templates.seriesFolder, samples.series),
+          ...render(templates.seasonFolder, samples.series),
+          `${render(templates.episodeFile, samples.series).join('')}.mkv`,
         ],
       },
     };

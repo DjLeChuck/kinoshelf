@@ -207,8 +207,14 @@ describe('parseProfile', () => {
   });
 
   it('rejects variables not allowed in a given template', () => {
-    const yaml = base.replace(`seasonFolder: 'Season {season:02}'`, `seasonFolder: '{episode:02}'`);
+    // A movie has no episode; a series' names, on the other hand, all take the episode.
+    const yaml = base.replace(`movieFile: '{title}'`, `movieFile: '{title} {episode:02}'`);
     expect(codeOf(() => parseProfile(yaml))).toBe('profile.unknown-variable');
+    const folder = base.replace(
+      `seasonFolder: 'Season {season:02}'`,
+      `seasonFolder: '{episode:02}'`,
+    );
+    expect(codeOf(() => parseProfile(folder))).toBeUndefined();
   });
 
   it('rejects slashes in file name templates and path traversal in folders', () => {
@@ -341,9 +347,9 @@ describe('checkNaming', () => {
       'Dune (2021) [tmdbtvid-438631].mkv',
     ]);
     expect(report.preview.complete.episode.path).toEqual([
-      'Dune (2021)',
+      'The Bear (2022)',
       'Season 01',
-      'Dune (2021) - s01e02.mkv',
+      'The Bear (2022) - s01e02.mkv',
     ]);
     // The issue's own structure: the file does not start with its folder's name (Jellyfin's rule).
     expect(report.warnings.map((warning) => warning.code)).toEqual([
@@ -354,21 +360,40 @@ describe('checkNaming', () => {
     );
   });
 
-  it('accepts the variables the file itself tells, in a file name only', () => {
+  it('accepts the variables the file itself tells, in a file name and in a folder name', () => {
     expect(
       codeOf(() => checkNaming(movie('{title} ({year}) {audioCodec} {videoCodec} [{hdr}]'))),
     ).toBeUndefined();
-    expect(codeOf(() => checkNaming(movie('{title}', '{title} {hdr}')))).toBe(
-      'profile.unknown-variable',
+    expect(codeOf(() => checkNaming(movie('{title}', '{title} {hdr}')))).toBeUndefined();
+  });
+
+  it('gives every variable a value in the complete example, and none in the bare one', () => {
+    const report = checkNaming(
+      movie(
+        '{title} ({year}) {tmdb} {imdb} {screenSize} {source} {releaseGroup} {videoCodec} {audioCodec} {hdr}',
+      ),
     );
+    expect(report.preview.complete.movie.path[1]).toBe(
+      'Dune (2021) 438631 tt1160419 2160p Blu-ray GRP HEVC EAC3 HDR10.mkv',
+    );
+    expect(report.preview.bare.movie.path[1]).toBe('Dune (2021) 438631.mkv');
+  });
+
+  it('leaves the episode title out of a name when there is none', () => {
+    const report = checkNaming({
+      ...show,
+      episodeFile: '{title} - s{season:02}e{episode:02} [{episodeTitle}]',
+    });
+    expect(report.preview.complete.episode.path[2]).toBe('The Bear - s01e02 [Hands].mkv');
+    expect(report.preview.bare.episode.path[2]).toBe('The Bear - s01e02.mkv');
   });
 
   it('shows the default names of a type that is not customised', () => {
     const report = checkNaming(movie('{title} ({year}) {screenSize}'));
     expect(report.preview.complete.episode.path).toEqual([
-      'Dune (2021)',
+      'The Bear (2022)',
       'Season 01',
-      'Dune (2021) - s01e02.mkv',
+      'The Bear (2022) - s01e02.mkv',
     ]);
   });
 
@@ -404,10 +429,15 @@ describe('checkNaming', () => {
 
   it('refuses an unknown variable, one a folder cannot have, and a path that leaves the library', () => {
     expect(codeOf(() => checkNaming(movie('{title} {nope}')))).toBe('profile.unknown-variable');
-    // A folder holds several versions: only a file may say the picture size.
-    expect(codeOf(() => checkNaming(movie('{title}', '{title} {screenSize}')))).toBe(
+    // A folder may say what the video says (one folder per version); a movie has no episode.
+    expect(codeOf(() => checkNaming(movie('{title}', '{title} {screenSize}')))).toBeUndefined();
+    expect(codeOf(() => checkNaming(movie('{title}', '{title} {episode}')))).toBe(
       'profile.unknown-variable',
     );
+    // Every name of a series takes the season and the episode, a folder's included.
+    expect(
+      codeOf(() => checkNaming({ ...show, seriesFolder: '{title} {season} {episode} {hdr}' })),
+    ).toBeUndefined();
     expect(codeOf(() => checkNaming(movie('{title}', '../{title}')))).toBe('profile.invalid-path');
     expect(codeOf(() => checkNaming(movie('{title}', '/{title}')))).toBe('profile.invalid-path');
     expect(codeOf(() => checkNaming(movie('{title}/{year}')))).toBe('profile.invalid-path');

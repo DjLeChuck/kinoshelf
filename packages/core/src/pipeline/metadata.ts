@@ -66,10 +66,11 @@ export class MetadataLoader {
     return profile.nfo !== null || profile.artwork.length > 0;
   }
 
-  /** `{episodeTitle}` in the episode file name: it comes from the provider's season. */
+  /** `{episodeTitle}` in a series name (the episode file's, usually): it comes from the provider's season. */
   private get namesEpisodes(): boolean {
-    return templateVariables(parseTemplate(this.options.profile.templates.episodeFile)).includes(
-      'episodeTitle',
+    const { templates } = this.options.profile;
+    return [templates.seriesFolder, templates.seasonFolder, templates.episodeFile].some(
+      (template) => templateVariables(parseTemplate(template)).includes('episodeTitle'),
     );
   }
 
