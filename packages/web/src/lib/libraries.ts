@@ -9,6 +9,47 @@ export interface LibraryInto {
   readonly series?: string;
 }
 
+/** A library's own folder and file names, a type at a time (see `POST /api/naming/preview`). */
+export interface LibraryNames {
+  readonly movieFolder?: string;
+  readonly movieFile?: string;
+  readonly seriesFolder?: string;
+  readonly seasonFolder?: string;
+  readonly episodeFile?: string;
+}
+
+/** The names of a type, in the order the form shows them. */
+export const NAME_FIELDS = {
+  movie: ['movieFolder', 'movieFile'],
+  series: ['seriesFolder', 'seasonFolder', 'episodeFile'],
+} as const satisfies Record<LibraryKind, readonly (keyof LibraryNames)[]>;
+
+/**
+ * Where "use custom naming masks" starts from: what the standard naming writes without an id, so a
+ * person edits a name that already works rather than an empty field.
+ */
+export const STARTING_NAMES: Required<LibraryNames> = {
+  movieFolder: '{title} ({year})',
+  movieFile: '{title} ({year})',
+  seriesFolder: '{title} ({year})',
+  seasonFolder: 'Season {season:02}',
+  episodeFile: '{title} ({year}) - s{season:02}e{episode:02}',
+};
+
+/** What `POST /api/naming/preview` answers: a path is its folders then the file, as it would be written. */
+export interface NamingPreview {
+  readonly complete: NamingPaths;
+  readonly bare: NamingPaths;
+  readonly warnings: readonly {
+    readonly code: 'movie-file-not-in-folder-name';
+    readonly params: Readonly<Record<string, string>>;
+  }[];
+}
+export interface NamingPaths {
+  readonly movie: readonly string[];
+  readonly episode: readonly string[];
+}
+
 /** What `GET /api/libraries` returns. A field that is `null` follows the global setting. */
 export interface Library {
   readonly id: string;
@@ -19,6 +60,8 @@ export interface Library {
   readonly into?: LibraryInto | null;
   readonly naming: Naming | null;
   readonly metadata: Metadata | null;
+  /** Its own names, when it writes them itself; `null`: the standard ones. */
+  readonly names: LibraryNames | null;
   readonly mode: Mode | null;
   readonly threshold: number | null;
   readonly watch: boolean;
@@ -42,6 +85,7 @@ export interface LibraryBody {
   into?: LibraryInto;
   naming?: Naming | null;
   metadata?: Metadata | null;
+  names?: LibraryNames | null;
   mode?: Mode | null;
   threshold?: number | null;
   watch?: boolean;
@@ -53,6 +97,8 @@ export interface LibraryApi {
   create(body: LibraryBody): Promise<Library>;
   update(id: string, body: Partial<LibraryBody>): Promise<Library>;
   remove(id: string): Promise<void>;
+  /** Checks names and shows what they give; refuses what cannot be used, with the core's code. */
+  previewNames(names: LibraryNames): Promise<NamingPreview>;
   /** Starts the analysis of the library's source folder; the job id follows it. */
   scan(id: string): Promise<{ readonly id: string }>;
   /**
@@ -69,6 +115,7 @@ export const libraryApi: LibraryApi = {
   create: (body) => api.post('/api/libraries', body),
   update: (id, body) => api.patch(`/api/libraries/${id}`, body),
   remove: (id) => api.delete(`/api/libraries/${id}`),
+  previewNames: (names) => api.post('/api/naming/preview', { names }),
   scan: (id) => api.post(`/api/libraries/${id}/scan`),
   rescan: (id, path, candidate) =>
     api.post(`/api/libraries/${id}/rescan`, {
@@ -103,6 +150,10 @@ export interface LibraryForm {
   /** In place only; `''` follows the global setting. */
   naming: Naming | '';
   metadata: Metadata | '';
+  /** In place only: the names are the library's own, for its type. */
+  ownNames: boolean;
+  /** Every name starts filled in; only those of the library's type are sent. */
+  names: Required<LibraryNames>;
   /** Arrival only; `''` follows the global mode. */
   mode: Mode | '';
   /** Follow the global threshold instead of `threshold`. */
@@ -128,6 +179,8 @@ export function libraryForm(
       : { movie: first('movie'), series: first('series') },
     naming: library?.naming ?? '',
     metadata: library?.metadata ?? '',
+    ownNames: library?.names != null,
+    names: { ...STARTING_NAMES, ...library?.names },
     mode: library?.mode ?? '',
     defaultThreshold: library?.threshold == null,
     threshold: library?.threshold ?? THRESHOLD_DEFAULT,
@@ -146,7 +199,7 @@ export const folderName = baseName;
 export function libraryBody(
   form: LibraryForm,
   creating: boolean,
-): LibraryBody | { invalid: 'source' | 'into' | 'threshold' } {
+): LibraryBody | { invalid: 'source' | 'into' | 'threshold' | 'names' } {
   const source = form.source.trim();
   if (!source.startsWith('/')) {
     return { invalid: 'source' };
@@ -164,6 +217,18 @@ export function libraryBody(
   if (form.group === 'in-place') {
     body.naming = form.naming === '' ? null : form.naming;
     body.metadata = form.metadata === '' ? null : form.metadata;
+    if (form.ownNames) {
+      // A type's names go together, and only those of the library's own type are written.
+      const names = Object.fromEntries(
+        NAME_FIELDS[form.type].map((field) => [field, form.names[field].trim()]),
+      ) as LibraryNames;
+      if (Object.values(names).some((name) => name === '')) {
+        return { invalid: 'names' };
+      }
+      body.names = names;
+    } else {
+      body.names = null;
+    }
     if (creating) {
       body.type = form.type;
     }

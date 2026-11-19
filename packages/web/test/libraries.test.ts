@@ -16,6 +16,7 @@ const films: Library = {
   into: null,
   naming: 'no-id',
   metadata: 'nfo',
+  names: null,
   mode: null,
   threshold: 90,
   watch: false,
@@ -32,6 +33,7 @@ const arrivals: Library = {
   into: { movie: 'films', series: 'series' },
   naming: null,
   metadata: null,
+  names: null,
   mode: 'hardlink',
   threshold: null,
   watch: true,
@@ -88,6 +90,7 @@ describe('the library form', () => {
       source: '/in',
       naming: null,
       metadata: null,
+      names: null,
       threshold: null,
       watch: false,
     });
@@ -132,6 +135,49 @@ describe('the library form', () => {
     });
     expect(libraryBody({ ...arrival, into: { movie: '', series: 'series' } }, true)).toMatchObject({
       into: { series: 'series' },
+    });
+  });
+
+  describe('own names', () => {
+    const own = {
+      movieFolder: '{title} ({year})',
+      movieFile: '{title} ({year}) {screenSize} [imdbid-{imdb}]',
+    };
+
+    it('shows a library that writes its names, and starts a new one from the standard ones', () => {
+      const form = libraryForm({ ...films, names: own });
+      expect(form).toMatchObject({
+        ownNames: true,
+        names: { ...own, seasonFolder: 'Season {season:02}' },
+      });
+      expect(libraryForm(films)).toMatchObject({
+        ownNames: false,
+        names: { movieFolder: '{title} ({year})', movieFile: '{title} ({year})' },
+      });
+    });
+
+    it('sends the names of the library’s type only, and null when they are turned off', () => {
+      const form = libraryForm({ ...films, names: own });
+      expect(libraryBody(form, false)).toMatchObject({ names: own });
+      expect(libraryBody({ ...form, ownNames: false }, false)).toMatchObject({ names: null });
+      // Nothing to unset on a creation.
+      expect(libraryBody({ ...form, ownNames: false }, true)).not.toHaveProperty('names');
+
+      const shows = libraryForm({
+        ...series,
+        names: { seriesFolder: 'a', seasonFolder: 'b', episodeFile: 'c' },
+      });
+      expect(libraryBody(shows, false)).toMatchObject({
+        names: { seriesFolder: 'a', seasonFolder: 'b', episodeFile: 'c' },
+      });
+    });
+
+    it('refuses a name left blank, and sends none for an arrival folder', () => {
+      const form = libraryForm({ ...films, names: own });
+      expect(libraryBody({ ...form, names: { ...form.names, movieFile: '  ' } }, false)).toEqual({
+        invalid: 'names',
+      });
+      expect(libraryBody(libraryForm(arrivals), false)).not.toHaveProperty('names');
     });
   });
 });

@@ -219,3 +219,39 @@ test('puts the section in the address as it is reached, and opens on the one in 
   await expect(page).toHaveURL(/\/settings#plex$/);
   await expect(menu.locator('[aria-current]')).toHaveCount(1);
 });
+
+test('writes a library’s own names, sees what they give, and finds them after a reload', async ({
+  page,
+}) => {
+  await mkdir(library('Own names'), { recursive: true });
+  const section = page.locator('section', {
+    has: page.getByRole('heading', { name: 'Folders', exact: true }),
+  });
+
+  await section.getByRole('button', { name: '+ Add' }).first().click();
+  await section.getByRole('textbox', { name: 'Source folder' }).fill(library('Own names'));
+  await section.getByRole('checkbox', { name: /Use custom naming masks/ }).check();
+
+  const file = section.getByRole('textbox', { name: 'Movie file' });
+  await file.fill('{title} ({year}) {screenSize} [imdbid-{imdb}]');
+  // The preview answers a moment after the typing stops: a video that gave everything, and one that did not.
+  await expect(
+    section.getByText('Dune (2021) / Dune (2021) 2160p [imdbid-tt1160419].mkv'),
+  ).toBeVisible();
+  await expect(section.getByText('Dune (2021) / Dune (2021).mkv')).toBeVisible();
+
+  // A name that gives two works the same file is refused with the reason, before anything is saved.
+  await file.fill('{year}');
+  await expect(section.getByRole('alert')).toContainText('{title}');
+
+  await file.fill('{title} ({year}) {screenSize}');
+  await expect(section.getByText('Dune (2021) / Dune (2021) 2160p.mkv')).toBeVisible();
+  await section.getByRole('button', { name: 'Create' }).click();
+
+  await page.reload();
+  await page.getByRole('button', { name: 'Own names' }).click();
+  await expect(section.getByRole('checkbox', { name: /Use custom naming masks/ })).toBeChecked();
+  await expect(section.getByRole('textbox', { name: 'Movie file' })).toHaveValue(
+    '{title} ({year}) {screenSize}',
+  );
+});

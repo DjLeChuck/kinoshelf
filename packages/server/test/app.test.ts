@@ -88,6 +88,7 @@ describe('GET /api/openapi.json', () => {
       '/api/maintenance/purge-hidden',
       '/api/maintenance/tidy',
       '/api/maintenance/vacuum',
+      '/api/naming/preview',
       '/api/notifications/test',
       '/api/onboarding',
       '/api/plans/{id}/execute',

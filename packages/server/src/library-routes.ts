@@ -11,6 +11,8 @@ import {
   KinoshelfError,
   findSubtitles,
   libraryId,
+  checkNaming,
+  type CustomNames,
   type ExternalSubtitle,
   type MovieDetails,
   type PlanItem,
@@ -76,8 +78,10 @@ import {
   fileSchema,
   matchBodySchema,
   versionSchema,
+  libraryNamesSchema,
   libraryPatchSchema,
   librarySchema,
+  namingReportSchema,
   paging,
   selectionReportSchema,
   selectionRunSchema,
@@ -147,6 +151,7 @@ interface CreateBody {
   into?: Into;
   naming?: Naming;
   metadata?: Metadata;
+  names?: CustomNames;
   mode?: Mode;
   threshold?: number;
   watch?: boolean;
@@ -160,6 +165,7 @@ interface PatchBody {
   into?: Into | null;
   naming?: Naming | null;
   metadata?: Metadata | null;
+  names?: CustomNames | null;
   mode?: Mode | null;
   threshold?: number | null;
   watch?: boolean;
@@ -188,6 +194,11 @@ async function requireFolder(path: string): Promise<void> {
 async function validate(body: PatchBody): Promise<void> {
   if (body.source) {
     await requireFolder(body.source);
+  }
+  if (body.names) {
+    // The core's own refusal, with its code and parameters, says what is wrong with a name; the
+    // config's check afterwards would only say that the library is not valid.
+    checkNaming(body.names);
   }
 }
 
@@ -378,6 +389,7 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
       into: library.into ?? null,
       naming: library.naming ?? null,
       metadata: library.metadata ?? null,
+      names: library.names ?? null,
       mode: library.mode ?? null,
       threshold: library.threshold ?? null,
       watch: library.watch ?? false,
@@ -420,6 +432,38 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
     () => (store.config.libraries ?? []).map(present),
   );
 
+  api.post<{ Body: { names: CustomNames } }>(
+    '/api/naming/preview',
+    {
+      schema: {
+        summary: 'Check a library’s own names and show what they give',
+        description:
+          'The same check as `names` of `POST /api/libraries`, without saving: the names of a ' +
+          'type go together (a movie’s folder and file, or a series’ folder, season folder and ' +
+          'episode file). `complete` is a video that gave everything (ids, size, source, group, ' +
+          'codecs), `bare` one that gave only the work: what is optional is left out. A name that ' +
+          'cannot be used is a 422 with the core’s code (`profile.name-not-unique`, ' +
+          '`profile.names-incomplete`, `profile.unknown-variable`, `profile.invalid-path`, `template.*`); ' +
+          '`warnings` do not stop it from being used.',
+        body: {
+          type: 'object',
+          required: ['names'],
+          additionalProperties: false,
+          properties: { names: libraryNamesSchema },
+        },
+        response: { 200: namingReportSchema, 400: errorSchema, 401: errorSchema, 422: errorSchema },
+      },
+    },
+    (request) => {
+      const { preview, warnings } = checkNaming(request.body.names);
+      const paths = ({ movie, episode }: typeof preview.complete) => ({
+        movie: [...movie.path],
+        episode: [...episode.path],
+      });
+      return { complete: paths(preview.complete), bare: paths(preview.bare), warnings };
+    },
+  );
+
   api.post<{ Body: CreateBody }>(
     '/api/libraries',
     {
@@ -455,6 +499,7 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
           ...(body.into !== undefined && { into: body.into }),
           ...(body.naming !== undefined && { naming: body.naming }),
           ...(body.metadata !== undefined && { metadata: body.metadata }),
+          ...(body.names !== undefined && { names: body.names }),
           ...(body.mode !== undefined && { mode: body.mode }),
           ...(body.threshold !== undefined && { threshold: body.threshold }),
           ...(body.watch !== undefined && { watch: body.watch }),

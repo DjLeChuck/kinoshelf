@@ -38,7 +38,7 @@ export const en = {
   'error.profile.invalid': 'Invalid profile at "{path}": {detail}',
   'error.profile.invalid-path': 'Invalid template in {field}: "{template}"',
   'error.profile.name-not-unique':
-    'The {field} name must use the variable {variable}, or two works would share one name.',
+    '“{field}” must use {variable}, or two works would share one name.',
   'error.profile.names-incomplete': 'The {kind} names go together: also set {missing}.',
   'error.profile.not-a-file':
     'Cannot use {path} as a profile: give an existing .yaml file of at most {max} KB.',
@@ -1248,8 +1248,9 @@ export const en = {
     'Delete the library “{name}”? Its files stay where they are: only the library is forgotten.',
   'web.libraries.delete.confirm': 'Yes, delete',
   'web.libraries.delete.cancel': 'Cancel',
-  'web.libraries.invalid.source': 'Give the source folder, as an absolute path.',
+  'web.libraries.invalid.names': 'Fill in every name, or turn the custom names off.',
   'web.welcome.eyebrow': 'Welcome',
+  'web.libraries.invalid.source': 'Give the source folder, as an absolute path.',
   'web.welcome.title': 'Let’s put your movies and series in order',
   'web.welcome.intro':
     'Four steps and a few minutes are enough. You can change everything afterwards in the settings.',
@@ -1635,8 +1636,56 @@ export const en = {
   'web.profile.example.series': 'Episode',
   'web.profile.explain': 'What this naming writes',
   'web.libraries.summary.profile': 'Names: {naming} · Metadata: {metadata}',
-  'web.libraries.profile': 'Names and metadata',
+  'web.libraries.names': 'Custom names',
+  'web.libraries.names.own': 'Use custom naming masks',
+  'web.libraries.names.hint':
+    'Replaces the standard names of this library. The NFO and image names stay the ones every player reads.',
+  'web.libraries.names.note':
+    'Your names are kept as written: Kinoshelf adds nothing to them, not even a quality label. Two files they do not tell apart wait in Arrivals as a conflict, so write the picture size, the source or the group in the file name if you keep several versions.',
+  'web.libraries.names.movieFolder': 'Movie folder name',
+  'web.libraries.names.movieFile': 'Movie file name',
+  'web.libraries.names.seriesFolder': 'Series folder name',
+  'web.libraries.names.seasonFolder': 'Season folder name',
+  'web.libraries.names.episodeFile': 'Episode file name',
+  'web.libraries.names.variables': 'Available variables',
+  'web.libraries.names.variables.hint':
+    'A group in square brackets is written only when everything in it has a value, with the space before it.',
+  'web.libraries.names.variables.example':
+    'A label is part of the name: to write it only when its value exists, put both in a group, such as {example}.',
+  'web.libraries.names.var.title': 'Title',
+  'web.libraries.names.var.year': 'Year',
+  'web.libraries.names.var.tmdb': 'TMDB id',
+  'web.libraries.names.var.imdb': 'IMDb id (tt…), when TMDB has it',
+  'web.libraries.names.var.season': 'Season number (:02 pads with a zero)',
+  'web.libraries.names.var.episode': 'Episode number',
+  'web.libraries.names.var.episodeTitle': 'Episode title',
+  'web.libraries.names.var.screenSize': 'Picture size (2160p), from the name or the file',
+  'web.libraries.names.var.source': 'Source (Blu-ray, Web), from the name',
+  'web.libraries.names.var.releaseGroup': 'Release group, from the name',
+  'web.libraries.names.var.videoCodec': 'Video codec (HEVC), read from the file',
+  'web.libraries.names.var.audioCodec': 'Audio codec (EAC3), read from the file',
+  'web.libraries.names.var.hdr': 'Dynamic range (HDR10, Dolby Vision), read from the file',
+  'web.libraries.names.preview': 'What it gives',
+  'web.libraries.names.preview.complete': 'With every detail known (ids, size, source, codecs…)',
+  'web.libraries.names.preview.bare': 'With only the title, the year and the TMDB id',
+  'web.libraries.names.preview.movie': 'Movie',
+  'web.libraries.names.preview.episode': 'Episode',
+  'web.libraries.names.preview.checking': 'Checking…',
+  'web.libraries.names.warning.movie-file-not-in-folder-name':
+    'The movie file does not start with its folder’s name ({folder}). Jellyfin needs it to group the versions of a movie.',
+  'web.libraries.names.movieFolder.hint':
+    'The folder created for each movie, at the root of the library.',
+  'web.libraries.names.movieFile.hint': 'The video file inside that folder, without its extension.',
+  'web.libraries.names.seriesFolder.hint':
+    'The folder created for each series, at the root of the library.',
+  'web.libraries.names.seasonFolder.hint': 'The folder of each season, inside the series folder.',
+  'web.libraries.names.episodeFile.hint':
+    'The video file of each episode inside its season folder, without its extension.',
+  'web.libraries.names.vars.work': 'About the work',
+  'web.libraries.names.vars.series': 'About the season and the episode',
+  'web.libraries.names.vars.file': 'About the video file',
   'web.history.job.used.naming': 'Names',
+  'web.libraries.profile': 'Names and metadata',
   'web.history.job.used.metadata': 'Metadata files',
   'web.settings.retention.title': 'Retention',
   'web.settings.retention.intro':

@@ -35,7 +35,7 @@ export const fr: Record<keyof typeof en, string> = {
   'error.profile.invalid': 'Profil invalide à « {path} » : {detail}',
   'error.profile.invalid-path': 'Template invalide dans {field} : « {template} »',
   'error.profile.name-not-unique':
-    'Le nom {field} doit utiliser la variable {variable}, sinon deux œuvres porteraient le même nom.',
+    '« {field} » doit utiliser {variable}, sinon deux œuvres porteraient le même nom.',
   'error.profile.names-incomplete':
     'Les noms du type {kind} vont ensemble : renseignez aussi {missing}.',
   'error.profile.not-a-file':
@@ -1291,8 +1291,9 @@ export const fr: Record<keyof typeof en, string> = {
     'Supprimer la bibliothèque « {name} » ? Ses fichiers restent où ils sont : seule la bibliothèque est oubliée.',
   'web.libraries.delete.confirm': 'Oui, supprimer',
   'web.libraries.delete.cancel': 'Annuler',
-  'web.libraries.invalid.source': 'Indiquez le dossier source, en chemin absolu.',
+  'web.libraries.invalid.names': 'Renseignez tous les noms, ou désactivez les noms personnalisés.',
   'web.welcome.eyebrow': 'Bienvenue',
+  'web.libraries.invalid.source': 'Indiquez le dossier source, en chemin absolu.',
   'web.welcome.title': 'Mettons de l’ordre dans vos films et séries',
   'web.welcome.intro':
     'Quatre étapes et quelques minutes suffisent. Vous pourrez tout modifier ensuite dans les réglages.',
@@ -1685,8 +1686,59 @@ export const fr: Record<keyof typeof en, string> = {
   'web.profile.example.series': 'Épisode',
   'web.profile.explain': 'Ce que ce nommage écrit',
   'web.libraries.summary.profile': 'Noms : {naming} · Métadonnées : {metadata}',
-  'web.libraries.profile': 'Noms et métadonnées',
+  'web.libraries.names': 'Noms personnalisés',
+  'web.libraries.names.own': 'Utiliser des masques de nommage personnalisés',
+  'web.libraries.names.hint':
+    'Remplace les noms standards de cette bibliothèque. Les noms des NFO et des images restent ceux que tous les lecteurs savent lire.',
+  'web.libraries.names.note':
+    'Vos noms sont gardés tels quels : Kinoshelf n’y ajoute rien, pas même une étiquette de qualité. Deux fichiers qu’ils ne distinguent pas attendent dans Arrivées comme un conflit : si vous gardez plusieurs versions, écrivez la taille d’image, la source ou le groupe dans le nom du fichier.',
+  'web.libraries.names.movieFolder': 'Nom du dossier du film',
+  'web.libraries.names.movieFile': 'Nom du fichier du film',
+  'web.libraries.names.seriesFolder': 'Nom du dossier de la série',
+  'web.libraries.names.seasonFolder': 'Nom du dossier de saison',
+  'web.libraries.names.episodeFile': 'Nom du fichier d’épisode',
+  'web.libraries.names.variables': 'Variables disponibles',
+  'web.libraries.names.variables.hint':
+    'Un groupe entre crochets n’est écrit que si tout ce qu’il contient a une valeur, avec l’espace qui le précède.',
+  'web.libraries.names.variables.example':
+    'Une étiquette fait partie du nom : pour ne l’écrire que si sa valeur existe, mettez les deux dans un groupe, par exemple {example}.',
+  'web.libraries.names.var.title': 'Titre',
+  'web.libraries.names.var.year': 'Année',
+  'web.libraries.names.var.tmdb': 'Identifiant TMDB',
+  'web.libraries.names.var.imdb': 'Identifiant IMDb (tt…), quand TMDB le donne',
+  'web.libraries.names.var.season': 'Numéro de saison (:02 ajoute un zéro)',
+  'web.libraries.names.var.episode': 'Numéro d’épisode',
+  'web.libraries.names.var.episodeTitle': 'Titre de l’épisode',
+  'web.libraries.names.var.screenSize':
+    'Taille d’image (2160p), lue dans le nom ou dans le fichier',
+  'web.libraries.names.var.source': 'Source (Blu-ray, Web), lue dans le nom',
+  'web.libraries.names.var.releaseGroup': 'Groupe de release, lu dans le nom',
+  'web.libraries.names.var.videoCodec': 'Codec vidéo (HEVC), lu dans le fichier',
+  'web.libraries.names.var.audioCodec': 'Codec audio (EAC3), lu dans le fichier',
+  'web.libraries.names.var.hdr': 'Plage dynamique (HDR10, Dolby Vision), lue dans le fichier',
+  'web.libraries.names.preview': 'Ce que cela donne',
+  'web.libraries.names.preview.complete':
+    'Avec toutes les informations connues (ids, taille, source, codecs…)',
+  'web.libraries.names.preview.bare': 'Avec seulement le titre, l’année et l’id TMDB',
+  'web.libraries.names.preview.movie': 'Film',
+  'web.libraries.names.preview.episode': 'Épisode',
+  'web.libraries.names.preview.checking': 'Vérification…',
+  'web.libraries.names.warning.movie-file-not-in-folder-name':
+    'Le fichier du film ne commence pas par le nom de son dossier ({folder}). Jellyfin en a besoin pour regrouper les versions d’un film.',
+  'web.libraries.names.movieFolder.hint':
+    'Le dossier créé pour chaque film, à la racine de la bibliothèque.',
+  'web.libraries.names.movieFile.hint': 'Le fichier vidéo dans ce dossier, sans son extension.',
+  'web.libraries.names.seriesFolder.hint':
+    'Le dossier créé pour chaque série, à la racine de la bibliothèque.',
+  'web.libraries.names.seasonFolder.hint':
+    'Le dossier de chaque saison, dans le dossier de la série.',
+  'web.libraries.names.episodeFile.hint':
+    'Le fichier vidéo de chaque épisode dans son dossier de saison, sans son extension.',
+  'web.libraries.names.vars.work': 'Sur l’œuvre',
+  'web.libraries.names.vars.series': 'Sur la saison et l’épisode',
+  'web.libraries.names.vars.file': 'Sur le fichier vidéo',
   'web.history.job.used.naming': 'Noms',
+  'web.libraries.profile': 'Noms et métadonnées',
   'web.history.job.used.metadata': 'Fichiers de métadonnées',
   'web.settings.retention.title': 'Conservation',
   'web.settings.retention.intro':

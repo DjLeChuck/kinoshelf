@@ -26,6 +26,7 @@ interface LibraryBody {
   into: { movie?: string; series?: string } | null;
   naming: string | null;
   metadata: string | null;
+  names: Record<string, string> | null;
   mode: string | null;
   threshold: number | null;
   watch: boolean;
@@ -109,6 +110,59 @@ describe('libraries', () => {
     expect(patched.json<LibraryBody>()).toMatchObject({ watch: true, type: 'movie', into: null });
   });
 
+  it('keeps a library’s own names, checks them, and shows what they give', async () => {
+    const h = await served();
+    const source = await makeDir();
+    const names = {
+      movieFolder: '{title} ({year})',
+      movieFile: '{title} ({year}) {screenSize} [imdbid-{imdb}]',
+    };
+
+    const preview = await h.request('POST', '/api/naming/preview', { names });
+    expect(preview.statusCode, preview.body).toBe(200);
+    expect(preview.json()).toMatchObject({
+      complete: {
+        movie: ['Dune (2021)', 'Dune (2021) 2160p [imdbid-tt1160419].mkv'],
+      },
+      bare: { movie: ['Dune (2021)', 'Dune (2021).mkv'] },
+      warnings: [],
+    });
+
+    const created = await h.request('POST', '/api/libraries', {
+      name: 'Films',
+      source,
+      type: 'movie',
+      names,
+    });
+    expect(created.statusCode, created.body).toBe(201);
+    expect(created.json<LibraryBody>().names).toEqual(names);
+    expect(await h.file()).toContain('movieFile:');
+
+    // The core's refusal reaches the client with its own code, from the preview and from the save.
+    const half = { movieFile: '{title}' };
+    for (const response of [
+      await h.request('POST', '/api/naming/preview', { names: half }),
+      await h.request('PATCH', '/api/libraries/films', { names: half }),
+    ]) {
+      expect(response.statusCode).toBe(422);
+      expect(response.json()).toMatchObject({ error: { code: 'profile.names-incomplete' } });
+    }
+    expect(
+      (
+        await h.request('POST', '/api/naming/preview', {
+          names: { movieFolder: '{title}', movieFile: '{year}' },
+        })
+      ).json(),
+    ).toMatchObject({ error: { code: 'profile.name-not-unique' } });
+    expect((await h.request('GET', '/api/libraries')).json<LibraryBody[]>()[0]?.names).toEqual(
+      names,
+    );
+
+    const cleared = await h.request('PATCH', '/api/libraries/films', { names: null });
+    expect(cleared.json<LibraryBody>().names).toBeNull();
+    expect(await h.file()).not.toContain('movieFile:');
+  });
+
   it('creates, lists, changes and removes a library, in config.yaml', async () => {
     const h = await served();
     const source = await makeDir();
@@ -131,6 +185,7 @@ describe('libraries', () => {
       into: null,
       naming: 'no-id',
       metadata: 'nfo',
+      names: null,
       mode: null,
       threshold: 80,
       watch: false,

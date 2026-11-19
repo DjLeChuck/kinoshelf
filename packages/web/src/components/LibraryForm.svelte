@@ -17,6 +17,7 @@
     type NamingExample,
     type Naming,
   } from '../lib/settings.js';
+  import NamesEditor from './NamesEditor.svelte';
   import PathField from './PathField.svelte';
   import ProfileChoice from './ProfileChoice.svelte';
 
@@ -176,6 +177,15 @@
         {examples}
         {defaults}
         withDefault
+      />
+    </section>
+    <section class="card" aria-labelledby="lib-names">
+      <h2 id="lib-names">{t('web.libraries.names')}</h2>
+      <NamesEditor
+        id="lib-names-edit"
+        type={library?.type ?? form.type}
+        bind:own={form.ownNames}
+        bind:names={form.names}
       />
     </section>
   {:else}

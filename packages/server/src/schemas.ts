@@ -1347,6 +1347,56 @@ const libraryInto = {
   properties: { movie: { type: 'string', minLength: 1 }, series: { type: 'string', minLength: 1 } },
 } as const;
 
+const nameTemplate = { type: 'string', minLength: 1 } as const;
+
+/**
+ * A library's own names, a type at a time (`checkNaming`: a movie's folder and file, or a series'
+ * folder, season folder and episode file). A name is a template: `{title}`, `{year}`, `{tmdb}`,
+ * `{imdb}`, `{season:02}`, `{episode:02}`, and what the video says: `{screenSize}`, `{source}`,
+ * `{releaseGroup}`, `{videoCodec}`, `{audioCodec}`, `{hdr}` (in a folder's name, they make one folder
+ * per version). `[...]` is left out, with the separator before it, when a value in it is missing.
+ */
+export const libraryNamesSchema = {
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    movieFolder: nameTemplate,
+    movieFile: nameTemplate,
+    seriesFolder: nameTemplate,
+    seasonFolder: nameTemplate,
+    episodeFile: nameTemplate,
+  },
+} as const;
+
+const namingExampleSchema = {
+  type: 'object',
+  required: ['movie', 'episode'],
+  properties: {
+    movie: { type: 'array', items: { type: 'string' } },
+    episode: { type: 'array', items: { type: 'string' } },
+  },
+} as const;
+
+export const namingReportSchema = {
+  type: 'object',
+  required: ['complete', 'bare', 'warnings'],
+  properties: {
+    complete: namingExampleSchema,
+    bare: namingExampleSchema,
+    warnings: {
+      type: 'array',
+      items: {
+        type: 'object',
+        required: ['code', 'params'],
+        properties: {
+          code: { type: 'string', enum: ['movie-file-not-in-folder-name'] },
+          params: { type: 'object', additionalProperties: { type: 'string' } },
+        },
+      },
+    },
+  },
+} as const;
+
 export const librarySchema = {
   type: 'object',
   required: [
@@ -1357,6 +1407,7 @@ export const librarySchema = {
     'into',
     'naming',
     'metadata',
+    'names',
     'mode',
     'threshold',
     'watch',
@@ -1374,6 +1425,8 @@ export const librarySchema = {
     /** Unset (null): follows the global naming, metadata, mode and threshold. */
     naming: { type: 'string', enum: [...namings, null], nullable: true },
     metadata: { type: 'string', enum: [...metadatas, null], nullable: true },
+    /** Typed libraries: its own folder and file names; unset (null), the naming's standard ones. */
+    names: { ...libraryNamesSchema, nullable: true },
     mode: { type: 'string', enum: [...libraryModes, null], nullable: true },
     threshold: { type: 'number', nullable: true },
     watch: { type: 'boolean' },
@@ -1398,6 +1451,7 @@ const libraryFields = {
   into: libraryInto,
   naming: { type: 'string', enum: namings },
   metadata: { type: 'string', enum: metadatas },
+  names: libraryNamesSchema,
   mode: { type: 'string', enum: libraryModes },
   threshold: { type: 'number', minimum: 0, maximum: 100 },
   watch: { type: 'boolean' },
@@ -1421,6 +1475,7 @@ export const libraryPatchSchema = {
     into: nullable(libraryFields.into),
     naming: nullable(libraryFields.naming),
     metadata: nullable(libraryFields.metadata),
+    names: nullable(libraryFields.names),
     mode: nullable(libraryFields.mode),
     threshold: nullable(libraryFields.threshold),
     watch: libraryFields.watch,

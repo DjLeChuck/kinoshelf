@@ -2529,6 +2529,13 @@ export interface paths {
                             naming: "with-id" | "no-id" | null;
                             /** @enum {string|null} */
                             metadata: "none" | "nfo" | null;
+                            names: {
+                                movieFolder?: string;
+                                movieFile?: string;
+                                seriesFolder?: string;
+                                seasonFolder?: string;
+                                episodeFile?: string;
+                            } | null;
                             /** @enum {string|null} */
                             mode: "copy" | "hardlink" | "move" | null;
                             threshold: number | null;
@@ -2588,6 +2595,13 @@ export interface paths {
                         naming?: "with-id" | "no-id";
                         /** @enum {string} */
                         metadata?: "none" | "nfo";
+                        names?: {
+                            movieFolder?: string;
+                            movieFile?: string;
+                            seriesFolder?: string;
+                            seasonFolder?: string;
+                            episodeFile?: string;
+                        };
                         /** @enum {string} */
                         mode?: "copy" | "hardlink" | "move";
                         threshold?: number;
@@ -2616,6 +2630,13 @@ export interface paths {
                             naming: "with-id" | "no-id" | null;
                             /** @enum {string|null} */
                             metadata: "none" | "nfo" | null;
+                            names: {
+                                movieFolder?: string;
+                                movieFile?: string;
+                                seriesFolder?: string;
+                                seasonFolder?: string;
+                                episodeFile?: string;
+                            } | null;
                             /** @enum {string|null} */
                             mode: "copy" | "hardlink" | "move" | null;
                             threshold: number | null;
@@ -2664,6 +2685,121 @@ export interface paths {
                 };
                 /** @description Default Response */
                 409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Default Response */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/naming/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Check a library’s own names and show what they give
+         * @description The same check as `names` of `POST /api/libraries`, without saving: the names of a type go together (a movie’s folder and file, or a series’ folder, season folder and episode file). `complete` is a video that gave everything (ids, size, source, group, codecs), `bare` one that gave only the work: what is optional is left out. A name that cannot be used is a 422 with the core’s code (`profile.name-not-unique`, `profile.names-incomplete`, `profile.unknown-variable`, `profile.invalid-path`, `template.*`); `warnings` do not stop it from being used.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        names: {
+                            movieFolder?: string;
+                            movieFile?: string;
+                            seriesFolder?: string;
+                            seasonFolder?: string;
+                            episodeFile?: string;
+                        };
+                    };
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            complete: {
+                                movie: string[];
+                                episode: string[];
+                            };
+                            bare: {
+                                movie: string[];
+                                episode: string[];
+                            };
+                            warnings: {
+                                /** @enum {string} */
+                                code: "movie-file-not-in-folder-name";
+                                params: {
+                                    [key: string]: string;
+                                };
+                            }[];
+                        };
+                    };
+                };
+                /** @description Default Response */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Default Response */
+                401: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -2814,6 +2950,13 @@ export interface paths {
                         naming?: "with-id" | "no-id" | null;
                         /** @enum {string|null} */
                         metadata?: "none" | "nfo" | null;
+                        names?: {
+                            movieFolder?: string;
+                            movieFile?: string;
+                            seriesFolder?: string;
+                            seasonFolder?: string;
+                            episodeFile?: string;
+                        } | null;
                         /** @enum {string|null} */
                         mode?: "copy" | "hardlink" | "move" | null;
                         threshold?: number | null;
@@ -2842,6 +2985,13 @@ export interface paths {
                             naming: "with-id" | "no-id" | null;
                             /** @enum {string|null} */
                             metadata: "none" | "nfo" | null;
+                            names: {
+                                movieFolder?: string;
+                                movieFile?: string;
+                                seriesFolder?: string;
+                                seasonFolder?: string;
+                                episodeFile?: string;
+                            } | null;
                             /** @enum {string|null} */
                             mode: "copy" | "hardlink" | "move" | null;
                             threshold: number | null;
