@@ -6,6 +6,7 @@ import type { DestinationRoots } from '../types/plan.js';
 import type { Profile } from '../types/profile.js';
 import type { Config } from './config.js';
 import { libraryProfile } from './libraries.js';
+import type { CustomNames } from '../profiles/naming.js';
 
 /** Already-validated values that win over the config file (CLI flags, an API request). */
 /** The language TMDB is asked in when nothing sets one: the interface's, as TMDB spells it. */
@@ -19,6 +20,7 @@ export interface SettingsOverrides {
   readonly destSeries?: string | null;
   readonly naming?: Naming;
   readonly metadata?: Metadata;
+  readonly names?: CustomNames;
   readonly mode?: TransferMode;
   readonly threshold?: number;
   readonly metadataLanguage?: string;

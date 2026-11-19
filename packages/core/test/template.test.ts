@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { KinoshelfError, parseTemplate, renderTemplate } from '../src/index.js';
+import { templateVariables } from '../src/profiles/template.js';
 import type { RenderContext } from '../src/index.js';
 
 const context: RenderContext = {
@@ -170,5 +171,62 @@ describe('finalizing a segment', () => {
     expect(render('{title}', { title: 'nul.txt' })).toEqual(['_nul.txt']);
     expect(render('{title}', { title: 'Console' })).toEqual(['Console']);
     expect(render('{title}', { title: 'CON' }, posix)).toEqual(['CON']);
+  });
+});
+
+describe('optional variables and [groups]', () => {
+  const full = {
+    title: 'La Vache',
+    year: 1959,
+    tmdb: 58736,
+    imdb: 'tt0053403',
+    screenSize: '1080p',
+  };
+  const template = '{title} ({year}) {screenSize} [imdbid-{imdb}] [tmdbtvid-{tmdb}]';
+
+  it('writes a group with its brackets when every value is there', () => {
+    expect(render(template, full)).toEqual([
+      'La Vache (1959) 1080p [imdbid-tt0053403] [tmdbtvid-58736]',
+    ]);
+  });
+
+  it('leaves a group out with the separator before it', () => {
+    expect(render(template, { ...full, imdb: undefined })).toEqual([
+      'La Vache (1959) 1080p [tmdbtvid-58736]',
+    ]);
+    expect(render(template, { ...full, imdb: '' })).toEqual([
+      'La Vache (1959) 1080p [tmdbtvid-58736]',
+    ]);
+  });
+
+  it('leaves an optional variable out with the separator before it', () => {
+    expect(render(template, { ...full, screenSize: undefined })).toEqual([
+      'La Vache (1959) [imdbid-tt0053403] [tmdbtvid-58736]',
+    ]);
+    expect(render('{title} - {screenSize}', { title: 'Dune' })).toEqual(['Dune']);
+  });
+
+  it('keeps a group that holds no variable as plain text', () => {
+    expect(render('{title} [FR]', { title: 'Dune' })).toEqual(['Dune [FR]']);
+  });
+
+  it('still requires the variables that are not optional', () => {
+    expect(codeOf(() => render('{title} [tmdb-{tmdb}]', { title: 'Dune' }))).toBe(
+      'template.missing-variable',
+    );
+  });
+
+  it('writes literal brackets with a backslash', () => {
+    expect(render('{title} \\[x\\]', { title: 'Dune' })).toEqual(['Dune [x]']);
+  });
+
+  it('refuses a bracket with no partner, and a group inside a group', () => {
+    for (const source of ['{title} [a', '{title} a]', '[a [b]]']) {
+      expect(codeOf(() => parseTemplate(source))).toBe('template.unbalanced-bracket');
+    }
+  });
+
+  it('lists the variables of a group', () => {
+    expect(templateVariables(parseTemplate('{title} [imdbid-{imdb}]'))).toEqual(['title', 'imdb']);
   });
 });

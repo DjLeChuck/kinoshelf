@@ -46,7 +46,19 @@ export class MetadataLoader {
    * ever made then.
    */
   get needsMetadata(): boolean {
-    return this.writesCompanions || this.namesEpisodes;
+    return this.writesCompanions || this.namesEpisodes || this.namesImdb;
+  }
+
+  /** `{imdb}` in a folder or file name: only the details carry the id, so they are read for it. */
+  private get namesImdb(): boolean {
+    const { templates } = this.options.profile;
+    return [
+      templates.movieFolder,
+      templates.movieFile,
+      templates.seriesFolder,
+      templates.seasonFolder,
+      templates.episodeFile,
+    ].some((template) => templateVariables(parseTemplate(template)).includes('imdb'));
   }
 
   private get writesCompanions(): boolean {
@@ -65,7 +77,7 @@ export class MetadataLoader {
     if (!this.needsMetadata) {
       return {};
     }
-    const loaded = this.writesCompanions ? await this.detailsOf(candidate) : null;
+    const loaded = this.writesCompanions || this.namesImdb ? await this.detailsOf(candidate) : null;
     const { details = null, collection } = loaded ?? {};
     if (details === null && !this.namesEpisodes) {
       return {};
@@ -92,6 +104,10 @@ export class MetadataLoader {
     );
     if (details?.kind !== 'movie') {
       return details && { details };
+    }
+    // A collection is only worth its request when an NFO says it: otherwise it is not read.
+    if (!this.writesCompanions) {
+      return { details };
     }
     if (!details.collection?.id) {
       return { details, collection: null };

@@ -32,6 +32,8 @@ export const fr: Record<keyof typeof en, string> = {
     'Profil invalide : les templates contenant \\{ ou \\} doivent utiliser des guillemets simples. ({detail})',
   'error.profile.invalid': 'Profil invalide à « {path} » : {detail}',
   'error.profile.invalid-path': 'Template invalide dans {field} : « {template} »',
+  'error.profile.name-not-unique':
+    'Le nom {field} doit utiliser la variable {variable}, sinon deux œuvres porteraient le même nom.',
   'error.profile.not-a-file':
     'Impossible d’utiliser {path} comme profil : indiquez un fichier .yaml existant d’au plus {max} Ko.',
   'error.profile.unknown-variable': 'Variable inconnue {variable} dans {field}.',
@@ -49,6 +51,8 @@ export const fr: Record<keyof typeof en, string> = {
     'Impossible de construire le nom : aucune valeur pour {variable}.',
   'error.template.pad-on-text':
     'Le remplissage par des zéros ne s’applique pas à la variable texte {variable}.',
+  'error.template.unbalanced-bracket':
+    '« [ » ou « ] » sans pendant dans le template « {template} » à la position {position} (écrivez \\[ ou \\] pour un crochet littéral).',
   'error.template.unexpected-brace':
     '« } » inattendu dans le template « {template} » à la position {position}.',
   'error.tmdb.http-error': 'TMDB a répondu avec le code HTTP {status}.',

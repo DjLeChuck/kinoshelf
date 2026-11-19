@@ -35,6 +35,8 @@ export const en = {
     'Invalid profile: templates containing \\{ or \\} must use single quotes. ({detail})',
   'error.profile.invalid': 'Invalid profile at "{path}": {detail}',
   'error.profile.invalid-path': 'Invalid template in {field}: "{template}"',
+  'error.profile.name-not-unique':
+    'The {field} name must use the variable {variable}, or two works would share one name.',
   'error.profile.not-a-file':
     'Cannot use {path} as a profile: give an existing .yaml file of at most {max} KB.',
   'error.profile.unknown-variable': 'Unknown variable {variable} in {field}.',
@@ -48,6 +50,8 @@ export const en = {
   'error.template.invalid-variable': 'Invalid variable "{variable}" in template "{template}".',
   'error.template.missing-variable': 'Cannot build the name: no value for {variable}.',
   'error.template.pad-on-text': 'Zero padding cannot be applied to the text variable {variable}.',
+  'error.template.unbalanced-bracket':
+    'Unbalanced "[" or "]" in template "{template}" at position {position} (write \\[ or \\] for a literal bracket).',
   'error.template.unexpected-brace':
     'Unexpected "}" in template "{template}" at position {position}.',
   'error.tmdb.http-error': 'TMDB answered with HTTP {status}.',

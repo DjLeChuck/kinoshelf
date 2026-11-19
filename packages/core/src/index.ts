@@ -23,6 +23,16 @@ export {
   type ProfileChoice,
 } from './profiles/build.js';
 export {
+  checkNaming,
+  CUSTOM_NAME_FIELDS,
+  namingProblem,
+  type CustomNames,
+  type NamingExample,
+  type NamingPreview,
+  type NamingReport,
+  type NamingWarning,
+} from './profiles/naming.js';
+export {
   parseTemplate,
   renderProfileTemplate,
   renderTemplate,

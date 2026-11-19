@@ -23,7 +23,10 @@ function checkTemplate(field: string, source: string, shape: TemplateShape): voi
   }
 
   // Replace variables by a placeholder to inspect the literal path structure.
-  const skeleton = parsed.tokens.map((t) => (t.kind === 'text' ? t.text : 'x')).join('');
+  const skeleton = parsed.tokens
+    .flatMap((t) => (t.kind === 'group' ? t.tokens : [t]))
+    .map((t) => (t.kind === 'text' ? t.text : 'x'))
+    .join('');
   if (skeleton === '' && shape.allowEmpty) {
     return;
   }
@@ -36,7 +39,10 @@ function checkTemplate(field: string, source: string, shape: TemplateShape): voi
   }
 }
 
-function checkTemplates(file: ProfileFile): void {
+/** Checks every template of a profile; throws {@link KinoshelfError} on the first that is not valid. */
+export function checkTemplates(
+  file: Pick<ProfileFile | Profile, 'templates' | 'nfo' | 'artwork'>,
+): void {
   const { templates, nfo, artwork } = file;
   checkTemplate('templates.movieFolder', templates.movieFolder, {
     allowed: VARIABLES.movieFolder,

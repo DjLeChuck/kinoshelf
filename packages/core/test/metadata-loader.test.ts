@@ -54,6 +54,21 @@ describe('MetadataLoader', () => {
     expect(provider.calls).toEqual([]);
   });
 
+  it('asks for the details only for the id when a name uses {imdb}, and reads no collection', async () => {
+    const provider = new FakeProvider([movie(1, 'Dune', 2021)]);
+    const profile = parseProfile(
+      WRITING.replace("movieFolder: '{title} ({year})'", "movieFolder: '{title} [imdbid-{imdb}]'")
+        .replace(/nfo: .*\n/, '')
+        .replace(/artwork:\n(  - .*\n)+/, ''),
+    );
+    const loader = new MetadataLoader({ provider, profile });
+    expect(loader.needsMetadata).toBe(true);
+    const loaded = await loader.forCandidate(movie(1, 'Dune', 2021), episode(1, [1]));
+    expect(loaded.details?.kind).toBe('movie');
+    expect(loaded).not.toHaveProperty('collection');
+    expect(provider.calls.map((c) => c.method)).toEqual(['getMovieDetails']);
+  });
+
   it('asks for the details of a movie', async () => {
     const provider = new FakeProvider([movie(1, 'Dune', 2021)]);
     const loader = new MetadataLoader({ provider, profile: parseProfile(WRITING) });

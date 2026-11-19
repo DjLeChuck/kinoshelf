@@ -4,6 +4,7 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { isCollection, isScalar, isMap, parseDocument, type Document } from 'yaml';
 import { z } from 'zod';
+import { namingProblem } from '../profiles/naming.js';
 import { errnoCode, KinoshelfError } from '../errors.js';
 
 /** A web address: a notification or a media server is never reached through `file:` or `ftp:`. */
@@ -48,6 +49,13 @@ const watchSchema = z.strictObject({
 export const LIBRARY_ID_PATTERN = /^[a-z0-9][a-z0-9-]*$/;
 
 const namingSchema = z.enum(['with-id', 'no-id']);
+const namesSchema = z.strictObject({
+  movieFolder: z.string().min(1).optional(),
+  movieFile: z.string().min(1).optional(),
+  seriesFolder: z.string().min(1).optional(),
+  seasonFolder: z.string().min(1).optional(),
+  episodeFile: z.string().min(1).optional(),
+});
 const metadataSchema = z.enum(['none', 'nfo']);
 
 const libraryKindSchema = z.enum(['movie', 'series']);
@@ -74,6 +82,11 @@ const librarySchema = z
     /** Typed libraries only: an arrival folder takes the naming and metadata of its destination. */
     naming: namingSchema.optional(),
     metadata: metadataSchema.optional(),
+    /**
+     * Typed libraries only: the library's own folder and file names (`naming` gives the others).
+     * Checked by `checkNaming` when the config is read, so a name that is not usable never gets saved.
+     */
+    names: namesSchema.optional(),
     /** Arrival folders only (default `copy`): a typed library is organized in place. */
     mode: z.enum(['copy', 'hardlink', 'move']).optional(),
     threshold: z.number().min(0).max(100).optional(),
@@ -101,6 +114,13 @@ const librarySchema = z
       );
     } else if (library.type !== undefined && library.mode !== undefined) {
       problem('a library with a "type" is organized in place: remove "mode"');
+    } else if (library.into !== undefined && library.names !== undefined) {
+      problem('an arrival folder ("into") takes the names of its destination: remove "names"');
+    } else if (library.names !== undefined) {
+      const found = namingProblem(library.names);
+      if (found) {
+        problem(`names: ${found.code} ${JSON.stringify(found.params ?? {})}`);
+      }
     }
   });
 

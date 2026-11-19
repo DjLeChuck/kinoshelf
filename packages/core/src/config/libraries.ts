@@ -4,10 +4,11 @@ import type { SettingsOverrides } from './settings.js';
 
 /** The profile a library writes with: its own choices, else the global ones, else the defaults. */
 export function libraryProfile(
-  library: Pick<LibraryConfig, 'naming' | 'metadata'> | undefined,
+  library: Pick<LibraryConfig, 'naming' | 'metadata' | 'names'> | undefined,
   config: Pick<Config, 'naming' | 'metadata'>,
 ): ProfileChoice {
   return {
+    ...(library?.names !== undefined && { names: library.names }),
     naming: library?.naming ?? config.naming ?? DEFAULT_PROFILE_CHOICE.naming,
     metadata: library?.metadata ?? config.metadata ?? DEFAULT_PROFILE_CHOICE.metadata,
   };
@@ -46,6 +47,7 @@ export function libraryOverrides(
     ...destinationOverrides(library, libraries),
     ...(library.naming !== undefined && { naming: library.naming }),
     ...(library.metadata !== undefined && { metadata: library.metadata }),
+    ...(library.names !== undefined && { names: library.names }),
     ...(library.mode !== undefined && { mode: library.mode }),
     ...(library.threshold !== undefined && { threshold: library.threshold }),
   };

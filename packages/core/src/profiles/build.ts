@@ -1,4 +1,5 @@
 import type { Profile } from '../types/profile.js';
+import type { CustomNames } from './naming.js';
 
 /** Whether the `{tmdb-<id>}` tag is in the folder names (and the movie file). */
 export type Naming = 'with-id' | 'no-id';
@@ -13,6 +14,8 @@ export const METADATAS: readonly Metadata[] = ['none', 'nfo'];
 export interface ProfileChoice {
   readonly naming: Naming;
   readonly metadata: Metadata;
+  /** A library's own folder and file names, over the ones `naming` gives (`CustomNames`). */
+  readonly names?: CustomNames;
 }
 
 export const DEFAULT_PROFILE_CHOICE: ProfileChoice = { naming: 'no-id', metadata: 'nfo' };
@@ -44,12 +47,12 @@ export function buildProfile(choice: ProfileChoice): Profile {
     id: `${choice.naming}.${choice.metadata}`,
     episodeRangeSeparator: '-e',
     templates: {
-      movieFolder: `{title} ({year})${tag}`,
-      movieFile: `{title} ({year})${tag}`,
+      movieFolder: choice.names?.movieFolder ?? `{title} ({year})${tag}`,
+      movieFile: choice.names?.movieFile ?? `{title} ({year})${tag}`,
       movieVersion: ' - {version}',
-      seriesFolder: `{title} ({year})${tag}`,
-      seasonFolder: 'Season {season:02}',
-      episodeFile: '{title} ({year}) - s{season:02}e{episode:02}',
+      seriesFolder: choice.names?.seriesFolder ?? `{title} ({year})${tag}`,
+      seasonFolder: choice.names?.seasonFolder ?? 'Season {season:02}',
+      episodeFile: choice.names?.episodeFile ?? '{title} ({year}) - s{season:02}e{episode:02}',
       episodeVersion: ' - {version}',
     },
     nfo:

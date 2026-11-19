@@ -1,12 +1,14 @@
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { loadConfig, type Config } from '../src/config/config.js';
+import { loadConfig, type Config, type LibraryConfig } from '../src/config/config.js';
 import {
   destinationRoots,
   libraryId,
   libraryOverrides,
+  libraryProfile,
   watchedFolders,
 } from '../src/config/libraries.js';
+import { buildProfile } from '../src/profiles/build.js';
 import { cleanup, makeDir, put } from './workspace.js';
 
 afterEach(cleanup);
@@ -102,6 +104,29 @@ describe('libraries', () => {
         `${head}  - {id: a, name: A, source: /a, into: {movie: films, series: shows}, naming: no-id}\n`,
       );
       await rejected('libraries:\n  - {id: a, name: A, source: /a, type: movie, mode: copy}\n');
+    });
+
+    it('reads a typed library’s own names, checks them, and refuses them on an arrival folder', async () => {
+      const config = await load(
+        `${head}  - {id: a, name: A, source: /a, type: movie, names: {movieFile: '{title} ({year}) {screenSize}'}}\n`,
+      );
+      const library = config.libraries?.[2];
+      expect(library?.names).toEqual({ movieFile: '{title} ({year}) {screenSize}' });
+      expect(libraryOverrides(library as LibraryConfig, config.libraries ?? []).names).toEqual(
+        library?.names,
+      );
+      expect(buildProfile(libraryProfile(library, {})).templates.movieFile).toBe(
+        '{title} ({year}) {screenSize}',
+      );
+      await rejected(
+        `${head}  - {id: a, name: A, source: /a, type: movie, names: {movieFile: '{year}'}}\n`,
+      );
+      await rejected(
+        `${head}  - {id: a, name: A, source: /a, type: movie, names: {movieFile: '{title} {x}'}}\n`,
+      );
+      await rejected(
+        `${head}  - {id: a, name: A, source: /a, into: {movie: films}, names: {movieFile: '{title}'}}\n`,
+      );
     });
 
     it('needs into to name existing libraries of the right type', async () => {

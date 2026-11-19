@@ -205,6 +205,58 @@ describe('createPlan: names', () => {
   });
 });
 
+describe('createPlan: a custom naming', () => {
+  const custom = parseProfile(`
+id: custom
+episodeRangeSeparator: '-e'
+templates:
+  movieFolder: '{title} ({year}) [imdbid-{imdb}] [tmdbid-{tmdb}]'
+  movieFile: '{title} ({year}) {screenSize} {source} [imdbid-{imdb}] [tmdbid-{tmdb}]'
+  seriesFolder: '{title} ({year})'
+  seasonFolder: 'Season {season:02}'
+  episodeFile: '{title} - s{season:02}e{episode:02} {screenSize}'
+filesystem: { forbidden: windows, replacement: '', maxSegmentBytes: 255 }
+`);
+  const details = {
+    kind: 'movie',
+    id: dune.id,
+    imdbId: 'tt1160419',
+    title: 'Dune',
+    originalTitle: 'Dune',
+    genres: [],
+    tags: [],
+    studios: [],
+    countries: [],
+    cast: [],
+    directors: [],
+    writers: [],
+  } satisfies MovieDetails;
+
+  it('writes the ids and what the name says of the video, and leaves out what is missing', async () => {
+    const [src, lib] = [await makeDir(), await makeDir()];
+    const source = await put(join(src, 'Dune.2021.2160p.BluRay.mkv'));
+    const parsed = { ...parsedMovie(source), screenSize: '2160p', source: 'Blu-ray' };
+
+    const full = await plan([{ parsed, candidate: dune, details }], lib, { profile: custom });
+    const folder = 'Dune (2021) [imdbid-tt1160419] [tmdbid-438631]';
+    expect(destinationOf(full.items[0])).toBe(
+      join(lib, folder, 'Dune (2021) 2160p Blu-ray [imdbid-tt1160419] [tmdbid-438631].mkv'),
+    );
+
+    // No IMDb id, no source: the groups and their separators go, no double space is left.
+    const bare = await plan(
+      [{ parsed: { ...parsedMovie(source), screenSize: '2160p' }, candidate: dune }],
+      lib,
+      {
+        profile: custom,
+      },
+    );
+    expect(destinationOf(bare.items[0])).toBe(
+      join(lib, 'Dune (2021) [tmdbid-438631]', 'Dune (2021) 2160p [tmdbid-438631].mkv'),
+    );
+  });
+});
+
 describe('createPlan: separate libraries', () => {
   it('sends movies and series to their own roots', async () => {
     const src = await makeDir();

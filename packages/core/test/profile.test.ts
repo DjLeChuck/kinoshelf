@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import {
   KinoshelfError,
   buildProfile,
+  checkNaming,
   loadProfileFile,
   parseProfile,
   parseTemplate,
@@ -309,5 +310,76 @@ describe('loadProfileFile: parsed once', () => {
     } finally {
       await rm(directory, { recursive: true, force: true });
     }
+  });
+});
+
+describe('checkNaming', () => {
+  it('previews a template with everything given, and with only the work', () => {
+    const report = checkNaming({
+      movieFolder: '{title} ({year}) [imdbid-{imdb}] [tmdbtvid-{tmdb}]',
+      movieFile: '{title} ({year}) {screenSize} [imdbid-{imdb}] [tmdbtvid-{tmdb}]',
+    });
+    expect(report.preview.complete.movie.path).toEqual([
+      'Dune (2021) [imdbid-tt1160419] [tmdbtvid-438631]',
+      'Dune (2021) 2160p [imdbid-tt1160419] [tmdbtvid-438631].mkv',
+    ]);
+    expect(report.preview.bare.movie.path).toEqual([
+      'Dune (2021) [tmdbtvid-438631]',
+      'Dune (2021) [tmdbtvid-438631].mkv',
+    ]);
+    expect(report.preview.complete.episode.path).toEqual([
+      'Dune (2021)',
+      'Season 01',
+      'Dune (2021) - s01e02.mkv',
+    ]);
+    // The issue's own structure: the file does not start with its folder's name (Jellyfin's rule).
+    expect(report.warnings.map((warning) => warning.code)).toEqual([
+      'movie-file-not-in-folder-name',
+    ]);
+    expect(
+      checkNaming({ movieFile: '{title} ({year}) {screenSize} [imdbid-{imdb}]' }).warnings,
+    ).toEqual([]);
+  });
+
+  it('warns, without refusing, when a movie file does not start with its folder’s name', () => {
+    const report = checkNaming({ movieFile: '{title} - {year}' });
+    expect(report.warnings.map((warning) => warning.code)).toEqual([
+      'movie-file-not-in-folder-name',
+    ]);
+  });
+
+  it('refuses a name that would give two works the same one', () => {
+    expect(codeOf(() => checkNaming({ movieFile: '{year}' }))).toBe('profile.name-not-unique');
+    expect(codeOf(() => checkNaming({ seasonFolder: 'Saison' }))).toBe('profile.name-not-unique');
+    expect(codeOf(() => checkNaming({ episodeFile: '{title} {season:02}' }))).toBe(
+      'profile.name-not-unique',
+    );
+  });
+
+  it('refuses an unknown variable, one a folder cannot have, and a path that leaves the library', () => {
+    expect(codeOf(() => checkNaming({ movieFile: '{title} {nope}' }))).toBe(
+      'profile.unknown-variable',
+    );
+    // A folder holds several versions: only a file may say the picture size.
+    expect(codeOf(() => checkNaming({ movieFolder: '{title} {screenSize}' }))).toBe(
+      'profile.unknown-variable',
+    );
+    expect(codeOf(() => checkNaming({ movieFolder: '../{title}' }))).toBe('profile.invalid-path');
+    expect(codeOf(() => checkNaming({ movieFolder: '/{title}' }))).toBe('profile.invalid-path');
+    expect(codeOf(() => checkNaming({ movieFile: '{title}/{year}' }))).toBe('profile.invalid-path');
+    // A slash hidden in a group is a slash all the same.
+    expect(codeOf(() => checkNaming({ movieFile: '{title} [../{imdb}]' }))).toBe(
+      'profile.invalid-path',
+    );
+  });
+
+  it('is applied by buildProfile over the naming axis', () => {
+    const profile = buildProfile({
+      naming: 'with-id',
+      metadata: 'none',
+      names: { seasonFolder: 'Saison {season:02}' },
+    });
+    expect(profile.templates.seasonFolder).toBe('Saison {season:02}');
+    expect(profile.templates.movieFolder).toBe('{title} ({year}) \\{tmdb-{tmdb}\\}');
   });
 });
