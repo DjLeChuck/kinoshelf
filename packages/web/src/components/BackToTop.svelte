@@ -32,6 +32,12 @@
     left: 16px;
     bottom: 16px;
     z-index: 20;
+    /* Opaque: it floats over the list, and a transparent button lets the text show through. */
+    background: var(--surface);
     box-shadow: 0 2px 10px rgb(0 0 0 / 30%);
+  }
+
+  .top:hover:not(:disabled) {
+    background: var(--surface-2);
   }
 </style>
