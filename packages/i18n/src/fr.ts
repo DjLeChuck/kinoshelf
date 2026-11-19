@@ -401,6 +401,7 @@ export const fr: Record<keyof typeof en, string> = {
     'Aucun dossier d’arrivée à examiner. Ajoutez-en un dans les réglages.',
   'web.skip-to-content': 'Aller au contenu',
   'web.nav.label': 'Navigation principale',
+  'web.nav.tools': 'Préférences',
   'web.nav.libraries': 'Bibliothèques',
   'web.nav.history': 'Historique',
   'web.nav.settings': 'Réglages',

@@ -380,6 +380,7 @@ export const en = {
     'There is no arrival folder to look at. Add one in the settings first.',
   'web.skip-to-content': 'Skip to content',
   'web.nav.label': 'Main navigation',
+  'web.nav.tools': 'Preferences',
   'web.nav.libraries': 'Libraries',
   'web.nav.history': 'History',
   'web.nav.settings': 'Settings',

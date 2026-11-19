@@ -51,6 +51,19 @@
     };
   };
 
+  // On a phone the theme, the language and the sign-out fold behind a button: the header is then
+  // the logo and one line of menus rather than a third of the screen.
+  let toolsOpen = $state(false);
+
+  let toggleEl = $state<HTMLButtonElement | undefined>(undefined);
+
+  function closeTools(refocus = false): void {
+    toolsOpen = false;
+    if (refocus) {
+      toggleEl?.focus();
+    }
+  }
+
   const themes: readonly ThemePreference[] = ['dark', 'light', 'system'];
 
   function pickLocale(event: Event & { currentTarget: HTMLSelectElement }): void {
@@ -65,10 +78,46 @@
   }
 </script>
 
+<svelte:window
+  onkeydown={(event: KeyboardEvent) => {
+    if (event.key === 'Escape' && toolsOpen) {
+      closeTools(true);
+    }
+  }}
+  onclick={(event: MouseEvent) => {
+    // A click anywhere else puts the menu away.
+    if (
+      toolsOpen &&
+      event.target instanceof Element &&
+      !event.target.closest('.tools, .tools-toggle')
+    ) {
+      closeTools();
+    }
+  }}
+/>
+
 <a class="skip" href="#content">{t('web.skip-to-content')}</a>
 
 <header use:measure>
-  <Link href="/" aria-label="Kinoshelf"><Logo /></Link>
+  <Link href="/" class="home" aria-label="Kinoshelf"><Logo /></Link>
+
+  <button
+    type="button"
+    class="tools-toggle"
+    bind:this={toggleEl}
+    aria-expanded={toolsOpen}
+    aria-controls="header-tools"
+    aria-label={t('web.nav.tools')}
+    onclick={() => {
+      toolsOpen = !toolsOpen;
+    }}
+  >
+    <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+      <circle cx="5" cy="12" r="1.8" fill="currentColor" />
+      <circle cx="12" cy="12" r="1.8" fill="currentColor" />
+      <circle cx="19" cy="12" r="1.8" fill="currentColor" />
+    </svg>
+  </button>
 
   <nav aria-label={t('web.nav.label')}>
     {#each routes as route (route.id)}
@@ -96,7 +145,7 @@
     {/each}
   </nav>
 
-  <div class="tools">
+  <div class="tools" id="header-tools" class:open={toolsOpen}>
     {#if shell.onboarding?.completed === false}
       <span class="chip chip-warn">{t('web.welcome.status')}</span>
     {/if}
@@ -213,9 +262,95 @@
     text-align: center;
   }
 
+  .tools-toggle {
+    display: none;
+  }
+
+  /* Where the logo, the menus and the tools no longer fit on a line, the theme, the language and
+     the sign-out fold behind a button: the header stays one line (two on a phone). */
+  @media (max-width: 1080px) {
+    header :global(.home) {
+      margin-right: auto;
+    }
+
+    .tools-toggle {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 44px;
+      height: 44px;
+      padding: 0;
+      border: 0;
+      border-radius: 50%;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      order: 2;
+    }
+
+    .tools-toggle:hover,
+    .tools-toggle[aria-expanded='true'] {
+      background: var(--surface-2);
+      color: var(--text);
+    }
+
+    nav {
+      order: 1;
+    }
+
+    /* A menu hanging from the button, over the menus and the page, not a block that pushes them
+       down: the header's padding and the button's height, then a gap. */
+    .tools {
+      position: absolute;
+      top: 60px;
+      right: 16px;
+      z-index: 25;
+      display: none;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 8px;
+      min-width: 220px;
+      padding: 12px;
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius-sm);
+      background: var(--surface);
+      box-shadow: 0 6px 24px rgb(0 0 0 / 35%);
+    }
+
+    .tools.open {
+      display: flex;
+    }
+  }
+
   @media (max-width: 640px) {
     header {
-      padding: 12px 16px;
+      gap: 4px 8px;
+      padding: 8px 16px;
+    }
+
+    .tools {
+      top: 56px;
+    }
+
+    /* The menus take a line of their own, scrolled sideways if the labels outgrow the screen. */
+    nav {
+      scrollbar-width: none;
+      order: 2;
+      flex: 0 0 100%;
+      flex-wrap: nowrap;
+      margin: 0 -8px;
+      overflow-x: auto;
+    }
+
+    .tools-toggle {
+      order: 1;
+    }
+
+    nav :global(.nav-link) {
+      flex: none;
+      min-height: 40px;
+      padding: 0 12px;
+      font-size: 14px;
     }
 
     main {
