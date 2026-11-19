@@ -1715,6 +1715,8 @@ export const fr: Record<keyof typeof en, string> = {
   'web.libraries.names.var.videoCodec': 'Codec vidéo (HEVC), lu dans le fichier',
   'web.libraries.names.var.audioCodec': 'Codec audio (EAC3), lu dans le fichier',
   'web.libraries.names.var.hdr': 'Plage dynamique (HDR10, Dolby Vision), lue dans le fichier',
+  'web.libraries.names.var.audioChannels': 'Disposition audio (5.1), lue dans le fichier',
+  'web.libraries.names.var.audioLanguages': 'Langues audio (FR+EN), lues dans le fichier',
   'web.libraries.names.preview': 'Ce que cela donne',
   'web.libraries.names.preview.complete':
     'Avec toutes les informations connues (ids, taille, source, codecs…)',

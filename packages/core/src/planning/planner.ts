@@ -51,6 +51,10 @@ export interface PlanInput {
 export interface FileTraits {
   readonly videoCodec?: string;
   readonly audioCodec?: string;
+  /** The first audio track's layout (`5.1`). */
+  readonly audioChannels?: string;
+  /** The languages of the audio tracks, two letters, joined by `+` (`FR+EN`). */
+  readonly audioLanguages?: string;
   readonly hdr?: string;
 }
 
@@ -128,6 +132,16 @@ function readsStreams(profile: Profile, kind: 'movie' | 'series'): boolean {
   );
 }
 
+/** Whether a name of this kind of work uses `{screenSize}`, which a file name may not give. */
+function usesScreenSize(profile: Profile, kind: 'movie' | 'series'): boolean {
+  const { templates } = profile;
+  const used =
+    kind === 'movie'
+      ? [templates.movieFolder, templates.movieFile]
+      : [templates.seriesFolder, templates.seasonFolder, templates.episodeFile];
+  return used.some((template) => templateVariables(parseTemplate(template)).includes('screenSize'));
+}
+
 /** The text of the version template that comes before `{version}`: what a labelled name shows. */
 function versionPrefixOf(template: string): string {
   const first = parseTemplate(template).tokens[0];
@@ -162,6 +176,8 @@ function targetSegments(
     ...(parsed.releaseGroup !== undefined && { releaseGroup: parsed.releaseGroup }),
     ...(traits?.videoCodec !== undefined && { videoCodec: traits.videoCodec }),
     ...(traits?.audioCodec !== undefined && { audioCodec: traits.audioCodec }),
+    ...(traits?.audioChannels !== undefined && { audioChannels: traits.audioChannels }),
+    ...(traits?.audioLanguages !== undefined && { audioLanguages: traits.audioLanguages }),
     ...(traits?.hdr !== undefined && { hdr: traits.hdr }),
     ...(parsed.season !== undefined && { season: parsed.season }),
     ...(parsed.episodes.length > 0 && { episode: parsed.episodes }),
@@ -317,8 +333,21 @@ async function planItem(
       return unresolvable({ code: 'plan.probe-unavailable' });
     }
   }
+  // A name that asks for `{screenSize}` when the file's own says none: the picture's. Optional, so
+  // a file ffprobe cannot read (or a library with `detectPictureSize` off) simply goes without.
+  let namedInput = input;
+  if (
+    input.parsed.screenSize === undefined &&
+    options.sizeOf !== undefined &&
+    usesScreenSize(profile, kind)
+  ) {
+    const size = await options.sizeOf(source);
+    if (size !== undefined) {
+      namedInput = { ...input, parsed: { ...input.parsed, screenSize: size } };
+    }
+  }
   try {
-    target = targetSegments(input, profile, reserveBytes, undefined, traits);
+    target = targetSegments(namedInput, profile, reserveBytes, undefined, traits);
   } catch (error) {
     if (error instanceof KinoshelfError) {
       return unresolvable(error.info);

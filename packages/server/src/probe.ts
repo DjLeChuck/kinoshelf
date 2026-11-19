@@ -4,6 +4,7 @@ import { stat } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { isSea } from 'node:sea';
 import { errnoCode, pictureSize, type FileTraits } from '@kinoshelf/core';
+import { languageShort } from '@kinoshelf/i18n';
 import type { LibraryItemStore } from './library-items.js';
 
 /**
@@ -220,10 +221,15 @@ const HDR_NAMES: Readonly<Record<Hdr, string>> = {
  * has none, so `{hdr}` is left out of its name.
  */
 export function traitsOf(probe: Probe): FileTraits {
-  const audioCodec = probe.audio?.split(' ')[0];
+  const [audioCodec, layout] = probe.audio?.split(' ') ?? [];
+  // `ch` is the layout of one nobody names (`3ch`): a channel count is no name.
+  const audioChannels = layout && !layout.endsWith('ch') ? layout : undefined;
+  const audioLanguages = probe.audioLanguages.map(languageShort).join('+');
   return {
     ...(probe.video && { videoCodec: probe.video.toUpperCase() }),
     ...(audioCodec && { audioCodec: audioCodec.toUpperCase() }),
+    ...(audioChannels && { audioChannels }),
+    ...(audioLanguages && { audioLanguages }),
     ...(probe.hdr && { hdr: HDR_NAMES[probe.hdr] }),
   };
 }

@@ -3,7 +3,8 @@
   import { locale, t } from '../lib/i18n.svelte.js';
   import { versionStatus } from '../lib/fiche.js';
   import { baseName } from '../lib/paths.js';
-  import { HDR_LABEL, languageName, languageShort } from '../lib/versions.js';
+  import { languageShort } from '@kinoshelf/i18n';
+  import { HDR_LABEL, languageName } from '../lib/versions.js';
   import type { ExternalSubtitle, Version } from '../lib/library-items.js';
   import Tip from './Tip.svelte';
 

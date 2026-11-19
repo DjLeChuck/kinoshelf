@@ -11,13 +11,13 @@ All notable changes to Kinoshelf are written here. The format follows
 - A library organized in place can now write its folder and file names its own way, from its form in the
   settings ("Custom masks" among the namings, or `names` in `config.yaml`): `{title}`, `{year}`, `{tmdb}`,
   `{imdb}`, `{season:02}`, `{episode:02}`, and what the video says: `{screenSize}`, `{source}`, `{releaseGroup}`, plus the
-  codecs and dynamic range read from the file (`{videoCodec}`, `{audioCodec}`, `{hdr}`). Any of them can also
+  codecs and dynamic range read from the file (`{videoCodec}`, `{audioCodec}`, `{audioChannels}` as `5.1`, `{audioLanguages}` as `FR+EN`, `{hdr}`). Any of them can also
   name a folder, which gives one folder per version. A `[group]` is left out,
   with the space before it, when a value in it is missing (`[imdbid-{imdb}]`). The names of a type go together (a
   movie's folder and file; a series' folder, season folder and episode file) and are kept as written: nothing
   is added to them, so two files they do not tell apart wait in Arrivals as a conflict. They are checked when
   saved (unique per work, inside the library) with a preview, and a warning when a movie file does not start
-  with its folder's name (Jellyfin's rule). The NFO and image names stay the ones every player reads. A name that
+  with its folder's name (Jellyfin's rule). `{screenSize}` falls back on the picture's size read with ffprobe when the file name gives none (unless "Read the picture size with ffprobe" is off). The NFO and image names stay the ones every player reads. A name that
   uses the codecs needs the file read with ffprobe: a file it cannot read is held back with the reason. The
   parser now reads `[tmdbtvid-…]` and `[tmdbmovieid-…]` tags back (#12).
 

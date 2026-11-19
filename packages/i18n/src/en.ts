@@ -1664,6 +1664,8 @@ export const en = {
   'web.libraries.names.var.videoCodec': 'Video codec (HEVC), read from the file',
   'web.libraries.names.var.audioCodec': 'Audio codec (EAC3), read from the file',
   'web.libraries.names.var.hdr': 'Dynamic range (HDR10, Dolby Vision), read from the file',
+  'web.libraries.names.var.audioChannels': 'Audio layout (5.1), read from the file',
+  'web.libraries.names.var.audioLanguages': 'Audio languages (FR+EN), read from the file',
   'web.libraries.names.preview': 'What it gives',
   'web.libraries.names.preview.complete': 'With every detail known (ids, size, source, codecs…)',
   'web.libraries.names.preview.bare': 'With only the title, the year and the TMDB id',

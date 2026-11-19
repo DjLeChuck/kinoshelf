@@ -1353,7 +1353,7 @@ const nameTemplate = { type: 'string', minLength: 1 } as const;
  * A library's own names, a type at a time (`checkNaming`: a movie's folder and file, or a series'
  * folder, season folder and episode file). A name is a template: `{title}`, `{year}`, `{tmdb}`,
  * `{imdb}`, `{season:02}`, `{episode:02}`, and what the video says: `{screenSize}`, `{source}`,
- * `{releaseGroup}`, `{videoCodec}`, `{audioCodec}`, `{hdr}` (in a folder's name, they make one folder
+ * `{releaseGroup}`, `{videoCodec}`, `{audioCodec}`, `{audioChannels}`, `{audioLanguages}`, `{hdr}` (in a folder's name, they make one folder
  * per version). `[...]` is left out, with the separator before it, when a value in it is missing.
  */
 export const libraryNamesSchema = {

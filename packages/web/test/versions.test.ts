@@ -5,7 +5,6 @@ import {
   isIncomplete,
   slotsOf,
   languageName,
-  languageShort,
   totalSize,
   versionLabel,
 } from '../src/lib/versions.js';
@@ -40,13 +39,6 @@ describe('codecLine', () => {
 });
 
 describe('languages', () => {
-  it('shortens an ISO 639-2 code, either of its two forms, and keeps an unknown one', () => {
-    expect(languageShort('fre')).toBe('FR');
-    expect(languageShort('fra')).toBe('FR');
-    expect(languageShort('eng')).toBe('EN');
-    expect(languageShort('ine')).toBe('INE');
-  });
-
   it('names a language in the language of the page', () => {
     expect(languageName('fre', 'en')).toBe('French');
     expect(languageName('fre', 'fr')).toBe('français');

@@ -25,7 +25,16 @@
   /** Says something of the work, in any name. */
   const WORK = ['title', 'year', 'tmdb', 'imdb'] as const;
   /** Says something of the video file: in a folder's name it makes one folder per version. */
-  const FILE = ['screenSize', 'source', 'releaseGroup', 'videoCodec', 'audioCodec', 'hdr'] as const;
+  const FILE = [
+    'screenSize',
+    'source',
+    'releaseGroup',
+    'videoCodec',
+    'audioCodec',
+    'audioChannels',
+    'audioLanguages',
+    'hdr',
+  ] as const;
   const SERIES = ['season', 'episode', 'episodeTitle'] as const;
   /** The variables explained, a group at a time: a series' names add the season and the episode. */
   const groups = $derived.by(() => {

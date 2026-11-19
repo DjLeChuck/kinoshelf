@@ -1,0 +1,40 @@
+// Files tag languages with ISO 639-2 (`fre`, `eng`); Intl and the eye want the two letters.
+// Both the bibliographic and the terminologic codes of a language are listed (`fre`, `fra`).
+export const TWO_LETTERS: Readonly<Record<string, string>> = {
+  ara: 'ar',
+  chi: 'zh',
+  cze: 'cs',
+  ces: 'cs',
+  dan: 'da',
+  dut: 'nl',
+  nld: 'nl',
+  eng: 'en',
+  fin: 'fi',
+  fre: 'fr',
+  fra: 'fr',
+  ger: 'de',
+  deu: 'de',
+  gre: 'el',
+  ell: 'el',
+  heb: 'he',
+  hin: 'hi',
+  hun: 'hu',
+  ita: 'it',
+  jpn: 'ja',
+  kor: 'ko',
+  nor: 'no',
+  pol: 'pl',
+  por: 'pt',
+  rum: 'ro',
+  ron: 'ro',
+  rus: 'ru',
+  spa: 'es',
+  swe: 'sv',
+  tha: 'th',
+  tur: 'tr',
+  ukr: 'uk',
+  zho: 'zh',
+};
+
+/** `FR` for `fre`; a code nobody here knows (`ine`) is shown as the file gives it. */
+export const languageShort = (code: string): string => (TWO_LETTERS[code] ?? code).toUpperCase();

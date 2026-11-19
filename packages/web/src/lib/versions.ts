@@ -1,3 +1,4 @@
+import { TWO_LETTERS } from '@kinoshelf/i18n';
 import type { Coverage, Hdr, LibraryItem, ProbedFile } from './library-items.js';
 
 /** The names of the formats are the same in every language. */
@@ -7,47 +8,6 @@ export const HDR_LABEL: Readonly<Record<Hdr, string>> = {
   hdr10: 'HDR10',
   hlg: 'HLG',
 };
-
-// Files tag languages with ISO 639-2 (`fre`, `eng`); Intl and the eye want the two letters.
-// Both the bibliographic and the terminologic codes of a language are listed (`fre`, `fra`).
-const TWO_LETTERS: Readonly<Record<string, string>> = {
-  ara: 'ar',
-  chi: 'zh',
-  cze: 'cs',
-  ces: 'cs',
-  dan: 'da',
-  dut: 'nl',
-  nld: 'nl',
-  eng: 'en',
-  fin: 'fi',
-  fre: 'fr',
-  fra: 'fr',
-  ger: 'de',
-  deu: 'de',
-  gre: 'el',
-  ell: 'el',
-  heb: 'he',
-  hin: 'hi',
-  hun: 'hu',
-  ita: 'it',
-  jpn: 'ja',
-  kor: 'ko',
-  nor: 'no',
-  pol: 'pl',
-  por: 'pt',
-  rum: 'ro',
-  ron: 'ro',
-  rus: 'ru',
-  spa: 'es',
-  swe: 'sv',
-  tha: 'th',
-  tur: 'tr',
-  ukr: 'uk',
-  zho: 'zh',
-};
-
-/** `FR` for `fre`; a code nobody here knows (`ine`) is shown as the file gives it. */
-export const languageShort = (code: string): string => (TWO_LETTERS[code] ?? code).toUpperCase();
 
 /** `French` or `français` for `fre`, in the language of the page; an unknown code as it is. */
 export function languageName(code: string, locale: string): string {

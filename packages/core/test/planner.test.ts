@@ -382,6 +382,62 @@ describe('createPlan: names that use what the file holds', () => {
   });
 });
 
+describe('createPlan: {screenSize} for a name the file does not give', () => {
+  const sized = buildProfile({
+    naming: 'no-id',
+    metadata: 'none',
+    names: {
+      movieFolder: '{title} ({year})',
+      movieFile: '{title} ({year}) [{screenSize}]',
+    },
+  });
+  const run = async (
+    sizeOf: PlannerOptions['sizeOf'],
+    screenSize?: string,
+  ): Promise<{ item: PlanItem | undefined; lib: string }> => {
+    const [src, lib] = [await makeDir(), await makeDir()];
+    const source = await put(join(src, 'Dune.mkv'));
+    const result = await createPlan(
+      [
+        {
+          parsed: { ...parsedMovie(source), ...(screenSize && { screenSize }) },
+          candidate: dune,
+        },
+      ],
+      {
+        profile: sized,
+        destinationRoot: lib,
+        mode: 'copy',
+        newId: counter(),
+        ...(sizeOf && { sizeOf }),
+      },
+    );
+    return { item: result.items[0], lib };
+  };
+
+  it("falls back on the picture's size", async () => {
+    const { item, lib } = await run(() => Promise.resolve('1080p'));
+    expect(destinationOf(item)).toBe(join(lib, 'Dune (2021)', 'Dune (2021) [1080p].mkv'));
+  });
+
+  it('prefers the size the name gives, without reading the file', async () => {
+    let reads = 0;
+    const { item, lib } = await run(() => {
+      reads += 1;
+      return Promise.resolve('1080p');
+    }, '2160p');
+    expect(destinationOf(item)).toBe(join(lib, 'Dune (2021)', 'Dune (2021) [2160p].mkv'));
+    expect(reads).toBe(0);
+  });
+
+  it('leaves it out when the reading is off or the file cannot be read', async () => {
+    for (const sizeOf of [undefined, () => Promise.resolve(undefined)]) {
+      const { item, lib } = await run(sizeOf);
+      expect(destinationOf(item)).toBe(join(lib, 'Dune (2021)', 'Dune (2021).mkv'));
+    }
+  });
+});
+
 describe('createPlan: a folder named after the video', () => {
   const perVersion = buildProfile({
     naming: 'no-id',

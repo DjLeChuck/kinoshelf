@@ -59,3 +59,4 @@ export {
 export { formatBytes } from './format.js';
 export { en } from './en.js';
 export { fr } from './fr.js';
+export { languageShort, TWO_LETTERS } from './languages.js';

@@ -46,6 +46,8 @@ const TRAITS: TemplateVariables = {
   releaseGroup: 'GRP',
   videoCodec: 'HEVC',
   audioCodec: 'EAC3',
+  audioChannels: '5.1',
+  audioLanguages: 'FR+EN',
   hdr: 'HDR10',
 };
 

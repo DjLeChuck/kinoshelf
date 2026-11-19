@@ -55,27 +55,31 @@ A mask is a template with variables in braces, such as `{title} ({year}) [imdbid
 **type go together**: a movie library sets the movie's folder and file, a series library the series folder,
 the season folder and the episode file. A type you do not customise keeps its naming.
 
-| Variable         | Stands for                                                           | Always there |
-| ---------------- | -------------------------------------------------------------------- | ------------ |
-| `{title}`        | the title                                                            | yes          |
-| `{year}`         | the year                                                             | yes          |
-| `{tmdb}`         | the TMDB id                                                          | yes          |
-| `{imdb}`         | the IMDb id (`tt…`), when TMDB has it                                | no           |
-| `{season}`       | the season number (`{season:02}` pads with a zero), series only      | yes          |
-| `{episode}`      | the episode number (`{episode:02}`), series only                     | yes          |
-| `{episodeTitle}` | the episode's title, series only                                     | no           |
-| `{screenSize}`   | the picture size (`2160p`), as the file name says it                 | no           |
-| `{source}`       | the source (`Blu-ray`, `Web`), as the file name says it              | no           |
-| `{releaseGroup}` | the release group, as the file name says it                          | no           |
-| `{videoCodec}`   | the video codec read from the file (`HEVC`, `H264`, `AV1`)           | no           |
-| `{audioCodec}`   | the audio codec read from the file (`EAC3`, `AC3`, `DTS`)            | no           |
-| `{hdr}`          | `Dolby Vision`, `HDR10+`, `HDR10` or `HLG`; nothing for an SDR video | no           |
+| Variable           | Stands for                                                                  | Always there |
+| ------------------ | --------------------------------------------------------------------------- | ------------ |
+| `{title}`          | the title                                                                   | yes          |
+| `{year}`           | the year                                                                    | yes          |
+| `{tmdb}`           | the TMDB id                                                                 | yes          |
+| `{imdb}`           | the IMDb id (`tt…`), when TMDB has it                                       | no           |
+| `{season}`         | the season number (`{season:02}` pads with a zero), series only             | yes          |
+| `{episode}`        | the episode number (`{episode:02}`), series only                            | yes          |
+| `{episodeTitle}`   | the episode's title, series only                                            | no           |
+| `{screenSize}`     | the picture size (`2160p`): the file name's, else the one ffprobe reads     | no           |
+| `{source}`         | the source (`Blu-ray`, `Web`), as the file name says it                     | no           |
+| `{releaseGroup}`   | the release group, as the file name says it                                 | no           |
+| `{videoCodec}`     | the video codec read from the file (`HEVC`, `H264`, `AV1`)                  | no           |
+| `{audioCodec}`     | the audio codec read from the file (`EAC3`, `AC3`, `DTS`)                   | no           |
+| `{audioChannels}`  | the first audio track's layout read from the file (`5.1`, `2.0`)            | no           |
+| `{audioLanguages}` | the audio languages read from the file, two letters joined by `+` (`FR+EN`) | no           |
+| `{hdr}`            | `Dolby Vision`, `HDR10+`, `HDR10` or `HLG`; nothing for an SDR video        | no           |
 
 Every name of a type takes every variable of the type, a folder's too: `Dune (2021) - {screenSize}` as a
-movie folder makes one folder per version. A movie has no season nor episode. The codecs and `{hdr}`
-are read from the video with `ffprobe`: the probe a library already holds is used while the file is
-unchanged, else the file is read, and one `ffprobe` cannot read is held back with the reason (it would
-be named wrongly rather than shortly).
+movie folder makes one folder per version. A movie has no season nor episode. The codecs, the audio
+layout and languages, and `{hdr}` are read from the video with `ffprobe`: the probe a library already
+holds is used while the file is unchanged, else the file is read, and one `ffprobe` cannot read is held
+back with the reason (it would be named wrongly rather than shortly). `{screenSize}` is the exception:
+it is read only when the file name gives no size, and is left out when "Read the picture size with
+ffprobe" is off or the file cannot be read.
 
 **What may be missing is left out.** A variable that has no value (the second column says which) is
 written as nothing, with the space or separator before it. A group in square brackets is written only

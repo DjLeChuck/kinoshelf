@@ -96,13 +96,27 @@ describe('traitsOf', () => {
     expect(traitsOf(probe('hevc', 'eac3 5.1', 'dolby-vision'))).toEqual({
       videoCodec: 'HEVC',
       audioCodec: 'EAC3',
+      audioChannels: '5.1',
       hdr: 'Dolby Vision',
     });
     expect(traitsOf(probe('h264', 'ac3 5.1', 'hdr10-plus'))).toEqual({
       videoCodec: 'H264',
       audioCodec: 'AC3',
+      audioChannels: '5.1',
       hdr: 'HDR10+',
     });
+  });
+
+  it('writes the audio layout and the languages, two letters, joined', () => {
+    const multi: Probe = {
+      ...probe('hevc', 'eac3 5.1', null),
+      audioLanguages: ['fre', 'eng', 'xyz'],
+    };
+    expect(traitsOf(multi)).toMatchObject({ audioChannels: '5.1', audioLanguages: 'FR+EN+XYZ' });
+    // A count nobody names (`3ch`) and a file that tags no language say nothing.
+    const bare = traitsOf(probe('hevc', 'ac3 3ch', null));
+    expect(bare).not.toHaveProperty('audioChannels');
+    expect(bare).not.toHaveProperty('audioLanguages');
   });
 
   it('leaves out what the file does not have: SDR, no audio', () => {
@@ -628,7 +642,12 @@ describe('storedTraitReader', () => {
   it('answers from what the library stored while the file is the one that was read', async () => {
     const { file, store, reads, live } = await stored();
     const read = storedTraitReader(store, 'films', live);
-    expect(await read(file)).toEqual({ videoCodec: 'HEVC', audioCodec: 'EAC3', hdr: 'HDR10' });
+    expect(await read(file)).toEqual({
+      videoCodec: 'HEVC',
+      audioCodec: 'EAC3',
+      audioChannels: '5.1',
+      hdr: 'HDR10',
+    });
     expect(reads).toEqual([]);
   });
 

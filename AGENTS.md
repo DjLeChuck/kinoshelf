@@ -82,9 +82,9 @@ nowhere: a custom profile file is to be discussed again.
   (`{title}` in a work's names, `{season}` in the season folder, `{episode}` in the episode file), and previews a video that gave
   everything and one that gave only the work; a movie file not starting with its folder's name is a warning (Jellyfin). A template
   may hold `[groups]` (`template.ts`): written only when every value in it exists, else left out with the separator before it
-  (`OPTIONAL_VARIABLES`: `imdb`, `episodeTitle`, `screenSize`, `source`, `releaseGroup`, `videoCodec`, `audioCodec`, `hdr`; the others are
+  (`OPTIONAL_VARIABLES`: `imdb`, `episodeTitle`, `screenSize`, `source`, `releaseGroup`, `videoCodec`, `audioCodec`, `audioChannels`, `audioLanguages`, `hdr`; the others are
   required, `{year}` included). `{screenSize}` and the like may be used in a folder's name too (one folder per version, the owner's to ask for); `{imdb}`
-  makes the `MetadataLoader` read the details even with `metadata: none`. **The codecs and `{hdr}` are read from the file at plan
+  makes the `MetadataLoader` read the details even with `metadata: none`. **`{screenSize}` is the file name's, else `sizeOf`'s** (ffprobe's picture, only when a name uses it and the name gives none; `detectPictureSize` off or an unreadable file leaves it out, it being optional). **The codecs and `{hdr}` are read from the file at plan
   time** (`PlannerOptions.traitsOf`, `traitsOf` of `probe.ts`: `HEVC`, `EAC3`, `Dolby Vision`), only for a file whose name uses
   one; a file ffprobe cannot read is held back (`plan.probe-unavailable`) rather than named without them. What the library's background probe stored for the file is used while its size and date still match (`storedTraitReader`, one `stat`), so only a file never probed, changed, unreadable or not in a library (an arrival) costs an ffprobe. There is no "waiting for the probe" state. A library already organized another way shows its files as to rename, as for any change
   of profile. The parser reads `[tmdbtvid-…]` / `[tmdbmovieid-…]` as id tags.
