@@ -1163,6 +1163,7 @@ export const fr: Record<keyof typeof en, string> = {
   'web.activity.dismiss': 'Fermer',
   'web.activity.open': 'Ouvrir',
   'web.activity.count': '{done} sur {total}',
+  'web.activity.analyses': '{count, plural, one {# analyse} other {# analyses}}',
   'web.activity.done': 'Terminé',
   'web.activity.failed': 'Échec',
   'web.activity.task.unknown': 'Tâche en arrière-plan',

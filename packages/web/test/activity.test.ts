@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createTranslator } from '@kinoshelf/i18n';
 import {
+  grouped,
   labelOf,
   ordered,
   overallPercent,
@@ -89,5 +90,41 @@ describe.each(['fr', 'en'] as const)('the words of a task (%s)', (locale) => {
     expect(phaseOf({ params: { phase: 'read' } })).toBe('web.library.progress.read');
     expect(phaseOf({ params: {} })).toBeUndefined();
     expect(phaseOf({ params: { phase: 'nope' } })).toBeUndefined();
+  });
+});
+
+describe('grouped', () => {
+  const scan = (id: string, over: Partial<ActivityTask> = {}): ActivityTask =>
+    task({
+      id: `scan:${id}`,
+      kind: 'scan',
+      code: 'scan',
+      params: { name: 'arrivals' },
+      status: 'done',
+      href: '/arrivals',
+      ...over,
+    });
+
+  it('folds the scans of one place into a line that keeps the running one', () => {
+    const rows = grouped([scan('a', { status: 'running' }), scan('b'), scan('c')]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.task.id).toBe('scan:a');
+    expect(rows[0]?.ids).toEqual(['scan:a', 'scan:b', 'scan:c']);
+    expect(rows[0]?.count).toBe(3);
+  });
+
+  it('keeps a failed scan apart: it has its own cause', () => {
+    const rows = grouped([scan('a', { status: 'failed' }), scan('b'), scan('c')]);
+    expect(rows.map(({ task: row }) => row.id)).toEqual(['scan:a', 'scan:b']);
+    expect(rows[1]?.count).toBe(2);
+  });
+
+  it('keeps places and other kinds of task apart', () => {
+    const rows = grouped([
+      scan('a'),
+      scan('b', { params: { name: 'Movies' }, href: '/libraries/movies' }),
+      task({ id: 'undo:x', kind: 'undo', code: 'undo' }),
+    ]);
+    expect(rows).toHaveLength(3);
   });
 });

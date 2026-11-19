@@ -3,6 +3,7 @@
   import { activity } from '../lib/activity.svelte.js';
   import {
     cancellableJob,
+    grouped,
     isRunning,
     labelOf,
     overallPercent,
@@ -17,6 +18,7 @@
   let open = $state(false);
 
   const tasks = $derived(activity.tasks);
+  const rows = $derived(grouped(tasks));
   const running = $derived(tasks.filter(isRunning));
   const overall = $derived(overallPercent(tasks));
   const failed = $derived(tasks.some(({ status }) => status === 'failed'));
@@ -77,7 +79,7 @@
 
     <div id="activity-list" role="status" aria-live="polite" hidden={!open}>
       <ul>
-        {#each tasks as task (task.id)}
+        {#each rows as { task, ids, count } (task.id)}
           {@const percent = percentOf(task)}
           <li class:failed={task.status === 'failed'} class:done={task.status === 'done'}>
             <div class="head">
@@ -88,7 +90,9 @@
                   class="close"
                   aria-label={t('web.activity.dismiss')}
                   onclick={() => {
-                    activity.dismiss(task.id);
+                    ids.forEach((id) => {
+                      activity.dismiss(id);
+                    });
                   }}>×</button
                 >
               {/if}
@@ -107,6 +111,7 @@
                 task.status === 'running' && task.done !== null && task.total !== null
                   ? t('web.activity.count', { done: task.done, total: task.total })
                   : '',
+                count > 1 ? t('web.activity.analyses', { count }) : '',
               ]
                 .filter(Boolean)
                 .join(' · ')}

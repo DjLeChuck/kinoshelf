@@ -1124,6 +1124,7 @@ export const en = {
   'web.activity.cancel': 'Cancel',
   'web.activity.open': 'Open',
   'web.activity.count': '{done} of {total}',
+  'web.activity.analyses': '{count, plural, one {# analysis} other {# analyses}}',
   'web.activity.done': 'Done',
   'web.activity.failed': 'Failed',
   'web.activity.task.unknown': 'Background task',

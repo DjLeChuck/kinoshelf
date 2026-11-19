@@ -68,3 +68,41 @@ export function ordered(tasks: readonly ActivityTask[]): ActivityTask[] {
     .sort((a, b) => rank(a.task) - rank(b.task) || a.index - b.index)
     .map(({ task }) => task);
 }
+
+/** A line of the panel: a task, or the scans of one place folded together. */
+export interface ActivityRow {
+  readonly task: ActivityTask;
+  /** Every task the line stands for, so that closing it closes them all. */
+  readonly ids: readonly string[];
+  readonly count: number;
+}
+
+/**
+ * A watched folder queues one scan per release, so a hundred arrivals would be a hundred lines.
+ * The scans of one place that went well make one line (the one running, else the latest); a failed
+ * one stays apart, since each has its own cause. Display only: the server still lists every task.
+ */
+export function grouped(tasks: readonly ActivityTask[]): ActivityRow[] {
+  const rows: { task: ActivityTask; ids: string[] }[] = [];
+  const byPlace = new Map<string, { task: ActivityTask; ids: string[] }>();
+  for (const task of tasks) {
+    if (task.kind !== 'scan' || task.status === 'failed') {
+      rows.push({ task, ids: [task.id] });
+      continue;
+    }
+    const place = `${String(task.params.name)}|${task.href ?? ''}`;
+    const row = byPlace.get(place);
+    if (row === undefined) {
+      const created = { task, ids: [task.id] };
+      byPlace.set(place, created);
+      rows.push(created);
+    } else {
+      row.ids.push(task.id);
+      // `ordered` puts the running ones first, so the line keeps showing what is going on.
+      if (task.status === 'running' && row.task.status !== 'running') {
+        row.task = task;
+      }
+    }
+  }
+  return rows.map(({ task, ids }) => ({ task, ids, count: ids.length }));
+}
