@@ -145,7 +145,9 @@ createServer((request, response) => {
     });
   } else if (url.pathname === '/3/search/movie') {
     const word = (url.searchParams.get('query') ?? '').toLowerCase().split(' ')[0];
-    json({ results: word ? catalog.filter((c) => c.title.toLowerCase().startsWith(word)) : [] });
+    const results = word ? catalog.filter((c) => c.title.toLowerCase().startsWith(word)) : [];
+    // A scan is too quick to be cancelled by hand: this title keeps it running for a few seconds.
+    setTimeout(() => json({ results }), word === 'slowscan' ? 4000 : 0);
   } else if (/^\/3\/movie\/\d+$/.test(url.pathname)) {
     // The details an NFO is built from: the film itself, with no cast and no genres.
     const found = catalog.find((c) => `/3/movie/${c.id}` === url.pathname);

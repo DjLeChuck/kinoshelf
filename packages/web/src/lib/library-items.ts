@@ -607,7 +607,7 @@ export const libraryItems = {
   /** Where a scan is, without the counts and the page around it. */
   scan: (jobId: string) =>
     api.get<{
-      readonly status: 'queued' | 'running' | 'done' | 'failed';
+      readonly status: 'queued' | 'running' | 'done' | 'failed' | 'cancelled';
       readonly progress: ScanProgress | null;
       readonly transfer: TransferProgress | null;
     }>(`/api/jobs/${jobId}`),

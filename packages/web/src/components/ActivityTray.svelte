@@ -2,6 +2,7 @@
   import { describeError } from '@kinoshelf/i18n';
   import { activity } from '../lib/activity.svelte.js';
   import {
+    cancellableJob,
     isRunning,
     labelOf,
     overallPercent,
@@ -10,6 +11,7 @@
     type ActivityTask,
   } from '../lib/activity.js';
   import { t } from '../lib/i18n.svelte.js';
+  import { libraryApi } from '../lib/libraries.js';
   import Link from './Link.svelte';
 
   let open = $state(false);
@@ -18,6 +20,17 @@
   const running = $derived(tasks.filter(isRunning));
   const overall = $derived(overallPercent(tasks));
   const failed = $derived(tasks.some(({ status }) => status === 'failed'));
+
+  let cancelling = $state<ReadonlySet<string>>(new Set());
+
+  async function cancel(jobId: string): Promise<void> {
+    cancelling = new Set([...cancelling, jobId]);
+    try {
+      await libraryApi.cancelJob(jobId);
+    } catch {
+      // Already over: the list says so at its next read.
+    }
+  }
 
   const title = (task: ActivityTask): string => t(labelOf(task), task.params);
 
@@ -103,6 +116,15 @@
             {/if}
             {#if task.href}
               <Link href={task.href} class="open">{t('web.activity.open')}</Link>
+            {/if}
+            {#if cancellableJob(task)}
+              {@const jobId = cancellableJob(task) ?? ''}
+              <button
+                type="button"
+                class="btn"
+                disabled={cancelling.has(jobId)}
+                onclick={() => void cancel(jobId)}>{t('web.activity.cancel')}</button
+              >
             {/if}
           </li>
         {/each}

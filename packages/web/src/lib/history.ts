@@ -4,7 +4,7 @@ import type { Library } from './libraries.js';
 import { isBelow } from './paths.js';
 import type { Metadata, Mode, Naming } from './settings.js';
 
-export type JobStatus = 'queued' | 'running' | 'done' | 'failed';
+export type JobStatus = 'queued' | 'running' | 'done' | 'failed' | 'cancelled';
 /** `queued`/`running`: the transfer of a batch is not over. */
 export type BatchStatus = 'done' | 'undone' | 'failed' | 'queued' | 'running';
 export type { Mode };
@@ -113,6 +113,7 @@ export const STATUS_CHIP: Record<BatchStatus | JobStatus, string> = {
   done: 'chip-ok',
   undone: 'chip-neutral',
   failed: 'chip-danger',
+  cancelled: 'chip-neutral',
   queued: 'chip-neutral',
   running: 'chip-neutral',
 };

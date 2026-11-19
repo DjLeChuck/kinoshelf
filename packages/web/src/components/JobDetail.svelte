@@ -173,7 +173,7 @@
       <p class="alert alert-danger" role="alert">{messageOf(t, resendFailure)}</p>
     {/if}
 
-    {#if job.status === 'failed' || job.execution?.status === 'failed'}
+    {#if job.status === 'failed' || job.status === 'cancelled' || job.execution?.status === 'failed'}
       <footer>
         <Tip text={t('web.history.job.resend.hint')}>
           {#snippet children(describedby)}

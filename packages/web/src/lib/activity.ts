@@ -43,6 +43,12 @@ export function percentOf(task: Pick<ActivityTask, 'done' | 'total'>): number | 
     : undefined;
 }
 
+/** The job a running scan task stands for, when it is one (its id is `scan:<job id>`). */
+export const cancellableJob = (
+  task: Pick<ActivityTask, 'id' | 'kind' | 'status'>,
+): string | undefined =>
+  task.kind === 'scan' && task.status === 'running' ? task.id.slice('scan:'.length) : undefined;
+
 export const isRunning = (task: Pick<ActivityTask, 'status'>): boolean => task.status === 'running';
 
 /** The pill's bar: the mean of the running tasks that count, undefined when none does. */

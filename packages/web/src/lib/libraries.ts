@@ -25,7 +25,7 @@ export interface Library {
   /** The latest scan of the whole source, whatever became of it. */
   readonly lastScan: {
     readonly jobId: string;
-    readonly status: 'queued' | 'running' | 'done' | 'failed';
+    readonly status: 'queued' | 'running' | 'done' | 'failed' | 'cancelled';
   } | null;
   /** A scan of the whole source is queued or running. */
   readonly scanning: boolean;
@@ -60,6 +60,8 @@ export interface LibraryApi {
    * `candidate`, its files are named after that work instead of the one the analysis would find.
    */
   rescan(id: string, path: string, candidate?: unknown): Promise<{ readonly id: string }>;
+  /** Stops a scan (or any analysis) that is queued or running; nothing is stored. */
+  cancelJob(jobId: string): Promise<unknown>;
 }
 
 export const libraryApi: LibraryApi = {
@@ -73,6 +75,7 @@ export const libraryApi: LibraryApi = {
       path,
       ...(candidate !== undefined && { candidate }),
     }),
+  cancelJob: (jobId) => api.post(`/api/jobs/${jobId}/cancel`),
 };
 
 // The web does not import the core. `THRESHOLD_DEFAULT` mirrors `DEFAULT_THRESHOLD` (core,

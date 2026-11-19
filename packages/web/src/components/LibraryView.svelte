@@ -299,6 +299,25 @@
   // A transfer has no job of its own to read: the page is read again, at the pace of the events.
   refetchOn(['progress'], () => void (page?.scan ? follow() : load()));
 
+  let cancelling = $state(false);
+
+  async function cancelScan(): Promise<void> {
+    const jobId = page?.scan?.jobId;
+    if (!jobId) {
+      return;
+    }
+    cancelling = true;
+    failure = undefined;
+    try {
+      await libraryApi.cancelJob(jobId);
+      await load();
+    } catch (error) {
+      failure = error;
+    } finally {
+      cancelling = false;
+    }
+  }
+
   async function scan(): Promise<void> {
     starting = true;
     failure = undefined;
@@ -380,6 +399,11 @@
         {t('web.library.scan')}
       {/if}
     </button>
+    {#if page?.scan}
+      <button type="button" class="btn" disabled={cancelling} onclick={() => void cancelScan()}
+        >{t('web.library.scan.cancel')}</button
+      >
+    {/if}
   </div>
 
   {#if lastScanFailed(library)}
