@@ -177,16 +177,17 @@
         {examples}
         {defaults}
         withDefault
-      />
-    </section>
-    <section class="card" aria-labelledby="lib-names">
-      <h2 id="lib-names">{t('web.libraries.names')}</h2>
-      <NamesEditor
-        id="lib-names-edit"
-        type={library?.type ?? form.type}
-        bind:own={form.ownNames}
-        bind:names={form.names}
-      />
+        customizable
+        bind:custom={form.ownNames}
+      >
+        {#snippet masks()}
+          <NamesEditor
+            id="lib-names-edit"
+            type={library?.type ?? form.type}
+            bind:names={form.names}
+          />
+        {/snippet}
+      </ProfileChoice>
     </section>
   {:else}
     <section class="card" aria-labelledby="lib-into">
@@ -269,14 +270,13 @@
     </div>
   </details>
 
-  {#if failure}
-    <p class="alert alert-danger" role="alert">
-      {failure instanceof FormError ? failure.message : messageOf(t, failure)}
-    </p>
-  {/if}
-  {#if saved && library}<p class="ok" role="status">{t('web.settings.saved')}</p>{/if}
-
   <div class="footer">
+    {#if failure}
+      <p class="alert alert-danger" role="alert">
+        {failure instanceof FormError ? failure.message : messageOf(t, failure)}
+      </p>
+    {/if}
+    {#if saved && library}<p class="ok" role="status">{t('web.settings.saved')}</p>{/if}
     {#if confirming && library}
       <div class="confirm" role="alertdialog" aria-label={t('web.libraries.delete')}>
         <p>{t('web.libraries.delete.warning', { name: library.name })}</p>

@@ -1630,16 +1630,15 @@ export const en = {
   'web.profile.metadata.nfo': 'NFO files and images',
   'web.profile.metadata.nfo.help':
     'Writes the NFO files and the images (poster, background, logo) next to the videos. Jellyfin, Kodi and Plex’s “Plex NFO” agent read them; Plex’s default agents ignore them.',
-  'web.profile.default': 'Default',
+  'web.profile.naming.custom': 'Custom masks',
+  'web.profile.naming.custom.help':
+    'You write the folder and file names yourself. The NFO and image names stay the standard ones.',
   'web.profile.default.named': 'Default ({value})',
+  'web.profile.default': 'Default',
   'web.profile.example.movie': 'Movie',
   'web.profile.example.series': 'Episode',
   'web.profile.explain': 'What this naming writes',
   'web.libraries.summary.profile': 'Names: {naming} · Metadata: {metadata}',
-  'web.libraries.names': 'Custom names',
-  'web.libraries.names.own': 'Use custom naming masks',
-  'web.libraries.names.hint':
-    'Replaces the standard names of this library. The NFO and image names stay the ones every player reads.',
   'web.libraries.names.note':
     'Your names are kept as written: Kinoshelf adds nothing to them, not even a quality label. Two files they do not tell apart wait in Arrivals as a conflict, so write the picture size, the source or the group in the file name if you keep several versions.',
   'web.libraries.names.movieFolder': 'Movie folder name',

@@ -1680,16 +1680,15 @@ export const fr: Record<keyof typeof en, string> = {
   'web.profile.metadata.nfo': 'Fichiers NFO et images',
   'web.profile.metadata.nfo.help':
     'Écrit les fichiers NFO et les images (affiche, fond, logo) à côté des vidéos. Jellyfin, Kodi et l’agent « Plex NFO » les lisent ; les agents par défaut de Plex les ignorent.',
-  'web.profile.default': 'Par défaut',
+  'web.profile.naming.custom': 'Masques personnalisés',
+  'web.profile.naming.custom.help':
+    'Vous écrivez vous-même les noms des dossiers et des fichiers. Les noms des NFO et des images restent ceux du standard.',
   'web.profile.default.named': 'Par défaut ({value})',
+  'web.profile.default': 'Par défaut',
   'web.profile.example.movie': 'Film',
   'web.profile.example.series': 'Épisode',
   'web.profile.explain': 'Ce que ce nommage écrit',
   'web.libraries.summary.profile': 'Noms : {naming} · Métadonnées : {metadata}',
-  'web.libraries.names': 'Noms personnalisés',
-  'web.libraries.names.own': 'Utiliser des masques de nommage personnalisés',
-  'web.libraries.names.hint':
-    'Remplace les noms standards de cette bibliothèque. Les noms des NFO et des images restent ceux que tous les lecteurs savent lire.',
   'web.libraries.names.note':
     'Vos noms sont gardés tels quels : Kinoshelf n’y ajoute rien, pas même une étiquette de qualité. Deux fichiers qu’ils ne distinguent pas attendent dans Arrivées comme un conflit : si vous gardez plusieurs versions, écrivez la taille d’image, la source ou le groupe dans le nom du fichier.',
   'web.libraries.names.movieFolder': 'Nom du dossier du film',

@@ -9,7 +9,7 @@ All notable changes to Kinoshelf are written here. The format follows
 ### Added
 
 - A library organized in place can now write its folder and file names its own way, from its form in the
-  settings ("Use custom naming masks", or `names` in `config.yaml`): `{title}`, `{year}`, `{tmdb}`,
+  settings ("Custom masks" among the namings, or `names` in `config.yaml`): `{title}`, `{year}`, `{tmdb}`,
   `{imdb}`, `{season:02}`, `{episode:02}`, and what the video says: `{screenSize}`, `{source}`, `{releaseGroup}`, plus the
   codecs and dynamic range read from the file (`{videoCodec}`, `{audioCodec}`, `{hdr}`). Any of them can also
   name a folder, which gives one folder per version. A `[group]` is left out,

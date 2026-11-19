@@ -168,6 +168,8 @@
 <style>
   dialog {
     width: min(960px, 96vw);
+    /* The form's footer sticks to the bottom: what scrolls into view or takes the focus clears it. */
+    scroll-padding-bottom: 120px;
     max-height: 92vh;
     padding: 16px;
     color: var(--text);

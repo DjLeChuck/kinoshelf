@@ -230,7 +230,7 @@ test('writes a library’s own names, sees what they give, and finds them after 
 
   await section.getByRole('button', { name: '+ Add' }).first().click();
   await section.getByRole('textbox', { name: 'Source folder' }).fill(library('Own names'));
-  await section.getByRole('checkbox', { name: /Use custom naming masks/ }).check();
+  await section.getByRole('radio', { name: /^Custom masks/ }).check({ force: true });
 
   const file = section.getByRole('textbox', { name: 'Movie file' });
   await file.fill('{title} ({year}) {screenSize} [imdbid-{imdb}]');
@@ -250,8 +250,21 @@ test('writes a library’s own names, sees what they give, and finds them after 
 
   await page.reload();
   await page.getByRole('button', { name: 'Own names' }).click();
-  await expect(section.getByRole('checkbox', { name: /Use custom naming masks/ })).toBeChecked();
+  await expect(section.getByRole('radio', { name: /^Custom masks/ })).toBeChecked();
   await expect(section.getByRole('textbox', { name: 'Movie file' })).toHaveValue(
     '{title} ({year}) {screenSize}',
   );
+});
+
+test('shows a refusal where the buttons are, even when the form is long', async ({ page }) => {
+  // A short window: the form scrolls, and what is at its end is out of sight.
+  await page.setViewportSize({ width: 1100, height: 480 });
+  const section = page.locator('section', {
+    has: page.getByRole('heading', { name: 'Folders', exact: true }),
+  });
+  await section.getByRole('button', { name: '+ Add' }).first().click();
+  // Custom masks make the form longer than the dialog: the refusal must not end up below the fold.
+  await section.getByRole('radio', { name: /^Custom masks/ }).check({ force: true });
+  await section.getByRole('button', { name: 'Create' }).click();
+  await expect(section.getByRole('alert').filter({ hasText: 'source folder' })).toBeInViewport();
 });

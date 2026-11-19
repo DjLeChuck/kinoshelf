@@ -13,13 +13,10 @@
 
   let {
     type,
-    own = $bindable(false),
     names = $bindable({ ...STARTING_NAMES }),
     id,
   }: {
     type: LibraryKind;
-    /** The library writes its names itself. */
-    own?: boolean;
     names?: Required<LibraryNames>;
     /** Keeps the ids of two forms on one page apart. */
     id: string;
@@ -55,9 +52,6 @@
 
   // A check after each pause in typing; an answer that comes back after a newer question is dropped.
   $effect(() => {
-    if (!own) {
-      return;
-    }
     const wanted = JSON.parse(asked) as LibraryNames;
     if (Object.values(wanted).some((name) => name === '')) {
       preview = undefined;
@@ -116,67 +110,59 @@
   const kind = $derived(type === 'movie' ? 'movie' : 'episode');
 </script>
 
-<label class="check">
-  <input type="checkbox" bind:checked={own} />
-  {t('web.libraries.names.own')}
-</label>
-<span class="muted hint">{t('web.libraries.names.hint')}</span>
+<p class="alert alert-warn" role="note">{t('web.libraries.names.note')}</p>
 
-{#if own}
-  <p class="alert alert-warn" role="note">{t('web.libraries.names.note')}</p>
-
-  {#each fields as field (field)}
-    <div class="field">
-      <label for="{id}-{field}">{t(`web.libraries.names.${field}`)}</label>
-      <input
-        id="{id}-{field}"
-        class="input mono"
-        autocomplete="off"
-        spellcheck="false"
-        bind:value={names[field]}
-      />
-      <span class="muted hint">{t(`web.libraries.names.${field}.hint`)}</span>
-    </div>
-  {/each}
-
-  <details class="variables">
-    <summary>{t('web.libraries.names.variables')}</summary>
-    {#each groups as { group, list } (group)}
-      <h4>{t(`web.libraries.names.vars.${group}`)}</h4>
-      <dl>
-        {#each list as name (name)}
-          <dt class="mono">{'{' + name + '}'}</dt>
-          <dd>{t(`web.libraries.names.var.${name}`)}</dd>
-        {/each}
-      </dl>
-    {/each}
-    <span class="muted hint">{t('web.libraries.names.variables.hint')}</span>
-    <span class="muted hint"
-      >{t('web.libraries.names.variables.example', { example: '[HDR: {hdr}]' })}</span
-    >
-  </details>
-
-  <div class="preview" aria-live="polite">
-    <h3>{t('web.libraries.names.preview')}</h3>
-    {#if failure}
-      <p class="alert alert-danger" role="alert">{refusal}</p>
-    {:else if preview}
-      {#each ['complete', 'bare'] as const as shape (shape)}
-        <div class="sample">
-          <span class="muted hint">{t(`web.libraries.names.preview.${shape}`)}</span>
-          <code class="mono path">{preview[shape][kind].join(' / ')}</code>
-        </div>
-      {/each}
-      {#each preview.warnings as warning (warning.code)}
-        <p class="alert alert-warn" role="note">
-          {t(`web.libraries.names.warning.${warning.code}`, warning.params)}
-        </p>
-      {/each}
-    {:else if checking}
-      <span class="muted hint">{t('web.libraries.names.preview.checking')}</span>
-    {/if}
+{#each fields as field (field)}
+  <div class="field">
+    <label for="{id}-{field}">{t(`web.libraries.names.${field}`)}</label>
+    <input
+      id="{id}-{field}"
+      class="input mono"
+      autocomplete="off"
+      spellcheck="false"
+      bind:value={names[field]}
+    />
+    <span class="muted hint">{t(`web.libraries.names.${field}.hint`)}</span>
   </div>
-{/if}
+{/each}
+
+<details class="variables">
+  <summary>{t('web.libraries.names.variables')}</summary>
+  {#each groups as { group, list } (group)}
+    <h4>{t(`web.libraries.names.vars.${group}`)}</h4>
+    <dl>
+      {#each list as name (name)}
+        <dt class="mono">{'{' + name + '}'}</dt>
+        <dd>{t(`web.libraries.names.var.${name}`)}</dd>
+      {/each}
+    </dl>
+  {/each}
+  <span class="muted hint">{t('web.libraries.names.variables.hint')}</span>
+  <span class="muted hint"
+    >{t('web.libraries.names.variables.example', { example: '[HDR: {hdr}]' })}</span
+  >
+</details>
+
+<div class="preview" aria-live="polite">
+  <h3>{t('web.libraries.names.preview')}</h3>
+  {#if failure}
+    <p class="alert alert-danger" role="alert">{refusal}</p>
+  {:else if preview}
+    {#each ['complete', 'bare'] as const as shape (shape)}
+      <div class="sample">
+        <span class="muted hint">{t(`web.libraries.names.preview.${shape}`)}</span>
+        <code class="mono path">{preview[shape][kind].join(' / ')}</code>
+      </div>
+    {/each}
+    {#each preview.warnings as warning (warning.code)}
+      <p class="alert alert-warn" role="note">
+        {t(`web.libraries.names.warning.${warning.code}`, warning.params)}
+      </p>
+    {/each}
+  {:else if checking}
+    <span class="muted hint">{t('web.libraries.names.preview.checking')}</span>
+  {/if}
+</div>
 
 <style>
   .variables dl {
