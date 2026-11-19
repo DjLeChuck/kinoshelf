@@ -1,6 +1,8 @@
 <script lang="ts">
   import { imageUrl } from '../lib/arrivals.js';
   import { api } from '../lib/api.js';
+  import { MediaQuery } from 'svelte/reactivity';
+  import PanelSheet from './PanelSheet.svelte';
   import { messageOf } from '../lib/errors.js';
   import { refetchOn } from '../lib/events.svelte.js';
   import { formatDate } from '../lib/history.js';
@@ -51,6 +53,8 @@
   let failure = $state<unknown>(undefined);
   let task = $state<SendTask | undefined>(undefined);
   let choosing = $state<CollectionImageType | undefined>(undefined);
+  // Below this width the panel sits under the list (the layout's own media query, below).
+  const narrow = new MediaQuery('max-width: 960px');
   let renaming = $state(false);
   let chooseButton = $state<HTMLElement | undefined>(undefined);
 
@@ -324,7 +328,13 @@
         </ul>
       {/if}
 
-      <div class="side">
+      <PanelSheet
+        open={selected !== undefined}
+        stacked={narrow.current}
+        onclose={() => {
+          router.setQuery({ collection: undefined });
+        }}
+      >
         {#if selected}
           {#key selected.key}
             {@const pill = completenessOf(selected)}
@@ -537,7 +547,7 @@
         {:else}
           <p class="muted">{t('web.collections.pick')}</p>
         {/if}
-      </div>
+      </PanelSheet>
     </div>
   {/if}
 </div>
@@ -764,13 +774,6 @@
 
   .status-sent {
     color: var(--ok);
-  }
-
-  .side {
-    position: sticky;
-    top: calc(var(--header-h, 0px) + 16px);
-    max-height: calc(100vh - var(--header-h, 0px) - 32px);
-    overflow-y: auto;
   }
 
   .detail {
@@ -1016,11 +1019,6 @@
   @media (max-width: 960px) {
     .layout {
       grid-template-columns: 1fr;
-    }
-
-    .side {
-      position: static;
-      max-height: none;
     }
   }
 </style>

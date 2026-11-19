@@ -64,6 +64,12 @@ All notable changes to Kinoshelf are written here. The format follows
 
 ### Changed
 
+- On a phone (640 px and below) the library tables drop their tick columns (NFO, poster, fanart, logo,
+  thumbnail), and a series tree its year and seasons columns: the sheet of the work says the same, and the
+  table fits the screen without scrolling sideways (#14). Where the page of a work or of a collection has no
+  room beside the list, it opens as a sheet over it, never under it, and the versions scroll on their own.
+  On a narrow screen the header folds the theme, the language and the sign-out into a menu.
+
 - "Add the version to the name…" now only renames: it no longer writes the NFO and images that are missing
   (that is what the refresh is for), and a `.nfo` beside the video travels with it.
 - "Rename…" is now "Organize…" and "Refresh…" is "Complete…": the first also writes what the profile expects

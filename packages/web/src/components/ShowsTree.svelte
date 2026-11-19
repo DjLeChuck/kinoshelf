@@ -2,7 +2,9 @@
   import { baseName, rescanPath } from '../lib/paths.js';
   import { loadWhenVisible } from '../lib/infinite-scroll.js';
   import { untrack } from 'svelte';
+  import { MediaQuery } from 'svelte/reactivity';
   import { ApiError } from '../lib/api.js';
+  import PanelSheet from './PanelSheet.svelte';
   import { messageOf } from '../lib/errors.js';
   import { refetchOn } from '../lib/events.svelte.js';
   import { t } from '../lib/i18n.svelte.js';
@@ -118,6 +120,14 @@
     // The panel takes up to 36%, but gives back what the table needs, down to 340px.
     const room = layoutWidth - 16 - narrowest;
     stacked = room < 340;
+    // Opening a show's seasons selected its page while the panel was beside the tree; the opening
+    // widened the table and the panel is now a sheet over it: let the seasons be seen.
+    untrack(() => {
+      if (stacked && selectedByToggle && selection?.kind === 'show') {
+        selection = undefined;
+      }
+      if (stacked) selectedByToggle = false;
+    });
     panelWidth = Math.min(layoutWidth * 0.36, room);
   });
 
@@ -141,6 +151,8 @@
   const seasonsOpen = $derived(listOf(router.query.get('seasons')));
   let settleOpen = $state(false);
   let selection = $state<Selection | undefined>(undefined);
+  /** The selected show came from opening its row, not from a click on its page button. */
+  let selectedByToggle = false;
   let failure = $state<unknown>(undefined);
   let limit = $state(PAGE_SIZE);
   // Groups of files to validate, one row each: a release of sixteen episodes takes one place.
@@ -319,7 +331,12 @@
   async function toggle(show: Show): Promise<void> {
     // From an episode, the show's row goes up to the show's panel and leaves the tree as it is.
     const stay = holdsEpisode(show.tmdbId) && opened.includes(show.tmdbId);
-    selection = { kind: 'show', tmdbId: show.tmdbId };
+    // Stacked, the page is a sheet over the tree: a row that only opens its seasons must not cover
+    // them, so the show's page has a button of its own there.
+    if (!stacked) {
+      selection = { kind: 'show', tmdbId: show.tmdbId };
+      selectedByToggle = true;
+    }
     if (stay) {
       return;
     }
@@ -372,8 +389,13 @@
     router.setQuery(sortToQuery(nextSort(current, column)));
   };
 
+  // On a phone the year and the seasons columns go (as the tick columns do, in CSS): the title and
+  // the counts of a show stay. Rows that span the title, year and seasons span the title alone.
+  const phone = new MediaQuery('max-width: 640px');
+  const lead = $derived(phone.current ? 1 : 3);
+
   const columns = $derived(
-    6 +
+    (phone.current ? 4 : 6) +
       (writes.nfo ? 1 : 0) +
       (writes.artwork ? 2 : 0) +
       (writes.logo ? 1 : 0) +
@@ -432,24 +454,26 @@
                 onsort={sortBy}
               />
             </th>
-            <th aria-sort={ariaSortOf(current, 'year')}>
-              <SortButton
-                column="year"
-                {current}
-                label={t('web.library.col.year')}
-                onsort={sortBy}
-              />
-            </th>
-            <th>{t('web.library.col.seasons')}</th>
+            {#if !phone.current}
+              <th aria-sort={ariaSortOf(current, 'year')}>
+                <SortButton
+                  column="year"
+                  {current}
+                  label={t('web.library.col.year')}
+                  onsort={sortBy}
+                />
+              </th>
+              <th>{t('web.library.col.seasons')}</th>
+            {/if}
             <th>{t('web.library.col.episodes')}</th>
             <th>{t('web.library.col.versions')}</th>
-            {#if writes.nfo}<th>NFO</th>{/if}
+            {#if writes.nfo}<th class="mark">NFO</th>{/if}
             {#if writes.artwork}
-              <th>{t('web.library.col.poster')}</th>
-              <th>{t('web.library.col.fanart')}</th>
+              <th class="mark">{t('web.library.col.poster')}</th>
+              <th class="mark">{t('web.library.col.fanart')}</th>
             {/if}
-            {#if writes.logo}<th>{t('web.library.col.logo')}</th>{/if}
-            {#if writes.thumb}<th>{t('web.library.col.thumb')}</th>{/if}
+            {#if writes.logo}<th class="mark">{t('web.library.col.logo')}</th>{/if}
+            {#if writes.thumb}<th class="mark">{t('web.library.col.thumb')}</th>{/if}
             <th aria-sort={ariaSortOf(current, 'missing')}>
               <SortButton
                 column="missing"
@@ -573,10 +597,43 @@
                     <Chevron open={isOpen} />
                     {show.title ?? ''}
                   </button>
+                  <!-- Stacked, the page is a sheet over the tree: opening the seasons leaves the tree
+                       in view, so the show's page has a button of its own. -->
+                  {#if stacked}
+                    <button
+                      type="button"
+                      class="page-btn"
+                      aria-label={t('web.library.shows.page', { title: show.title ?? '' })}
+                      onclick={() => {
+                        selection = { kind: 'show', tmdbId: show.tmdbId };
+                        selectedByToggle = false;
+                      }}
+                    >
+                      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+                        <circle
+                          cx="12"
+                          cy="12"
+                          r="9.5"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="1.6"
+                        />
+                        <circle cx="12" cy="7.9" r="1.2" fill="currentColor" />
+                        <path
+                          d="M12 11v6"
+                          stroke="currentColor"
+                          stroke-width="1.8"
+                          stroke-linecap="round"
+                        />
+                      </svg>
+                    </button>
+                  {/if}
                 </div>
               </td>
-              <td>{show.year ?? ''}</td>
-              <td>{show.seasons}</td>
+              {#if !phone.current}
+                <td>{show.year ?? ''}</td>
+                <td>{show.seasons}</td>
+              {/if}
               <td>
                 {show.episodes}
                 {#if show.versions.length > 1}
@@ -588,7 +645,7 @@
               </td>
               <td><CoverageBadges coverage={show.versions} /></td>
               {#if writes.nfo}
-                <td>
+                <td class="mark">
                   <Presence value={show.nfo} />
                   {#if show.episodesLackingNfo > 0}
                     <Tip
@@ -608,13 +665,17 @@
                 </td>
               {/if}
               {#if writes.artwork}
-                <td><Presence value={show.poster} unavailable={lacksOnTmdb(show, 'poster')} /></td>
-                <td><Presence value={show.fanart} unavailable={lacksOnTmdb(show, 'fanart')} /></td>
+                <td class="mark"
+                  ><Presence value={show.poster} unavailable={lacksOnTmdb(show, 'poster')} /></td
+                >
+                <td class="mark"
+                  ><Presence value={show.fanart} unavailable={lacksOnTmdb(show, 'fanart')} /></td
+                >
               {/if}
-              {#if writes.logo}<td
+              {#if writes.logo}<td class="mark"
                   ><Presence value={show.logo} unavailable={lacksOnTmdb(show, 'logo')} /></td
                 >{/if}
-              {#if writes.thumb}<td></td>{/if}
+              {#if writes.thumb}<td class="mark"></td>{/if}
               <td>
                 {#if show.missing}
                   <!-- The column's header says what it counts; the tooltip spells it out. -->
@@ -656,7 +717,7 @@
                     season.episodes.filter((e) => e.state !== 'extra').map((e) => e.episode),
                   ).size}
                   <tr class="child season" class:empty>
-                    <td colspan="3">
+                    <td colspan={lead}>
                       <div class="season-head">
                         <button
                           type="button"
@@ -702,13 +763,14 @@
                     <td
                       >{#if !empty}<CoverageBadges coverage={season.versions} always />{/if}</td
                     >
-                    {#if writes.nfo}<td><NfoTally tally={season.nfo} always /></td>{/if}
+                    {#if writes.nfo}<td class="mark"><NfoTally tally={season.nfo} always /></td
+                      >{/if}
                     {#if writes.artwork}
-                      <td><Presence value={season.poster} /></td>
-                      <td></td>
+                      <td class="mark"><Presence value={season.poster} /></td>
+                      <td class="mark"></td>
                     {/if}
-                    {#if writes.logo}<td></td>{/if}
-                    {#if writes.thumb}<td></td>{/if}
+                    {#if writes.logo}<td class="mark"></td>{/if}
+                    {#if writes.thumb}<td class="mark"></td>{/if}
                     <td>
                       {#if season.missing > 0}
                         <Tip text={t('web.library.shows.missing', { count: season.missing })}>
@@ -730,7 +792,7 @@
                           selection.episode.season === episode.season &&
                           selection.episode.episode === episode.episode}
                       >
-                        <td class="indent2" colspan="3">
+                        <td class="indent2" colspan={lead}>
                           {#if item}
                             <button
                               type="button"
@@ -757,7 +819,7 @@
                           {/if}
                         </td>
                         <!-- The tag sits in the "Episodes" column. An episode no file holds has nothing after it: the cell takes the rest of the row, so the tag has room. -->
-                        <td colspan={item ? 1 : columns - 3}>
+                        <td colspan={item ? 1 : columns - lead}>
                           <!-- In a season no file holds, every episode is missing: the season says it once. -->
                           {#if episode.state !== 'present' && !(empty && episode.state === 'missing')}
                             <span class="chip {EPISODE_CHIP[episode.state]}"
@@ -769,10 +831,12 @@
                           <td>
                             <SlotBadges slots={slotsOf(season.versions, episode.versions)} />
                           </td>
-                          {#if writes.nfo}<td><NfoTally tally={episode.nfo} /></td>{/if}
-                          {#if writes.artwork}<td></td><td></td>{/if}
-                          {#if writes.logo}<td></td>{/if}
-                          {#if writes.thumb}<td><Presence value={thumbOf(episode.versions)} /></td
+                          {#if writes.nfo}<td class="mark"><NfoTally tally={episode.nfo} /></td
+                            >{/if}
+                          {#if writes.artwork}<td class="mark"></td><td class="mark"></td>{/if}
+                          {#if writes.logo}<td class="mark"></td>{/if}
+                          {#if writes.thumb}<td class="mark"
+                              ><Presence value={thumbOf(episode.versions)} /></td
                             >{/if}
                           <td></td>
                         {/if}
@@ -805,7 +869,13 @@
       {/if}
     </div>
 
-    <div class="side">
+    <PanelSheet
+      open={selection?.kind === 'item' || selection?.kind === 'episode' || chosenShow !== undefined}
+      {stacked}
+      onclose={() => {
+        selection = undefined;
+      }}
+    >
       {#if selection?.kind === 'item'}
         {@const chosenItem = selection.item}
         {#key chosenItem.id}
@@ -868,7 +938,7 @@
       {:else}
         <p class="muted">{t('web.library.pick')}</p>
       {/if}
-    </div>
+    </PanelSheet>
   </div>
 {/if}
 
@@ -889,6 +959,28 @@
 {/if}
 
 <style>
+  /* A round icon button: it sits at the end of the title's line and takes no room of a word. */
+  .page-btn {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    margin-left: auto;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+  }
+
+  .page-btn:hover {
+    background: var(--surface-2);
+    color: var(--text);
+  }
+
   .name {
     display: flex;
     align-items: center;
@@ -929,14 +1021,6 @@
     grid-template-columns: minmax(0, 1fr) var(--panel, minmax(340px, 36%));
     gap: 16px;
     align-items: start;
-  }
-
-  /* Floats beside the tree while it scrolls; a tall panel scrolls on its own rather than past the screen. */
-  .side {
-    position: sticky;
-    top: calc(var(--header-h, 0px) + 16px);
-    max-height: calc(100vh - var(--header-h, 0px) - 32px);
-    overflow-y: auto;
   }
 
   .table-wrap {
@@ -1032,9 +1116,23 @@
     grid-template-columns: 1fr;
   }
 
-  .stacked .side {
-    position: static;
-    max-height: none;
-    overflow-y: visible;
+  /* On a phone the tick columns go: the panel of the work says the same, and the table then fits. */
+  @media (max-width: 640px) {
+    .mark {
+      display: none;
+    }
+
+    th:first-child {
+      min-width: 0;
+    }
+
+    th,
+    td {
+      padding: 8px 6px;
+    }
+
+    .name {
+      gap: 4px;
+    }
   }
 </style>

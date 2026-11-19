@@ -211,3 +211,93 @@ test('files movies under collections: the list, the page of a film, a whole sele
     .poll(async () => readFile(library('sagas', 'Alien (1979)', 'movie.nfo'), 'utf8'))
     .toContain('<name>Sables</name>');
 });
+
+test('opens a collection as a sheet over the list on a phone, and closes it', async ({
+  page,
+  request,
+}) => {
+  const film = library('sagas-phone', 'Dune (2021)', 'Dune (2021).mkv');
+  await mkdir(film.slice(0, film.lastIndexOf('/')), { recursive: true });
+  await writeFile(film, 'video');
+  const created = await request.post('/api/libraries', {
+    headers: AUTH_HEADERS,
+    data: {
+      name: 'Sagas phone',
+      source: library('sagas-phone'),
+      type: 'movie',
+      naming: 'no-id',
+      metadata: 'nfo',
+    },
+  });
+  expect(created.status()).toBe(201);
+  const { id } = (await created.json()) as { id: string };
+  expect(
+    (await request.post(`/api/libraries/${id}/scan`, { headers: AUTH_HEADERS })).status(),
+  ).toBe(202);
+  await expect
+    .poll(async () => {
+      const response = await request.get(`/api/libraries/${id}/collections`, {
+        headers: AUTH_HEADERS,
+      });
+      return response.ok()
+        ? ((await response.json()) as { collections: unknown[] }).collections.length
+        : 0;
+    })
+    .toBe(1);
+
+  await page.setViewportSize({ width: 390, height: 800 });
+  await signIn(page);
+  await page.goto(`/libraries/${id}?vue=collections`);
+  const close = page.getByRole('button', { name: 'Close the page' });
+  // Nothing is selected: the list has the screen, and the page behind it scrolls.
+  await expect(close).toHaveCount(0);
+  await expect(page.locator('html')).not.toHaveCSS('overflow', 'hidden');
+
+  await page
+    .getByRole('button', { name: /Dune - Saga/ })
+    .first()
+    .click();
+  await expect(page).toHaveURL(/collection=tmdb%3A726871/);
+  const detail = page.getByRole('article', { name: 'Dune - Saga' });
+  await expect(detail).toBeVisible();
+  // A sheet: fixed over the list, with its own close bar, and the list behind it does not scroll.
+  await expect(close).toBeVisible();
+  await expect(close.locator('xpath=ancestor::div[contains(@class, "side")]')).toHaveCSS(
+    'position',
+    'fixed',
+  );
+  await expect(page.locator('html')).toHaveCSS('overflow', 'hidden');
+
+  await close.click();
+  await expect(close).toHaveCount(0);
+  await expect(page).not.toHaveURL(/collection=/);
+  await expect(page.locator('html')).not.toHaveCSS('overflow', 'hidden');
+
+  // A tablet width is no different: the page is never under the list.
+  await page.setViewportSize({ width: 800, height: 800 });
+  await page
+    .getByRole('button', { name: /Dune - Saga/ })
+    .first()
+    .click();
+  await expect(close).toBeVisible();
+  await expect(close.locator('xpath=ancestor::div[contains(@class, "side")]')).toHaveCSS(
+    'position',
+    'fixed',
+  );
+  await close.click();
+  await expect(close).toHaveCount(0);
+  await expect(page.getByText(/Pick a collection/)).toBeHidden();
+  await page
+    .getByRole('button', { name: /Dune - Saga/ })
+    .first()
+    .click();
+
+  // On a desktop width the panel sits beside the list and has no close bar.
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page
+    .getByRole('button', { name: /Dune - Saga/ })
+    .first()
+    .click();
+  await expect(detail).toBeVisible();
+  await expect(close).toBeHidden();
+});

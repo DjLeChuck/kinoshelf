@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { MediaQuery } from 'svelte/reactivity';
+  import PanelSheet from './PanelSheet.svelte';
   import { messageOf } from '../lib/errors.js';
   import { onDestroy, untrack } from 'svelte';
   import { refetchOn } from '../lib/events.svelte.js';
@@ -95,6 +97,8 @@
     clearTimeout(typing);
   });
   let limit = $state(PAGE_SIZE);
+  // Below this width the panel sits under the list (the layout's own media query, below).
+  const narrow = new MediaQuery('max-width: 960px');
   let chosen = $state<string | undefined>(undefined);
   let notice = $state<string | undefined>(undefined);
   let starting = $state(false);
@@ -591,12 +595,12 @@
                   />
                 </th>
                 <th>{t('web.library.col.versions')}</th>
-                {#if page.library.writes.nfo}<th>NFO</th>{/if}
+                {#if page.library.writes.nfo}<th class="mark">NFO</th>{/if}
                 {#if page.library.writes.artwork}
-                  <th>{t('web.library.col.poster')}</th>
-                  <th>{t('web.library.col.fanart')}</th>
+                  <th class="mark">{t('web.library.col.poster')}</th>
+                  <th class="mark">{t('web.library.col.fanart')}</th>
                 {/if}
-                {#if page.library.writes.logo}<th>{t('web.library.col.logo')}</th>{/if}
+                {#if page.library.writes.logo}<th class="mark">{t('web.library.col.logo')}</th>{/if}
               </tr>
             </thead>
             <tbody>
@@ -642,22 +646,23 @@
                   </td>
                   <td>{item.year ?? ''}</td>
                   <td><VersionBadges versions={item.versions} /></td>
-                  {#if page.library.writes.nfo}<td><Presence value={item.nfo} /></td>{/if}
+                  {#if page.library.writes.nfo}<td class="mark"><Presence value={item.nfo} /></td
+                    >{/if}
                   {#if page.library.writes.artwork}
-                    <td
+                    <td class="mark"
                       ><Presence
                         value={item.poster}
                         unavailable={item.unavailable.includes('poster')}
                       /></td
                     >
-                    <td
+                    <td class="mark"
                       ><Presence
                         value={item.fanart}
                         unavailable={item.unavailable.includes('fanart')}
                       /></td
                     >
                   {/if}
-                  {#if page.library.writes.logo}<td
+                  {#if page.library.writes.logo}<td class="mark"
                       ><Presence
                         value={item.logo}
                         unavailable={item.unavailable.includes('logo')}
@@ -682,7 +687,13 @@
           {/if}
         </div>
 
-        <div class="side">
+        <PanelSheet
+          open={open !== undefined}
+          stacked={narrow.current}
+          onclose={() => {
+            chosen = undefined;
+          }}
+        >
           {#if open}
             {#key `${open.id}:${String(panelVersion)}`}
               <ItemPanel
@@ -707,7 +718,7 @@
           {:else}
             <p class="muted">{t('web.library.pick')}</p>
           {/if}
-        </div>
+        </PanelSheet>
       </div>
     {/if}
   {/if}
@@ -807,14 +818,6 @@
     align-items: start;
   }
 
-  /* Floats beside the list while it scrolls; a tall panel scrolls on its own rather than past the screen. */
-  .side {
-    position: sticky;
-    top: calc(var(--header-h, 0px) + 16px);
-    max-height: calc(100vh - var(--header-h, 0px) - 32px);
-    overflow-y: auto;
-  }
-
   .table-wrap {
     display: flex;
     flex-direction: column;
@@ -871,6 +874,13 @@
 
     .layout {
       grid-template-columns: 1fr;
+    }
+  }
+
+  /* On a phone the tick columns go: the panel of the work says the same, and the table then fits. */
+  @media (max-width: 640px) {
+    .mark {
+      display: none;
     }
   }
 </style>

@@ -14,7 +14,9 @@
   <h3 id="versions-title">
     {t('web.library.versions.title')}<span class="muted">{tail}</span>
   </h3>
-  {@render children()}
+  <div class="body">
+    {@render children()}
+  </div>
 </section>
 
 <style>
@@ -26,6 +28,13 @@
   h3 {
     margin: 0 0 8px;
     font-size: 14px;
+  }
+
+  /* The versions scroll on their own, so a long list (tracks, subtitles) does not push the rest of
+     the sheet out of view: the identity and the synopsis stay where they are. */
+  .body {
+    max-height: max(260px, 45vh);
+    overflow-y: auto;
   }
 
   h3 .muted {

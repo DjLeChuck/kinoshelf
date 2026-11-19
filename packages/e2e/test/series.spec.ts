@@ -154,3 +154,64 @@ test('shows which NFO and images a show and its seasons have', async ({ page, re
   await expect(page).toHaveURL(/state=missing-show-files/);
   await expect(page.getByRole('button', { name: /the seasons of Severance/ })).toBeVisible();
 });
+
+test('drops the tick columns on a phone, so the tree needs no sideways scroll', async ({
+  page,
+  request,
+}) => {
+  const folder = incoming('series-phone');
+  const show = `${folder}/Severance (2022) {tmdb-95396}`;
+  await mkdir(`${show}/Season 01`, { recursive: true });
+  await writeFile(`${show}/Season 01/Severance (2022) - s01e01.mkv`, 'video');
+  const created = await request.post('/api/libraries', {
+    headers: AUTH_HEADERS,
+    data: { name: 'Phone series', source: folder, type: 'series', metadata: 'nfo' },
+  });
+  expect(created.status()).toBe(201);
+  const { id } = (await created.json()) as { id: string };
+  expect(
+    (await request.post(`/api/libraries/${id}/scan`, { headers: AUTH_HEADERS })).status(),
+  ).toBe(202);
+
+  await page.setViewportSize({ width: 390, height: 800 });
+  await signIn(page);
+  await page.goto(`/libraries/${id}`);
+  await expect(page.getByRole('row', { name: /Severance/ }).first()).toBeVisible();
+
+  // The columns are gone from the page, not only hidden by a scroll.
+  for (const name of ['NFO', 'Poster', 'Fanart', 'Logo']) {
+    await expect(page.getByRole('columnheader', { name, exact: true })).toHaveCount(0);
+  }
+  // The year and the seasons go too (the panel and the season rows say them); the title stays.
+  for (const name of ['Year', 'Seasons']) {
+    await expect(page.getByRole('columnheader', { name, exact: true })).toHaveCount(0);
+  }
+  await expect(page.getByRole('columnheader', { name: 'Title' })).toBeVisible();
+  const overflow = await page.evaluate<number>(
+    "(() => { const wrap = document.querySelector('table').parentElement; return wrap.scrollWidth - wrap.clientWidth; })()",
+  );
+  expect(overflow).toBeLessThanOrEqual(0);
+
+  // The page of a show is a sheet over the list: it has its own close button, and closing it
+  // gives the list back.
+  // Opening the seasons leaves the tree in view; the show's page has a button of its own.
+  await page.getByRole('button', { name: /Show the seasons of Severance/ }).click();
+  await expect(page.getByRole('button', { name: 'Close the page' })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Open the page of Severance' }).click();
+  const close = page.getByRole('button', { name: 'Close the page' });
+  await expect(close).toBeVisible();
+  await expect(close.locator('xpath=ancestor::div[contains(@class, "side")]')).toHaveCSS(
+    'position',
+    'fixed',
+  );
+  // The list behind it does not scroll.
+  await expect(page.locator('html')).toHaveCSS('overflow', 'hidden');
+  await close.click();
+  await expect(close).toHaveCount(0);
+  await expect(page.locator('html')).not.toHaveCSS('overflow', 'hidden');
+
+  // Back on a desktop width, they return.
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await expect(page.getByRole('columnheader', { name: 'NFO', exact: true })).toBeVisible();
+  await expect(page.getByRole('columnheader', { name: 'Year', exact: true })).toBeVisible();
+});

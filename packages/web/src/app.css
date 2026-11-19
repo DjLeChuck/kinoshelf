@@ -510,3 +510,9 @@ input[type='radio']:disabled {
   margin: 0;
   overflow-wrap: anywhere;
 }
+
+/* A work's page open as a sheet (`PanelSheet`, when it has no room beside the list): the list
+   behind it must not scroll, or a swipe on the sheet's edge moves the page. */
+html:has(.side.stacked.sheet) {
+  overflow: hidden;
+}
