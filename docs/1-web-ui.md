@@ -11,6 +11,9 @@ The header has four entries: **Libraries**, **History**, **Settings** and **Syst
 [Libraries](2-libraries.md) page and the [System](3-system.md) page have a chapter of their own; this
 one covers the concepts, the welcome, Arrivals, History, the activity panel and the Settings.
 
+On a screen narrower than 1080 px the theme, the language and **Sign out** fold into a **⋯** menu at the end
+of the header (Escape or a click elsewhere closes it), so the header stays one line, or two on a phone.
+
 ## How a file is handled
 
 Every file goes through the same four steps, and nothing touches the disk before the third is

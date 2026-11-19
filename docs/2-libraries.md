@@ -78,6 +78,11 @@ A movie library lists movies; a series library reads as a **tree**: show, season
   one under the filter.
 - Long lists load by themselves as you scroll to the end; a series library lists a release to validate
   as one line, fifty at a time.
+- **On a small screen** the page of a movie, a show, an episode or a collection opens as a sheet over the
+  list, with a **Close the page** bar, wherever it has no room beside the list: it is never under it, and
+  the list behind does not scroll. The versions scroll on their own inside it. Under 640 px the tables also
+  drop their tick columns (NFO, images) and, in a series tree, the year and seasons: the page of the work
+  says the same. There the title of a show opens its seasons, and a round info button opens its page.
 
 ### What a series tree shows
 
