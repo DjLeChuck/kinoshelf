@@ -2,7 +2,8 @@
 
 Two options decide how files are named and which metadata files are written next to them. Set them
 globally (`naming` and `metadata` in `config.yaml`, or the Settings) or per library (CLI:
-`--naming` and `--metadata`).
+`--naming` and `--metadata`). A library can also write its folder and file names itself:
+see [Custom masks](#custom-masks).
 
 | Option     | Value     | Effect                                                                                                     |
 | ---------- | --------- | ---------------------------------------------------------------------------------------------------------- |
@@ -41,6 +42,73 @@ identify the work from the NFO alone.
   `Dune (2021) - 1080p.mkv` (or `Dune (2021) {tmdb-438631} - 1080p.mkv` with `with-id`), so several versions
   of a work can sit side by side (see [the rules below](#rules-that-hold-for-every-combination)). The examples of the naming
   choice in the Settings show that case.
+
+## Custom masks
+
+A library organized in place can name its folders and its video files its own way, instead of with one
+of the two namings: choose **Custom masks** among the namings of its form in the Settings (or set `names`
+for the library in `config.yaml`, see [Configuration](6-configuration.md#libraries)). A downloads
+folder has none: it takes the masks of the library each file goes to. The NFO and image names are not
+part of it: they stay the ones every player reads.
+
+A mask is a template with variables in braces, such as `{title} ({year}) [imdbid-{imdb}]`. The names of a
+**type go together**: a movie library sets the movie's folder and file, a series library the series folder,
+the season folder and the episode file. A type you do not customise keeps its naming.
+
+| Variable         | Stands for                                                           | Always there |
+| ---------------- | -------------------------------------------------------------------- | ------------ |
+| `{title}`        | the title                                                            | yes          |
+| `{year}`         | the year                                                             | yes          |
+| `{tmdb}`         | the TMDB id                                                          | yes          |
+| `{imdb}`         | the IMDb id (`tt…`), when TMDB has it                                | no           |
+| `{season}`       | the season number (`{season:02}` pads with a zero), series only      | yes          |
+| `{episode}`      | the episode number (`{episode:02}`), series only                     | yes          |
+| `{episodeTitle}` | the episode's title, series only                                     | no           |
+| `{screenSize}`   | the picture size (`2160p`), as the file name says it                 | no           |
+| `{source}`       | the source (`Blu-ray`, `Web`), as the file name says it              | no           |
+| `{releaseGroup}` | the release group, as the file name says it                          | no           |
+| `{videoCodec}`   | the video codec read from the file (`HEVC`, `H264`, `AV1`)           | no           |
+| `{audioCodec}`   | the audio codec read from the file (`EAC3`, `AC3`, `DTS`)            | no           |
+| `{hdr}`          | `Dolby Vision`, `HDR10+`, `HDR10` or `HLG`; nothing for an SDR video | no           |
+
+Every name of a type takes every variable of the type, a folder's too: `Dune (2021) - {screenSize}` as a
+movie folder makes one folder per version. A movie has no season nor episode. The codecs and `{hdr}`
+are read from the video with `ffprobe`: the probe a library already holds is used while the file is
+unchanged, else the file is read, and one `ffprobe` cannot read is held back with the reason (it would
+be named wrongly rather than shortly).
+
+**What may be missing is left out.** A variable that has no value (the second column says which) is
+written as nothing, with the space or separator before it. A group in square brackets is written only
+when everything in it has a value, with the space before it: `{title} ({year}) [imdbid-{imdb}] [{hdr}]` gives
+`Dune (2021) [imdbid-tt1160419] [HDR10]`, and `Dune (2021)` when nothing else is known. Text outside the
+brackets always stays, so put a label in the group with its value: `[HDR: {hdr}]`. `{title}`, `{year}`,
+`{tmdb}`, `{season}` and `{episode}` are required: a work TMDB gives no year cannot be named by a mask
+that uses `{year}` and waits for you in Arrivals. Write `\{`, `\}`, `\[` and `\]` for a literal brace or
+bracket, and in YAML put a mask that has a backslash between single quotes.
+
+**A custom name is kept as written.** Kinoshelf adds nothing to it, not even the quality label it adds to
+the standard names: two files your masks do not tell apart wait in Arrivals as a conflict. To keep
+several versions of a work, put the picture size, the source or the group in the file name (or in the
+folder's, for one folder per version). A library already organized another way shows its files as to
+rename, as for any change of naming.
+
+A mask is checked when it is saved, with a preview of what it gives for a film and for a series, with
+everything known and with the bare minimum. It is refused when it uses an unknown variable, when it
+leaves the library (`..`, a leading `/`, a `/` in a file name) or when it would give two works the same
+name (`{title}` is needed in the names of a work, `{season}` in the season folder, `{episode}` in the
+episode file). It only warns when a movie file does not start with its folder's name, which Jellyfin
+needs to group the versions of a movie.
+
+```yaml
+libraries:
+  - id: films
+    name: Films
+    source: /media/films
+    type: movie
+    names:
+      movieFolder: '{title} ({year}) [imdbid-{imdb}] [tmdbid-{tmdb}]'
+      movieFile: '{title} ({year}) {screenSize} {audioCodec} [imdbid-{imdb}] [tmdbid-{tmdb}]'
+```
 
 ## What `nfo` writes
 

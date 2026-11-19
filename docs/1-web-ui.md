@@ -173,8 +173,8 @@ API refuses to change it.
 ### Folders
 
 Libraries (your final files) and downloads folders (the files to put away), added with a server-side path picker (a browser cannot see the
-server's disk, and in Docker only mounted folders exist). A library sets its own names and metadata
-options and threshold; an downloads folder sets its mode (copy, hardlink, move), its destination
+server's disk, and in Docker only mounted folders exist). A library sets its own names (the two namings, or **Custom masks**: see
+[Output options](5-output-options.md#custom-masks)), metadata options and threshold; an downloads folder sets its mode (copy, hardlink, move), its destination
 libraries and whether it is watched. Ids are generated from the name and never change; two
 libraries cannot share a source, nor contain one another. A library an downloads folder points at cannot be deleted.
 

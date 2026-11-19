@@ -115,6 +115,7 @@ Each entry of `libraries` is either a library or an downloads folder (see
 | `into`      | —                              | `{ movie?: <id>, series?: <id> }`, one at least |
 | `naming`    | overrides the global naming    | — (takes its destination's)                     |
 | `metadata`  | overrides the global metadata  | — (takes its destination's)                     |
+| `names`     | its own folder and file names  | — (takes its destination's)                     |
 | `mode`      | — (organized in place: `move`) | `copy` (default), `hardlink` or `move`          |
 | `threshold` | overrides the global threshold | overrides the global threshold                  |
 | `watch`     | —                              | `true` to submit what lands in `source`         |
@@ -122,7 +123,9 @@ Each entry of `libraries` is either a library or an downloads folder (see
 Rules the file enforces: ids are lowercase letters, digits and dashes and are generated from the
 name; two folders cannot share a source nor contain one another (`library.source-overlaps`); a source cannot be `/`, `/proc`, `/sys` or `/dev`; `into`
 must name existing libraries of the right type. A library's profile is its own `naming`/`metadata`,
-else the global ones, else the defaults.
+else the global ones, else the defaults. `names` holds the masks of a type, all or none: `movieFolder` and
+`movieFile` for a movie library, `seriesFolder`, `seasonFolder` and `episodeFile` for a series library (see
+[Custom masks](5-output-options.md#custom-masks)); a mask that is not usable makes the file invalid.
 
 ### Watching
 

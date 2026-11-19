@@ -44,7 +44,7 @@ key) is the reference for parameters and responses; this is the map.
 | Arrivals        | `GET /api/arrivals` (`?state=ready\|review\|unrecognized`), `GET /api/search` (TMDB candidates)                                                                                           |
 | Entries         | `POST /api/entries/{id}/match`, `/preview`, `/ignore`; `GET .../match` follows a validation                                                                                               |
 | Plans           | `POST /api/plans/{id}/execute` (with `entries`) transfers what a plan holds                                                                                                               |
-| Libraries       | `/api/libraries` and `/api/libraries/{id}` (CRUD), `.../scan`, `.../rescan`, `.../execute`                                                                                                |
+| Libraries       | `/api/libraries` and `/api/libraries/{id}` (CRUD), `.../scan`, `.../rescan`, `.../execute`; `POST /api/naming/preview` checks custom masks                                                |
 | Library content | `.../items`, `.../items/{itemId}`, `.../shows`, `.../shows/{tmdbId}`, `PUT`/`DELETE .../shows/{tmdbId}/seasons/{season}/versions/accepted`                                                |
 | Metadata        | `POST .../libraries/{id}/imdb-nfo` adds IMDb's rating to the NFO of one work                                                                                                              |
 | Images          | `.../items/{itemId}/images`, `.../shows/{tmdbId}/images` and an episode's, with `.../preview`                                                                                             |
