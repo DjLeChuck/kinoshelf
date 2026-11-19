@@ -3,6 +3,7 @@
   import { messageOf } from '../lib/errors.js';
   import { t } from '../lib/i18n.svelte.js';
   import { allSettled, settled, type Onboarding } from '../lib/onboarding.js';
+  import { router } from '../lib/router.svelte.js';
   import { shell } from '../lib/shell-state.svelte.js';
   import OnboardingSteps from './OnboardingSteps.svelte';
 
@@ -14,7 +15,13 @@
 
   async function finish(): Promise<void> {
     try {
-      shell.setOnboarding(await api.patch<Onboarding>('/api/onboarding', { finished: true }));
+      const finished = await api.patch<Onboarding>('/api/onboarding', { finished: true });
+      // An arrival folder was just set up: what it picks up waits there, not in the libraries.
+      // Navigating first, since `Home` sends a finished setup to the libraries on its own.
+      if (onboarding.steps.some((step) => step.id === 'source' && step.state === 'done')) {
+        router.navigate('/arrivals', { replace: true });
+      }
+      shell.setOnboarding(finished);
     } catch (error) {
       failure = error;
     }
