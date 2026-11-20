@@ -6,6 +6,8 @@ All notable changes to Kinoshelf are written here. The format follows
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-11-20
+
 ### Added
 
 - A library organized in place can now write its folder and file names its own way, from its form in the
@@ -104,6 +106,12 @@ All notable changes to Kinoshelf are written here. The format follows
 - A video `ffprobe` cannot read is now said so: one log line with its path and `ffprobe`'s reason (no
   stack), an Unreadable badge on its version, and a warning on the System page.
 
+- The welcome now opens on **Arrivals** when its setup created a downloads folder, since that is where what the
+  folder picks up waits, instead of an empty Libraries page.
+
+- The activity panel folds the scans of one watched folder into a single line: a folder queues one scan per
+  release, so a hundred arrivals no longer make a hundred lines. A failed scan stays apart, with its cause.
+
 ### Fixed
 
 - Arrivals no longer slow down with the size of a release: the episodes TMDB has no number for were
@@ -119,6 +127,11 @@ All notable changes to Kinoshelf are written here. The format follows
   last one.
 
 - The image dialog keeps a fixed height while its tabs load.
+
+- **Transfer** in the panel of an arrival no longer turns into **Validate** when the list is read again while the
+  panel is open.
+
+- The page no longer scrolls behind a dialog or a sheet while one is open.
 
 ## [1.0.0] - 2026-11-16
 
@@ -156,5 +169,6 @@ First stable release.
   binaries for Linux (x64, arm64) and macOS (arm64), with ffprobe included and a `SHA256SUMS` file.
 - **Documentation** site built from `docs/`.
 
-[Unreleased]: https://github.com/DjLeChuck/kinoshelf/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/DjLeChuck/kinoshelf/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/DjLeChuck/kinoshelf/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/DjLeChuck/kinoshelf/releases/tag/v1.0.0

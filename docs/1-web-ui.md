@@ -75,7 +75,8 @@ file of the library would be offered as an arrival. See
 On a new install, `/` shows a setup in four steps: the TMDB key (your own, tested as soon as you enter
 it), Plex or Jellyfin, your movies and series folders (the first libraries, organized in place; give
 only the one you keep if you have movies or series alone; it also offers [IMDb ratings](5-output-options.md#imdb-ratings), off unless ticked) and a downloads folder pointing at them (watched, or scanned once). Each step ticks itself once the
-configuration says so, and the server remembers what you skipped. The app then opens on Libraries.
+configuration says so, and the server remembers what you skipped. The app then opens on Libraries, or on
+**Arrivals** when the setup created a downloads folder: that is where what it picks up waits.
 
 If the first job fails, it is not lost: the History lists it with its cause.
 
@@ -151,7 +152,8 @@ At the bottom right of every page, a pill says how many tasks run in the backgro
 line per task: title, phase, progress bar, current file and a link to where it is followed; a running scan has a **Cancel** button. It lists
 scans, transfers, undos, arrival validations, tidy-ups, database backup and compaction, emptying
 `replaced/`, sending collection images, downloading IMDb's ratings and adding them to the NFO. A finished task stays a few seconds (ten minutes when it
-failed) and can be closed by hand.
+failed) and can be closed by hand. A watched folder queues one scan per release, so the scans of one folder that went well fold into a
+single line (the one running, else the latest) that counts them; a failed one stays apart, with its own cause.
 
 ## Settings
 
