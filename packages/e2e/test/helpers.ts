@@ -37,7 +37,9 @@ export async function submit(
 ): Promise<string> {
   const path = incoming(folder);
   await mkdir(path, { recursive: true });
-  await Promise.all(files.map((file) => writeFile(incoming(folder, file), 'video')));
+  // Content of its own: a file the size of one already in the library is a copy of it, which
+  // Arrivals sets aside instead of transferring.
+  await Promise.all(files.map((file) => writeFile(incoming(folder, file), `video of ${folder}`)));
 
   const created = await request.post('/api/jobs', { headers: AUTH_HEADERS, data: { path, apply } });
   expect(created.status()).toBe(202);

@@ -6,6 +6,7 @@
   import { t } from '../lib/i18n.svelte.js';
   import {
     folderOf,
+    libraryLinkOf,
     QUEUE_CHIP,
     STATUS_LABEL,
     releaseName,
@@ -20,6 +21,8 @@
     type Preview,
     type Settled,
   } from '../lib/arrivals.js';
+  import { formatBytes } from '@kinoshelf/i18n';
+  import { locale } from '../lib/i18n.svelte.js';
   import { PICTURE_SIZES, settleKey } from '../lib/library-items.js';
   import type { MessageKey } from '@kinoshelf/i18n';
   import CandidateList from './CandidateList.svelte';
@@ -71,6 +74,28 @@
   const progress = $derived(validations.progressOf(entry.id));
   const shownFailure = $derived(failure ?? validations.failure(entry.id)?.error);
   const status = $derived(statusOf(entry));
+  /** In "Already in the library": nothing to choose, only to set aside or to process anyway. */
+  const present = $derived(entry.state === 'present');
+  const duplicate = $derived(entry.duplicate);
+  /** Why the library's file is in the way, in words: the reason of a version or of an exact copy. */
+  const duplicateReason = $derived.by(() => {
+    if (!duplicate) {
+      return undefined;
+    }
+    if (duplicate.kind === 'same-file') {
+      return t('web.queue.duplicate.same-file');
+    }
+    if (duplicate.kind === 'same-size') {
+      return t('web.queue.duplicate.same-size', {
+        size: duplicate.size === null ? '' : formatBytes(duplicate.size, locale.value),
+      });
+    }
+    return t(`web.queue.duplicate.other-version.${entry.kind === 'series' ? 'series' : 'movie'}`, {
+      library: duplicate.libraryName,
+      file: duplicate.file,
+      resolution: duplicate.resolution === null ? '' : `, ${duplicate.resolution}`,
+    });
+  });
   /** The files TMDB lacks, by season: a season it does not know at all is one line, not eighty. */
   const NAMED_FILES = 3;
   const unknownSeasons = $derived.by(() => {
@@ -228,6 +253,8 @@
       validations.clear(id);
       if (outcome.status === 'conflict') {
         refused = outcome.conflicts;
+      } else if (outcome.status === 'present') {
+        ondone(t('web.queue.present', { name: label }), { ...settled, ignored: true });
       } else {
         ondone(
           outcome.followed > 0
@@ -264,6 +291,44 @@
     }
   }
 
+  /** Sets aside the files of the release the library holds; the rest stays to be transferred. */
+  async function ignorePresent(): Promise<void> {
+    const settled: Settled = { id: entry.id, key: settleKey(entry), ignored: false };
+    busy = true;
+    failure = undefined;
+    try {
+      const { ignored, held } = await api.post<{ ignored: number; held: number }>(
+        `/api/entries/${settled.id}/ignore-present`,
+      );
+      ondone(
+        held > 0
+          ? t('web.arrivals.ignored.held', { ignored, held })
+          : t('web.arrivals.ignored', { ignored }),
+        settled,
+      );
+    } catch (error) {
+      failure = error;
+    } finally {
+      busy = false;
+    }
+  }
+
+  /** The file goes back to "To validate" with its candidate, the library's copy notwithstanding. */
+  async function processAnyway(): Promise<void> {
+    const settled: Settled = { id: entry.id, key: settleKey(entry), ignored: false };
+    const label = name;
+    busy = true;
+    failure = undefined;
+    try {
+      await api.post(`/api/entries/${settled.id}/process`);
+      ondone(t('web.queue.duplicate.processed', { name: label }), settled);
+    } catch (error) {
+      failure = error;
+    } finally {
+      busy = false;
+    }
+  }
+
   /** What the panel calls the file: its release when several files go along, its own name else. */
   function label(arrival: Arrival, count: number): string {
     return count > 1 && !arrival.detached && arrival.release
@@ -293,6 +358,49 @@
     <p class="alert alert-info" role="note">{t('web.queue.release-scope', { count: siblings })}</p>
   {/if}
 
+  {#if duplicate}
+    <section aria-labelledby="duplicate-title" class="duplicate">
+      <h3 id="duplicate-title">{t('web.queue.duplicate.title')}</h3>
+      {#if duplicate.kind === 'other-version'}
+        <p class="alert alert-warn" role="note">{duplicateReason}</p>
+      {:else}
+        <p class="mono duplicate-path">{duplicate.path}</p>
+        <p>{duplicateReason}</p>
+        {#if duplicate.forced === 'asked'}
+          <p class="alert alert-info" role="note">{t('web.queue.duplicate.asked')}</p>
+        {/if}
+      {/if}
+      <p>
+        <Link href={libraryLinkOf(duplicate, entry.kind)}>{t('web.queue.duplicate.open')}</Link>
+      </p>
+    </section>
+  {/if}
+  {#if entry.presentEpisodes.length > 0 && !present}
+    <section aria-labelledby="present-title" class="duplicate">
+      <h3 id="present-title">
+        {t('web.queue.duplicate.present-episodes', { count: entry.presentEpisodes.length })}
+      </h3>
+      <ul class="mono duplicate-path">
+        {#each entry.presentEpisodes as { file } (file)}<li>{file}</li>{/each}
+      </ul>
+      <div>
+        <Tip text={t('web.tip.ignore-present')}>
+          {#snippet children(describedby)}
+            <button
+              type="button"
+              class="btn"
+              disabled={locked}
+              aria-describedby={describedby}
+              onclick={() => void ignorePresent()}
+            >
+              {t('web.queue.duplicate.ignore-present', { count: entry.presentEpisodes.length })}
+            </button>
+          {/snippet}
+        </Tip>
+      </div>
+    </section>
+  {/if}
+
   <dl class="tags" aria-label={t('web.queue.detected')}>
     <div class="chip chip-neutral">
       {t(
@@ -310,141 +418,145 @@
     </p>
   {/if}
 
-  <section aria-labelledby="candidates-title">
-    <h3 id="candidates-title">{t('web.queue.candidates')}</h3>
-    {#if entry.candidates.length > 0}
-      <CandidateList
-        candidates={entry.candidates}
-        {selected}
-        label={t('web.queue.candidates')}
-        onselect={(candidate: Candidate) => {
-          selected = candidate;
-        }}
-      />
-      {#if entry.limits.length > 0}
-        <div class="alert alert-info unknown" role="status">
-          <p>{t('web.queue.limits')}</p>
-          <ul>
-            {#each entry.limits as { code, value } (code)}
-              <li>{t(`web.queue.limit.${code}` as MessageKey, { value: value ?? '' })}</li>
-            {/each}
-          </ul>
-        </div>
-      {/if}
-      {#if entry.unknownEpisodes.length > 0}
-        <div class="alert alert-warn unknown" role="status">
-          <p>{t('web.queue.episode-unknown', { count: entry.unknownEpisodes.length })}</p>
-          <ul>
-            {#each unknownSeasons as { season, known, files } (season)}
-              <li>
-                {#if season !== null && !known}
-                  {t('web.queue.season-absent', { season })}
-                {:else if season !== null && entry.candidates[0]}
-                  <a
-                    href={`https://www.themoviedb.org/tv/${entry.candidates[0].id.id}/season/${season}`}
-                    target="_blank"
-                    rel="noopener noreferrer">{t('web.queue.season-link', { season })}</a
-                  >
-                {:else}
-                  {t('web.queue.season-none')}
-                {/if}
-                · {t('web.queue.unknown-count', { count: files.length })}
-                {#if files.length <= NAMED_FILES}
-                  <span class="names">: {files.join(', ')}</span>
-                {/if}
-              </li>
-            {/each}
-          </ul>
-        </div>
-      {/if}
-    {:else}
-      <p class="muted">
-        {entry.reason ? `${t(`unrecognized.${entry.reason}` as MessageKey)}. ` : ''}{t(
-          'web.queue.no-candidates',
-        )}
-      </p>
-    {/if}
-  </section>
-
-  <section aria-labelledby="search-title">
-    <h3 id="search-title">{t('web.queue.search.title')}</h3>
-    <form class="search" onsubmit={search}>
-      <div class="field grow">
-        <label for="search-query">{t('web.queue.search.query')}</label>
-        <input id="search-query" class="input" type="search" required bind:value={query} />
-      </div>
-      <div class="field year">
-        <label for="search-year">{t('web.queue.search.year')}</label>
-        <input
-          id="search-year"
-          class="input"
-          inputmode="numeric"
-          pattern="[0-9]{'{4}'}"
-          maxlength="4"
-          bind:value={year}
+  {#if !present}
+    <section aria-labelledby="candidates-title">
+      <h3 id="candidates-title">{t('web.queue.candidates')}</h3>
+      {#if entry.candidates.length > 0}
+        <CandidateList
+          candidates={entry.candidates}
+          {selected}
+          label={t('web.queue.candidates')}
+          onselect={(candidate: Candidate) => {
+            selected = candidate;
+          }}
         />
-      </div>
-      <div class="field">
-        <label for="search-kind">{t('web.queue.search.kind')}</label>
-        <select id="search-kind" class="input" bind:value={kind}>
-          <option value="">{t('web.queue.search.kind.any')}</option>
-          <option value="movie">{t('web.queue.kind.movie')}</option>
-          <option value="series">{t('web.queue.kind.series')}</option>
-        </select>
-      </div>
-      <button type="submit" class="btn" disabled={searching || query.trim() === ''}>
-        {searching ? t('web.queue.search.searching') : t('web.queue.search.submit')}
-      </button>
-    </form>
-    {#if results}
-      <div class="results" role="status">
-        {#if results.length === 0}
-          <p class="muted">{t('web.queue.search.none')}</p>
-        {:else}
-          <CandidateList
-            candidates={results}
-            {selected}
-            label={t('web.queue.search.results')}
-            onselect={(candidate: Candidate) => {
-              selected = candidate;
-            }}
-          />
+        {#if entry.limits.length > 0}
+          <div class="alert alert-info unknown" role="status">
+            <p>{t('web.queue.limits')}</p>
+            <ul>
+              {#each entry.limits as { code, value } (code)}
+                <li>{t(`web.queue.limit.${code}` as MessageKey, { value: value ?? '' })}</li>
+              {/each}
+            </ul>
+          </div>
         {/if}
-      </div>
-    {/if}
-  </section>
-
-  <section aria-labelledby="destination-title" aria-live="polite">
-    <h3 id="destination-title">{t('web.queue.destination')}</h3>
-    {#if !selected}
-      <p class="muted">{t('web.queue.destination.pick')}</p>
-    {:else if previewing}
-      <p class="muted">{t('web.queue.destination.loading')}</p>
-    {:else if preview}
-      {#if siblings > 1 && preview.folder}
-        <p class="mono">{preview.folder}</p>
-        <p class="muted">{t('web.queue.destination.folder', { count: siblings })}</p>
-      {:else if preview.destination}
-        <p class="mono">{preview.destination}</p>
-      {/if}
-      {#if conflicts.length > 0}
-        <p class="alert alert-danger">
-          {t('web.queue.conflicts', { reasons: reasons(conflicts) })}
+        {#if entry.unknownEpisodes.length > 0}
+          <div class="alert alert-warn unknown" role="status">
+            <p>{t('web.queue.episode-unknown', { count: entry.unknownEpisodes.length })}</p>
+            <ul>
+              {#each unknownSeasons as { season, known, files } (season)}
+                <li>
+                  {#if season !== null && !known}
+                    {t('web.queue.season-absent', { season })}
+                  {:else if season !== null && entry.candidates[0]}
+                    <a
+                      href={`https://www.themoviedb.org/tv/${entry.candidates[0].id.id}/season/${season}`}
+                      target="_blank"
+                      rel="noopener noreferrer">{t('web.queue.season-link', { season })}</a
+                    >
+                  {:else}
+                    {t('web.queue.season-none')}
+                  {/if}
+                  · {t('web.queue.unknown-count', { count: files.length })}
+                  {#if files.length <= NAMED_FILES}
+                    <span class="names">: {files.join(', ')}</span>
+                  {/if}
+                </li>
+              {/each}
+            </ul>
+          </div>
+        {/if}
+      {:else}
+        <p class="muted">
+          {entry.reason ? `${t(`unrecognized.${entry.reason}` as MessageKey)}. ` : ''}{t(
+            'web.queue.no-candidates',
+          )}
         </p>
       {/if}
-    {/if}
-    {#if refused.length > 0}
-      <p class="alert alert-danger" role="alert">
-        {t('web.queue.conflicts', { reasons: reasons(refused) })}
-      </p>
-    {/if}
-  </section>
+    </section>
+
+    <section aria-labelledby="search-title">
+      <h3 id="search-title">{t('web.queue.search.title')}</h3>
+      <form class="search" onsubmit={search}>
+        <div class="field grow">
+          <label for="search-query">{t('web.queue.search.query')}</label>
+          <input id="search-query" class="input" type="search" required bind:value={query} />
+        </div>
+        <div class="field year">
+          <label for="search-year">{t('web.queue.search.year')}</label>
+          <input
+            id="search-year"
+            class="input"
+            inputmode="numeric"
+            pattern="[0-9]{'{4}'}"
+            maxlength="4"
+            bind:value={year}
+          />
+        </div>
+        <div class="field">
+          <label for="search-kind">{t('web.queue.search.kind')}</label>
+          <select id="search-kind" class="input" bind:value={kind}>
+            <option value="">{t('web.queue.search.kind.any')}</option>
+            <option value="movie">{t('web.queue.kind.movie')}</option>
+            <option value="series">{t('web.queue.kind.series')}</option>
+          </select>
+        </div>
+        <button type="submit" class="btn" disabled={searching || query.trim() === ''}>
+          {searching ? t('web.queue.search.searching') : t('web.queue.search.submit')}
+        </button>
+      </form>
+      {#if results}
+        <div class="results" role="status">
+          {#if results.length === 0}
+            <p class="muted">{t('web.queue.search.none')}</p>
+          {:else}
+            <CandidateList
+              candidates={results}
+              {selected}
+              label={t('web.queue.search.results')}
+              onselect={(candidate: Candidate) => {
+                selected = candidate;
+              }}
+            />
+          {/if}
+        </div>
+      {/if}
+    </section>
+
+    <section aria-labelledby="destination-title" aria-live="polite">
+      <h3 id="destination-title">{t('web.queue.destination')}</h3>
+      {#if !selected}
+        <p class="muted">{t('web.queue.destination.pick')}</p>
+      {:else if previewing}
+        <p class="muted">{t('web.queue.destination.loading')}</p>
+      {:else if preview}
+        {#if siblings > 1 && preview.folder}
+          <p class="mono">{preview.folder}</p>
+          <p class="muted">{t('web.queue.destination.folder', { count: siblings })}</p>
+        {:else if preview.destination}
+          <p class="mono">{preview.destination}</p>
+        {/if}
+        {#if conflicts.length > 0}
+          <p class="alert alert-danger">
+            {t('web.queue.conflicts', { reasons: reasons(conflicts) })}
+          </p>
+        {/if}
+      {/if}
+      {#if refused.length > 0}
+        <p class="alert alert-danger" role="alert">
+          {t('web.queue.conflicts', { reasons: reasons(refused) })}
+        </p>
+      {/if}
+    </section>
+  {/if}
 
   {#if shownFailure}
     <p class="alert alert-danger" role="alert">{messageOf(t, shownFailure)}</p>
   {/if}
 
-  {#if entry.kind !== null && entry.destinationOptions.length === 0}
+  {#if present}
+    <!-- Nothing to choose: the library holds the file. -->
+  {:else if entry.kind !== null && entry.destinationOptions.length === 0}
     <p class="alert alert-warn" role="note">
       {t(`web.queue.library.none.${entry.kind}`)}
       <Link href="/settings#libraries">{t('web.queue.library.none.link')}</Link>
@@ -465,7 +577,7 @@
     </section>
   {/if}
 
-  {#if selected}
+  {#if selected && !present}
     <section aria-labelledby="size-title">
       <h3 id="size-title">{t('web.queue.size')}</h3>
       <select id="arrival-size" class="input" aria-labelledby="size-title" bind:value={screenSize}>
@@ -479,42 +591,91 @@
   {/if}
 
   <footer>
-    <Tip text={asPlanned ? t('web.tip.transfer') : t('web.tip.validate')}>
-      {#snippet children(describedby)}
-        <button
-          type="button"
-          class="btn btn-primary"
-          disabled={!canValidate}
-          aria-describedby={describedby}
-          onclick={() => void confirm()}
-        >
-          {locked
-            ? progress && progress.total > 1
-              ? t('web.queue.validating.progress', progress)
-              : t('web.queue.validating')
-            : asPlanned
-              ? t('web.queue.transfer')
-              : t('web.queue.validate')}
-        </button>
-      {/snippet}
-    </Tip>
-    <Tip text={t('web.tip.ignore')}>
-      {#snippet children(describedby)}
-        <button
-          type="button"
-          class="btn"
-          disabled={locked}
-          aria-describedby={describedby}
-          onclick={() => void ignore()}
-        >
-          {t('web.queue.ignore')}
-        </button>
-      {/snippet}
-    </Tip>
+    {#if present}
+      <Tip text={t('web.tip.ignore')}>
+        {#snippet children(describedby)}
+          <button
+            type="button"
+            class="btn btn-primary"
+            disabled={locked}
+            aria-describedby={describedby}
+            onclick={() => void ignore()}
+          >
+            {t('web.queue.ignore')}
+          </button>
+        {/snippet}
+      </Tip>
+      <Tip text={t('web.tip.process')}>
+        {#snippet children(describedby)}
+          <button
+            type="button"
+            class="btn"
+            disabled={locked}
+            aria-describedby={describedby}
+            onclick={() => void processAnyway()}
+          >
+            {t('web.queue.duplicate.process')}
+          </button>
+        {/snippet}
+      </Tip>
+    {:else}
+      <Tip text={asPlanned ? t('web.tip.transfer') : t('web.tip.validate')}>
+        {#snippet children(describedby)}
+          <button
+            type="button"
+            class="btn btn-primary"
+            disabled={!canValidate}
+            aria-describedby={describedby}
+            onclick={() => void confirm()}
+          >
+            {locked
+              ? progress && progress.total > 1
+                ? t('web.queue.validating.progress', progress)
+                : t('web.queue.validating')
+              : asPlanned
+                ? t('web.queue.transfer')
+                : t('web.queue.validate')}
+          </button>
+        {/snippet}
+      </Tip>
+      <Tip text={t('web.tip.ignore')}>
+        {#snippet children(describedby)}
+          <button
+            type="button"
+            class="btn"
+            disabled={locked}
+            aria-describedby={describedby}
+            onclick={() => void ignore()}
+          >
+            {t('web.queue.ignore')}
+          </button>
+        {/snippet}
+      </Tip>
+    {/if}
   </footer>
 </article>
 
 <style>
+  .duplicate {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .duplicate p,
+  .duplicate ul {
+    margin: 0;
+  }
+
+  .duplicate-path {
+    font-size: 12px;
+    overflow-wrap: anywhere;
+  }
+
+  ul.duplicate-path {
+    padding-left: 18px;
+  }
+
   .unknown {
     margin-top: 12px;
   }
