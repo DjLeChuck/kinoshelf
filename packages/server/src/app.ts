@@ -38,6 +38,7 @@ import { registerCollectionRoutes } from './collection-routes.js';
 import { SendTasks } from './collection-tasks.js';
 import { CollectionEditor, CollectionStore, hasCollections } from './collections.js';
 import { DuplicateFinder } from './duplicates.js';
+import { Reevaluation } from './reevaluation.js';
 import { createProcessor, type ProcessorDeps } from './processor.js';
 import { forgetReplacedScans, purgeHistory, type LibraryScan } from './purge.js';
 import { registerFsRoutes } from './fs-routes.js';
@@ -70,6 +71,7 @@ import {
   maintenanceSource,
   imdbSource,
   matchSource,
+  reevaluationSource,
   scanSource,
   tidySource,
   transferSource,
@@ -95,6 +97,8 @@ declare module 'fastify' {
     completeness: Completeness;
     /** Looks for the NFO and images of the shows in the background; tests await `seriesFiles.idle()`. */
     seriesFiles: SeriesFiles;
+    /** Compares the waiting arrivals with a library that changed; tests await `reevaluation.idle()`. */
+    reevaluation: Reevaluation;
     /** The folder watcher; tests await `watcher.idle()`. */
     watcher: FolderWatcher;
   }
@@ -268,6 +272,8 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     changed: (libraryId) => {
       completeness.touch(libraryId);
       seriesFiles.touch(libraryId);
+      // What waits in Arrivals for this library may now be in it already (or no longer).
+      reevaluation.touch(libraryId);
     },
   });
   const matches = new MatchTracker((ended) => {
@@ -334,6 +340,16 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     busy: () => runner.busy,
     onError: (error) => {
       noted('scan').warn(error, 'Could not count the missing episodes of a show');
+    },
+  });
+  const reevaluation = new Reevaluation({
+    run: (libraryId, progress) => service.reevaluate(libraryId, progress),
+    // `progress` wakes the activity panel; `arrivals` the lists, only when a file changed place.
+    announce: (changed) => {
+      events.emit('progress', ...(changed ? (['arrivals'] as const) : []));
+    },
+    onError: (error) => {
+      noted('scan').warn(error, 'Could not compare the waiting arrivals with a library');
     },
   });
   const seriesFilesStore = new SeriesFilesStore(options.database);
@@ -452,6 +468,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
   app.decorate('probes', probes);
   app.decorate('completeness', completeness);
   app.decorate('seriesFiles', seriesFiles);
+  app.decorate('reevaluation', reevaluation);
   app.decorate('watcher', watcher);
   app.decorate('notifier', notifier);
 
@@ -511,6 +528,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     await watcher.idle();
     await runner.stop();
     await seriesFiles.idle();
+    await reevaluation.idle();
     await probes.stop();
     await completeness.stop();
     await notifier.idle();
@@ -837,6 +855,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
       transferSource({ progress, jobs, executions }),
       undoSource(undos),
       matchSource(matches),
+      reevaluationSource(reevaluation, () => configStore.config),
       tidySource(tidyTasks, () => configStore.config),
       maintenanceSource({ databaseTasks, replaced }),
       imdbSource(imdbRatings, imdbNfoTasks),

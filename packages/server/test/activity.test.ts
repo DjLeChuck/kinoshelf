@@ -29,11 +29,13 @@ const make = (id: string, status: ActivityTask['status'] = 'running'): ActivityT
 });
 
 function setup() {
+  const instant: ActivityTask[] = [];
   let tasks: ActivityTask[] = [];
   let at = 0;
   const source: ActivitySource = {
     list: () => tasks,
     ended: (task) => (task.id === 'gone' ? make('gone', 'done') : undefined),
+    finished: () => instant.splice(0),
   };
   const activity = new Activity([source], () => at);
   return {
@@ -41,6 +43,7 @@ function setup() {
     set: (next: ActivityTask[]) => {
       tasks = next;
     },
+    instant,
     wait: (ms: number) => {
       at += ms;
     },
@@ -52,6 +55,17 @@ describe('Activity', () => {
     const { activity, set } = setup();
     set([make('a')]);
     expect(activity.list().map(({ id }) => id)).toEqual(['a']);
+  });
+
+  it('reports a task that ended without being seen running, once, and forgets it in time', () => {
+    const { activity, instant, wait } = setup();
+    instant.push(make('quick', 'done'));
+    expect(activity.list().map(({ id }) => id)).toEqual(['quick']);
+    // Handed over once: the next read still holds it, from what the panel kept.
+    wait(DONE_KEPT_MS - 1);
+    expect(activity.list().map(({ id }) => id)).toEqual(['quick']);
+    wait(2);
+    expect(activity.list()).toEqual([]);
   });
 
   it('never offers a task it did not see run (a result a source keeps for its page)', () => {

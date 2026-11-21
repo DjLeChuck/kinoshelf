@@ -9,6 +9,7 @@ import type { ImdbRatings } from './imdb-ratings.js';
 import type { ImdbNfoTasks } from './imdb-nfo.js';
 import type { TidyTask } from './maintenance-routes.js';
 import type { MatchTracker } from './matches.js';
+import type { Reevaluation } from './reevaluation.js';
 import type { ReplacedFiles } from './replaced-files.js';
 import type { UndoTasks } from './undo-tasks.js';
 
@@ -299,6 +300,50 @@ export function imdbSource(ratings: ImdbRatings, nfoTasks: ImdbNfoTasks): Activi
             ]
           : []),
       ];
+    },
+  };
+}
+
+/**
+ * Waiting arrivals compared again with a library that changed. It runs for a moment, so the panel
+ * only tells when it set aside more than a handful of files: "214 arrivals already in the library".
+ */
+const NOTABLE = 5;
+
+export function reevaluationSource(
+  reevaluation: Reevaluation,
+  config: () => Config,
+): ActivitySource {
+  return {
+    list: () => {
+      const running = reevaluation.running();
+      return running
+        ? [
+            task({
+              id: 'reevaluate',
+              kind: 'reevaluate',
+              code: 'reevaluate',
+              params: { name: nameOf(config(), running.libraryId, running.libraryId) },
+              href: '/arrivals',
+            }),
+          ]
+        : [];
+    },
+    // Reported when it ends, not only when the panel happened to see it run: it may take no time.
+    finished: () => {
+      const found = reevaluation.take();
+      return found && found.present > NOTABLE
+        ? [
+            task({
+              id: `reevaluated:${String(found.seq)}`,
+              kind: 'reevaluate',
+              code: 'reevaluated',
+              status: 'done',
+              params: { count: found.present },
+              href: '/arrivals?state=present',
+            }),
+          ]
+        : [];
     },
   };
 }

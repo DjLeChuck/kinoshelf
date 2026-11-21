@@ -1141,6 +1141,9 @@ export const en = {
   'web.activity.task.send-collections': 'Sending the collection images of {name}',
   'web.activity.task.scan': 'Scan of {name}',
   'web.activity.task.transfer': 'Transfer of files',
+  'web.activity.task.reevaluate': 'Comparing the arrivals with {name}',
+  'web.activity.task.reevaluated':
+    '{count, plural, one {# arrival already in the library} other {# arrivals already in the library}}',
   'web.activity.task.undo': 'Undo of a batch',
   'web.activity.task.undo-check': 'Check before an undo',
   'web.library.progress.label': 'Progress of the scan',

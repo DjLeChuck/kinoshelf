@@ -17,6 +17,8 @@ const LABELS: Readonly<Record<string, MessageKey>> = {
   'send-collections': 'web.activity.task.send-collections',
   'adopt-collections': 'web.activity.task.adopt-collections',
   transfer: 'web.activity.task.transfer',
+  reevaluate: 'web.activity.task.reevaluate',
+  reevaluated: 'web.activity.task.reevaluated',
   undo: 'web.activity.task.undo',
   'undo-check': 'web.activity.task.undo-check',
 };
