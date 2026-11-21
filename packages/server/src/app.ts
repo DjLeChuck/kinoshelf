@@ -37,6 +37,7 @@ import { CollectionScreen } from './collection-screen.js';
 import { registerCollectionRoutes } from './collection-routes.js';
 import { SendTasks } from './collection-tasks.js';
 import { CollectionEditor, CollectionStore, hasCollections } from './collections.js';
+import { DuplicateFinder } from './duplicates.js';
 import { createProcessor, type ProcessorDeps } from './processor.js';
 import { forgetReplacedScans, purgeHistory, type LibraryScan } from './purge.js';
 import { registerFsRoutes } from './fs-routes.js';
@@ -280,6 +281,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     executions,
     journal,
     snapshot,
+    duplicates: new DuplicateFinder(items),
   });
   const history = new History(journal, executions, jobs);
   const plexTvUrl = (options.env.KINOSHELF_PLEX_TV_URL ?? '').trim();

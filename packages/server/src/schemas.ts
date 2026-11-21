@@ -796,6 +796,11 @@ export const matchStateSchema = {
     followers: { type: 'array', items: { type: 'string' } },
     /** The file as the choice left it (`to-rename` or `conflict`): when `done`. */
     entry: entrySchema,
+    /**
+     * Where Arrivals lists the file now: `present` when the destination library already holds it
+     * (nothing is sent to a transfer), else where it waits. When `done`.
+     */
+    arrival: { type: 'string', enum: ['ready', 'review', 'unrecognized', 'present'] },
     /** Why it failed, as an error response carries it: when `failed`. */
     error: errorSchema.properties.error,
   },
@@ -842,11 +847,22 @@ export const onboardingPatchSchema = {
 
 export const arrivalsSchema = {
   type: 'object',
-  required: ['total', 'sources', 'items'],
+  required: ['total', 'counts', 'sources', 'items'],
   properties: {
     total: {
       type: 'integer',
       description: 'Files of this filter, for the badge. Paging counts releases.',
+    },
+    counts: {
+      type: 'object',
+      required: ['ready', 'review', 'unrecognized', 'present'],
+      description: 'Files in each state, whatever the filter: the badges of the tabs.',
+      properties: {
+        ready: { type: 'integer' },
+        review: { type: 'integer' },
+        unrecognized: { type: 'integer' },
+        present: { type: 'integer' },
+      },
     },
     sources: {
       type: 'array',
@@ -882,6 +898,8 @@ export const arrivalsSchema = {
           'limits',
           'conflicts',
           'error',
+          'duplicate',
+          'presentEpisodes',
         ],
         properties: {
           id: { type: 'string', format: 'uuid', description: 'The entry: `/api/entries/{id}/…`.' },
@@ -903,7 +921,7 @@ export const arrivalsSchema = {
             type: 'boolean',
             description: 'Another series than the main one of the folder (`cluster` above 0).',
           },
-          state: { type: 'string', enum: ['ready', 'review', 'unrecognized'] },
+          state: { type: 'string', enum: ['ready', 'review', 'unrecognized', 'present'] },
           kind: { type: 'string', enum: ['movie', 'series'], nullable: true },
           /** The picture size the name announces (`2160p`), null when it says none. */
           resolution: { type: 'string', nullable: true },
@@ -956,6 +974,67 @@ export const arrivalsSchema = {
           /** What stops it from going there. */
           conflicts: entrySchema.properties.conflicts,
           error: entrySchema.properties.error,
+          /** What the destination library already holds of this file; null: nothing. */
+          duplicate: {
+            type: 'object',
+            nullable: true,
+            required: [
+              'kind',
+              'path',
+              'file',
+              'libraryId',
+              'libraryName',
+              'resolution',
+              'itemId',
+              'tmdbId',
+              'title',
+              'season',
+              'episode',
+              'size',
+              'forced',
+            ],
+            properties: {
+              kind: {
+                type: 'string',
+                enum: ['same-file', 'same-size', 'other-version'],
+                description:
+                  '`same-file`: a hardlink of it. `same-size`: a file of the same work with the ' +
+                  'same size in bytes. `other-version`: the work is there in a file of another size.',
+              },
+              path: { type: 'string', description: 'The library file it duplicates.' },
+              file: { type: 'string' },
+              libraryId: { type: 'string' },
+              libraryName: { type: 'string' },
+              resolution: { type: 'string', nullable: true },
+              /** The library file's id in its library's list (`GET /api/libraries/{id}/items`). */
+              itemId: { type: 'string' },
+              tmdbId: { type: 'integer', nullable: true },
+              title: { type: 'string', nullable: true },
+              season: { type: 'integer', nullable: true },
+              episode: { type: 'integer', nullable: true },
+              size: {
+                type: 'integer',
+                nullable: true,
+                description: 'Bytes: the arrival size, for `same-size`.',
+              },
+              forced: {
+                type: 'string',
+                enum: ['asked', 'confirmed'],
+                nullable: true,
+                description:
+                  '`asked`: "Process anyway", to validate. `confirmed`: validated, it goes out.',
+              },
+            },
+          },
+          /** Files of its release (and series) the library already holds: for a partial release. */
+          presentEpisodes: {
+            type: 'array',
+            items: {
+              type: 'object',
+              required: ['file'],
+              properties: { file: { type: 'string' } },
+            },
+          },
         },
       },
     },

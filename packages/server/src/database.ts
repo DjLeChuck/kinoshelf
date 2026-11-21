@@ -302,6 +302,19 @@ export const SERVER_MIGRATIONS: readonly { readonly name: string; readonly sql: 
       ALTER TABLE library_items ADD COLUMN unreadable TEXT;
     `,
   },
+  {
+    // An arrival already in its destination library (`same-file`, `same-size`) or whose work is
+    // there in another version (`other-version`), read once when it is analyzed or validated so the
+    // list never reads the disk. `duplicate_forced`: the owner asked to process it anyway.
+    name: 'server:004-duplicate-arrivals',
+    sql: `
+      ALTER TABLE job_entries ADD COLUMN duplicate_kind TEXT;
+      ALTER TABLE job_entries ADD COLUMN duplicate_path TEXT;
+      ALTER TABLE job_entries ADD COLUMN duplicate_library_id TEXT;
+      ALTER TABLE job_entries ADD COLUMN duplicate_size INTEGER;
+      ALTER TABLE job_entries ADD COLUMN duplicate_forced INTEGER NOT NULL DEFAULT 0;
+    `,
+  },
 ];
 
 /** Opens the single SQLite file of the config directory, shared with the CLI and the cache. */

@@ -5,6 +5,7 @@ import {
   folderOf,
   posterUrl,
   groupReleases,
+  libraryLinkOf,
   readArrivals,
   releaseName,
   goesAsPlanned,
@@ -39,7 +40,34 @@ const arrival = (over: Partial<Arrival> = {}): Arrival => ({
   limits: [],
   conflicts: [],
   error: null,
+  duplicate: null,
+  presentEpisodes: [],
   ...over,
+});
+
+describe('libraryLinkOf', () => {
+  const duplicate = {
+    kind: 'same-size',
+    path: '/films/Dune (2021).mkv',
+    file: 'Dune (2021).mkv',
+    libraryId: 'films',
+    libraryName: 'Films',
+    resolution: null,
+    itemId: 'abc123',
+    tmdbId: 438631,
+    title: 'Dune',
+    season: null,
+    episode: null,
+    size: 10,
+    forced: null,
+  } as const;
+
+  it('opens a movie on its search and its page, a series on the season of the episode', () => {
+    expect(libraryLinkOf(duplicate, 'movie')).toBe('/libraries/films?item=abc123&q=Dune');
+    expect(libraryLinkOf({ ...duplicate, tmdbId: 77, season: 2 }, 'series')).toBe(
+      '/libraries/films?open=77&seasons=77:2',
+    );
+  });
 });
 
 describe('statusOf', () => {
@@ -48,6 +76,7 @@ describe('statusOf', () => {
     [{}, 'to-validate'],
     [{ state: 'unrecognized' }, 'nothing-found'],
     [{ state: 'ready' }, 'ready'],
+    [{ state: 'present' }, 'present'],
     [{ conflicts: conflict }, 'conflict'],
     [{ error: { code: 'x' } }, 'failed'],
     // A transfer that failed after a conflict is first a failure.
@@ -180,6 +209,14 @@ describe('validate', () => {
     ]);
     expect(calls[0]?.body).not.toHaveProperty('score');
     expect(calls[2]?.body).toEqual({ entries: ['e1'] });
+  });
+
+  it('stops at a file the library already holds: nothing is queued', async () => {
+    const { calls, post, watch } = recorder([done({ arrival: 'present' })]);
+    expect(await validate(arrival(), { candidate: dune }, post, watch)).toEqual({
+      status: 'present',
+    });
+    expect(calls.map((c) => c.url)).not.toContain('/api/plans/j1/execute');
   });
 
   it('reports how far the server is until it ends', async () => {
@@ -344,6 +381,7 @@ describe('readArrivals', () => {
       asked.push([limit, offset]);
       return Promise.resolve({
         total: 6,
+        counts: { ready: 6, review: 0, unrecognized: 0, present: 0 },
         sources: [],
         items: releases.slice(offset, offset + Math.min(limit, 2)).flat(),
       });

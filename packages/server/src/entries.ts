@@ -8,7 +8,14 @@ import type {
   ScoredCandidate,
 } from '@kinoshelf/core';
 import type { Database } from '@kinoshelf/core';
-import { openEntry, READY_ENTRY, REVIEW_ENTRY, UNRECOGNIZED_ENTRY } from './entry-sql.js';
+import type { Duplicate } from './duplicates.js';
+import {
+  openEntry,
+  PRESENT_ENTRY,
+  READY_ENTRY,
+  REVIEW_ENTRY,
+  UNRECOGNIZED_ENTRY,
+} from './entry-sql.js';
 
 /** How a file left the queue: transferred, failed (needs a human again) or set aside. */
 export type Resolution = 'done' | 'failed' | 'ignored';
@@ -55,7 +62,53 @@ export interface Entry {
   readonly cluster: number;
   /** An episode of another series than the folder's main one. */
   readonly detached: boolean;
+  /** What the destination library already holds of it; null: nothing, or never compared. */
+  readonly duplicate: StoredDuplicate | null;
 }
+
+/** A verdict of `DuplicateFinder` as stored, with the owner's "process it anyway". */
+export interface StoredDuplicate extends Duplicate {
+  /** `asked`: process it anyway, to validate. `confirmed`: validated, it goes out like the others. */
+  readonly forced: 'asked' | 'confirmed' | null;
+}
+
+/** The states Arrivals lists; every waiting file is in exactly one. */
+export type ArrivalState = 'ready' | 'review' | 'unrecognized' | 'present';
+
+const STATES: Record<ArrivalState, string> = {
+  ready: READY_ENTRY,
+  review: REVIEW_ENTRY,
+  unrecognized: UNRECOGNIZED_ENTRY,
+  present: PRESENT_ENTRY,
+};
+
+const ANY_STATE = `(${Object.values(STATES).join(' OR ')})`;
+
+/** What a bulk action needs to know of a file before it is read whole. */
+export interface EntrySeed {
+  readonly id: string;
+  readonly jobId: string;
+  readonly release: string | null;
+  readonly cluster: number;
+  /** An episode: settled with the rest of its release and series. */
+  readonly episode: boolean;
+}
+
+interface SeedRow {
+  id: string;
+  job_id: string;
+  release: string | null;
+  cluster: number;
+  episode: number;
+}
+
+const seedOf = (row: SeedRow): EntrySeed => ({
+  id: row.id,
+  jobId: row.job_id,
+  release: row.release,
+  cluster: row.cluster,
+  episode: row.episode === 1,
+});
 
 export type JobSummary = Record<Classification, number>;
 
@@ -77,10 +130,15 @@ interface EntryRow {
   destination_library_id: string | null;
   release: string | null;
   cluster: number;
+  duplicate_kind: StoredDuplicate['kind'] | null;
+  duplicate_path: string | null;
+  duplicate_library_id: string | null;
+  duplicate_size: number | null;
+  duplicate_forced: number;
 }
 
 const COLUMNS =
-  'id, job_id, path, classification, resolution, parsed, outcome, item, error, batch_id, destination_library_id, release, cluster';
+  'id, job_id, path, classification, resolution, parsed, outcome, item, error, batch_id, destination_library_id, release, cluster, duplicate_kind, duplicate_path, duplicate_library_id, duplicate_size, duplicate_forced';
 
 /** Candidates kept per file: the runner-ups a human needs, a few kilobytes less than all of them. */
 const KEPT_CANDIDATES = 4;
@@ -144,6 +202,18 @@ function toEntry(row: EntryRow): Entry {
     release: row.release,
     cluster: row.cluster,
     detached: row.cluster > 0,
+    duplicate:
+      row.duplicate_kind === null ||
+      row.duplicate_path === null ||
+      row.duplicate_library_id === null
+        ? null
+        : {
+            kind: row.duplicate_kind,
+            path: row.duplicate_path,
+            libraryId: row.duplicate_library_id,
+            size: row.duplicate_size,
+            forced: ([null, 'asked', 'confirmed'] as const)[row.duplicate_forced] ?? null,
+          },
   };
 }
 
@@ -227,7 +297,7 @@ export class EntryStore {
         .prepare<[string], { id: string }>(
           `SELECT id FROM job_entries
            WHERE job_id = ? AND classification = 'to-rename' AND item IS NOT NULL
-             AND ${openEntry()}`,
+             AND ${openEntry()} AND NOT ${PRESENT_ENTRY}`,
         )
         .all(jobId)
         .map(({ id }) => id),
@@ -242,15 +312,12 @@ export class EntryStore {
    */
   arrivals(options: {
     arrivalIds: readonly string[];
-    state?: 'ready' | 'review' | 'unrecognized';
+    state?: ArrivalState;
     limit: number;
     offset: number;
   }): { total: number; entries: Entry[] } {
     const marks = options.arrivalIds.map(() => '?').join(', ');
-    const states = { ready: READY_ENTRY, review: REVIEW_ENTRY, unrecognized: UNRECOGNIZED_ENTRY };
-    const state = options.state
-      ? states[options.state]
-      : `(${READY_ENTRY} OR ${REVIEW_ENTRY} OR ${UNRECOGNIZED_ENTRY})`;
+    const state = options.state ? STATES[options.state] : ANY_STATE;
     const where = `${state} AND job_id IN (
       SELECT id FROM jobs WHERE library_id IS NULL${marks ? ` OR library_id IN (${marks})` : ''})`;
     const total =
@@ -279,6 +346,129 @@ export class EntryStore {
             .all(...options.arrivalIds, ...keys)
             .map(toEntry);
     return { total, entries };
+  }
+
+  /** The state of Arrivals each of these files is in (one missing from the map is in none). */
+  statesOf(ids: readonly string[]): Map<string, ArrivalState> {
+    const rows = this.database
+      .prepare<[string], { id: string; state: ArrivalState | null }>(
+        `SELECT id, CASE
+           WHEN ${PRESENT_ENTRY} THEN 'present' WHEN ${READY_ENTRY} THEN 'ready'
+           WHEN ${REVIEW_ENTRY} THEN 'review' WHEN ${UNRECOGNIZED_ENTRY} THEN 'unrecognized'
+         END AS state FROM job_entries WHERE id IN (SELECT value FROM json_each(?))`,
+      )
+      .all(JSON.stringify(ids));
+    return new Map(rows.flatMap(({ id, state }) => (state === null ? [] : [[id, state] as const])));
+  }
+
+  /**
+   * The files to set aside, as little as is needed to expand a release and tell what a transfer
+   * holds: either these ids (open ones only) or everything of an Arrivals state.
+   */
+  seeds(
+    target: { ids: readonly string[] } | { state: ArrivalState; arrivalIds: readonly string[] },
+  ): EntrySeed[] {
+    let where: string;
+    const params: string[] = [];
+    if ('ids' in target) {
+      where = `id IN (SELECT value FROM json_each(?)) AND ${openEntry()}`;
+      params.push(JSON.stringify(target.ids));
+    } else {
+      const marks = target.arrivalIds.map(() => '?').join(', ');
+      where = `${STATES[target.state]} AND job_id IN (
+        SELECT id FROM jobs WHERE library_id IS NULL${marks ? ` OR library_id IN (${marks})` : ''})`;
+      params.push(...target.arrivalIds);
+    }
+    return this.database
+      .prepare<string[], SeedRow>(
+        `SELECT id, job_id, release, cluster,
+                COALESCE(json_extract(parsed, '$.kind') = 'episode', 0) AS episode
+         FROM job_entries WHERE ${where}`,
+      )
+      .all(...params)
+      .map(seedOf);
+  }
+
+  /** The open episodes of the releases these files belong to: a release is settled as a whole. */
+  withReleaseMates(seeds: readonly EntrySeed[]): EntrySeed[] {
+    const known = new Map(seeds.map((seed) => [seed.id, seed]));
+    const groups = new Set<string>();
+    const mates = this.database.prepare<[string, string, number], SeedRow>(
+      `SELECT id, job_id, release, cluster, 1 AS episode FROM job_entries
+       WHERE job_id = ? AND release = ? AND cluster = ?
+         AND resolution IS NULL AND classification <> 'compliant'
+         AND json_extract(parsed, '$.kind') = 'episode'`,
+    );
+    for (const seed of seeds) {
+      const key = `${seed.jobId}|${seed.release ?? ''}|${String(seed.cluster)}`;
+      if (!seed.episode || seed.release === null || groups.has(key)) {
+        continue;
+      }
+      groups.add(key);
+      for (const row of mates.all(seed.jobId, seed.release, seed.cluster)) {
+        known.set(row.id, known.get(row.id) ?? seedOf(row));
+      }
+    }
+    return [...known.values()];
+  }
+
+  /** Sets these files aside, all in one write; returns how many were open. */
+  ignoreAll(ids: readonly string[]): number {
+    return this.database
+      .prepare(
+        `UPDATE job_entries SET resolution = 'ignored', batch_id = NULL, error = NULL
+         WHERE id IN (SELECT value FROM json_each(?)) AND ${openEntry()}`,
+      )
+      .run(JSON.stringify(ids)).changes;
+  }
+
+  /** Files waiting in each state of Arrivals, for the badges. */
+  arrivalCounts(arrivalIds: readonly string[]): Record<ArrivalState, number> {
+    const marks = arrivalIds.map(() => '?').join(', ');
+    const where = `job_id IN (
+      SELECT id FROM jobs WHERE library_id IS NULL${marks ? ` OR library_id IN (${marks})` : ''})`;
+    const counts = {} as Record<ArrivalState, number>;
+    for (const [name, sql] of Object.entries(STATES) as [ArrivalState, string][]) {
+      counts[name] =
+        this.database
+          .prepare<string[], { total: number }>(
+            `SELECT COUNT(*) AS total FROM job_entries WHERE ${sql} AND ${where}`,
+          )
+          .get(...arrivalIds)?.total ?? 0;
+    }
+    return counts;
+  }
+
+  /** What the library holds of this file, or nothing; a new verdict replaces the owner's choice. */
+  setDuplicate(
+    id: string,
+    duplicate: Duplicate | null,
+    forced: 'asked' | 'confirmed' | null = null,
+  ): void {
+    this.database
+      .prepare(
+        `UPDATE job_entries SET duplicate_kind = ?, duplicate_path = ?, duplicate_library_id = ?,
+           duplicate_size = ?, duplicate_forced = ? WHERE id = ?`,
+      )
+      .run(
+        duplicate?.kind ?? null,
+        duplicate?.path ?? null,
+        duplicate?.libraryId ?? null,
+        duplicate?.size ?? null,
+        forced === 'asked' ? 1 : forced === 'confirmed' ? 2 : 0,
+        id,
+      );
+  }
+
+  /** The owner asked to process these files although the library holds them: back to review. */
+  forceDuplicates(ids: readonly string[]): void {
+    this.database
+      .prepare(
+        `UPDATE job_entries SET duplicate_forced = 1
+         WHERE id IN (SELECT value FROM json_each(?)) AND duplicate_kind IS NOT NULL
+           AND duplicate_forced = 0`,
+      )
+      .run(JSON.stringify(ids));
   }
 
   /**
@@ -362,7 +552,7 @@ export class EntryStore {
       .prepare<[string], EntryRow>(
         `SELECT ${COLUMNS} FROM job_entries
          WHERE job_id = ? AND classification = 'to-rename'
-           AND ${openEntry()}
+           AND ${openEntry()} AND NOT ${PRESENT_ENTRY}
          ORDER BY seq`,
       )
       .all(jobId)

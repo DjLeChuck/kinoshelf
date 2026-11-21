@@ -392,6 +392,8 @@ export const fr: Record<keyof typeof en, string> = {
     'Un transfert de ce fichier est en attente ou en cours : attendez qu’il se termine.',
   'error.queue.match-in-progress': 'La validation de ce fichier est déjà en cours.',
   'error.queue.match-unknown': 'Aucune validation de ce fichier n’est connue.',
+  'error.queue.not-duplicate':
+    'La bibliothèque ne contient pas ce fichier : il n’y a rien à traiter malgré tout.',
   'error.queue.entry-resolved': 'Ce fichier a déjà été traité ({resolution}).',
   'error.request.invalid': 'La requête a été refusée : {detail}',
   'error.request.not-found': 'Rien à cette adresse.',
@@ -1214,6 +1216,28 @@ export const fr: Record<keyof typeof en, string> = {
   'web.arrivals.filter.ready': 'Prêts à transférer',
   'web.arrivals.filter.review': 'À valider',
   'web.arrivals.filter.unrecognized': 'Non reconnus',
+  'web.arrivals.filter.present': 'Déjà en bibliothèque',
+  'web.arrivals.ignore-present':
+    '{count, plural, one {Ignorer le # fichier déjà en bibliothèque} other {Ignorer les # fichiers déjà en bibliothèque}}',
+  'web.arrivals.ignore-present.title': 'Ignorer les fichiers déjà en bibliothèque',
+  'web.arrivals.ignore-present.does':
+    '{count, plural, one {# fichier est écarté} other {# fichiers sont écartés}}, y compris ceux que la liste n’a pas encore chargés. Ils quittent les arrivées.',
+  'web.arrivals.ignore-present.keeps':
+    'Rien n’est déplacé ni supprimé. Un fichier peut être proposé de nouveau en analysant à nouveau le dossier.',
+  'web.arrivals.ignore-present.confirm': 'Ignorer',
+  'web.arrivals.ignored': '{ignored, plural, one {# fichier ignoré} other {# fichiers ignorés}}.',
+  'web.arrivals.ignored.held':
+    '{ignored, plural, one {# fichier ignoré} other {# fichiers ignorés}}, {held, plural, one {# en cours de transfert laissé de côté} other {# en cours de transfert laissés de côté}}.',
+  'web.arrivals.select-all': 'Tout sélectionner',
+  'web.arrivals.select-row': 'Sélectionner {name}',
+  'web.arrivals.selected':
+    '{count, plural, one {# release sélectionnée} other {# releases sélectionnées}}',
+  'web.arrivals.bar.label': 'Actions sur la sélection',
+  'web.arrivals.bar.ignore': 'Ignorer',
+  'web.arrivals.bar.transfer': 'Transférer',
+  'web.arrivals.bar.transfer.hint':
+    'Seuls des fichiers prêts à transférer peuvent être envoyés ensemble.',
+  'web.arrivals.in-library': 'Déjà dans {library}',
   'web.arrivals.list.label': 'Fichiers à trancher',
   'web.arrivals.empty': 'Rien n’attend votre décision.',
   'web.arrivals.transfer-all': 'Transférer tous les fichiers prêts ({count})',
@@ -1414,6 +1438,29 @@ export const fr: Record<keyof typeof en, string> = {
   'web.queue.status.nothing-found': 'Rien trouvé',
   'web.queue.status.conflict': 'Conflit',
   'web.queue.status.failed': 'Échec',
+  'web.queue.status.present': 'Déjà en bibliothèque',
+  'web.queue.present': '{name} est déjà en bibliothèque : le fichier est écarté des transferts.',
+  'web.queue.duplicate.title': 'Déjà en bibliothèque',
+  'web.queue.duplicate.in': 'Dans {library}',
+  'web.queue.duplicate.same-file': 'Même fichier (lien physique).',
+  'web.queue.duplicate.same-size': 'Même taille : {size}.',
+  'web.queue.duplicate.other-version.movie':
+    'Ce film est déjà dans {library} ({file}{resolution}). Ce fichier serait ajouté comme seconde version.',
+  'web.queue.duplicate.other-version.series':
+    'Cet épisode est déjà dans {library} ({file}{resolution}). Ce fichier serait ajouté comme seconde version.',
+  'web.queue.duplicate.processed': '{name} est revenu dans « À valider ».',
+  'web.queue.duplicate.asked':
+    'Vous avez choisi de traiter ce fichier bien que la bibliothèque le contienne : validez-le pour l’ajouter.',
+  'web.queue.duplicate.open': 'Ouvrir dans la bibliothèque',
+  'web.queue.duplicate.ignore-present':
+    '{count, plural, one {Ignorer le # fichier déjà présent} other {Ignorer les # fichiers déjà présents}}',
+  'web.tip.ignore-present':
+    'Écarte seulement les fichiers de cette release que la bibliothèque contient. Les autres restent à transférer.',
+  'web.queue.duplicate.process': 'Traiter quand même',
+  'web.queue.duplicate.present-episodes':
+    '{count, plural, one {# fichier de cette release est déjà en bibliothèque} other {# fichiers de cette release sont déjà en bibliothèque}} :',
+  'web.tip.process':
+    'Renvoie le fichier dans « À valider », avec son candidat, pour l’ajouter malgré tout.',
   'web.queue.detected': 'Lu dans le nom',
   'web.queue.kind.movie': 'Film',
   'web.queue.kind.unknown': 'Inconnu',
