@@ -765,6 +765,20 @@ refuses to delete a library an arrival folder points at (`library.in-use`). Ther
   again (`work_destinations` is gone). Once a job is stored,
   `Service.planArrivals` plans each file matched with confidence again for the library it goes to
   (the analysis used the global profile); a file left unmatched keeps waiting.
+- **Arrivals already in the library** (`duplicates.ts`, `entry-sql.ts`; `job_entries.duplicate_*`): once an arrival's plan is
+  final (`planArrivals`) and after each validation (`runMatch`), `DuplicateFinder.verdict` compares it with the snapshot of
+  its destination library: same `tmdb_id` (an episode: same season and overlapping `episode`..`episodeEnd`), then `same-file`
+  (same `dev` + `ino`, read with `stat`, never stored: a remounted share changes it), `same-size` (exact bytes, read with
+  `stat` rather than from the possibly older snapshot) or `other-version`. A library file with no `tmdb_id` is never a
+  match. The verdict is stored on the entry so a list never reads the disk. **A fourth state, `present`** (`PRESENT_ENTRY`):
+  open, `same-*`, not forced, and for an episode every other open episode of its release and series is too; a release
+  with an episode to bring in stays what it was and its panel lists the ones already there (`presentEpisodes`).
+  `READY_ENTRY` and `executable()` leave `present` out (so "Transfer all" and a stale `entries` list never send a
+  duplicate); `other-version` goes to review. `duplicate_forced`: 1 `asked` ("Process anyway", back to review), 2
+  `confirmed` (a human validated it: it goes out as a second version). A new verdict replaces the choice. **Every SQL
+  test of `duplicate_kind` is wrapped in `COALESCE`: `NOT NULL` is NULL, which dropped every ready file once.**
+  `POST /api/entries/ignore` (`{ ids }` or `{ state }`) is one `UPDATE`, one `arrivals` event; held files are counted in
+  `held`.
 - **The router reads the query** (`lib/router.svelte.ts`: `router.path` is the path alone, `router.query` the
   `?query`, `router.setQuery` changes it in place, with no history entry). The state filter of a library and of
   Arrivals is `?state=…` (`oneOf` drops a value the filter does not know). The open tree of a series is too: `?open=<tmdb ids>` for the

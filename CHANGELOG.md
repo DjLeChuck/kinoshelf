@@ -6,6 +6,16 @@ All notable changes to Kinoshelf are written here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- Arrivals tells when a file is already in its destination library, under another name: the same file (a
+  hard link) or one of the same size is listed under a new **Already in the library** state, never ready and
+  never taken by "Transfer all". The same work in a file of another size waits in "To validate" with the
+  file it would sit beside, and validating it adds a second version. A series release moves there only when
+  every episode is. "Process anyway" sends such a file back to review (#32).
+- Arrivals ignores in bulk: **Ignore all the files already in the library** in one click, and tick boxes to
+  ignore or transfer several releases together (`POST /api/entries/ignore`) (#32).
+
 ## [1.1.1] - 2026-11-21
 
 ### Fixed
