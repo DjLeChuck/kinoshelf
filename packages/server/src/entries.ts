@@ -422,6 +422,29 @@ export class EntryStore {
       .run(JSON.stringify(ids)).changes;
   }
 
+  /**
+   * The next files of the arrival folders still waiting for a human whose work is known (a
+   * candidate to compare), after `after`: what a library change makes worth looking at again.
+   * Read in batches, so thousands of entries are never held at once.
+   */
+  pendingBatch(
+    arrivalIds: readonly string[],
+    after: number,
+    limit: number,
+  ): { entries: Entry[]; last: number } {
+    const marks = arrivalIds.map(() => '?').join(', ');
+    const rows = this.database
+      .prepare<(string | number)[], EntryRow & { seq: number }>(
+        `SELECT seq, ${COLUMNS} FROM job_entries
+         WHERE seq > ? AND resolution IS NULL AND classification NOT IN ('unrecognized', 'compliant')
+           AND job_id IN (
+             SELECT id FROM jobs WHERE library_id IS NULL${marks ? ` OR library_id IN (${marks})` : ''})
+         ORDER BY seq LIMIT ?`,
+      )
+      .all(after, ...arrivalIds, limit);
+    return { entries: rows.map(toEntry), last: rows.at(-1)?.seq ?? after };
+  }
+
   /** Files waiting in each state of Arrivals, for the badges. */
   arrivalCounts(arrivalIds: readonly string[]): Record<ArrivalState, number> {
     const marks = arrivalIds.map(() => '?').join(', ');

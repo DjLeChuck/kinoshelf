@@ -40,7 +40,12 @@ import {
 } from '@kinoshelf/core';
 import { ApiError } from './api-error.js';
 import { CollectionStore } from './collections.js';
-import type { DuplicateFinder, DuplicateKind } from './duplicates.js';
+import {
+  isPresent,
+  type Duplicate,
+  type DuplicateFinder,
+  type DuplicateKind,
+} from './duplicates.js';
 import {
   workKindOf as kindOf,
   type ArrivalState,
@@ -638,16 +643,9 @@ export class Service {
     work: ExternalId | undefined,
     options: { job?: Job; validated?: boolean } = {},
   ): Promise<void> {
-    const kind = kindOf(entry);
     const fresh = this.require(entry.id);
     const libraryId = this.destinationOf(fresh, options.job).libraryId;
-    const verdict =
-      kind !== null &&
-      work?.provider === 'tmdb' &&
-      libraryId !== null &&
-      this.typedLibrary(libraryId)?.type === kind
-        ? await this.deps.duplicates.verdict(fresh, libraryId, work.id)
-        : null;
+    const verdict = await this.verdictFor(fresh, work, libraryId);
     const asked = entry.duplicate?.forced != null && entry.duplicate.path === verdict?.path;
     this.deps.entries.setDuplicate(
       entry.id,
@@ -656,6 +654,79 @@ export class Service {
         ? 'confirmed'
         : null,
     );
+  }
+
+  /** What `libraryId` holds of the file's work: nothing for a kind that library does not take. */
+  private async verdictFor(
+    entry: Entry,
+    work: ExternalId | undefined,
+    libraryId: string | null,
+  ): Promise<Duplicate | null> {
+    const kind = kindOf(entry);
+    return kind !== null &&
+      work?.provider === 'tmdb' &&
+      libraryId !== null &&
+      this.typedLibrary(libraryId)?.type === kind
+      ? this.deps.duplicates.verdict(entry, libraryId, work.id)
+      : null;
+  }
+
+  /**
+   * A library's rows changed (a scan ended, a transfer or an undo patched them): the files waiting
+   * in Arrivals for it are compared again, with the same code as the analysis and no search on
+   * TMDB. A file the library now holds leaves "Ready"; one whose library file is gone comes back.
+   * What a transfer holds, or a validation is rewriting, is left alone. `present` counts the files
+   * that are now certainly there.
+   */
+  async reevaluate(
+    libraryId: string,
+    progress?: (checked: number) => void,
+  ): Promise<{ changed: number; present: number }> {
+    const { entries, executions, matches, jobs } = this.deps;
+    const arrivalIds = this.arrivalFolders().map(({ id }) => id);
+    const held = executions.pendingEntries();
+    const jobOf = new Map<string, Job | undefined>();
+    let after = 0;
+    let checked = 0;
+    let changed = 0;
+    let present = 0;
+    for (;;) {
+      const batch = entries.pendingBatch(arrivalIds, after, 200);
+      if (batch.entries.length === 0) {
+        return { changed, present };
+      }
+      after = batch.last;
+      for (const entry of batch.entries) {
+        if (!jobOf.has(entry.jobId)) {
+          jobOf.set(entry.jobId, jobs.get(entry.jobId));
+        }
+        const holding = held.get(entry.jobId);
+        if (
+          this.destinationOf(entry, jobOf.get(entry.jobId)).libraryId !== libraryId ||
+          holding === null ||
+          holding?.has(entry.id) ||
+          matches.locked(this.lockOf(entry))
+        ) {
+          continue;
+        }
+        const verdict = await this.verdictFor(
+          entry,
+          entry.item?.externalId ?? entry.candidates[0]?.id,
+          libraryId,
+        );
+        const before = entry.duplicate;
+        // Unchanged keeps what the owner chose ("process anyway", a validation).
+        if (before?.kind !== verdict?.kind || before?.path !== verdict?.path) {
+          entries.setDuplicate(entry.id, verdict);
+          changed += 1;
+          present += verdict !== null && isPresent(verdict.kind) ? 1 : 0;
+        }
+      }
+      checked += batch.entries.length;
+      progress?.(checked);
+      // The disk is read for each file: let requests through between two batches.
+      await new Promise((resolve) => setImmediate(resolve));
+    }
   }
 
   private typedLibrary(id: string | null | undefined): LibraryConfig | undefined {

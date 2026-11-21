@@ -779,6 +779,12 @@ refuses to delete a library an arrival folder points at (`library.in-use`). Ther
   test of `duplicate_kind` is wrapped in `COALESCE`: `NOT NULL` is NULL, which dropped every ready file once.**
   `POST /api/entries/ignore` (`{ ids }` or `{ state }`) is one `UPDATE`, one `arrivals` event; held files are counted in
   `held`.
+  **Waiting arrivals are compared again** (`reevaluation.ts`, `Service.reevaluate`) when a library's rows change
+  (`LibrarySnapshot`'s `changed`: a scan ends, a transfer, an undo): the same verdict code, no TMDB, batches of 200
+  (`EntryStore.pendingBatch`) with the event loop let through between them, a held file or a release being
+  validated left alone, a verdict that did not change keeping the owner's choice (`duplicate_forced`). One `arrivals`
+  event at the end; the activity panel says `reevaluated` only above 5 files set aside. Tests await
+  `app.reevaluation.idle()`.
 - **The router reads the query** (`lib/router.svelte.ts`: `router.path` is the path alone, `router.query` the
   `?query`, `router.setQuery` changes it in place, with no history entry). The state filter of a library and of
   Arrivals is `?state=…` (`oneOf` drops a value the filter does not know). The open tree of a series is too: `?open=<tmdb ids>` for the

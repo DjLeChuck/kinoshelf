@@ -1,10 +1,18 @@
 import type { ReadableStreamDefaultReader } from 'node:stream/web';
-import { link, readdir, readFile } from 'node:fs/promises';
+import { link, readdir, readFile, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { loadConfig } from '@kinoshelf/core';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { EntryStore } from '../src/entries.js';
-import { cleanup, harness, jobEntries, makeDir, put, type Harness } from './harness.js';
+import {
+  cleanup,
+  fakeProvider,
+  harness,
+  jobEntries,
+  makeDir,
+  put,
+  type Harness,
+} from './harness.js';
 import { LibraryItemStore } from '../src/library-items.js';
 import { ExecutionStore } from '../src/executions.js';
 
@@ -45,10 +53,10 @@ interface Arrivals {
  * Two movie libraries and a series one, and an arrival folder pointing at the first of each. The
  * server reads a real config.yaml: libraries live there.
  */
-async function setup() {
+async function setup(options: Parameters<typeof harness>[0] = {}) {
   const configDir = await makeDir();
   await put(join(configDir, 'config.yaml'), 'naming: with-id\nmetadata: none\n');
-  const h = await harness({ configDir, config: await loadConfig(configDir) });
+  const h = await harness({ configDir, config: await loadConfig(configDir), ...options });
   const roots = { films: await makeDir(), uhd: await makeDir(), series: await makeDir() };
   const create = (body: object): Promise<unknown> => h.request('POST', '/api/libraries', body);
   await create({ name: 'Films', source: roots.films, type: 'movie' });
@@ -606,5 +614,130 @@ describe('POST /api/entries/ignore', () => {
     }
     await reader.cancel();
     expect(text.match(/event: arrivals/g)).toHaveLength(1);
+  });
+});
+
+describe('arrivals analysed before the library was scanned', () => {
+  /** A provider that counts what it is asked, to show the comparison never goes back to TMDB. */
+  function counting() {
+    const asked = { calls: 0 };
+    const tick = <R>(result: R): R => {
+      asked.calls += 1;
+      return result;
+    };
+    return {
+      asked,
+      provider: {
+        ...fakeProvider,
+        searchMovies: (query: Parameters<typeof fakeProvider.searchMovies>[0]) =>
+          tick(fakeProvider.searchMovies(query)),
+        searchSeries: (query: Parameters<typeof fakeProvider.searchSeries>[0]) =>
+          tick(fakeProvider.searchSeries(query)),
+        getMovieDetails: (id: Parameters<typeof fakeProvider.getMovieDetails>[0]) =>
+          tick(fakeProvider.getMovieDetails(id)),
+        getSeriesDetails: (id: Parameters<typeof fakeProvider.getSeriesDetails>[0]) =>
+          tick(fakeProvider.getSeriesDetails(id)),
+        getSeason: (
+          id: Parameters<typeof fakeProvider.getSeason>[0],
+          season: Parameters<typeof fakeProvider.getSeason>[1],
+        ) => tick(fakeProvider.getSeason(id, season)),
+      },
+    };
+  }
+
+  /** The libraries hold Dune and Alien on the disk, unscanned; the downloads hold what the cases need. */
+  async function unscanned() {
+    const { asked, provider } = counting();
+    const world = await setup({ createProvider: () => provider });
+    const dune = await put(DUNE_NAME(world.roots.films), 'dune in the library');
+    await put(
+      join(world.roots.films, 'Alien (1979) {tmdb-348}', 'Alien (1979) {tmdb-348}.mkv'),
+      'alien in the library',
+    );
+    await link(dune, join(world.downloads, 'Dune.2021.1080p-LINK.mkv'));
+    await put(join(world.downloads, 'Alien.1979.2160p-COPY.mkv'), 'alien in the library');
+    await scanDownloads(world.h);
+    return { ...world, asked, dune };
+  }
+
+  const scanFilms = async (h: Harness): Promise<void> => {
+    expect((await h.request('POST', '/api/libraries/films/scan')).statusCode).toBe(202);
+    await h.app.jobs.idle();
+    await h.app.reevaluation.idle();
+  };
+
+  it('sets the duplicates aside once the library is scanned, with no search on TMDB', async () => {
+    const { h, asked } = await unscanned();
+    // Nothing knew the library: every file waits as ready, as it did before.
+    expect((await arrivals(h)).counts).toMatchObject({ ready: 2, present: 0 });
+    const searches = asked.calls;
+
+    await scanFilms(h);
+    const found = await arrivals(h);
+    expect(found.counts).toMatchObject({ ready: 0, present: 2 });
+    expect(found.items.map(({ file, duplicate }) => [file, duplicate?.kind])).toEqual([
+      ['Alien.1979.2160p-COPY.mkv', 'same-size'],
+      ['Dune.2021.1080p-LINK.mkv', 'same-file'],
+    ]);
+    // The scan of the films is the only thing that asked TMDB; the comparison did not.
+    const scanned = asked.calls - searches;
+    await h.app.reevaluation.idle();
+    expect(asked.calls - searches).toBe(scanned);
+  });
+
+  it('tells the activity panel how many it set aside, even when it took no time', async () => {
+    const { h, downloads, roots } = await setup({ createProvider: () => fakeProvider });
+    await put(DUNE_NAME(roots.films), 'dune in the library');
+    for (let n = 1; n <= 6; n++) {
+      await put(join(downloads, `Dune.2021.copy${String(n)}.mkv`), 'dune in the library');
+    }
+    await scanDownloads(h);
+    await scanFilms(h);
+    const { tasks } = (await h.request('GET', '/api/activity')).json<{
+      tasks: { code: string; status: string; params: { count?: number } }[];
+    }>();
+    expect(tasks.find(({ code }) => code === 'reevaluated')).toMatchObject({
+      status: 'done',
+      params: { count: 6 },
+    });
+  });
+
+  it('brings a file back to ready when the library lost the one it matched', async () => {
+    const { h, dune } = await unscanned();
+    await scanFilms(h);
+    expect((await arrivals(h)).counts.present).toBe(2);
+
+    await rm(dune);
+    await scanFilms(h);
+    const found = await arrivals(h);
+    expect(found.counts).toMatchObject({ ready: 1, present: 1 });
+    expect(found.items.find(({ file }) => file.includes('LINK'))).toMatchObject({
+      state: 'ready',
+      duplicate: null,
+    });
+  });
+
+  it('does not touch a file a transfer holds', async () => {
+    const { h, jobId } = await (async () => {
+      const world = await unscanned();
+      const [first] = (await arrivals(world.h)).items;
+      const { id } = new ExecutionStore(world.h.database).create(first?.jobId ?? '', [
+        first?.id ?? '',
+      ]);
+      // Running, so the queue does not pick it up: the file stays held while the scan ends.
+      world.h.database.prepare("UPDATE executions SET status = 'running' WHERE id = ?").run(id);
+      return { ...world, jobId: first?.id ?? '' };
+    })();
+    await scanFilms(h);
+    // The held file is in no list while it is held: read its row. It was left as it was, and the
+    // other one was compared.
+    const verdict = (id: string) =>
+      h.database
+        .prepare<[string], { duplicate_kind: string | null }>(
+          'SELECT duplicate_kind FROM job_entries WHERE id = ?',
+        )
+        .get(id)?.duplicate_kind;
+    expect(verdict(jobId)).toBeNull();
+    expect((await arrivals(h)).items.map(({ duplicate }) => duplicate !== null)).toEqual([true]);
   });
 });

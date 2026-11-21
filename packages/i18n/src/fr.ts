@@ -1179,6 +1179,9 @@ export const fr: Record<keyof typeof en, string> = {
   'web.activity.task.adopt-collections': 'Choix des images TMDB des collections de {name}',
   'web.activity.task.send-collections': 'Envoi des images de collections de {name}',
   'web.activity.task.scan': 'Analyse de {name}',
+  'web.activity.task.reevaluate': 'Comparaison des arrivées avec {name}',
+  'web.activity.task.reevaluated':
+    '{count, plural, one {# arrivée déjà en bibliothèque} other {# arrivées déjà en bibliothèque}}',
   'web.activity.task.transfer': 'Transfert de fichiers',
   'web.activity.task.undo': 'Annulation d’un lot',
   'web.activity.task.undo-check': 'Vérification avant une annulation',

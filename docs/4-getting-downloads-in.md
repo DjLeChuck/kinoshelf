@@ -92,6 +92,9 @@ tool, or hard-linked by Sonarr or Radarr), do it in this order:
 3. In Arrivals, open **Already in the library** and **ignore them all** in one click, then process the
    rest.
 
+Scanning the libraries after the folder was analysed works too: what waits in Arrivals is compared again
+when the scan ends. A transfer already started (`watch.apply`) cannot wait for it, though.
+
 The same work in a file of another size is not set aside: it waits in _To validate_, as it may be another
 version. Alternatively, `kinoshelf submit` from the client, without watching the folder, only brings in new
 downloads.

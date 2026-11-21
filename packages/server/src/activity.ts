@@ -28,6 +28,12 @@ export interface ActivitySource {
    * came to, or `undefined` to drop it silently.
    */
   ended?(task: ActivityTask): ActivityTask | undefined;
+  /**
+   * Tasks that came to an end without ever being seen running (a comparison that took a few
+   * milliseconds): reported once, with their result, and kept like any finished task. Each call
+   * hands over what happened since the last one.
+   */
+  finished?(): ActivityTask[];
 }
 
 /** A finished task stays this long in the panel; a failed one lasts until the owner has had time to read it. */
@@ -68,6 +74,13 @@ export class Activity {
           this.finished.delete(task.id);
         } else if (this.live.has(task.id)) {
           this.live.delete(task.id);
+          this.finished.set(task.id, { task, at });
+        }
+      }
+    }
+    for (const source of this.sources) {
+      for (const task of source.finished?.() ?? []) {
+        if (task.status !== 'running') {
           this.finished.set(task.id, { task, at });
         }
       }

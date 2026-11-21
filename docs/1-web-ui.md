@@ -118,6 +118,11 @@ hard-linked by a Sonarr or Radarr. To avoid proposing them again:
 2. Add the downloads folder next.
 3. In _Already in the library_, ignore them all in one click, then handle the rest.
 
+The order is not strict: files waiting in Arrivals are compared again, in the background and without
+asking TMDB, whenever a library's scan ends or a transfer or an undo changes what it holds. Scanning the
+libraries after the folder was analysed therefore still sets the duplicates aside (the activity panel says
+so when more than five files moved), but a transfer started before the scan could not know.
+
 Alternatively, `kinoshelf submit` from the download client, without watching the folder, only brings in
 the new downloads.
 
