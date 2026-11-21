@@ -83,7 +83,7 @@ If the first job fails, it is not lost: the History lists it with its cause.
 ## Arrivals
 
 The **Arrivals** tab of the Libraries page holds the files that wait for you. A library organized in
-place never lands here. The files are in three states:
+place never lands here. The files are in four states:
 
 - **Ready to transfer**: matched with confidence (a score at or above the threshold), but not moved
   because the analysis only reads. That is what a watched folder or a scan does while the setting
@@ -93,6 +93,33 @@ place never lands here. The files are in three states:
 - **To validate**: Kinoshelf could not place the file with confidence, or a conflict or a failed
   transfer needs a look.
 - **Not recognized**: nothing was found.
+- **Already in the library**: the destination library holds this file already, as the same file (a hard
+  link) or as a file of the same size, under another name. It is never ready and never taken by
+  **Transfer all the files that are ready**. **Ignore** sets it aside; **Process anyway** sends it back to
+  _To validate_ with its candidate. **Ignore all the files already in the library** (at the top) sets
+  aside the whole state in one click, the files the list has not loaded included. A work the library
+  holds in a file of **another size** is not in this state: it waits in _To validate_, with the file it
+  would sit beside, because it may be a second version you want (validating it adds it as one). A release
+  of a series moves here only when **every** episode is already there; otherwise it stays where it was,
+  and its panel lists the episodes already in the library, with **Ignore the files already there** to set
+  aside only those and keep the others to transfer.
+
+Tick the box of one or more releases (or **Select all** for the page) to **Ignore** them together, or to
+**Transfer** them when every one is ready. A release counts for all its files; one a transfer is still
+holding is left alone and counted apart.
+
+### Plugging in a downloads folder that already exists
+
+A downloads folder often holds files that are in the library already, renamed by hand, by another tool or
+hard-linked by a Sonarr or Radarr. To avoid proposing them again:
+
+1. Scan the libraries first: the detection reads what they hold, and a file the scan could not identify
+   (no TMDB id) cannot stand for a work.
+2. Add the downloads folder next.
+3. In _Already in the library_, ignore them all in one click, then handle the rest.
+
+Alternatively, `kinoshelf submit` from the download client, without watching the folder, only brings in
+the new downloads.
 
 For each file you see its TMDB candidates and their score, a manual search, and the destination a
 choice would give. When the best candidate is under 100 %, the panel says **why**: the title, year or

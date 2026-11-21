@@ -79,6 +79,23 @@ for a watched folder).
 to settle (a still-incomplete suffix such as `.part` is still skipped). The API equivalent is
 `POST /api/watch/scan` (`GET /api/watch` says what is watched).
 
+## Plugging in a folder that already exists
+
+If the folder you plug in already holds files that are in your library (renamed by hand or by another
+tool, or hard-linked by Sonarr or Radarr), do it in this order:
+
+1. **Scan the libraries first.** Kinoshelf compares each arrival with what its destination library holds,
+   as the last scan saw it (same TMDB id, and for an episode the same season and episode): a file that has
+   the same inode (a hard link) or the same size is _Already in the library_. A library file the scan could
+   not identify has no TMDB id and cannot be compared.
+2. **Add the downloads folder.**
+3. In Arrivals, open **Already in the library** and **ignore them all** in one click, then process the
+   rest.
+
+The same work in a file of another size is not set aside: it waits in _To validate_, as it may be another
+version. Alternatively, `kinoshelf submit` from the client, without watching the folder, only brings in new
+downloads.
+
 ## What happens next
 
 Each release found becomes one job in the queue: analyses and transfers run one at a time each, and
