@@ -1,6 +1,6 @@
 {
   "name": "@kinoshelf/e2e",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "private": true,
   "description": "End-to-end tests of the web UI against the real server and a fake TMDB.",
   "license": "MIT",

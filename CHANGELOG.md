@@ -6,6 +6,8 @@ All notable changes to Kinoshelf are written here. The format follows
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-11-21
+
 ### Fixed
 
 - Signed in with Plex, Kinoshelf now sends the media server the token plex.tv lists for it instead of the
@@ -176,6 +178,7 @@ First stable release.
   binaries for Linux (x64, arm64) and macOS (arm64), with ffprobe included and a `SHA256SUMS` file.
 - **Documentation** site built from `docs/`.
 
-[Unreleased]: https://github.com/DjLeChuck/kinoshelf/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/DjLeChuck/kinoshelf/compare/v1.1.1...HEAD
+[1.1.1]: https://github.com/DjLeChuck/kinoshelf/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/DjLeChuck/kinoshelf/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/DjLeChuck/kinoshelf/releases/tag/v1.0.0

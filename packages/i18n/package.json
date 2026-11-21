@@ -1,6 +1,6 @@
 {
   "name": "@kinoshelf/i18n",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Kinoshelf messages in French and English, shared by the CLI, the server and the web UI.",
   "license": "MIT",
   "type": "module",

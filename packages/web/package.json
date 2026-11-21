@@ -1,6 +1,6 @@
 {
   "name": "@kinoshelf/web",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "private": true,
   "description": "Kinoshelf web UI (Svelte 5), served statically by the server.",
   "license": "MIT",
