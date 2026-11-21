@@ -16,6 +16,7 @@ import {
   type Candidate,
   classifyItem,
   type ErrorInfo,
+  type ExternalId,
   type ImageFetcher,
   type ImageSize,
   type ImageCandidate,
@@ -39,8 +40,11 @@ import {
 } from '@kinoshelf/core';
 import { ApiError } from './api-error.js';
 import { CollectionStore } from './collections.js';
+import type { DuplicateFinder, DuplicateKind } from './duplicates.js';
 import {
   workKindOf as kindOf,
+  type ArrivalState,
+  type EntrySeed,
   type EntryStore,
   type Entry,
   type StoredCandidate,
@@ -107,6 +111,8 @@ export interface ServiceDeps extends ProcessorDeps {
   readonly journal: Journal;
   /** What each library holds, kept in step with what is matched, transferred and undone. */
   readonly snapshot: LibrarySnapshot;
+  /** Tells what an arrival's destination library already holds. */
+  readonly duplicates: DuplicateFinder;
   /** The validations in flight: one match at a time per release, with their progress. */
   readonly matches: MatchTracker;
   /** Replaces the download of the images a plan writes, for tests: the default is the network. */
@@ -228,6 +234,7 @@ export class Service {
             { libraryId: id },
           );
           this.deps.snapshot.matched(this.require(file.id), candidate);
+          await this.markDuplicate(file, candidate.id, { validated: true });
           if (file.id !== entry.id && classification !== 'conflict') {
             followers.push(file.id);
           }
@@ -527,6 +534,39 @@ export class Service {
     return { libraryId: (chosen ?? this.defaultLibrary(entry, job))?.id ?? null };
   }
 
+  /** What the library holds of an arrival, in the words of the web (names, not ids). */
+  duplicateOf(entry: Entry): {
+    kind: DuplicateKind;
+    path: string;
+    file: string;
+    libraryId: string;
+    libraryName: string;
+    resolution: string | null;
+    itemId: string;
+    tmdbId: number | null;
+    title: string | null;
+    season: number | null;
+    episode: number | null;
+    size: number | null;
+    forced: 'asked' | 'confirmed' | null;
+  } | null {
+    const { duplicate } = entry;
+    if (!duplicate) {
+      return null;
+    }
+    const library = this.deps.config.libraries?.find(({ id }) => id === duplicate.libraryId);
+    return {
+      kind: duplicate.kind,
+      path: duplicate.path,
+      file: basename(duplicate.path),
+      libraryId: duplicate.libraryId,
+      libraryName: library?.name ?? duplicate.libraryId,
+      ...this.deps.duplicates.describe(duplicate.libraryId, duplicate.path),
+      size: duplicate.size,
+      forced: duplicate.forced,
+    };
+  }
+
   /** The arrival folders: where files wait for a destination. */
   arrivalFolders(): LibraryConfig[] {
     return (this.deps.config.libraries ?? []).filter(({ into }) => into !== undefined);
@@ -571,6 +611,51 @@ export class Service {
         continue;
       }
     }
+    await this.markDuplicates(job);
+  }
+
+  /**
+   * Compares each file of an arrival job with the library it goes to, once the plans are final, so
+   * Arrivals can tell what is already there without reading the disk.
+   */
+  private async markDuplicates(job: Job): Promise<void> {
+    for (const entry of this.deps.entries.list(job.id)) {
+      if (entry.classification === 'unrecognized' || entry.classification === 'compliant') {
+        continue;
+      }
+      const best = entry.item?.externalId ?? entry.candidates[0]?.id;
+      await this.markDuplicate(entry, best, { job });
+    }
+  }
+
+  /**
+   * Stores what the destination library holds of a file (or nothing). `validated`: a human chose
+   * this work for the file, so an other version they were told of, or a file they asked to process
+   * anyway, is theirs to add: it is `confirmed` and goes out like the others.
+   */
+  private async markDuplicate(
+    entry: Entry,
+    work: ExternalId | undefined,
+    options: { job?: Job; validated?: boolean } = {},
+  ): Promise<void> {
+    const kind = kindOf(entry);
+    const fresh = this.require(entry.id);
+    const libraryId = this.destinationOf(fresh, options.job).libraryId;
+    const verdict =
+      kind !== null &&
+      work?.provider === 'tmdb' &&
+      libraryId !== null &&
+      this.typedLibrary(libraryId)?.type === kind
+        ? await this.deps.duplicates.verdict(fresh, libraryId, work.id)
+        : null;
+    const asked = entry.duplicate?.forced != null && entry.duplicate.path === verdict?.path;
+    this.deps.entries.setDuplicate(
+      entry.id,
+      verdict,
+      options.validated && verdict && (verdict.kind === 'other-version' || asked)
+        ? 'confirmed'
+        : null,
+    );
   }
 
   private typedLibrary(id: string | null | undefined): LibraryConfig | undefined {
@@ -628,6 +713,90 @@ export class Service {
     for (const mate of mates) {
       this.deps.entries.resolve(mate.id, 'ignored');
     }
+    return this.require(entryId);
+  }
+
+  /**
+   * Sets many files aside at once, a release counting for all its episodes. What a transfer waiting
+   * or running holds (or a validation is rewriting) is left alone and counted apart. The write is
+   * one statement: a state of several hundred files is not as many requests or events.
+   */
+  ignoreMany(target: { ids: readonly string[] } | { state: ArrivalState }): {
+    ignored: number;
+    held: number;
+  } {
+    const { entries } = this.deps;
+    return this.setAside(
+      entries.withReleaseMates(
+        entries.seeds(
+          'ids' in target
+            ? target
+            : {
+                state: target.state,
+                arrivalIds: this.arrivalFolders().map(({ id }) => id),
+              },
+        ),
+      ),
+    );
+  }
+
+  /**
+   * Sets aside the episodes of a release the library already holds, and only those: the rest of a
+   * release that is partly there stays to be transferred. Where `ignore` takes the whole release.
+   */
+  ignorePresentOf(entryId: string): { ignored: number; held: number } {
+    const entry = this.require(entryId);
+    const there = this.deps.entries
+      .releaseGroup(entry)
+      .filter(({ duplicate }) => duplicate !== null && duplicate.kind !== 'other-version')
+      .filter(({ duplicate }) => duplicate?.forced === null);
+    if (there.length === 0) {
+      throw new ApiError(409, 'queue.not-duplicate');
+    }
+    return this.setAside(
+      there.map(({ id, jobId, release, cluster }) => ({
+        id,
+        jobId,
+        release,
+        cluster,
+        episode: true,
+      })),
+    );
+  }
+
+  /** The write behind both: what a transfer or a validation holds is left out and counted. */
+  private setAside(seeds: readonly EntrySeed[]): { ignored: number; held: number } {
+    const { entries, executions, matches } = this.deps;
+    const pending = executions.pendingEntries();
+    const free: string[] = [];
+    let held = 0;
+    for (const seed of seeds) {
+      const holding = pending.get(seed.jobId);
+      const lock =
+        seed.episode && seed.release !== null
+          ? `${seed.jobId}|${seed.release}|${String(seed.cluster)}`
+          : seed.id;
+      if (holding === null || holding?.has(seed.id) || matches.locked(lock)) {
+        held += 1;
+      } else {
+        free.push(seed.id);
+      }
+    }
+    return { ignored: entries.ignoreAll(free), held };
+  }
+
+  /**
+   * "Process anyway": a file the library already holds goes back to review with its candidate, and
+   * the rest of its release with it. Validating it then adds it, as any other version.
+   */
+  processAnyway(entryId: string): Entry {
+    const entry = this.pendingEntry(entryId);
+    if (entry.duplicate === null || entry.duplicate.forced !== null) {
+      throw new ApiError(409, 'queue.not-duplicate');
+    }
+    const mates = this.deps.entries.releaseMates(entry);
+    this.requireFree(mates);
+    this.deps.entries.forceDuplicates([entry.id, ...mates.map(({ id }) => id)]);
     return this.require(entryId);
   }
 

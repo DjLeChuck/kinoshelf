@@ -92,6 +92,7 @@ export const API_ERROR_CODES = [
   'queue.entry-resolved',
   'queue.match-in-progress',
   'queue.match-unknown',
+  'queue.not-duplicate',
   'request.invalid',
   'request.not-found',
   'request.rejected',

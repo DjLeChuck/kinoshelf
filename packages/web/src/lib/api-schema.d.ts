@@ -9038,12 +9038,12 @@ export interface paths {
         };
         /**
          * Files that wait for a destination or a choice
-         * @description What the arrival folders (and paths sent by hand) hold that waits for a human: `review` (candidates to choose from, a conflict, a failed transfer), `unrecognized`, and `ready` (matched with confidence, but the analysis did not transfer it: `apply` is off; `POST /api/plans/{id}/execute` starts it). Each file says where it would go (`destination`) and the libraries it could go to instead. `total` counts every file of the filter, for the badge of the navigation; `limit` and `offset` count releases.
+         * @description What the arrival folders (and paths sent by hand) hold that waits for a human: `review` (candidates to choose from, a conflict, a failed transfer, or a work the library holds in another version), `unrecognized`, `present` (already in the destination library: the same file or one of the same size; `duplicate` says which) and `ready` (matched with confidence, but the analysis did not transfer it: `apply` is off; `POST /api/plans/{id}/execute` starts it). Each file says where it would go (`destination`) and the libraries it could go to instead. `total` counts every file of the filter, for the badge of the navigation, and `counts` every state; `limit` and `offset` count releases.
          */
         get: {
             parameters: {
                 query?: {
-                    state?: "ready" | "review" | "unrecognized";
+                    state?: "ready" | "review" | "unrecognized" | "present";
                     limit?: number;
                     offset?: number;
                 };
@@ -9062,6 +9062,13 @@ export interface paths {
                         "application/json": {
                             /** @description Files of this filter, for the badge. Paging counts releases. */
                             total: number;
+                            /** @description Files in each state, whatever the filter: the badges of the tabs. */
+                            counts: {
+                                ready: number;
+                                review: number;
+                                unrecognized: number;
+                                present: number;
+                            };
                             sources: {
                                 id: string;
                                 name: string;
@@ -9085,7 +9092,7 @@ export interface paths {
                                 /** @description Another series than the main one of the folder (`cluster` above 0). */
                                 detached: boolean;
                                 /** @enum {string} */
-                                state: "ready" | "review" | "unrecognized";
+                                state: "ready" | "review" | "unrecognized" | "present";
                                 /** @enum {string|null} */
                                 kind: "movie" | "series" | null;
                                 resolution: string | null;
@@ -9139,6 +9146,34 @@ export interface paths {
                                         [key: string]: string | number;
                                     };
                                 } | null;
+                                duplicate: {
+                                    /**
+                                     * @description `same-file`: a hardlink of it. `same-size`: a file of the same work with the same size in bytes. `other-version`: the work is there in a file of another size.
+                                     * @enum {string}
+                                     */
+                                    kind: "same-file" | "same-size" | "other-version";
+                                    /** @description The library file it duplicates. */
+                                    path: string;
+                                    file: string;
+                                    libraryId: string;
+                                    libraryName: string;
+                                    resolution: string | null;
+                                    itemId: string;
+                                    tmdbId: number | null;
+                                    title: string | null;
+                                    season: number | null;
+                                    episode: number | null;
+                                    /** @description Bytes: the arrival size, for `same-size`. */
+                                    size: number | null;
+                                    /**
+                                     * @description `asked`: "Process anyway", to validate. `confirmed`: validated, it goes out.
+                                     * @enum {string|null}
+                                     */
+                                    forced: "asked" | "confirmed" | null;
+                                } | null;
+                                presentEpisodes: {
+                                    file: string;
+                                }[];
                             }[];
                         };
                     };
@@ -9215,7 +9250,7 @@ export interface paths {
                             /** @description Another series than the main one of the folder (`cluster` above 0). */
                             detached: boolean;
                             /** @enum {string} */
-                            state: "ready" | "review" | "unrecognized";
+                            state: "ready" | "review" | "unrecognized" | "present";
                             /** @enum {string|null} */
                             kind: "movie" | "series" | null;
                             resolution: string | null;
@@ -9269,6 +9304,34 @@ export interface paths {
                                     [key: string]: string | number;
                                 };
                             } | null;
+                            duplicate: {
+                                /**
+                                 * @description `same-file`: a hardlink of it. `same-size`: a file of the same work with the same size in bytes. `other-version`: the work is there in a file of another size.
+                                 * @enum {string}
+                                 */
+                                kind: "same-file" | "same-size" | "other-version";
+                                /** @description The library file it duplicates. */
+                                path: string;
+                                file: string;
+                                libraryId: string;
+                                libraryName: string;
+                                resolution: string | null;
+                                itemId: string;
+                                tmdbId: number | null;
+                                title: string | null;
+                                season: number | null;
+                                episode: number | null;
+                                /** @description Bytes: the arrival size, for `same-size`. */
+                                size: number | null;
+                                /**
+                                 * @description `asked`: "Process anyway", to validate. `confirmed`: validated, it goes out.
+                                 * @enum {string|null}
+                                 */
+                                forced: "asked" | "confirmed" | null;
+                            } | null;
+                            presentEpisodes: {
+                                file: string;
+                            }[];
                         };
                     };
                 };
@@ -9508,6 +9571,8 @@ export interface paths {
                                 cluster: number;
                                 detached: boolean;
                             };
+                            /** @enum {string} */
+                            arrival?: "ready" | "review" | "unrecognized" | "present";
                             error?: {
                                 code: string;
                                 params?: {
@@ -9793,6 +9858,322 @@ export interface paths {
         /**
          * Set a file aside
          * @description The rest of its release goes with it.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** Format: uuid */
+                            id: string;
+                            /** Format: uuid */
+                            jobId: string;
+                            path: string;
+                            /** @enum {string} */
+                            classification: "compliant" | "to-rename" | "conflict" | "ambiguous" | "unrecognized";
+                            /** @enum {string|null} */
+                            resolution: "done" | "failed" | "ignored" | null;
+                            parsed: {
+                                kind: string;
+                                title?: string;
+                                year?: number;
+                                season?: number;
+                                episodes: number[];
+                            };
+                            reason: string | null;
+                            candidates: {
+                                /** @enum {string} */
+                                kind: "movie" | "series";
+                                id: {
+                                    /** @enum {string} */
+                                    provider: "tmdb";
+                                    id: number;
+                                };
+                                title: string;
+                                originalTitle: string;
+                                year?: number;
+                                posterPath?: string;
+                                score: number;
+                            }[];
+                            destination: string | null;
+                            conflicts: {
+                                reason: string;
+                                path: string;
+                                detail: {
+                                    code: string;
+                                    params?: {
+                                        [key: string]: string | number;
+                                    };
+                                } | null;
+                            }[];
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            } | null;
+                            batchId: string | null;
+                            release: string | null;
+                            cluster: number;
+                            detached: boolean;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Default Response */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Default Response */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/entries/ignore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Set many files aside at once
+         * @description Either `ids` (files, each with the rest of its release) or `state` (every file of that Arrivals state, the ones the page has not loaded included): both or neither is a 422. Files a transfer waiting or running holds are left alone and counted in `held`. One write, one `arrivals` event.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        ids?: string[];
+                        /** @enum {string} */
+                        state?: "ready" | "review" | "unrecognized" | "present";
+                    };
+                };
+            };
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            ignored: number;
+                            held: number;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Default Response */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/entries/{id}/ignore-present": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Set aside the files of a release the library already holds
+         * @description Only the files of the release (and series) that are already in the destination library: the others stay to be transferred, where `ignore` takes the whole release. Files a transfer holds are left alone and counted in `held`. 409 `queue.not-duplicate` when none is there.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Default Response */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            ignored: number;
+                            held: number;
+                        };
+                    };
+                };
+                /** @description Default Response */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Default Response */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+                /** @description Default Response */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            error: {
+                                code: string;
+                                params?: {
+                                    [key: string]: string | number;
+                                };
+                            };
+                        };
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/entries/{id}/process": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Process a file the library already holds anyway
+         * @description The file goes back to `review` with its candidate (`duplicate.forced` is `asked`), the rest of its release with it; validating it adds it like any other version. 409 `queue.not-duplicate` for a file the library does not hold.
          */
         post: {
             parameters: {

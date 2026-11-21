@@ -16,6 +16,7 @@ describe('server schema', () => {
       { name: 'server:001-initial' },
       { name: 'server:002-collection-tmdb-images' },
       { name: 'server:003-unreadable-videos' },
+      { name: 'server:004-duplicate-arrivals' },
     ]);
     expect(database.prepare('SELECT path, apply FROM jobs').get()).toEqual({
       path: '/a',

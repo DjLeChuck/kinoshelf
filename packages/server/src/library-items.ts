@@ -625,6 +625,17 @@ export class LibraryItemStore {
       .map(toItem);
   }
 
+  /** The files of one movie of a movie library (its versions), by path. */
+  ofMovie(libraryId: string, tmdbId: number): LibraryItem[] {
+    return this.database
+      .prepare<[string, number], Row>(
+        `SELECT ${COLUMNS} FROM library_items
+         WHERE library_id = ? AND tmdb_id = ? AND kind = 'movie' ORDER BY path`,
+      )
+      .all(libraryId, tmdbId)
+      .map(toItem);
+  }
+
   /** The files of one show of a series library, by path. */
   ofShow(libraryId: string, tmdbId: number): LibraryItem[] {
     return this.database

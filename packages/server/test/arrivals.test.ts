@@ -1,9 +1,12 @@
-import { readFile } from 'node:fs/promises';
+import type { ReadableStreamDefaultReader } from 'node:stream/web';
+import { link, readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { loadConfig } from '@kinoshelf/core';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { EntryStore } from '../src/entries.js';
 import { cleanup, harness, jobEntries, makeDir, put, type Harness } from './harness.js';
+import { LibraryItemStore } from '../src/library-items.js';
+import { ExecutionStore } from '../src/executions.js';
 
 afterEach(cleanup);
 
@@ -21,10 +24,19 @@ interface Arrival {
   sourceId: string | null;
   destination: { libraryId: string | null };
   destinationOptions: { id: string; name: string }[];
+  duplicate: {
+    kind: string;
+    path: string;
+    file: string;
+    libraryName: string;
+    forced: string | null;
+  } | null;
+  presentEpisodes: { file: string }[];
 }
 
 interface Arrivals {
   total: number;
+  counts: Record<'ready' | 'review' | 'unrecognized' | 'present', number>;
   sources: { id: string; name: string; path: string }[];
   items: Arrival[];
 }
@@ -273,5 +285,326 @@ describe('a release of many files', () => {
     } finally {
       reads.mockRestore();
     }
+  });
+});
+
+describe('arrivals the destination library already holds', () => {
+  /** Dune is in Films under its own name, scanned so the snapshot knows it. */
+  async function withDune(contents = 'the same twenty-eight gigabytes') {
+    const world = await setup();
+    const there = await put(DUNE_NAME(world.roots.films), contents);
+    expect((await world.h.request('POST', '/api/libraries/films/scan')).statusCode).toBe(202);
+    await world.h.app.jobs.idle();
+    return { ...world, there };
+  }
+
+  it('puts a hardlink in "present", never in "ready", and counts every state', async () => {
+    const { h, there, downloads } = await withDune();
+    await link(there, join(downloads, 'Dune.2021.1080p.mkv'));
+    await put(join(downloads, 'Mystery.Home.Video.mkv'));
+    await scanDownloads(h);
+
+    const found = await arrivals(h);
+    expect(found.counts).toEqual({ ready: 0, review: 0, unrecognized: 1, present: 1 });
+    const dune = found.items.find(({ file }) => file === 'Dune.2021.1080p.mkv');
+    expect(dune).toMatchObject({
+      state: 'present',
+      duplicate: { kind: 'same-file', path: there, libraryName: 'Films', forced: null },
+    });
+    expect((await arrivals(h, '?state=present')).items.map(({ file }) => file)).toEqual([
+      'Dune.2021.1080p.mkv',
+    ]);
+    expect((await arrivals(h, '?state=ready')).items).toEqual([]);
+  });
+
+  it('puts a copy of the same size in "present" too, and a bigger version in "review"', async () => {
+    const { h, there, downloads } = await withDune();
+    await put(join(downloads, 'Dune.2021.copy.mkv'), 'the same twenty-eight gigabytes');
+    await put(join(downloads, 'Dune.2021.2160p.mkv'), 'a much heavier remux of the same film');
+    await scanDownloads(h);
+
+    const items = (await arrivals(h)).items;
+    expect(items.find(({ file }) => file.includes('copy'))).toMatchObject({
+      state: 'present',
+      duplicate: { kind: 'same-size', path: there },
+    });
+    expect(items.find(({ file }) => file.includes('2160p'))).toMatchObject({
+      state: 'review',
+      duplicate: { kind: 'other-version', path: there },
+    });
+  });
+
+  it('never transfers a duplicate with "Transfer all", and keeps the new films', async () => {
+    const { h, roots, there, downloads } = await withDune();
+    await link(there, join(downloads, 'Dune.2021.1080p.mkv'));
+    await put(join(downloads, 'Alien.1979.mkv'), 'alien');
+    const jobId = await scanDownloads(h);
+    expect((await arrivals(h, '?state=ready')).items.map(({ file }) => file)).toEqual([
+      'Alien.1979.mkv',
+    ]);
+
+    const run = await h.request('POST', `/api/plans/${jobId}/execute`);
+    expect(run.statusCode).toBe(202);
+    await h.app.jobs.idle();
+    // Alien arrived; Dune is still the only version of Dune.
+    expect(await readdir(join(roots.films, 'Dune (2021) {tmdb-438631}'))).toEqual([
+      'Dune (2021) {tmdb-438631}.mkv',
+    ]);
+    expect(
+      await readFile(
+        join(roots.films, 'Alien (1979) {tmdb-348}', 'Alien (1979) {tmdb-348}.mkv'),
+        'utf8',
+      ),
+    ).toBe('alien');
+    expect((await arrivals(h, '?state=present')).items).toHaveLength(1);
+  });
+
+  it('lets the owner process a duplicate anyway: back to review with its reason', async () => {
+    const { h, there, downloads } = await withDune();
+    await link(there, join(downloads, 'Dune.2021.1080p.mkv'));
+    await scanDownloads(h);
+    const [dune] = (await arrivals(h)).items;
+
+    const answer = await h.request('POST', `/api/entries/${dune?.id ?? ''}/process`);
+    expect(answer.statusCode, answer.body).toBe(200);
+    const after = await arrivals(h);
+    expect(after.counts).toMatchObject({ present: 0, review: 1 });
+    expect(after.items[0]).toMatchObject({
+      state: 'review',
+      duplicate: { kind: 'same-file', forced: 'asked' },
+    });
+  });
+
+  it('recomputes the verdict when the owner validates another work or library', async () => {
+    const { h, there, downloads, roots } = await withDune();
+    await link(there, join(downloads, 'Mystery.Home.Video.mkv'));
+    await scanDownloads(h);
+    const [mystery] = (await arrivals(h)).items;
+    // Nobody recognized it, so it carries no verdict yet.
+    expect(mystery).toMatchObject({ state: 'unrecognized', duplicate: null });
+
+    // Validated as Dune in the library that holds Dune: it is the same file.
+    expect((await h.match(mystery?.id ?? '', DUNE)).statusCode).toBe(200);
+    expect((await arrivals(h)).items[0]).toMatchObject({
+      state: 'present',
+      duplicate: { kind: 'same-file' },
+    });
+    // Sent to the other library, which holds nothing: the verdict goes.
+    expect((await h.match(mystery?.id ?? '', { ...DUNE, libraryId: 'films-4k' })).statusCode).toBe(
+      200,
+    );
+    expect((await arrivals(h)).items[0]).toMatchObject({ state: 'ready', duplicate: null });
+    expect(roots.uhd).not.toBe(roots.films);
+  });
+
+  it('validating an other version confirms it: it goes out as a second version', async () => {
+    const { h, downloads, roots } = await withDune();
+    await put(join(downloads, 'Dune.2021.2160p.mkv'), 'a much heavier remux of the same film');
+    const jobId = await scanDownloads(h);
+    const [dune] = (await arrivals(h)).items;
+    expect(dune?.state).toBe('review');
+
+    expect((await h.match(dune?.id ?? '', DUNE)).statusCode).toBe(200);
+    expect((await arrivals(h)).items[0]).toMatchObject({
+      state: 'ready',
+      duplicate: { kind: 'other-version', forced: 'confirmed' },
+    });
+    expect((await h.request('POST', `/api/plans/${jobId}/execute`)).statusCode).toBe(202);
+    await h.app.jobs.idle();
+    expect(await readdir(join(roots.films, 'Dune (2021) {tmdb-438631}'))).toHaveLength(2);
+  });
+});
+
+describe('a release the series library partly or wholly holds', () => {
+  const ZORP = { kind: 'series', id: { provider: 'tmdb', id: 77 }, title: 'Zorp', year: 2010 };
+
+  /** The series library already holds E01 and E02 of Zorp, and the folder comes with the given episodes. */
+  async function withZorp(episodes: number[]) {
+    const world = await setup();
+    const store = new LibraryItemStore(world.h.database);
+    for (const number of [1, 2]) {
+      const path = await put(
+        join(world.roots.series, 'Zorp', 'Season 01', `Zorp - s01e0${String(number)}.mkv`),
+        `episode ${String(number)}`,
+      );
+      store.put({
+        libraryId: 'series',
+        path,
+        kind: 'series',
+        tmdbId: 77,
+        title: 'Zorp',
+        year: 2010,
+        season: 1,
+        episode: number,
+        episodeEnd: null,
+        state: 'ok',
+        nfo: null,
+        poster: null,
+        fanart: null,
+        logo: null,
+        thumb: null,
+        entryId: null,
+        scanJobId: null,
+        scannedAt: '2026-01-01T00:00:00.000Z',
+        unavailable: [],
+        picture: null,
+      });
+    }
+    for (const number of episodes) {
+      await put(
+        join(world.downloads, 'Pack', `Zorp.S01E0${String(number)}.mkv`),
+        `episode ${String(number)}`,
+      );
+    }
+    await scanDownloads(world.h);
+    const [first] = (await arrivals(world.h)).items;
+    expect((await world.h.match(first?.id ?? '', ZORP)).statusCode).toBe(200);
+    return world;
+  }
+
+  it('moves the whole release to "present" when every episode is there', async () => {
+    const { h } = await withZorp([1, 2]);
+    const found = await arrivals(h);
+    expect(found.items.map(({ state }) => state)).toEqual(['present', 'present']);
+    expect(found.counts.present).toBe(2);
+    expect((await arrivals(h, '?state=ready')).items).toEqual([]);
+  });
+
+  it('sets aside only the episodes already there, and keeps the ones to bring in', async () => {
+    const { h } = await withZorp([1, 2, 3]);
+    const [first] = (await arrivals(h)).items;
+    const answer = await h.request('POST', `/api/entries/${first?.id ?? ''}/ignore-present`);
+    expect(answer.json()).toEqual({ ignored: 2, held: 0 });
+    const after = await arrivals(h);
+    expect(after.items.map(({ file }) => file)).toEqual(['Zorp.S01E03.mkv']);
+    expect(after.items[0]?.state).toBe('ready');
+    // Nothing of it is left to set aside.
+    const again = await h.request(
+      'POST',
+      `/api/entries/${after.items[0]?.id ?? ''}/ignore-present`,
+    );
+    expect(again.statusCode).toBe(409);
+  });
+
+  it('leaves a release with an episode to bring in where it is, and lists those already there', async () => {
+    const { h } = await withZorp([1, 2, 3]);
+    const found = await arrivals(h);
+    expect(found.items.map(({ state }) => state)).toEqual(['ready', 'ready', 'ready']);
+    expect(found.items[0]?.presentEpisodes.map(({ file }) => file)).toEqual([
+      'Zorp.S01E01.mkv',
+      'Zorp.S01E02.mkv',
+    ]);
+    expect(found.counts).toMatchObject({ ready: 3, present: 0 });
+  });
+});
+
+describe('POST /api/entries/ignore', () => {
+  /** Dune in Films, and `copies` same-size copies of it in the downloads, all "present". */
+  async function withCopies(
+    copies: number,
+    extra: (downloads: string) => Promise<void> = () => Promise.resolve(),
+  ) {
+    const world = await setup();
+    await put(DUNE_NAME(world.roots.films), 'dune');
+    expect((await world.h.request('POST', '/api/libraries/films/scan')).statusCode).toBe(202);
+    await world.h.app.jobs.idle();
+    for (let n = 1; n <= copies; n++) {
+      await put(join(world.downloads, `Dune.2021.copy${String(n)}.mkv`), 'dune');
+    }
+    await extra(world.downloads);
+    const jobId = await scanDownloads(world.h);
+    return { ...world, jobId };
+  }
+
+  it('sets a whole state aside in one request, beyond the page that was loaded', async () => {
+    const { h } = await withCopies(5);
+    expect((await arrivals(h, '?limit=2')).items).toHaveLength(2);
+    expect((await arrivals(h)).counts.present).toBe(5);
+
+    const answer = await h.request('POST', '/api/entries/ignore', { state: 'present' });
+    expect(answer.statusCode, answer.body).toBe(200);
+    expect(answer.json()).toEqual({ ignored: 5, held: 0 });
+    expect((await arrivals(h)).counts).toEqual({
+      ready: 0,
+      review: 0,
+      unrecognized: 0,
+      present: 0,
+    });
+  });
+
+  it('leaves alone what a transfer holds, and says how many', async () => {
+    const { h, jobId } = await withCopies(3);
+    const [held] = (await arrivals(h, '?state=present')).items;
+    new ExecutionStore(h.database).create(jobId, [held?.id ?? '']);
+
+    const answer = await h.request('POST', '/api/entries/ignore', { state: 'present' });
+    expect(answer.json()).toEqual({ ignored: 2, held: 1 });
+    expect((await arrivals(h, '?state=present')).items.map(({ id }) => id)).toEqual([held?.id]);
+  });
+
+  it('sets files aside by id, a series release with all its episodes', async () => {
+    const { h } = await withCopies(1, async (downloads) => {
+      for (const n of [1, 2, 3]) {
+        await put(join(downloads, 'Pack', `Zorp.S01E0${String(n)}.mkv`));
+      }
+    });
+    const items = (await arrivals(h)).items;
+    const episode = items.find(({ file }) => file === 'Zorp.S01E01.mkv');
+    const copy = items.find(({ file }) => file.includes('copy1'));
+
+    const answer = await h.request('POST', '/api/entries/ignore', {
+      ids: [episode?.id ?? '', copy?.id ?? '', 'not-an-entry'],
+    });
+    // Three episodes and the copy; an id nobody knows is not an error.
+    expect(answer.json()).toEqual({ ignored: 4, held: 0 });
+    expect((await arrivals(h)).total).toBe(0);
+  });
+
+  it('wants ids or a state, not both and not neither', async () => {
+    const { h } = await withCopies(1);
+    for (const body of [{}, { ids: [], state: 'present' }]) {
+      const answer = await h.request('POST', '/api/entries/ignore', body);
+      expect(answer.statusCode).toBe(422);
+      expect(answer.json()).toMatchObject({ error: { code: 'request.invalid' } });
+    }
+    expect((await h.request('POST', '/api/entries/ignore', { state: 'nope' })).statusCode).toBe(
+      400,
+    );
+  });
+
+  it('announces one event for the whole batch', async () => {
+    const { h } = await withCopies(4);
+    const base = await h.app.listen({ host: '127.0.0.1', port: 0 });
+    const auth = { authorization: `Bearer ${h.apiKey}` };
+    const stream = await fetch(`${base}/api/events`, { headers: auth });
+    const reader = stream.body?.getReader() as ReadableStreamDefaultReader<Uint8Array>;
+    const decoder = new TextDecoder();
+    let text = '';
+    while (!text.includes('event: ready')) {
+      text += decoder.decode((await reader.read()).value);
+    }
+    text = '';
+    await fetch(`${base}/api/entries/ignore`, {
+      method: 'POST',
+      headers: { ...auth, 'content-type': 'application/json' },
+      body: JSON.stringify({ state: 'present' }),
+    });
+    const deadline = Date.now() + 1000;
+    while (Date.now() < deadline) {
+      const next = await Promise.race([
+        reader.read(),
+        new Promise<undefined>((resolve) => {
+          setTimeout(() => {
+            resolve(undefined);
+          }, 300);
+        }),
+      ]);
+      if (next === undefined) {
+        break;
+      }
+      text += decoder.decode(next.value);
+    }
+    await reader.cancel();
+    expect(text.match(/event: arrivals/g)).toHaveLength(1);
   });
 });

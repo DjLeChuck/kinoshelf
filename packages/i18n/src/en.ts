@@ -370,6 +370,8 @@ export const en = {
   'error.queue.entry-held': 'A transfer of this file is waiting or running: wait for it to end.',
   'error.queue.match-in-progress': 'This file is already being validated.',
   'error.queue.match-unknown': 'No validation of this file is known.',
+  'error.queue.not-duplicate':
+    'The library does not hold this file: there is nothing to process anyway.',
   'error.queue.entry-resolved': 'This file was already handled ({resolution}).',
   'error.request.invalid': 'The request was refused: {detail}',
   'error.request.not-found': 'Nothing at this address.',
@@ -1174,6 +1176,26 @@ export const en = {
   'web.arrivals.filter.ready': 'Ready to transfer',
   'web.arrivals.filter.review': 'To validate',
   'web.arrivals.filter.unrecognized': 'Not recognized',
+  'web.arrivals.filter.present': 'Already in the library',
+  'web.arrivals.ignore-present':
+    '{count, plural, one {Ignore the # file already in the library} other {Ignore the # files already in the library}}',
+  'web.arrivals.ignore-present.title': 'Ignore the files already in the library',
+  'web.arrivals.ignore-present.does':
+    '{count, plural, one {# file is set aside} other {# files are set aside}}, including those the list has not loaded yet. They leave Arrivals.',
+  'web.arrivals.ignore-present.keeps':
+    'Nothing is moved or deleted. A file can still be sent again by analysing the folder again.',
+  'web.arrivals.ignore-present.confirm': 'Ignore',
+  'web.arrivals.ignored': '{ignored, plural, one {# file ignored} other {# files ignored}}.',
+  'web.arrivals.ignored.held':
+    '{ignored, plural, one {# file ignored} other {# files ignored}}, {held, plural, one {# being transferred left aside} other {# being transferred left aside}}.',
+  'web.arrivals.select-all': 'Select all',
+  'web.arrivals.select-row': 'Select {name}',
+  'web.arrivals.selected': '{count, plural, one {# release selected} other {# releases selected}}',
+  'web.arrivals.bar.label': 'Actions on the selection',
+  'web.arrivals.bar.ignore': 'Ignore',
+  'web.arrivals.bar.transfer': 'Transfer',
+  'web.arrivals.bar.transfer.hint': 'Only files that are ready to transfer can be sent together.',
+  'web.arrivals.in-library': 'Already in {library}',
   'web.arrivals.list.label': 'Files to settle',
   'web.arrivals.empty': 'Nothing waits for you.',
   'web.arrivals.transfer-all': 'Transfer all the files that are ready ({count})',
@@ -1368,6 +1390,29 @@ export const en = {
   'web.queue.status.nothing-found': 'Nothing found',
   'web.queue.status.conflict': 'Conflict',
   'web.queue.status.failed': 'Failed',
+  'web.queue.status.present': 'Already in the library',
+  'web.queue.present': '{name} is already in the library: it was set aside from the transfers.',
+  'web.queue.duplicate.title': 'Already in the library',
+  'web.queue.duplicate.in': 'In {library}',
+  'web.queue.duplicate.same-file': 'Same file (hard link).',
+  'web.queue.duplicate.same-size': 'Same size: {size}.',
+  'web.queue.duplicate.other-version.movie':
+    'This movie is already in {library} ({file}{resolution}). This file would be added as a second version.',
+  'web.queue.duplicate.other-version.series':
+    'This episode is already in {library} ({file}{resolution}). This file would be added as a second version.',
+  'web.queue.duplicate.processed': '{name} is back in “To validate”.',
+  'web.queue.duplicate.asked':
+    'You chose to process this file although the library holds it: validate it to add it.',
+  'web.queue.duplicate.open': 'Open in the library',
+  'web.queue.duplicate.ignore-present':
+    '{count, plural, one {Ignore the # file already there} other {Ignore the # files already there}}',
+  'web.tip.ignore-present':
+    'Sets aside only the files of this release the library holds. The others stay to be transferred.',
+  'web.queue.duplicate.process': 'Process anyway',
+  'web.queue.duplicate.present-episodes':
+    '{count, plural, one {# file of this release is already in the library} other {# files of this release are already in the library}}:',
+  'web.tip.process':
+    'Sends the file back to “To validate”, with its candidate, to add it all the same.',
   'web.queue.detected': 'Read from the name',
   'web.queue.kind.movie': 'Movie',
   'web.queue.kind.unknown': 'Unknown',

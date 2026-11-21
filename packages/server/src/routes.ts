@@ -4,7 +4,7 @@ import type { FastifyInstance } from 'fastify';
 import { ApiError } from './api-error.js';
 import { toCandidate, type CandidateBody } from './candidate-body.js';
 import { isSystemPath } from './system-paths.js';
-import { workKindOf, type Entry, type EntryStore } from './entries.js';
+import { workKindOf, type ArrivalState, type Entry, type EntryStore } from './entries.js';
 import { resolutionOf } from './library-items.js';
 import type { EventBus } from './events.js';
 import type { Execution, ExecutionStore } from './executions.js';
@@ -90,8 +90,16 @@ export function presentEntry(entry: Entry): unknown {
   };
 }
 
-/** What an arriving file waits for: a transfer to start, a choice, or a name nobody found. */
-function arrivalState(entry: Entry): 'ready' | 'review' | 'unrecognized' {
+/**
+ * What an arriving file waits for: a transfer to start, a choice, a name nobody found, or nothing
+ * (already in the library). `states` is what the queue's own filters say; a file they do not list
+ * (one still held by a transfer, say) is read from its classification.
+ */
+function arrivalState(entry: Entry, states: ReadonlyMap<string, ArrivalState>): ArrivalState {
+  const listed = states.get(entry.id);
+  if (listed !== undefined) {
+    return listed;
+  }
   return entry.classification === 'unrecognized'
     ? 'unrecognized'
     : entry.classification === 'to-rename' && entry.resolution === null
@@ -123,7 +131,7 @@ const byFile = (a: UnknownEpisode, b: UnknownEpisode): number => (a.file < b.fil
  * number of files asked for: a release of thousands of files must not cost one read of the whole
  * release for each of them.
  */
-function unknownEpisodesOf(entries: EntryStore): (entry: Entry) => UnknownEpisode[] {
+function unknownEpisodesOf(entries: ReleaseReader): (entry: Entry) => UnknownEpisode[] {
   const groups = new Map<string, { ids: Set<string>; unknown: UnknownEpisode[] }>();
   return (entry) => {
     const own = unknownEpisodeOf(entry);
@@ -145,11 +153,56 @@ function unknownEpisodesOf(entries: EntryStore): (entry: Entry) => UnknownEpisod
   };
 }
 
+/**
+ * The episodes of a release the library holds for certain, said on each of its files: a release
+ * with some episodes to bring in stays where it is, and the panel tells which ones are there.
+ */
+function presentEpisodesOf(entries: ReleaseReader): (entry: Entry) => { file: string }[] {
+  const groups = new Map<string, { file: string }[]>();
+  return (entry) => {
+    if (entry.release === null || entry.parsed.kind !== 'episode') {
+      return [];
+    }
+    const key = `${entry.jobId}|${entry.release}|${String(entry.cluster)}`;
+    let group = groups.get(key);
+    if (!group) {
+      group = entries
+        .releaseGroup(entry)
+        .filter(({ duplicate }) => duplicate !== null && duplicate.forced === null)
+        .filter(({ duplicate }) => duplicate?.kind !== 'other-version')
+        .map(({ path }) => ({ file: basename(path) }))
+        .sort((a, b) => a.file.localeCompare(b.file));
+      groups.set(key, group);
+    }
+    return group;
+  };
+}
+
+type ReleaseReader = Pick<EntryStore, 'releaseGroup'>;
+
+/** Reads each release once for everything a response says of it (unknown and present episodes). */
+function sharedReleases(entries: EntryStore): ReleaseReader {
+  const read = new Map<string, Entry[]>();
+  return {
+    releaseGroup: (entry) => {
+      const key = `${entry.jobId}|${entry.release ?? ''}|${String(entry.cluster)}`;
+      let group = read.get(key);
+      if (!group) {
+        group = entries.releaseGroup(entry);
+        read.set(key, group);
+      }
+      return group;
+    },
+  };
+}
+
 function presentArrival(
   entry: Entry,
   service: Service,
   jobOf: (id: string) => Job | undefined,
   unknownEpisodes: (entry: Entry) => UnknownEpisode[],
+  presentEpisodes: (entry: Entry) => { file: string }[],
+  states: ReadonlyMap<string, ArrivalState>,
 ): unknown {
   const job = jobOf(entry.jobId);
   const destination = service.destinationOf(entry, job);
@@ -163,7 +216,7 @@ function presentArrival(
     release: entry.release,
     cluster: entry.cluster,
     detached: entry.detached,
-    state: arrivalState(entry),
+    state: arrivalState(entry, states),
     kind,
     resolution: resolutionOf(entry.path),
     title: entry.parsed.title ?? null,
@@ -184,6 +237,8 @@ function presentArrival(
     })),
     conflicts: plan.conflicts,
     error: entry.error,
+    duplicate: service.duplicateOf(entry),
+    presentEpisodes: presentEpisodes(entry),
   };
 }
 
@@ -318,21 +373,24 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
     },
   );
 
-  api.get<{ Querystring: Paging & { state?: 'ready' | 'review' | 'unrecognized' } }>(
+  api.get<{ Querystring: Paging & { state?: ArrivalState } }>(
     '/api/arrivals',
     {
       schema: {
         summary: 'Files that wait for a destination or a choice',
         description:
           'What the arrival folders (and paths sent by hand) hold that waits for a human: `review` ' +
-          '(candidates to choose from, a conflict, a failed transfer), `unrecognized`, and `ready` ' +
+          '(candidates to choose from, a conflict, a failed transfer, or a work the library holds in ' +
+          'another version), `unrecognized`, `present` (already in the destination library: the same ' +
+          'file or one of the same size; `duplicate` says which) and `ready` ' +
           '(matched with confidence, but the analysis did not transfer it: `apply` is off; ' +
           '`POST /api/plans/{id}/execute` starts it). Each file says where it would go (`destination`) and the libraries it could go to instead. `total` counts ' +
-          'every file of the filter, for the badge of the navigation; `limit` and `offset` count releases.',
+          'every file of the filter, for the badge of the navigation, and `counts` every state; `limit` ' +
+          'and `offset` count releases.',
         querystring: {
           type: 'object',
           properties: {
-            state: { type: 'string', enum: ['ready', 'review', 'unrecognized'] },
+            state: { type: 'string', enum: ['ready', 'review', 'unrecognized', 'present'] },
             ...paging,
           },
         },
@@ -349,18 +407,20 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
         }
         return known.get(id);
       };
-      const unknownOf = unknownEpisodesOf(entries);
+      const releases = sharedReleases(entries);
+      const unknownOf = unknownEpisodesOf(releases);
+      const presentOf = presentEpisodesOf(releases);
       const sources = service.arrivalFolders();
-      const page = entries.arrivals({
-        arrivalIds: sources.map(({ id }) => id),
-        ...(state && { state }),
-        limit,
-        offset,
-      });
+      const arrivalIds = sources.map(({ id }) => id);
+      const page = entries.arrivals({ arrivalIds, ...(state && { state }), limit, offset });
+      const states = entries.statesOf(page.entries.map(({ id }) => id));
       return {
         total: page.total,
+        counts: entries.arrivalCounts(arrivalIds),
         sources: sources.map(({ id, name, source }) => ({ id, name, path: source })),
-        items: page.entries.map((entry) => presentArrival(entry, service, jobOf, unknownOf)),
+        items: page.entries.map((entry) =>
+          presentArrival(entry, service, jobOf, unknownOf, presentOf, states),
+        ),
       };
     },
   );
@@ -386,7 +446,15 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
       if (!entry) {
         throw new ApiError(404, 'queue.entry-not-found');
       }
-      return presentArrival(entry, service, (id) => jobs.get(id), unknownEpisodesOf(entries));
+      const releases = sharedReleases(entries);
+      return presentArrival(
+        entry,
+        service,
+        (id) => jobs.get(id),
+        unknownEpisodesOf(releases),
+        presentEpisodesOf(releases),
+        entries.statesOf([entry.id]),
+      );
     },
   );
 
@@ -479,7 +547,12 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
     },
     (request) => {
       const { state, entry } = service.matchOf(request.params.id);
-      return { ...state, ...(entry && { entry: presentEntry(entry) as object }) };
+      const arrival = entry && entries.statesOf([entry.id]).get(entry.id);
+      return {
+        ...state,
+        ...(entry && { entry: presentEntry(entry) as object }),
+        ...(arrival && { arrival }),
+      };
     },
   );
 
@@ -540,6 +613,101 @@ export function registerRoutes(api: FastifyInstance, ctx: RouteContext): void {
     },
     (request) => {
       const entry = service.ignore(request.params.id);
+      events.emit('arrivals');
+      return presentEntry(entry);
+    },
+  );
+
+  api.post<{ Body: { ids?: string[]; state?: ArrivalState } }>(
+    '/api/entries/ignore',
+    {
+      schema: {
+        summary: 'Set many files aside at once',
+        description:
+          'Either `ids` (files, each with the rest of its release) or `state` (every file of that ' +
+          'Arrivals state, the ones the page has not loaded included): both or neither is a 422. ' +
+          'Files a transfer waiting or running holds are left alone and counted in `held`. One ' +
+          'write, one `arrivals` event.',
+        body: {
+          type: 'object',
+          additionalProperties: false,
+          properties: {
+            ids: { type: 'array', items: { type: 'string' }, maxItems: 100000 },
+            state: { type: 'string', enum: ['ready', 'review', 'unrecognized', 'present'] },
+          },
+        },
+        response: {
+          200: {
+            type: 'object',
+            required: ['ignored', 'held'],
+            properties: { ignored: { type: 'integer' }, held: { type: 'integer' } },
+          },
+          401: errorSchema,
+          422: errorSchema,
+        },
+      },
+    },
+    (request) => {
+      const { ids, state } = request.body;
+      if ((ids === undefined) === (state === undefined)) {
+        throw new ApiError(422, 'request.invalid', { detail: 'send either ids or state' });
+      }
+      const result = service.ignoreMany(
+        ids === undefined ? { state: state ?? 'present' } : { ids },
+      );
+      if (result.ignored > 0) {
+        events.emit('arrivals');
+      }
+      return result;
+    },
+  );
+
+  api.post<{ Params: { id: string } }>(
+    '/api/entries/:id/ignore-present',
+    {
+      schema: {
+        summary: 'Set aside the files of a release the library already holds',
+        description:
+          'Only the files of the release (and series) that are already in the destination library: ' +
+          'the others stay to be transferred, where `ignore` takes the whole release. Files a transfer ' +
+          'holds are left alone and counted in `held`. 409 `queue.not-duplicate` when none is there.',
+        params: idParams,
+        response: {
+          200: {
+            type: 'object',
+            required: ['ignored', 'held'],
+            properties: { ignored: { type: 'integer' }, held: { type: 'integer' } },
+          },
+          401: errorSchema,
+          404: errorSchema,
+          409: errorSchema,
+        },
+      },
+    },
+    (request) => {
+      const result = service.ignorePresentOf(request.params.id);
+      if (result.ignored > 0) {
+        events.emit('arrivals');
+      }
+      return result;
+    },
+  );
+
+  api.post<{ Params: { id: string } }>(
+    '/api/entries/:id/process',
+    {
+      schema: {
+        summary: 'Process a file the library already holds anyway',
+        description:
+          'The file goes back to `review` with its candidate (`duplicate.forced` is `asked`), the rest ' +
+          'of its release with it; validating it adds it like any other version. 409 ' +
+          '`queue.not-duplicate` for a file the library does not hold.',
+        params: idParams,
+        response: { 200: entrySchema, 401: errorSchema, 404: errorSchema, 409: errorSchema },
+      },
+    },
+    (request) => {
+      const entry = service.processAnyway(request.params.id);
       events.emit('arrivals');
       return presentEntry(entry);
     },

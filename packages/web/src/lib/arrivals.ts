@@ -47,7 +47,7 @@ export interface Arrival {
   readonly cluster: number;
   /** Another series than the main one of its folder (`cluster` above 0). */
   readonly detached: boolean;
-  readonly state: 'ready' | 'review' | 'unrecognized';
+  readonly state: ArrivalState;
   readonly kind: 'movie' | 'series' | null;
   readonly resolution: string | null;
   /** What the parser read of the name: where a manual search starts. */
@@ -62,10 +62,55 @@ export interface Arrival {
   readonly candidates: readonly Candidate[];
   readonly conflicts: readonly ConflictBody[];
   readonly error: ErrorBody | null;
+  /** What the destination library already holds of it; `null`: nothing. */
+  readonly duplicate: Duplicate | null;
+  /** Files of its release the library already holds: said when the release is only partly there. */
+  readonly presentEpisodes: readonly { readonly file: string }[];
+}
+
+/** Where Arrivals lists a file: the four tabs. */
+export type ArrivalState = 'ready' | 'review' | 'unrecognized' | 'present';
+
+export interface Duplicate {
+  /** A hardlink, a file of the same size, or the same work in a file of another size. */
+  readonly kind: 'same-file' | 'same-size' | 'other-version';
+  /** The library file it duplicates. */
+  readonly path: string;
+  readonly file: string;
+  readonly libraryId: string;
+  readonly libraryName: string;
+  readonly resolution: string | null;
+  /** The library file's id in its library's list, to open its page. */
+  readonly itemId: string;
+  readonly tmdbId: number | null;
+  readonly title: string | null;
+  readonly season: number | null;
+  readonly episode: number | null;
+  /** Bytes: the arrival's size, which `same-size` is about. */
+  readonly size: number | null;
+  /** `asked`: processed anyway, to validate. `confirmed`: validated, it goes out. */
+  readonly forced: 'asked' | 'confirmed' | null;
+}
+
+/** Where the library page of a file the library holds is: a movie's list, a series on its episode. */
+export function libraryLinkOf(duplicate: Duplicate, kind: 'movie' | 'series' | null): string {
+  const base = `/libraries/${duplicate.libraryId}`;
+  if (kind === 'series' && duplicate.tmdbId !== null) {
+    const id = String(duplicate.tmdbId);
+    const season = duplicate.season === null ? '' : `&seasons=${id}:${String(duplicate.season)}`;
+    return `${base}?open=${id}${season}`;
+  }
+  const query = new URLSearchParams({ item: duplicate.itemId });
+  if (duplicate.title !== null) {
+    query.set('q', duplicate.title);
+  }
+  return `${base}?${query.toString()}`;
 }
 
 export interface ArrivalPage {
   readonly total: number;
+  /** Files in each state, whatever the filter: the badges of the tabs. */
+  readonly counts: Readonly<Record<ArrivalState, number>>;
   readonly sources: readonly {
     readonly id: string;
     readonly name: string;
@@ -81,7 +126,8 @@ export interface Preview {
   readonly conflicts: readonly ConflictBody[];
 }
 
-export type QueueStatus = 'ready' | 'to-validate' | 'nothing-found' | 'conflict' | 'failed';
+export type QueueStatus =
+  'ready' | 'to-validate' | 'nothing-found' | 'conflict' | 'failed' | 'present';
 
 /** What a file is waiting for. A failed transfer says so first: it needs a look, not a choice. */
 export function statusOf(arrival: Pick<Arrival, 'state' | 'error' | 'conflicts'>): QueueStatus {
@@ -90,11 +136,13 @@ export function statusOf(arrival: Pick<Arrival, 'state' | 'error' | 'conflicts'>
   }
   return arrival.state === 'unrecognized'
     ? 'nothing-found'
-    : arrival.state === 'ready'
-      ? 'ready'
-      : arrival.conflicts.length > 0
-        ? 'conflict'
-        : 'to-validate';
+    : arrival.state === 'present'
+      ? 'present'
+      : arrival.state === 'ready'
+        ? 'ready'
+        : arrival.conflicts.length > 0
+          ? 'conflict'
+          : 'to-validate';
 }
 
 export const STATUS_LABEL: Record<QueueStatus, MessageKey> = {
@@ -103,6 +151,7 @@ export const STATUS_LABEL: Record<QueueStatus, MessageKey> = {
   'nothing-found': 'web.queue.status.nothing-found',
   conflict: 'web.queue.status.conflict',
   failed: 'web.queue.status.failed',
+  present: 'web.queue.status.present',
 };
 
 export const QUEUE_CHIP: Record<QueueStatus, string> = {
@@ -111,6 +160,7 @@ export const QUEUE_CHIP: Record<QueueStatus, string> = {
   'nothing-found': 'chip-neutral',
   conflict: 'chip-danger',
   failed: 'chip-danger',
+  present: 'chip-neutral',
 };
 
 /** A release as the list shows it: its files, and the episodes set aside from it. */
@@ -186,6 +236,19 @@ export function groupReleases(items: readonly Arrival[]): ReleaseGroup[] {
       .sort(([a], [b]) => a - b)
       .map(([cluster, clusterFiles]) => ({ cluster, files: clusterFiles })),
   }));
+}
+
+/**
+ * A name cut in the middle to fit a narrow row, keeping its start (the title) and its end (the
+ * quality and the extension), which are what tells two files apart.
+ */
+export function truncateMiddle(text: string, max = 42): string {
+  if (text.length <= max) {
+    return text;
+  }
+  const keep = max - 1;
+  const head = Math.ceil(keep * 0.6);
+  return `${text.slice(0, head)}…${text.slice(text.length - (keep - head))}`;
 }
 
 /** The file name, which is what a release is called; the API gives the whole path. */
@@ -274,7 +337,9 @@ export type ValidateOutcome =
   /** Matched, and the transfer is queued. `followed`: other files of the release that went along. */
   | { readonly status: 'started'; readonly followed: number }
   /** The plan refused the choice (target taken, name not buildable): the file stays to be settled. */
-  | { readonly status: 'conflict'; readonly conflicts: readonly ConflictBody[] };
+  | { readonly status: 'conflict'; readonly conflicts: readonly ConflictBody[] }
+  /** Matched, but the library holds the file already: nothing was queued, it waits in "Already in the library". */
+  | { readonly status: 'present' };
 
 /** What `GET /api/entries/{id}/match` says: where the validation is, or how it ended. */
 interface MatchState {
@@ -283,6 +348,8 @@ interface MatchState {
   readonly total?: number;
   readonly followers?: readonly string[];
   readonly entry?: { readonly classification: string; readonly conflicts: readonly ConflictBody[] };
+  /** Where Arrivals lists the file once matched. */
+  readonly arrival?: ArrivalState;
   readonly error?: { readonly code?: string; readonly params?: Record<string, string | number> };
 }
 
@@ -352,6 +419,9 @@ export async function validate(
   const state = await untilEnded(arrival.id, watch);
   if (state.status === 'failed') {
     throw new ApiError(500, state.error?.code ?? 'internal.unexpected', state.error?.params);
+  }
+  if (state.arrival === 'present') {
+    return { status: 'present' };
   }
   if (state.entry?.classification !== 'to-rename') {
     return { status: 'conflict', conflicts: state.entry?.conflicts ?? [] };
