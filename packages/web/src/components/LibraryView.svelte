@@ -82,9 +82,11 @@
 
   let page = $state<ItemsPage | undefined>(undefined);
   let failure = $state<unknown>(undefined);
-  let query = $state('');
+  // A link from Arrivals (`?q=<title>&item=<id>`) opens the library on the work it holds already:
+  // read once, the URL is not the search box's state afterwards. Read before the first load.
+  let query = $state(router.query.get('q') ?? '');
   /** What the box held when typing paused: a request per keystroke would be a request per letter. */
-  let searched = $state('');
+  let searched = $state(router.query.get('q') ?? '');
   let typing: ReturnType<typeof setTimeout> | undefined;
   function search(): void {
     clearTimeout(typing);
@@ -99,7 +101,7 @@
   let limit = $state(PAGE_SIZE);
   // Below this width the panel sits under the list (the layout's own media query, below).
   const narrow = new MediaQuery('max-width: 960px');
-  let chosen = $state<string | undefined>(undefined);
+  let chosen = $state<string | undefined>(router.query.get('item') ?? undefined);
   let notice = $state<string | undefined>(undefined);
   let starting = $state(false);
   let running = $state<BulkAction | undefined>(undefined);
@@ -217,11 +219,22 @@
     }
   });
 
-  const open = $derived(page?.items.find(({ id }) => id === chosen));
+  // A movie held in several versions is one row: a link may name any of its files.
+  const rowOf = (id: string | undefined) =>
+    id === undefined
+      ? undefined
+      : page?.items.find((item) => item.id === id || item.versions.some((v) => v.id === id));
+  const open = $derived(rowOf(chosen));
+  /** Picks a row (or none); the link that opened the page on a work is spent once the choice moves. */
+  function choose(id: string | undefined): void {
+    chosen = id;
+    if (router.query.has('item')) {
+      router.setQuery({ item: undefined });
+    }
+  }
   const busy = $derived(page?.transfer != null || runs.running(libraryKey(library.id)));
   /** Read when a validation ends, not when its panel was drawn: the open row may have changed. */
-  const openEntryId = (): string | null | undefined =>
-    page?.items.find(({ id }) => id === chosen)?.entryId;
+  const openEntryId = (): string | null | undefined => rowOf(chosen)?.entryId;
   const scanning = $derived(page?.scan != null || library.scanning);
   const percent = $derived(scanPercent(page?.scan?.progress ?? null));
 
@@ -626,7 +639,7 @@
                       class="link"
                       aria-current={open?.id === item.id ? 'true' : undefined}
                       onclick={() => {
-                        chosen = item.id;
+                        choose(item.id);
                         notice = undefined;
                       }}
                     >
@@ -691,7 +704,7 @@
           open={open !== undefined}
           stacked={narrow.current}
           onclose={() => {
-            chosen = undefined;
+            choose(undefined);
           }}
         >
           {#if open}
@@ -709,7 +722,7 @@
                   notice = message;
                   // Another row may be open by now: close the panel only if it is the one validated.
                   if (settled === undefined || openEntryId() === settled.id) {
-                    chosen = undefined;
+                    choose(undefined);
                   }
                   void load();
                 }}

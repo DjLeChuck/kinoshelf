@@ -176,7 +176,9 @@ test('keeps the state filter in the address', async ({ page, request }) => {
   const { id } = (await created.json()) as { id: string };
   try {
     await signInAt(page, '/arrivals?state=review');
-    const filter = (name: string) => page.getByRole('button', { name, exact: true });
+    // Each tab carries the number of files it holds, which is part of its name.
+    const filter = (name: string) =>
+      page.getByRole('button', { name: new RegExp(`^${name}( \\d+)?$`) });
     await expect(filter('To validate')).toHaveAttribute('aria-pressed', 'true');
 
     await filter('Not recognized').click();

@@ -16,17 +16,22 @@
     releaseKey,
     startPlanned,
     statusOf,
+    truncateMiddle,
     type Arrival,
     type ArrivalPage,
+    type ArrivalState,
   } from '../lib/arrivals.js';
+  import { Ticks } from '../lib/ticks.svelte.js';
+  import ActionDialog from './ActionDialog.svelte';
+  import ArrivalsBar from './ArrivalsBar.svelte';
   import { loadWhenVisible } from '../lib/infinite-scroll.js';
   import { MAX_SELECTION } from '../lib/library-items.js';
   import type { WatchScan, WatchStatus } from '../lib/watch.js';
   import ArrivalDetail from './ArrivalDetail.svelte';
   import Tip from './Tip.svelte';
 
-  type Filter = 'all' | 'ready' | 'review' | 'unrecognized';
-  const FILTERS: readonly Filter[] = ['all', 'ready', 'review', 'unrecognized'];
+  type Filter = 'all' | ArrivalState;
+  const FILTERS: readonly Filter[] = ['all', 'ready', 'review', 'unrecognized', 'present'];
 
   const PAGE = 50;
 
@@ -111,6 +116,73 @@
     void load();
   }
 
+  /** A line of the list: a release (its main series) or another series found in its folder. */
+  interface Row {
+    readonly lead: Arrival;
+    readonly files: readonly Arrival[];
+  }
+  const rows = $derived(
+    groups.flatMap((group): Row[] => [
+      ...(group.files[0] ? [{ lead: group.files[0], files: group.files }] : []),
+      ...group.others.flatMap((other) =>
+        other.files[0] ? [{ lead: other.files[0], files: other.files }] : [],
+      ),
+    ]),
+  );
+  // The boxes tick what the page holds; the server expands a release into all its files.
+  const ticks = new Ticks<Row, string>({
+    rows: () => rows,
+    key: ({ lead }) => lead.id,
+    total: () => undefined,
+    loaded: () => rows.length,
+    readAll: () => Promise.resolve(),
+  });
+  const picked = $derived(ticks.picked);
+  const allReady = $derived(
+    picked.length > 0 && picked.every(({ lead }) => lead.state === 'ready'),
+  );
+  let acting = $state(false);
+  let confirmingPresent = $state(false);
+  const presentCount = $derived(page?.counts.present ?? 0);
+
+  /** Says what an ignore did: how many files, and how many a transfer in progress kept out. */
+  const ignoredNotice = ({ ignored, held }: { ignored: number; held: number }): string =>
+    held > 0
+      ? t('web.arrivals.ignored.held', { ignored, held })
+      : t('web.arrivals.ignored', { ignored });
+
+  async function ignoreMany(body: { ids: string[] } | { state: ArrivalState }): Promise<void> {
+    acting = true;
+    try {
+      const result = await api.post<{ ignored: number; held: number }>('/api/entries/ignore', body);
+      notice = ignoredNotice(result);
+      ticks.clear();
+      loaded.failure = undefined;
+    } catch (error) {
+      loaded.failure = error;
+    } finally {
+      acting = false;
+    }
+    void load();
+  }
+
+  async function transferPicked(): Promise<void> {
+    acting = true;
+    try {
+      const files = picked
+        .flatMap(({ files: all }) => all.filter(({ state }) => state === 'ready'))
+        .filter(({ id }) => !validations.running(id));
+      notice = t('web.arrivals.transfer-all.done', { count: await startPlanned(files, api.post) });
+      ticks.clear();
+      loaded.failure = undefined;
+    } catch (error) {
+      loaded.failure = error;
+    } finally {
+      acting = false;
+    }
+    void load();
+  }
+
   /** Whether the open file is of the same series of the same release. */
   function inSeriesOfOpen(arrival: Arrival): boolean {
     return (
@@ -150,6 +222,31 @@
     page?.sources.find(({ id }) => id === arrival.sourceId)?.name;
 </script>
 
+{#snippet pick(lead: Arrival, name: string)}
+  <label class="pick">
+    <input
+      type="checkbox"
+      aria-label={t('web.arrivals.select-row', { name })}
+      checked={ticks.has(lead.id)}
+      onchange={(event) => {
+        ticks.toggle(lead.id, event.currentTarget.checked);
+      }}
+    />
+  </label>
+{/snippet}
+
+<!-- What the library holds of a file, said on its line: where, and which file. -->
+{#snippet held(lead: Arrival)}
+  {#if lead.duplicate && lead.state === 'present'}
+    <span class="meta">
+      <span class="muted"
+        >{t('web.arrivals.in-library', { library: lead.duplicate.libraryName })}</span
+      >
+      <span class="mono">{truncateMiddle(lead.duplicate.file)}</span>
+    </span>
+  {/if}
+{/snippet}
+
 <div class="stack">
   <div class="intro">
     <p class="muted">{t('web.arrivals.intro')}</p>
@@ -185,7 +282,9 @@
         aria-pressed={filter === option}
         onclick={() => {
           router.setQuery({ state: option === 'all' ? undefined : option });
-        }}>{t(`web.arrivals.filter.${option}`)}</button
+        }}
+        >{t(`web.arrivals.filter.${option}`)}{#if option !== 'all' && page}
+          <span class="count">{page.counts[option]}</span>{/if}</button
       >
     {/each}
   </div>
@@ -206,6 +305,32 @@
     </div>
   {/if}
 
+  {#if filter === 'present' && presentCount > 0}
+    <div>
+      <button
+        type="button"
+        class="btn btn-primary"
+        disabled={acting}
+        onclick={() => {
+          confirmingPresent = true;
+        }}>{t('web.arrivals.ignore-present', { count: presentCount })}</button
+      >
+    </div>
+  {/if}
+
+  {#if confirmingPresent}
+    <ActionDialog
+      title={t('web.arrivals.ignore-present.title')}
+      does={t('web.arrivals.ignore-present.does', { count: presentCount })}
+      keeps={t('web.arrivals.ignore-present.keeps')}
+      confirm={t('web.arrivals.ignore-present.confirm')}
+      onclose={() => {
+        confirmingPresent = false;
+      }}
+      onconfirm={() => void ignoreMany({ state: 'present' })}
+    />
+  {/if}
+
   {#if notice}<p class="alert notice" role="status">{notice}</p>{/if}
 
   {#if failure}
@@ -215,6 +340,19 @@
   {:else if page.items.length === 0}
     <p class="card muted">{t('web.arrivals.empty')}</p>
   {:else}
+    <ArrivalsBar
+      checked={ticks.everyPicked}
+      indeterminate={ticks.somePicked}
+      ontoggle={(all: boolean) => {
+        ticks.all(all);
+      }}
+      count={picked.length}
+      selected={t('web.arrivals.selected', { count: picked.length })}
+      canTransfer={allReady}
+      busy={acting}
+      onignore={() => void ignoreMany({ ids: picked.map(({ lead }) => lead.id) })}
+      ontransfer={() => void transferPicked()}
+    />
     <div class="layout">
       <ul class="list" aria-label={t('web.arrivals.list.label')}>
         {#each groups as group (group.key)}
@@ -222,36 +360,42 @@
           <li>
             {#if lead}
               {@const status = statusOf(lead)}
-              <button
-                type="button"
-                class:current={open?.id !== undefined && group.files.some((f) => f.id === open.id)}
-                aria-current={group.files.some((f) => f.id === open?.id) ? 'true' : undefined}
-                onclick={() => {
-                  chosen = lead.id;
-                  notice = undefined;
-                }}
-              >
-                <span class="mono release">{group.name}</span>
-                <span class="meta">
-                  {#if validations.anyRunning(group.files.map((f) => f.id))}<span
-                      class="chip chip-neutral">{t('web.queue.validating')}</span
-                    >{:else if validations.firstFailure(group.files.map((f) => f.id))}<span
-                      class="chip chip-danger"
-                      role="alert"
-                      >{messageOf(
-                        t,
-                        validations.firstFailure(group.files.map((f) => f.id))?.error,
-                      )}</span
-                    >{:else}<span class="chip {QUEUE_CHIP[status]}">{t(STATUS_LABEL[status])}</span
-                    >{/if}
-                  {#if group.files.length > 1}<span class="muted"
-                      >{t('web.arrivals.files', { count: group.files.length })}</span
-                    >{/if}
-                  {#if sourceName(lead)}<span class="muted"
-                      >{t('web.arrivals.from', { source: sourceName(lead) ?? '' })}</span
-                    >{/if}
-                </span>
-              </button>
+              <div class="row">
+                {@render pick(lead, group.name)}
+                <button
+                  type="button"
+                  class:current={open?.id !== undefined &&
+                    group.files.some((f) => f.id === open.id)}
+                  aria-current={group.files.some((f) => f.id === open?.id) ? 'true' : undefined}
+                  onclick={() => {
+                    chosen = lead.id;
+                    notice = undefined;
+                  }}
+                >
+                  <span class="mono release">{group.name}</span>
+                  <span class="meta">
+                    {#if validations.anyRunning(group.files.map((f) => f.id))}<span
+                        class="chip chip-neutral">{t('web.queue.validating')}</span
+                      >{:else if validations.firstFailure(group.files.map((f) => f.id))}<span
+                        class="chip chip-danger"
+                        role="alert"
+                        >{messageOf(
+                          t,
+                          validations.firstFailure(group.files.map((f) => f.id))?.error,
+                        )}</span
+                      >{:else}<span class="chip {QUEUE_CHIP[status]}"
+                        >{t(STATUS_LABEL[status])}</span
+                      >{/if}
+                    {#if group.files.length > 1}<span class="muted"
+                        >{t('web.arrivals.files', { count: group.files.length })}</span
+                      >{/if}
+                    {#if sourceName(lead)}<span class="muted"
+                        >{t('web.arrivals.from', { source: sourceName(lead) ?? '' })}</span
+                      >{/if}
+                  </span>
+                  {@render held(lead)}
+                </button>
+              </div>
             {/if}
             {#if group.others.length > 0}
               <ul
@@ -263,27 +407,31 @@
                   {#if arrival}
                     {@const status = statusOf(arrival)}
                     <li>
-                      <button
-                        type="button"
-                        class:current={inSeriesOfOpen(arrival)}
-                        aria-current={inSeriesOfOpen(arrival) ? 'true' : undefined}
-                        onclick={() => {
-                          chosen = arrival.id;
-                          notice = undefined;
-                        }}
-                      >
-                        <span class="mono release">{arrival.file}</span>
-                        <span class="meta">
-                          <span class="chip chip-neutral">{t('web.arrivals.detached')}</span>
-                          <span class="chip {QUEUE_CHIP[status]}">{t(STATUS_LABEL[status])}</span>
-                          {#if other.files.length > 1}<span class="muted"
-                              >{t('web.arrivals.files', { count: other.files.length })}</span
-                            >{/if}
-                          <span class="muted"
-                            >{t('web.arrivals.detached.from', { release: group.name })}</span
-                          >
-                        </span>
-                      </button>
+                      <div class="row">
+                        {@render pick(arrival, arrival.file)}
+                        <button
+                          type="button"
+                          class:current={inSeriesOfOpen(arrival)}
+                          aria-current={inSeriesOfOpen(arrival) ? 'true' : undefined}
+                          onclick={() => {
+                            chosen = arrival.id;
+                            notice = undefined;
+                          }}
+                        >
+                          <span class="mono release">{arrival.file}</span>
+                          <span class="meta">
+                            <span class="chip chip-neutral">{t('web.arrivals.detached')}</span>
+                            <span class="chip {QUEUE_CHIP[status]}">{t(STATUS_LABEL[status])}</span>
+                            {#if other.files.length > 1}<span class="muted"
+                                >{t('web.arrivals.files', { count: other.files.length })}</span
+                              >{/if}
+                            <span class="muted"
+                              >{t('web.arrivals.detached.from', { release: group.name })}</span
+                            >
+                          </span>
+                          {@render held(arrival)}
+                        </button>
+                      </div>
                     </li>
                   {/if}
                 {/each}
@@ -353,6 +501,36 @@
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
+  }
+
+  .count {
+    margin-left: 6px;
+    padding: 0 6px;
+    border-radius: 999px;
+    background: var(--surface-2);
+    font-size: 11.5px;
+  }
+
+  .row {
+    display: flex;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  /* A 44 px target around the 20 px box, as the lists of a library have. */
+  .pick {
+    display: flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    min-height: 44px;
+    cursor: pointer;
+  }
+
+  .row > button {
+    flex: 1;
+    min-width: 0;
   }
 
   .filters [aria-pressed='true'] {
