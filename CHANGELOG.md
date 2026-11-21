@@ -6,6 +6,13 @@ All notable changes to Kinoshelf are written here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- Signed in with Plex, Kinoshelf now sends the media server the token plex.tv lists for it instead of the
+  sign-in's own token, which a server refused (`HTTP 401`) when reached through an address that requires
+  authentication (a public address, a remote server, a network not allowed without auth): refreshes after a
+  transfer, the notification test, collection images and the Health card (#31).
+
 ## [1.1.0] - 2026-11-20
 
 ### Added

@@ -6,7 +6,7 @@ import { deviceJwt, expiryOf, newIdentity, PlexTv, PlexTvError } from '../src/no
 import { PlexSession } from '../src/plex-session.js';
 import { migrated } from '../src/database.js';
 import { deliver } from '../src/notify/delivery.js';
-import { fakePlexTv, plexToken } from './fake-plex-tv.js';
+import { fakePlexTv, MACHINE_ID, plexToken, serverAccessToken } from './fake-plex-tv.js';
 import { closeFakeServers, fakeServer } from './fake-server.js';
 
 afterEach(closeFakeServers);
@@ -194,42 +194,86 @@ describe('the session', () => {
 });
 
 describe('the media server client with a signed-in token', () => {
-  it('sends the session token, and renews once when the server refuses it', async () => {
-    const { tv, session } = await signedIn();
-    const first = await session.token();
-    // The media server drops that token (revoked) and accepts the next one.
-    const pms = await fakeServer((r) =>
-      r.headers['x-plex-token'] === first
-        ? { status: 401 }
-        : {
-            body: '<MediaContainer><Directory key="1" type="movie"><Location path="/m"/></Directory></MediaContainer>',
-          },
-    );
+  const sections =
+    '<MediaContainer><Directory key="1" type="movie"><Location path="/m"/></Directory></MediaContainer>';
+  const identity = `<MediaContainer machineIdentifier="${MACHINE_ID}"/>`;
+
+  /** A server that, like a real one behind an address needing auth, takes only its own token. */
+  const pms = (accepts: () => string) =>
+    fakeServer((r) => {
+      if (r.url === '/identity') {
+        return { body: identity };
+      }
+      return r.headers['x-plex-token'] === accepts() ? { body: sections } : { status: 401 };
+    });
+
+  it('sends the token plex.tv lists for the server, never the JWT', async () => {
+    const { session } = await signedIn();
+    const jwt = await session.token();
+    const server = await pms(() => serverAccessToken(MACHINE_ID));
     const client = new PlexClient(
-      { url: pms.url, token: session },
+      { url: server.url, token: session },
       (r) => deliver(r, { delays: [] }),
       quiet,
     );
 
-    const result = await client.check();
-    expect(result).toMatchObject({ ok: true, sections: 1 });
-    expect(pms.received.map((r) => r.headers['x-plex-token'])).toEqual([
-      first,
-      expect.not.stringMatching(String(first)),
+    expect(await client.check()).toMatchObject({ ok: true, sections: 1 });
+    await client.check();
+    const sent = server.received.filter((r) => r.url !== '/identity');
+    expect(sent.map((r) => r.headers['x-plex-token'])).toEqual([
+      serverAccessToken(MACHINE_ID),
+      serverAccessToken(MACHINE_ID),
     ]);
+    expect(sent.some((r) => r.headers['x-plex-token'] === jwt)).toBe(false);
+    // The identity is asked once, and without any token.
+    expect(server.received.filter((r) => r.url === '/identity')).toHaveLength(1);
+    expect(server.received[0]?.headers['x-plex-token']).toBeUndefined();
+  });
+
+  it('renews the JWT and reads the resources again when the server refuses its token', async () => {
+    const { tv, session } = await signedIn();
+    let accepted = serverAccessToken(MACHINE_ID);
+    const server = await pms(() => accepted);
+    const client = new PlexClient(
+      { url: server.url, token: session },
+      (r) => deliver(r, { delays: [] }),
+      quiet,
+    );
+    expect((await client.check()).ok).toBe(true);
+    const reads = () => tv.received.filter((r) => r.url.startsWith('/api/v2/resources')).length;
+    expect(reads()).toBe(1);
+
+    // The server drops that token and plex.tv still lists it: one renewal, one more read, then a 401.
+    accepted = 'revoked';
+    expect(await client.check()).toMatchObject({ ok: false, status: 401 });
     expect(tv.refreshes()).toBe(1);
+    expect(reads()).toBe(2);
+  });
+
+  it('does not send anything to a server the account does not list', async () => {
+    const { session } = await signedIn();
+    const other = await fakeServer(() => ({
+      body: '<MediaContainer machineIdentifier="someone-else"/>',
+    }));
+    const client = new PlexClient(
+      { url: other.url, token: session },
+      (r) => deliver(r, { delays: [] }),
+      quiet,
+    );
+    expect((await client.check()).ok).toBe(false);
+    expect(other.received.map((r) => r.url)).toEqual(['/identity']);
   });
 
   it('does not call the server at all when signed out', async () => {
     const { session } = await signedIn();
     session.signOut();
-    const pms = await fakeServer();
+    const server = await fakeServer(() => ({ body: identity }));
     const client = new PlexClient(
-      { url: pms.url, token: session },
+      { url: server.url, token: session },
       (r) => deliver(r, { delays: [] }),
       quiet,
     );
     expect((await client.check()).ok).toBe(false);
-    expect(pms.received).toHaveLength(0);
+    expect(server.received.filter((r) => r.url !== '/identity')).toHaveLength(0);
   });
 });

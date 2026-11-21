@@ -34,6 +34,8 @@ export interface PlexAccount {
  */
 export class PlexSession {
   private renewing: Promise<string | undefined> | undefined;
+  /** What each media server accepted, read with the JWT given here: a new JWT reads it again. */
+  private readonly serverTokens = new Map<string, { jwt: string; token: string }>();
   private failed = false;
 
   constructor(
@@ -138,6 +140,42 @@ export class PlexSession {
     }
   }
 
+  /**
+   * The token the media server `machineId` accepts (the JWT is plex.tv's alone), found in the
+   * account's resources and kept until the JWT changes. `undefined` when not signed in or when the
+   * account does not list that server.
+   */
+  async serverToken(machineId: string): Promise<string | undefined> {
+    const jwt = await this.token();
+    if (jwt === undefined) {
+      return undefined;
+    }
+    const known = this.serverTokens.get(machineId);
+    if (known?.jwt === jwt) {
+      return known.token;
+    }
+    return this.readServerToken(machineId, jwt);
+  }
+
+  /**
+   * A server token after the server refused the last one: the JWT is renewed, then the resources
+   * are read again (the server's own token may have changed without the JWT doing so).
+   */
+  async renewServerToken(machineId: string): Promise<string | undefined> {
+    const jwt = await this.renew();
+    return jwt === undefined ? undefined : this.readServerToken(machineId, jwt);
+  }
+
+  private async readServerToken(machineId: string, jwt: string): Promise<string | undefined> {
+    const token = await this.tv.serverToken(this.identity(), jwt, machineId);
+    if (token === undefined) {
+      this.serverTokens.delete(machineId);
+    } else {
+      this.serverTokens.set(machineId, { jwt, token });
+    }
+    return token;
+  }
+
   /** The servers of the account, for the user to pick one. */
   async servers(): Promise<PlexServer[]> {
     const token = await this.token();
@@ -149,6 +187,7 @@ export class PlexSession {
 
   signOut(): void {
     this.failed = false;
+    this.serverTokens.clear();
     // The identity stays: a new sign-in is the same device, not one more in Plex's authorized list.
     this.database
       .prepare('UPDATE plex_auth SET token = NULL, expires_at = NULL, pin_id = NULL WHERE id = 1')

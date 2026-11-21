@@ -262,8 +262,13 @@ nowhere: a custom profile file is to be discussed again.
   `GET /api/plex/auth/:id` (the server signs `deviceJWT`; a PIN other than the one made is refused,
   404 `plex.pin-unknown`). The token lasts 7 days and **renews on demand** (nonce, signed JWT,
   `POST /api/v2/auth/token`): Plex accepts a renewal after expiry, so there is no timer, and
-  `PlexSession.token()` renews a day early, one at a time. A media server's 401 renews once and retries
-  (`PlexClient.request`). plex.tv refusing the key (401/403/422/498) sets `plexAccount: 'expired'`
+  `PlexSession.token()` renews a day early, one at a time. **That JWT is plex.tv's alone**: its audience is plex.tv and
+  the client, and a media server refuses it however it is sent. The server takes the `accessToken` that
+  `GET clients.plex.tv/api/v2/resources` lists for it (the resource whose `clientIdentifier` is the server's machine
+  identifier, read by `PlexClient` from `/identity`, which needs no token): `PlexSession.serverToken(machineId)`, kept
+  until the JWT changes. A media server's 401 renews the JWT, reads the resources again and retries once
+  (`renewServerToken`, `PlexClient.request`). Through an address allowed without auth any token works, which is how
+  the JWT went unnoticed; the tests' fake server takes only its own token. plex.tv refusing the key (401/403/422/498) sets `plexAccount: 'expired'`
   (409 `plex.not-signed-in`); plex.tv being down keeps a still-valid token and is a 502
   `plex.unreachable`. **The state is in the database** (`plex_auth`: a secret that
   changes every week does not belong in a file people edit), shared with `kinoshelf-server notify`

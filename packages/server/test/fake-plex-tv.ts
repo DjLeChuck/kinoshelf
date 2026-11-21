@@ -12,6 +12,12 @@ export function plexToken(expiresInMs: number, label = 'token'): string {
   return `${part({ alg: 'EdDSA' })}.${part({ exp: Math.floor((Date.now() + expiresInMs) / 1000), label })}.sig`;
 }
 
+/** The machine identifier of the server the fake account lists. */
+export const MACHINE_ID = 'machine-salon';
+
+/** What that server accepts: plex.tv's own JWT it does not (its audience is plex.tv). */
+export const serverAccessToken = (machineId: string): string => `access-${machineId}`;
+
 export interface FakePlexTv {
   readonly url: string;
   readonly received: Received[];
@@ -118,6 +124,8 @@ export async function fakePlexTv(
             options.servers ?? [
               {
                 name: 'Salon',
+                clientIdentifier: MACHINE_ID,
+                accessToken: serverAccessToken(MACHINE_ID),
                 provides: 'server',
                 owned: true,
                 connections: [

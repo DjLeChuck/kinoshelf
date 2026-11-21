@@ -96,11 +96,14 @@ const SECTIONS_TTL_MS = 10 * 60_000;
 
 const PLEX_TYPE = { movie: 'movie', series: 'show' } as const;
 
-/** Where the token comes from when it is not typed: signed-in tokens last a week and are renewed. */
+/**
+ * Where the token comes from when it is not typed. A signed-in JWT is plex.tv's alone: the media
+ * server takes the token plex.tv lists for it, found by the server's machine identifier.
+ */
 export interface PlexTokenSource {
-  token(): Promise<string | undefined>;
+  serverToken(machineId: string): Promise<string | undefined>;
   /** A new token after the server refused the last one; `undefined` when there is none. */
-  renew(): Promise<string | undefined>;
+  renewServerToken(machineId: string): Promise<string | undefined>;
 }
 
 export interface PlexOptions {
@@ -123,6 +126,8 @@ export class PlexClient implements CollectionImageServer {
   private sections: { at: number; list: PlexSection[] } | undefined;
   /** Why the libraries could not be listed last time, so a caller can say it rather than "none holds it". */
   private listError: string | undefined;
+  /** The server's machine identifier, which tells plex.tv's resources which token is its own. */
+  private machine: string | undefined;
 
   constructor(
     private readonly options: PlexOptions,
@@ -278,18 +283,61 @@ export class PlexClient implements CollectionImageServer {
    */
   private async request(path: string, init: RequestInit = {}): Promise<DeliveryResult> {
     const source = this.options.token;
-    const first = typeof source === 'string' ? source : await source.token();
-    if (first === undefined) {
-      return { ok: false, attempts: 0, error: 'not signed in' };
+    if (typeof source === 'string') {
+      return this.send(this.get(path, source, init));
+    }
+    const machine = await this.machineId();
+    if (typeof machine !== 'string') {
+      return machine;
+    }
+    const first = await this.tokenFrom(() => source.serverToken(machine));
+    if (typeof first !== 'string') {
+      return first ?? { ok: false, attempts: 0, error: 'not signed in' };
     }
     const result = await this.send(this.get(path, first, init));
-    if (result.status !== 401 || typeof source === 'string') {
+    if (result.status !== 401) {
       return result;
     }
-    const renewed = await source.renew();
-    return renewed === undefined || renewed === first
+    const renewed = await this.tokenFrom(() => source.renewServerToken(machine));
+    return typeof renewed !== 'string' || renewed === first
       ? result
       : this.send(this.get(path, renewed, init));
+  }
+
+  /** A token from the source; plex.tv failing is an answer to give, not an exception. */
+  private async tokenFrom(
+    read: () => Promise<string | undefined>,
+  ): Promise<string | DeliveryResult | undefined> {
+    try {
+      return await read();
+    } catch (error) {
+      return {
+        ok: false,
+        attempts: 0,
+        error: `plex.tv: ${error instanceof Error ? error.message : String(error)}`,
+      };
+    }
+  }
+
+  /** The server's machine identifier (`/identity` needs no token), asked once. */
+  private async machineId(): Promise<string | DeliveryResult> {
+    if (this.machine !== undefined) {
+      return this.machine;
+    }
+    const result = await this.send({
+      method: 'GET',
+      url: `${this.options.url.replace(/\/+$/, '')}/identity`,
+      headers: { Accept: 'application/xml' },
+    });
+    const container = asRecord(asRecord(parser.parse(result.text ?? '') as unknown).MediaContainer);
+    const id = attribute(container['@_machineIdentifier']);
+    if (!result.ok || id === '') {
+      return result.ok
+        ? { ok: false, attempts: result.attempts, error: 'the server gave no machine identifier' }
+        : result;
+    }
+    this.machine = id;
+    return id;
   }
 
   private get(path: string, token: string, init: RequestInit): HttpRequest {

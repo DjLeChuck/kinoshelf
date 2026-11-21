@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { fakePlexTv } from './fake-plex-tv.js';
+import { fakePlexTv, MACHINE_ID, serverAccessToken } from './fake-plex-tv.js';
 import { closeFakeServers, fakeServer } from './fake-server.js';
 import { join } from 'node:path';
 import { loadConfig } from '@kinoshelf/core';
@@ -106,13 +106,18 @@ describe('signing in to Plex', () => {
 
   it('asks the media server with the signed-in token', async () => {
     const tv = await fakePlexTv();
-    const pms = await fakeServer((r) =>
-      r.url === '/library/sections'
+    const pms = await fakeServer((r) => {
+      if (r.url === '/identity') {
+        return { body: `<MediaContainer machineIdentifier="${MACHINE_ID}"/>` };
+      }
+      // Only its own token, as a server reached through an address that needs auth does.
+      return r.url === '/library/sections' &&
+        r.headers['x-plex-token'] === serverAccessToken(MACHINE_ID)
         ? {
             body: '<MediaContainer><Directory key="1" type="movie"><Location path="/m"/></Directory></MediaContainer>',
           }
-        : {},
-    );
+        : { status: 401 };
+    });
     const h = await appWith({ KINOSHELF_PLEX_TV_URL: tv.url });
     const { id } = body(await h.request('POST', '/api/plex/auth')) as { id: number };
     tv.claim();
@@ -122,7 +127,7 @@ describe('signing in to Plex', () => {
     const test = await h.request('POST', '/api/notifications/test');
     expect(test.statusCode).toBe(200);
     const sent = pms.received.find((r) => r.url === '/library/sections')?.headers['x-plex-token'];
-    expect(typeof sent).toBe('string');
-    expect(tv.valid.has(String(sent))).toBe(true);
+    expect(sent).toBe(serverAccessToken(MACHINE_ID));
+    expect(tv.valid.has(String(sent))).toBe(false); // not a plex.tv token, so not the JWT
   });
 });

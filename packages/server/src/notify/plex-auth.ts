@@ -12,8 +12,10 @@ type JsonWebKey = webcrypto.JsonWebKey;
 /**
  * Plex's JWT sign-in (https://developer.plex.tv/pms/#section/API-Info/Authenticating-with-Plex).
  * The device holds an Ed25519 key and registers its public half; plex.tv then hands out tokens that
- * last seven days and are renewed by signing a nonce, so nothing is ever typed or pasted. The
- * token is used as `X-Plex-Token`, on plex.tv and on the media server alike.
+ * last seven days and are renewed by signing a nonce, so nothing is ever typed or pasted. That
+ * JWT is for plex.tv only (its audience is plex.tv and the client): a media server refuses it
+ * however it is sent, and takes the `accessToken` plex.tv lists for it in the account's resources
+ * (`PlexTv.serverToken`).
  */
 
 export const PLEX_PRODUCT = 'Kinoshelf';
@@ -200,6 +202,27 @@ export class PlexTv {
       throw new PlexTvError(502, 'plex.tv sent no token');
     }
     return { token, expiresAt: expiryOf(token, this.now()) };
+  }
+
+  /**
+   * The token a media server accepts, from the account's resources: the one whose
+   * `clientIdentifier` is the server's machine identifier. `undefined` when the account lists no
+   * such server or gives no token for it.
+   */
+  async serverToken(
+    identity: PlexIdentity,
+    token: string,
+    machineId: string,
+  ): Promise<string | undefined> {
+    const body = await this.call(identity, 'GET', '/api/v2/resources?includeHttps=1', { token });
+    const resources = Array.isArray(body) ? (body as unknown[]) : [];
+    for (const entry of resources) {
+      const { clientIdentifier, accessToken } = asRecord(entry);
+      if (clientIdentifier === machineId && typeof accessToken === 'string' && accessToken !== '') {
+        return accessToken;
+      }
+    }
+    return undefined;
   }
 
   /** The media servers of the account, to pick the address of one instead of typing it. */
