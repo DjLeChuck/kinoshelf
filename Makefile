@@ -15,7 +15,7 @@ VERSION ?= 1.0.0-dev
 .DEFAULT_GOAL := help
 
 .PHONY: help hooks install build build-web dev-server dev-web typecheck lint format format-check test test-corpus \
-        docs-dev docs-build docs-preview test-e2e test-live corpus-report corpus-record check docker-build ffprobe sea sea-run test-sea sea-archive smoke-sea players-up players-down players-seed players-kodi22-up players-kodi22-down flake-check clean
+        docs-dev docs-build docs-preview test-e2e test-live corpus-report corpus-record check docker-build ffprobe sea sea-run test-sea sea-archive smoke-sea players-up players-down players-seed seed-duplicates players-kodi22-up players-kodi22-down flake-check clean
 
 help: ## List the targets
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}'
@@ -117,6 +117,9 @@ players-kodi22-up: ## Start Kodi 22 (RC) alone, on :6080 (built from source the 
 
 players-kodi22-down: ## Stop it (its state in .work/players/kodi22 is kept)
 	nix run ./dev/players#kodi22 -- down kodi
+
+seed-duplicates: ## Libraries and a downloads folder in .work/seed-duplicates, one file per case of "Already in the library"
+	./scripts/seed-duplicates.sh
 
 players-seed: ## Put tiny clips named like releases in .work/media/arrivals, for Kinoshelf to organize
 	nix run ./dev/players -- seed

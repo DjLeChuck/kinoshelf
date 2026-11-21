@@ -78,6 +78,10 @@ libraries in Jellyfin and Plex.
   cannot tell, one nobody can identify). Add that folder as an downloads folder pointing at the two
   libraries; it shares their filesystem, so a hardlink works. Running it again only adds what is
   missing.
+- `make seed-duplicates` builds `.work/seed-duplicates` (two libraries already holding a few works, a
+  downloads folder with one file per case of "Already in the library": a hard link, a copy, another
+  version, a new film, a whole series release and a partial one) and a `config.yaml` to start the server
+  on. It prints the steps; plain bytes, no ffmpeg needed. TMDB must be reachable (`TMDB_API_KEY`).
 - Jellyfin: <http://localhost:8096>. Plex: <http://localhost:32400/web> (host network; set
   `PLEX_CLAIM` from <https://plex.tv/claim> to claim the server at the first start).
 - Kodi: <http://localhost:6080/vnc.html?autoconnect=true&resize=scale>. It has no maintained Docker
