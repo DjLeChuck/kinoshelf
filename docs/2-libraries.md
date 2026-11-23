@@ -19,7 +19,8 @@ is waiting or running. Nothing is stored, so the library keeps what its last sca
 
 What the scan saw is kept as a **snapshot**: the lists read it, never the disk and never TMDB, so
 they are instant. It is patched after each transfer, undo or manual match, and replaced as a whole by
-the next scan. Nothing scans on its own: a scan comes from a click, from the folder watcher or from
+the next scan. A library organized in place is scanned once when it is made (and when Kinoshelf starts, if
+nobody ever scanned it); after that a scan comes from a click, from the folder watcher or from
 `kinoshelf submit`.
 
 In the background, once no job runs, `ffprobe` reads each file (picture size, codec, HDR, audio,
