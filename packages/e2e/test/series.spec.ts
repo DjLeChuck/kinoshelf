@@ -1,7 +1,7 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
 import { AUTH_HEADERS, incoming, library } from '../support.js';
-import { signIn } from './helpers.js';
+import { scanLibrary, signIn } from './helpers.js';
 
 test('browses a series library as a tree and finds the episode it lacks', async ({
   page,
@@ -90,9 +90,7 @@ test('refreshes a show that only lacks files of its own', async ({ page, request
   });
   expect(created.status()).toBe(201);
   const { id } = (await created.json()) as { id: string };
-  expect(
-    (await request.post(`/api/libraries/${id}/scan`, { headers: AUTH_HEADERS })).status(),
-  ).toBe(202);
+  await scanLibrary(request, id);
 
   await signIn(page);
   await page.goto(`/libraries/${id}`);
@@ -125,9 +123,7 @@ test('shows which NFO and images a show and its seasons have', async ({ page, re
   });
   expect(created.status()).toBe(201);
   const { id } = (await created.json()) as { id: string };
-  expect(
-    (await request.post(`/api/libraries/${id}/scan`, { headers: AUTH_HEADERS })).status(),
-  ).toBe(202);
+  await scanLibrary(request, id);
 
   await signIn(page);
   await page.goto(`/libraries/${id}`);
@@ -169,9 +165,7 @@ test('drops the tick columns on a phone, so the tree needs no sideways scroll', 
   });
   expect(created.status()).toBe(201);
   const { id } = (await created.json()) as { id: string };
-  expect(
-    (await request.post(`/api/libraries/${id}/scan`, { headers: AUTH_HEADERS })).status(),
-  ).toBe(202);
+  await scanLibrary(request, id);
 
   await page.setViewportSize({ width: 390, height: 800 });
   await signIn(page);

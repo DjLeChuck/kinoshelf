@@ -1,7 +1,7 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
 import { AUTH_HEADERS, incoming } from '../support.js';
-import { signIn } from './helpers.js';
+import { scanLibrary, signIn } from './helpers.js';
 
 // A JPEG header and a mark: the image one of the two versions has before the change.
 const OLD = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.from('old')]);
@@ -30,9 +30,7 @@ test('changes the one image of an episode held in two versions, for both', async
   });
   expect(created.status()).toBe(201);
   const { id } = (await created.json()) as { id: string };
-  const scan = await request.post(`/api/libraries/${id}/scan`, { headers: AUTH_HEADERS });
-  expect(scan.status()).toBe(202);
-  const job = ((await scan.json()) as { id: string }).id;
+  const job = await scanLibrary(request, id);
   await expect
     .poll(
       async () =>

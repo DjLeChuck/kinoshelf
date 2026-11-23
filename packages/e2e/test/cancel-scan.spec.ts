@@ -18,9 +18,10 @@ test('cancels a running scan: the library is untouched and the History says canc
   expect(created.status()).toBe(201);
   const { id } = (await created.json()) as { id: string };
 
+  // The library is scanned as it is made, and the slow answer keeps that scan running: it is the
+  // one the page finds and stops.
   await signInAt(page, `/libraries/${id}`);
   const scan = page.getByRole('button', { name: 'Update from source' });
-  await scan.click();
 
   // The button of the page is busy while it runs, and offers to stop it.
   const cancel = page.getByRole('button', { name: 'Cancel the scan' });

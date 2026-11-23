@@ -64,6 +64,27 @@ export async function submit(
 }
 
 /**
+ * Scans a library and returns the job. A library organized in place is already scanned when it is
+ * made, so the one asked for waits for that first (a second one is refused while one is queued).
+ */
+export async function scanLibrary(request: APIRequestContext, id: string): Promise<string> {
+  await expect
+    .poll(
+      async () => {
+        const libraries = (await (
+          await request.get('/api/libraries', { headers: AUTH_HEADERS })
+        ).json()) as { id: string; scanning: boolean }[];
+        return libraries.find((library) => library.id === id)?.scanning;
+      },
+      { message: `the scan made with ${id} did not finish` },
+    )
+    .toBe(false);
+  const scan = await request.post(`/api/libraries/${id}/scan`, { headers: AUTH_HEADERS });
+  expect(scan.status()).toBe(202);
+  return ((await scan.json()) as { id: string }).id;
+}
+
+/**
  * Resolves once the page has stopped scrolling (a smooth scroll, a key's or a click's, runs for
  * hundreds of milliseconds, longer on a loaded machine). Counted in frames, not in time: a fixed
  * sleep is too short exactly when the machine is slow. Whatever is asked of the page next, an

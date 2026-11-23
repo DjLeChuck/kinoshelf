@@ -785,6 +785,20 @@ refuses to delete a library an arrival folder points at (`library.in-use`). Ther
   validated left alone, a verdict that did not change keeping the owner's choice (`duplicate_forced`). One `arrivals`
   event at the end; the activity panel says `reevaluated` only above 5 files set aside. Tests await
   `app.reevaluation.idle()`.
+  **The libraries are scanned first, with no index and no inode stored.** The verdict needs the snapshot, so what makes it
+  exist is a scan, queued by the server: `POST /api/libraries` queues one for a typed library, and `scanNewLibraries`
+  (`main.ts`; off in tests, which count the jobs) queues one at start for a typed library with no scan job at all (a
+  `config.yaml` written by hand, a first launch of the container). **An analysis waits for it** (`RunnerHooks.held`,
+  `app.ts`): `JobRunner.pump` skips a job that is not a scan of a typed library while one is queued or running, so a
+  watcher that fired first, or a scan asked for after an arrival, still runs first, and `watch.apply` transfers (born when
+  the analysis ends) come after. A held job is skipped, never failed, and never holds up a scan; the check is wide on
+  purpose (any typed library, not the job's `into`). The scan a library gets when made is not "work" for the welcome
+  (`JobStore.hasJobBesides`), or the page would be left after the first library. The web's "Detect the files already
+  in the libraries" (`detectPresent`, Arrivals) scans each typed library (a 409 means one is already on its way) and
+  the reevaluation does the rest. **Decided not to build**: an index of the files (`library_files`) and a detection before
+  TMDB: a duplicate costs one cached search per release, and the same `tmdb_id` is a stronger check than a size.
+  A file added to a library by hand, a file the scan could not identify (no `tmdb_id`) and a re-encoded one are
+  not seen as duplicates until a scan, and the last two only as `other-version`.
 - **The router reads the query** (`lib/router.svelte.ts`: `router.path` is the path alone, `router.query` the
   `?query`, `router.setQuery` changes it in place, with no history entry). The state filter of a library and of
   Arrivals is `?state=…` (`oneOf` drops a value the filter does not know). The open tree of a series is too: `?open=<tmdb ids>` for the

@@ -157,6 +157,7 @@ const app = await buildApp({
   database,
   env: process.env,
   logger: true,
+  scanNewLibraries: true,
   logs,
   ...(logLevel && { logLevel }),
   // Finished jobs older than this are forgotten; 0 in config.yaml keeps everything.

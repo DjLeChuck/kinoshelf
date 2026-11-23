@@ -1,7 +1,7 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
 import { AUTH_HEADERS, library } from '../support.js';
-import { signIn } from './helpers.js';
+import { scanLibrary, signIn } from './helpers.js';
 
 const DUNE = library('sagas', 'Dune (2021)', 'Dune (2021).mkv');
 const ALIEN = library('sagas', 'Alien (1979)', 'Alien (1979).mkv');
@@ -26,9 +26,7 @@ test('files movies under collections: the list, the page of a film, a whole sele
   });
   expect(created.status()).toBe(201);
   const { id } = (await created.json()) as { id: string };
-  expect(
-    (await request.post(`/api/libraries/${id}/scan`, { headers: AUTH_HEADERS })).status(),
-  ).toBe(202);
+  await scanLibrary(request, id);
   const items = async () =>
     (
       (await (
@@ -231,9 +229,7 @@ test('opens a collection as a sheet over the list on a phone, and closes it', as
   });
   expect(created.status()).toBe(201);
   const { id } = (await created.json()) as { id: string };
-  expect(
-    (await request.post(`/api/libraries/${id}/scan`, { headers: AUTH_HEADERS })).status(),
-  ).toBe(202);
+  await scanLibrary(request, id);
   await expect
     .poll(async () => {
       const response = await request.get(`/api/libraries/${id}/collections`, {

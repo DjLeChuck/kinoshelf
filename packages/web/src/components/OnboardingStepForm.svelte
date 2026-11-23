@@ -315,6 +315,7 @@
         <label for="ob-folder">{t('web.onboarding.form.source')}</label>
         <PathField id="ob-folder" bind:value={folder} placeholder="/" />
         <span class="muted hint">{t('web.onboarding.form.source.hint')}</span>
+        <span class="muted hint">{t('web.onboarding.form.source.order')}</span>
       </div>
     {/if}
     {#if step === 'source'}

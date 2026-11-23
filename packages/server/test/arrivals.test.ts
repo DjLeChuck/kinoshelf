@@ -68,6 +68,8 @@ async function setup(options: Parameters<typeof harness>[0] = {}) {
     source: downloads,
     into: { movie: 'films', series: 'series' },
   });
+  // A typed library is scanned as it is created, empty here: the tests put their files after.
+  await h.app.jobs.idle();
   return { h, roots, downloads };
 }
 
@@ -699,6 +701,30 @@ describe('arrivals analysed before the library was scanned', () => {
     expect(tasks.find(({ code }) => code === 'reevaluated')).toMatchObject({
       status: 'done',
       params: { count: 6 },
+    });
+  });
+
+  it('scans a library as it is created, so the downloads analysed next know it', async () => {
+    const configDir = await makeDir();
+    await put(join(configDir, 'config.yaml'), 'naming: with-id\nmetadata: none\n');
+    const h = await harness({ configDir, config: await loadConfig(configDir) });
+    const films = await makeDir();
+    const downloads = await makeDir();
+    const dune = await put(DUNE_NAME(films), 'dune in the library');
+    await link(dune, join(downloads, 'Dune.2021.1080p-LINK.mkv'));
+    // As the welcome does: the library, then the downloads folder, no wait between.
+    const create = (body: object): Promise<{ statusCode: number }> =>
+      h.request('POST', '/api/libraries', body);
+    expect((await create({ name: 'Films', source: films, type: 'movie' })).statusCode).toBe(201);
+    expect(
+      (await create({ name: 'Downloads', source: downloads, into: { movie: 'films' } })).statusCode,
+    ).toBe(201);
+    expect((await h.request('POST', '/api/libraries/downloads/scan')).statusCode).toBe(202);
+    await h.app.jobs.idle();
+    // The library's scan ran first, so the duplicate was told when it was analysed.
+    expect((await arrivals(h)).items[0]).toMatchObject({
+      state: 'present',
+      duplicate: { kind: 'same-file' },
     });
   });
 

@@ -35,16 +35,8 @@ test('ignores in one click what the library already holds, and keeps the new fil
     source: library('present-films'),
     type: 'movie',
   });
-  expect(
-    (await request.post(`/api/libraries/${films}/scan`, { headers: AUTH_HEADERS })).status(),
-  ).toBe(202);
-  // The snapshot is what the detection reads: wait until the scan has written it.
-  await expect
-    .poll(async () => {
-      const answer = await request.get(`/api/libraries/${films}/items`, { headers: AUTH_HEADERS });
-      return ((await answer.json()) as { total: number }).total;
-    })
-    .toBe(2);
+  // A fresh install: nothing scans the library by hand, and the folder is analysed right after it
+  // is made. The scan made with the library comes first, so the duplicates are told.
 
   // The downloads folder: a hardlink of Dune, a copy of Alien, and a film the library lacks.
   const folder = incoming('present-drop');
@@ -58,9 +50,8 @@ test('ignores in one click what the library already holds, and keeps the new fil
     into: { movie: films },
   });
   try {
-    expect(
-      (await request.post(`/api/libraries/${drop}/scan`, { headers: AUTH_HEADERS })).status(),
-    ).toBe(202);
+    const scan = await request.post(`/api/libraries/${drop}/scan`, { headers: AUTH_HEADERS });
+    expect(scan.status()).toBe(202);
 
     await signInAt(page, '/arrivals?state=present');
     const hardlinked = page.getByRole('button', { name: /Dune\.2021\.1080p-LINK\.mkv/ });

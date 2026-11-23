@@ -1,7 +1,13 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import swagger from '@fastify/swagger';
-import { KinoshelfError, SqliteJournal, type ImageFetcher, type Journal } from '@kinoshelf/core';
+import {
+  KinoshelfError,
+  SqliteJournal,
+  type ImageFetcher,
+  type Journal,
+  type LibraryConfig,
+} from '@kinoshelf/core';
 import type { Database } from '@kinoshelf/core';
 import Fastify, { LogController, type FastifyInstance } from 'fastify';
 import { SqliteHttpCache } from '@kinoshelf/provider-tmdb';
@@ -16,7 +22,7 @@ import { EventBus, registerEventRoutes } from './events.js';
 import { ExecutionStore } from './executions.js';
 import { History } from './history.js';
 import { registerImageRoutes } from './images.js';
-import { JobStore } from './jobs.js';
+import { JobStore, type Job } from './jobs.js';
 import { registerLogRoutes } from './log-routes.js';
 import { UndoTasks } from './undo-tasks.js';
 import { registerMaintenanceRoutes, type TidyTask } from './maintenance-routes.js';
@@ -125,6 +131,11 @@ export interface AppOptions extends Omit<ProcessorDeps, 'database'> {
    * every day. Unset or 0 keeps everything.
    */
   readonly retentionDays?: number;
+  /**
+   * Scans, at start, a typed library no scan was ever asked for (a `config.yaml` written by hand,
+   * a first launch of the container). Off in tests, which count the jobs.
+   */
+  readonly scanNewLibraries?: boolean;
   /** How notifications are delivered (retries, timeout); tests make them instant. */
   readonly delivery?: DeliveryOptions;
   /** Replaces plex.tv's network and clock, for tests (the address is `KINOSHELF_PLEX_TV_URL`). */
@@ -320,6 +331,15 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
       createTranslator(detectLocale(undefined, config.locale, options.env)),
     );
   });
+  const typedLibraries = (): LibraryConfig[] =>
+    (configStore.config.libraries ?? []).filter(({ type }) => type !== undefined);
+  /** A scan of a typed library's source, or of a folder of it: what an arrival waits for. */
+  const isLibraryScan = (job: Job): boolean => {
+    const library = typedLibraries().find(({ id }) => id === job.libraryId);
+    return library !== undefined && (job.rescan || job.path === library.source);
+  };
+  const typedScanPending = (): boolean =>
+    typedLibraries().some((library) => jobs.scanPending(library.id, library.source));
   // Reads the videos' codecs once nothing else needs the disk; `runner` is only used when it runs.
   const probes = new ProbeQueue({
     store: items,
@@ -398,6 +418,8 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
         const touched = service.touches(execution);
         return !touched || touched.some((root) => sharesFolder(root, job.path));
       },
+      // The arrivals are compared with the libraries: they wait for a scan of one (see `JobRunner`).
+      held: (job) => !isLibraryScan(job) && typedScanPending(),
       scanned: async (job) => {
         // Before the snapshot and the notification: a file is planned for the library it goes to.
         await service.planArrivals(job);
@@ -492,6 +514,15 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
     }
   };
   app.addHook('onReady', () => {
+    if (options.scanNewLibraries) {
+      // Before the watcher and the queue start: what the libraries hold is known when the first
+      // arrival is compared with it, whoever wrote the configuration (a file, the welcome page).
+      for (const library of typedLibraries()) {
+        if (!jobs.lastScan(library.id, library.source)) {
+          jobs.create(library.source, false, library.id);
+        }
+      }
+    }
     runner.start();
     const typed = (options.config.libraries ?? []).flatMap((library) =>
       library.type ? [library.id] : [],
@@ -659,7 +690,7 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
       config: configStore,
       env: options.env,
       events,
-      hasWork: () => jobs.list(1).length > 0 || history.hasBatch(),
+      hasWork: () => jobs.hasJobBesides(typedLibraries()) || history.hasBatch(),
     });
     registerFsRoutes(api);
     const artwork = new Artwork({
