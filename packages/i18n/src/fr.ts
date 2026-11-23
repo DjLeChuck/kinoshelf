@@ -1378,6 +1378,8 @@ export const fr: Record<keyof typeof en, string> = {
   'web.onboarding.form.source.watch': 'Surveiller ce dossier',
   'web.onboarding.form.source.watch.hint':
     'Pour un dossier qui ne contient que des téléchargements terminés : chaque nouvelle release est analysée à son arrivée. Pas pour une bibliothèque déjà rangée. Modifiable ensuite dans les réglages.',
+  'web.onboarding.form.source.order':
+    'Kinoshelf scanne d’abord vos dossiers de films et de séries pour reconnaître ce qui s’y trouve déjà, puis analyse vos téléchargements.',
   'web.onboarding.form.source.name': 'Nom du dossier',
   'web.onboarding.form.source.submit': 'Analyser',
   'web.onboarding.form.source.submit.watch': 'Surveiller',

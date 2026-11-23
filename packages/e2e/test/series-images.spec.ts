@@ -1,7 +1,7 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
 import { AUTH_HEADERS, incoming } from '../support.js';
-import { signIn } from './helpers.js';
+import { scanLibrary, signIn } from './helpers.js';
 
 // A JPEG header and a mark: what the show's poster is before the user changes it.
 const OLD_POSTER = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.from('old')]);
@@ -19,9 +19,7 @@ test('changes the poster and adds a logo of a show from its panel', async ({ pag
   });
   expect(created.status()).toBe(201);
   const { id } = (await created.json()) as { id: string };
-  const scan = await request.post(`/api/libraries/${id}/scan`, { headers: AUTH_HEADERS });
-  expect(scan.status()).toBe(202);
-  const job = ((await scan.json()) as { id: string }).id;
+  const job = await scanLibrary(request, id);
   await expect
     .poll(
       async () =>

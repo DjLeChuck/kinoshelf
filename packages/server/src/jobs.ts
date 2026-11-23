@@ -146,6 +146,23 @@ export class JobStore {
   }
 
   /**
+   * Whether a job exists that is not a scan of one of these libraries (the whole source, or a
+   * folder of it). The scan a typed library gets when it is made is nobody's work yet.
+   */
+  hasJobBesides(scans: readonly { id: string; source: string }[]): boolean {
+    const own =
+      scans.map(() => '(library_id = ? AND (rescan = 1 OR path = ?))').join(' OR ') || '0';
+    // `COALESCE`: a job with no library gives NULL, and NOT NULL is NULL, which would drop it.
+    return (
+      this.database
+        .prepare<unknown[], { found: number }>(
+          `SELECT 1 AS found FROM jobs WHERE NOT COALESCE(${own}, 0) LIMIT 1`,
+        )
+        .get(...scans.flatMap(({ id, source }) => [id, source])) !== undefined
+    );
+  }
+
+  /**
    * The latest scan of the library, whole or of one folder (not a release its folder submitted),
    * whatever became of it: one still running or failed is what a user comes back to find.
    */

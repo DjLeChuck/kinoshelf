@@ -21,6 +21,13 @@ export interface RunnerHooks {
    * everything is held to be overlapping and the queue runs one task at a time.
    */
   overlaps?(job: Job, execution: Execution): boolean;
+  /**
+   * Whether a queued job must wait: an arrival is compared with what the libraries hold, so it
+   * is not taken while a scan of one of them is queued or running. The queue is in order, but a
+   * scan asked for after the arrival (a watcher that fired first, a hand-made scan) would
+   * otherwise run behind it. A job held is only skipped, never failed, and never holds up a scan.
+   */
+  held?(job: Job): boolean;
   /** The queue ran dry: background work (probing files) may use the disk. */
   idle?(): void;
   jobDone?(job: Job): void;
@@ -138,7 +145,9 @@ export class JobRunner {
     }
     if (!this.runningJob) {
       const job = this.jobs.claimNext(
-        (candidate) => !this.runningExecution || this.mayOverlap(candidate, this.runningExecution),
+        (candidate) =>
+          (!this.runningExecution || this.mayOverlap(candidate, this.runningExecution)) &&
+          this.hooks.held?.(candidate) !== true,
       );
       if (job) {
         this.runningJob = job;

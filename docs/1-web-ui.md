@@ -78,6 +78,9 @@ only the one you keep if you have movies or series alone; it also offers [IMDb r
 configuration says so, and the server remembers what you skipped. The app then opens on Libraries, or on
 **Arrivals** when the setup created a downloads folder: that is where what it picks up waits.
 
+The libraries made by the welcome are scanned right away, before the downloads folder is analysed. What the downloads hold that is in them already is
+therefore set aside as soon as it is analysed, even with "Transfer what is identified with confidence" on.
+
 If the first job fails, it is not lost: the History lists it with its cause.
 
 ## Arrivals
@@ -113,15 +116,19 @@ holding is left alone and counted apart.
 A downloads folder often holds files that are in the library already, renamed by hand, by another tool or
 hard-linked by a Sonarr or Radarr. To avoid proposing them again:
 
-1. Scan the libraries first: the detection reads what they hold, and a file the scan could not identify
+1. Add the libraries first. A library organized in place is scanned as soon as it is made (and when
+   Kinoshelf starts, if nobody ever scanned it), and the downloads folders wait for such a scan: an
+   analysis, or a transfer a watched folder would start by itself, is never run while a library's scan is
+   queued or running. The detection reads what the libraries hold, and a file the scan could not identify
    (no TMDB id) cannot stand for a work.
 2. Add the downloads folder next.
 3. In _Already in the library_, ignore them all in one click, then handle the rest.
 
-The order is not strict: files waiting in Arrivals are compared again, in the background and without
-asking TMDB, whenever a library's scan ends or a transfer or an undo changes what it holds. Scanning the
-libraries after the folder was analysed therefore still sets the duplicates aside (the activity panel says
-so when more than five files moved), but a transfer started before the scan could not know.
+Files waiting in Arrivals are also compared again, in the background and without asking TMDB, whenever a
+library's scan ends or a transfer or an undo changes what it holds, so the duplicates are set aside whatever
+the order (the activity panel says so when more than five files moved). A file added to a library by hand
+is only known once the library is scanned again: **Detect the files already in the libraries**, at the top
+of Arrivals, scans each library and does the rest.
 
 Alternatively, `kinoshelf submit` from the download client, without watching the folder, only brings in
 the new downloads.

@@ -1,7 +1,7 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
 import { AUTH_HEADERS, incoming } from '../support.js';
-import { signIn } from './helpers.js';
+import { scanLibrary, signIn } from './helpers.js';
 
 test('reads a series held in two versions, one of them short of an episode', async ({
   page,
@@ -20,9 +20,7 @@ test('reads a series held in two versions, one of them short of an episode', asy
   });
   expect(created.status()).toBe(201);
   const { id } = (await created.json()) as { id: string };
-  expect(
-    (await request.post(`/api/libraries/${id}/scan`, { headers: AUTH_HEADERS })).status(),
-  ).toBe(202);
+  await scanLibrary(request, id);
 
   await signIn(page);
   await page.goto(`/libraries/${id}`);

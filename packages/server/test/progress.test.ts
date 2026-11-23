@@ -107,8 +107,10 @@ describe('the progress of a scan, over the API', () => {
     await put(join(root, 'Dune.2021.mkv'));
     await put(join(root, 'Alien.1979.mkv'));
     await h.request('POST', '/api/libraries', { name: 'Films', source: root, type: 'movie' });
-    const scan = await h.request('POST', '/api/libraries/films/scan');
-    const jobId = scan.json<{ id: string }>().id;
+    // The scan a library gets when it is made, held at the search by the gate.
+    const jobId = (await h.request('GET', '/api/libraries')).json<
+      { lastScan: { jobId: string } }[]
+    >()[0]?.lastScan.jobId as string;
 
     type Job = {
       status: string;

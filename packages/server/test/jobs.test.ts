@@ -285,6 +285,28 @@ describe('JobRunner', () => {
     });
   });
 
+  it('leaves a held job for later, and never holds up what it waits for', async () => {
+    const { jobs, executions } = newQueue();
+    const order: string[] = [];
+    const runner = new JobRunner(
+      jobs,
+      executions,
+      (job) => {
+        order.push(job.path);
+        return Promise.resolve(empty);
+      },
+      idle,
+      // Arrivals wait while a scan is queued or running; a scan never does.
+      { held: (job) => job.path !== '/scan' && jobs.scanPending('lib', '/scan') },
+    );
+    // The arrival was asked for first: without the hold it would run first.
+    jobs.create('/arrival');
+    jobs.create('/scan', false, 'lib');
+    runner.kick();
+    await runner.idle();
+    expect(order).toEqual(['/scan', '/arrival']);
+  });
+
   it('serves jobs in submission order, one at a time', async () => {
     const { jobs, executions } = newQueue();
     const order: string[] = [];

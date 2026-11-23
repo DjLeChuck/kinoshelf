@@ -78,6 +78,8 @@ async function typedLibraries(h: Harness): Promise<{ movies: string; series: str
 }
 
 const scan = async (h: Harness, id: string): Promise<string> => {
+  // A typed library is scanned when it is made: that one is over before the test asks for its own.
+  await h.app.jobs.idle();
   const response = await h.request('POST', `/api/libraries/${id}/scan`);
   expect(response.statusCode).toBe(202);
   await h.app.jobs.idle();
@@ -189,8 +191,9 @@ describe('libraries', () => {
       mode: null,
       threshold: 80,
       watch: false,
-      lastScan: null,
-      scanning: false,
+      // A library organized in place is scanned as it is made.
+      lastScan: { jobId: expect.any(String) as string, status: expect.any(String) as string },
+      scanning: expect.any(Boolean) as boolean,
     });
     expect(await h.file()).toContain('id: films-4k');
 
@@ -400,6 +403,41 @@ describe('libraries', () => {
   });
 });
 
+describe('the scan of a library nobody asked for', () => {
+  const films = async (): Promise<Harness> => {
+    const configDir = await makeDir();
+    const source = await makeDir();
+    await put(join(source, 'Dune (2021) {tmdb-438631}', 'Dune (2021) {tmdb-438631}.mkv'), 'dune');
+    return harness({
+      configDir,
+      scanNewLibraries: true,
+      config: {
+        libraries: [
+          { id: 'films', name: 'Films', source, type: 'movie' },
+          { id: 'downloads', name: 'Downloads', source: await makeDir(), into: { movie: 'films' } },
+        ],
+      },
+    });
+  };
+
+  it('is queued at start for a typed library only', async () => {
+    const h = await films();
+    await h.app.jobs.idle();
+    const jobs = (await h.request('GET', '/api/libraries')).json<LibraryBody[]>();
+    // The arrival folder is not scanned: a scan of it would only list what waits.
+    expect(jobs.map(({ id, lastScan }) => [id, lastScan?.status ?? null])).toEqual([
+      ['films', 'done'],
+      ['downloads', null],
+    ]);
+    expect(
+      (await h.request('GET', '/api/libraries/films/items')).json<{ total: number }>().total,
+    ).toBe(1);
+    // One job, not one per start of the server, the arrival folder's included.
+    const count = h.database.prepare<[], { n: number }>('SELECT COUNT(*) AS n FROM jobs').get();
+    expect(count?.n).toBe(1);
+  });
+});
+
 describe('scanning a library', () => {
   it('scans its source with its own settings and sorts the files in tabs', async () => {
     const h = await served('metadata: nfo\n');
@@ -532,13 +570,14 @@ describe('scanning a library', () => {
       type: 'series',
     });
 
-    const first = await h.request('POST', '/api/libraries/films/scan');
-    expect(first.statusCode).toBe(202);
-    const second = await h.request('POST', '/api/libraries/films/scan');
-    expect(second.statusCode).toBe(409);
-    expect(second.json()).toEqual({ error: { code: 'library.scan-in-progress' } });
-    // Another library is not blocked, and the pending state is visible.
-    expect((await h.request('POST', '/api/libraries/series/scan')).statusCode).toBe(202);
+    // Each library queued its own scan when it was made, and the gate holds them: a second one is
+    // refused, library by library.
+    for (const id of ['films', 'series']) {
+      const refused = await h.request('POST', `/api/libraries/${id}/scan`);
+      expect(refused.statusCode).toBe(409);
+      expect(refused.json()).toEqual({ error: { code: 'library.scan-in-progress' } });
+    }
+    // The pending state is visible.
     const [films] = (await h.request('GET', '/api/libraries')).json<LibraryBody[]>();
     expect(films).toMatchObject({
       scanning: true,
@@ -636,6 +675,7 @@ describe('scanning a library', () => {
     const alien = join(root, 'Alien (1979) {tmdb-348}');
     await put(join(alien, 'Alien (1979) {tmdb-348}.mkv'), 'alien');
     await h.request('POST', '/api/libraries', { name: 'Home', source: root, type: 'movie' });
+    await h.app.jobs.idle();
     expect((await h.request('POST', '/api/libraries/home/scan')).statusCode).toBe(202);
     const refused = await h.request('POST', '/api/libraries/home/rescan', { path: alien });
     expect(refused.statusCode).toBe(409);

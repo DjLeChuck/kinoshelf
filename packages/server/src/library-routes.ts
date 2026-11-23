@@ -470,7 +470,7 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
       schema: {
         summary: 'Add a library',
         description:
-          'The id is made from the name. The source must be an existing ' +
+          'The id is made from the name; a library organized in place (`type`) is scanned at once. The source must be an existing ' +
           'folder (422 `fs.not-found`, `fs.not-a-directory`, `fs.unreadable`), exactly one of `type` and `into` is given and `into` names libraries of the right type (422 `library.invalid`), no other library may have the same source (409 ' +
           '`library.source-taken`) nor one that contains it or lies inside it (409 `library.source-overlaps`).',
         body: libraryCreateSchema,
@@ -506,6 +506,13 @@ export function registerLibraryRoutes(api: FastifyInstance, ctx: LibraryContext)
         };
         return [...libraries, created];
       });
+      // What a library holds is known from the start: the arrivals are compared with it, so its
+      // scan is queued with the library, ahead of anything that comes after.
+      if (created?.type) {
+        jobs.create(created.source, false, created.id);
+        events.emit('jobs');
+        runner.kick();
+      }
       return reply.code(201).send(present(created as LibraryConfig));
     },
   );

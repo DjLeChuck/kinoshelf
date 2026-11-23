@@ -1,7 +1,7 @@
 import { access, mkdir, readdir, writeFile } from 'node:fs/promises';
 import { expect, test, type APIRequestContext } from '@playwright/test';
 import { AUTH_HEADERS, incoming, library } from '../support.js';
-import { signIn, signInAt } from './helpers.js';
+import { scanLibrary, signIn, signInAt } from './helpers.js';
 
 const exists = (path: string): Promise<boolean> =>
   access(path).then(
@@ -24,9 +24,7 @@ test('validates an arrival and finds it in the library it was sent to', async ({
   });
   expect(created.status()).toBe(201);
   const { id } = (await created.json()) as { id: string };
-  expect(
-    (await request.post(`/api/libraries/${id}/scan`, { headers: AUTH_HEADERS })).status(),
-  ).toBe(202);
+  await scanLibrary(request, id);
 
   await signIn(page);
   await page.goto('/arrivals');
@@ -61,9 +59,7 @@ test('transfers a file Kinoshelf matched but the scan only read, as planned', as
   });
   expect(created.status()).toBe(201);
   const { id } = (await created.json()) as { id: string };
-  expect(
-    (await request.post(`/api/libraries/${id}/scan`, { headers: AUTH_HEADERS })).status(),
-  ).toBe(202);
+  await scanLibrary(request, id);
 
   await signIn(page);
   await page.goto('/arrivals?state=ready');
@@ -210,9 +206,7 @@ test('sets a series folder aside once, and shows the episode of another show set
   });
   expect(created.status()).toBe(201);
   const { id } = (await created.json()) as { id: string };
-  expect(
-    (await request.post(`/api/libraries/${id}/scan`, { headers: AUTH_HEADERS })).status(),
-  ).toBe(202);
+  await scanLibrary(request, id);
 
   await signIn(page);
   await page.goto('/arrivals');
@@ -266,9 +260,7 @@ test('validates a series folder once and transfers every episode of it', async (
   });
   expect(created.status()).toBe(201);
   const { id } = (await created.json()) as { id: string };
-  expect(
-    (await request.post(`/api/libraries/${id}/scan`, { headers: AUTH_HEADERS })).status(),
-  ).toBe(202);
+  await scanLibrary(request, id);
 
   await signIn(page);
   await page.goto('/arrivals');

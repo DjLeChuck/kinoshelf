@@ -15,6 +15,11 @@ All notable changes to Kinoshelf are written here. The format follows
   every episode is. "Process anyway" sends such a file back to review (#32).
 - Arrivals compared again with a library whenever it changes (a scan ends, a transfer, an undo): analysing the
   downloads folder before scanning the libraries no longer leaves the duplicates "Ready". No search on TMDB (#32).
+- A library organized in place is scanned when it is made, and at start if it never was, and the analysis of
+  an arrival folder (or a transfer a watched folder starts by itself) waits for such a scan, so the files
+  already in a library are set aside from the first analysis, whatever made the libraries (#32).
+- **Detect the files already in the libraries**, at the top of Arrivals, scans each library again and sets
+  aside the waiting files it holds (#32).
 - Arrivals ignores in bulk: **Ignore all the files already in the library** in one click, and tick boxes to
   ignore or transfer several releases together (`POST /api/entries/ignore`) (#32).
 

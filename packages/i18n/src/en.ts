@@ -1332,6 +1332,8 @@ export const en = {
   'web.onboarding.form.source.watch': 'Watch this folder',
   'web.onboarding.form.source.watch.hint':
     'For a folder that only holds finished downloads: each new release is analysed as it arrives. Not for a library already in place. You can edit it later in the settings.',
+  'web.onboarding.form.source.order':
+    'Kinoshelf scans your movies and series folders first, to recognise what is already there, then analyses your downloads.',
   'web.onboarding.form.source.name': 'Folder name',
   'web.onboarding.form.source.submit': 'Analyse',
   'web.onboarding.form.source.submit.watch': 'Watch',

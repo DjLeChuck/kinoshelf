@@ -2571,7 +2571,7 @@ export interface paths {
         put?: never;
         /**
          * Add a library
-         * @description The id is made from the name. The source must be an existing folder (422 `fs.not-found`, `fs.not-a-directory`, `fs.unreadable`), exactly one of `type` and `into` is given and `into` names libraries of the right type (422 `library.invalid`), no other library may have the same source (409 `library.source-taken`) nor one that contains it or lies inside it (409 `library.source-overlaps`).
+         * @description The id is made from the name; a library organized in place (`type`) is scanned at once. The source must be an existing folder (422 `fs.not-found`, `fs.not-a-directory`, `fs.unreadable`), exactly one of `type` and `into` is given and `into` names libraries of the right type (422 `library.invalid`), no other library may have the same source (409 `library.source-taken`) nor one that contains it or lies inside it (409 `library.source-overlaps`).
          */
         post: {
             parameters: {
