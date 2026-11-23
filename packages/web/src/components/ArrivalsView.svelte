@@ -267,39 +267,41 @@
 <div class="stack">
   <div class="intro">
     <p class="muted">{t('web.arrivals.intro')}</p>
-    <Tip text={watch?.scannable ? undefined : t('web.arrivals.check.none')}>
-      {#snippet children(describedby)}
-        <button
-          type="button"
-          class="btn"
-          disabled={!watch?.scannable || checking}
-          aria-describedby={describedby}
-          onclick={() => void checkNow()}>{t('web.arrivals.check')}</button
-        >
-      {/snippet}
-    </Tip>
-    <Tip text={t('web.arrivals.recheck.hint')}>
-      {#snippet children(describedby)}
-        <button
-          type="button"
-          class="btn"
-          disabled={!watch?.scannable || checking}
-          aria-describedby={describedby}
-          onclick={() => void checkNow(true)}>{t('web.arrivals.recheck')}</button
-        >
-      {/snippet}
-    </Tip>
-    <Tip text={t('web.arrivals.detect.hint')}>
-      {#snippet children(describedby)}
-        <button
-          type="button"
-          class="btn"
-          disabled={detecting}
-          aria-describedby={describedby}
-          onclick={() => void detect()}>{t('web.arrivals.detect')}</button
-        >
-      {/snippet}
-    </Tip>
+    <div class="actions">
+      <Tip text={watch?.scannable ? undefined : t('web.arrivals.check.none')}>
+        {#snippet children(describedby)}
+          <button
+            type="button"
+            class="btn"
+            disabled={!watch?.scannable || checking}
+            aria-describedby={describedby}
+            onclick={() => void checkNow()}>{t('web.arrivals.check')}</button
+          >
+        {/snippet}
+      </Tip>
+      <Tip text={t('web.arrivals.recheck.hint')}>
+        {#snippet children(describedby)}
+          <button
+            type="button"
+            class="btn"
+            disabled={!watch?.scannable || checking}
+            aria-describedby={describedby}
+            onclick={() => void checkNow(true)}>{t('web.arrivals.recheck')}</button
+          >
+        {/snippet}
+      </Tip>
+      <Tip text={t('web.arrivals.detect.hint')}>
+        {#snippet children(describedby)}
+          <button
+            type="button"
+            class="btn"
+            disabled={detecting}
+            aria-describedby={describedby}
+            onclick={() => void detect()}>{t('web.arrivals.detect')}</button
+          >
+        {/snippet}
+      </Tip>
+    </div>
   </div>
 
   <div class="filters" role="group" aria-label={t('web.arrivals.filter.label')}>
@@ -522,7 +524,18 @@
   }
 
   .intro p {
+    flex: 1 1 22rem;
     margin: 0;
+  }
+
+  /* The buttons stay one group: side by side with an even gap, wrapping together on a narrow screen. */
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    /* Pushed right beside the text; on a line of its own it starts at the left, like the filters. */
+    margin-left: auto;
   }
 
   .filters {
