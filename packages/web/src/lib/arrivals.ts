@@ -1,5 +1,6 @@
 import type { MessageKey } from '@kinoshelf/i18n';
 import { ApiError } from './api.js';
+import type { LibraryApi } from './libraries.js';
 import { baseName } from './paths.js';
 
 /** What a candidate looks like, in an arrival and in `GET /api/search`. */
@@ -448,4 +449,22 @@ export async function startPlanned(
     await post(`/api/plans/${jobId}/execute`, { entries });
   }
   return files.length;
+}
+
+/**
+ * Reads each library organized in place again, so the waiting files are compared with what they
+ * hold now: the server does the comparing when a scan ends. A library already being scanned answers
+ * 409, and that scan is the one wanted. Returns how many libraries are being read (none: nothing
+ * to detect, the page says so).
+ */
+export async function detectPresent(api: Pick<LibraryApi, 'list' | 'scan'>): Promise<number> {
+  const typed = (await api.list()).filter(({ type }) => type);
+  for (const { id } of typed) {
+    await api.scan(id).catch((error: unknown) => {
+      if (!(error instanceof ApiError && error.status === 409)) {
+        throw error;
+      }
+    });
+  }
+  return typed.length;
 }

@@ -11,6 +11,7 @@
   import {
     QUEUE_CHIP,
     STATUS_LABEL,
+    detectPresent,
     groupReleases,
     readArrivals,
     releaseKey,
@@ -21,6 +22,7 @@
     type ArrivalPage,
     type ArrivalState,
   } from '../lib/arrivals.js';
+  import { libraryApi } from '../lib/libraries.js';
   import { Ticks } from '../lib/ticks.svelte.js';
   import ActionDialog from './ActionDialog.svelte';
   import ArrivalsBar from './ArrivalsBar.svelte';
@@ -63,6 +65,7 @@
   let notice = $state<string | undefined>(undefined);
   let watch = $state<WatchStatus | undefined>(undefined);
   let checking = $state(false);
+  let detecting = $state(false);
 
   const groups = $derived(groupReleases(page?.items ?? []));
   const open = $derived(
@@ -216,6 +219,20 @@
     void load();
   }
 
+  /** Reads the libraries again: what they hold is compared with the files waiting here. */
+  async function detect(): Promise<void> {
+    detecting = true;
+    try {
+      const count = await detectPresent(libraryApi);
+      notice = t(count === 0 ? 'web.arrivals.detect.none' : 'web.arrivals.detect.done', { count });
+      loaded.failure = undefined;
+    } catch (error) {
+      loaded.failure = error;
+    } finally {
+      detecting = false;
+    }
+  }
+
   refetchOn(['arrivals', 'jobs', 'settings', 'ready'], () => void loadWatch());
 
   const sourceName = (arrival: Arrival): string | undefined =>
@@ -269,6 +286,17 @@
           disabled={!watch?.scannable || checking}
           aria-describedby={describedby}
           onclick={() => void checkNow(true)}>{t('web.arrivals.recheck')}</button
+        >
+      {/snippet}
+    </Tip>
+    <Tip text={t('web.arrivals.detect.hint')}>
+      {#snippet children(describedby)}
+        <button
+          type="button"
+          class="btn"
+          disabled={detecting}
+          aria-describedby={describedby}
+          onclick={() => void detect()}>{t('web.arrivals.detect')}</button
         >
       {/snippet}
     </Tip>

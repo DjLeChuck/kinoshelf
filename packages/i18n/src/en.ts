@@ -1213,6 +1213,12 @@ export const en = {
   'web.arrivals.recheck': 'Analyse everything again',
   'web.arrivals.recheck.hint':
     'Starts over: every file of the arrival folders is analysed again, except those already waiting here. Useful after emptying a library.',
+  'web.arrivals.detect': 'Detect the files already in the libraries',
+  'web.arrivals.detect.hint':
+    'Reads each library again, then sets aside the waiting files it already holds. Useful after adding files to a library by hand.',
+  'web.arrivals.detect.done':
+    '{count, plural, one {Reading # library} other {Reading # libraries}}: the files already there are set aside when it ends. The activity panel follows it.',
+  'web.arrivals.detect.none': 'There is no library to read. Add one in the settings.',
   'web.arrivals.check.none': 'There is no arrival folder to look at. Add one in the settings.',
   'web.libraries.title': 'Libraries',
   'web.libraries.new.in-place': 'New library',
@@ -1326,14 +1332,14 @@ export const en = {
   'web.onboarding.form.source': 'Downloads folder',
   'web.onboarding.form.source.hint':
     'The folder where your downloaded videos arrive, not the one that holds your movies and series.',
+  'web.onboarding.form.source.order':
+    'Kinoshelf scans your movies and series folders first, to recognise what is already there, then analyses your downloads.',
   'web.onboarding.form.source.once': 'Analyse it once',
   'web.onboarding.form.source.once.hint':
     'Nothing is changed: you will see what Kinoshelf proposes first.',
   'web.onboarding.form.source.watch': 'Watch this folder',
   'web.onboarding.form.source.watch.hint':
     'For a folder that only holds finished downloads: each new release is analysed as it arrives. Not for a library already in place. You can edit it later in the settings.',
-  'web.onboarding.form.source.order':
-    'Kinoshelf scans your movies and series folders first, to recognise what is already there, then analyses your downloads.',
   'web.onboarding.form.source.name': 'Folder name',
   'web.onboarding.form.source.submit': 'Analyse',
   'web.onboarding.form.source.submit.watch': 'Watch',

@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
+import { ApiError } from '../src/lib/api.js';
 import { en, fr } from '@kinoshelf/i18n';
 import {
   STATUS_LABEL,
+  detectPresent,
   folderOf,
   posterUrl,
   groupReleases,
@@ -418,5 +420,52 @@ describe('startPlanned', () => {
 
   it('does nothing for no file', async () => {
     expect(await startPlanned([], () => Promise.reject(new Error('no call')))).toBe(0);
+  });
+});
+
+describe('detectPresent', () => {
+  const library = (id: string, type: 'movie' | 'series' | null) => ({ id, type }) as never;
+
+  it('scans each library organized in place, never an arrival folder', async () => {
+    const scanned: string[] = [];
+    const count = await detectPresent({
+      list: () =>
+        Promise.resolve([
+          library('films', 'movie'),
+          library('downloads', null),
+          library('shows', 'series'),
+        ]),
+      scan: (id) => {
+        scanned.push(id);
+        return Promise.resolve({ id: `job-${id}` });
+      },
+    });
+    expect(scanned).toEqual(['films', 'shows']);
+    expect(count).toBe(2);
+  });
+
+  it('counts a library already being scanned: that scan is the one wanted', async () => {
+    const count = await detectPresent({
+      list: () => Promise.resolve([library('films', 'movie')]),
+      scan: () => Promise.reject(new ApiError(409, 'library.scan-in-progress')),
+    });
+    expect(count).toBe(1);
+  });
+
+  it('lets any other failure through', async () => {
+    await expect(
+      detectPresent({
+        list: () => Promise.resolve([library('films', 'movie')]),
+        scan: () => Promise.reject(new ApiError(500, 'internal.unexpected')),
+      }),
+    ).rejects.toThrow();
+  });
+
+  it('has nothing to scan without a library', async () => {
+    const count = await detectPresent({
+      list: () => Promise.resolve([library('downloads', null)]),
+      scan: () => Promise.reject(new Error('never')),
+    });
+    expect(count).toBe(0);
   });
 });
