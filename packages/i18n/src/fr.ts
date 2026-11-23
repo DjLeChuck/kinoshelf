@@ -1256,6 +1256,12 @@ export const fr: Record<keyof typeof en, string> = {
   'web.arrivals.recheck': 'Tout réanalyser',
   'web.arrivals.recheck.hint':
     'Repart de zéro : chaque fichier des dossiers d’arrivée est réanalysé, sauf ceux qui attendent déjà ici. Utile après avoir vidé une bibliothèque.',
+  'web.arrivals.detect': 'Détecter les fichiers déjà présents dans les bibliothèques',
+  'web.arrivals.detect.hint':
+    'Relit chaque bibliothèque, puis écarte les fichiers en attente qu’elle contient déjà. Utile après avoir ajouté des fichiers à une bibliothèque à la main.',
+  'web.arrivals.detect.done':
+    '{count, plural, one {Lecture de # bibliothèque} other {Lecture de # bibliothèques}} : les fichiers déjà présents sont écartés à la fin. Le panneau d’activité la suit.',
+  'web.arrivals.detect.none': 'Aucune bibliothèque à lire. Ajoutez-en une dans les réglages.',
   'web.arrivals.check.none': 'Aucun dossier d’arrivée à examiner. Ajoutez-en un dans les réglages.',
   'web.libraries.title': 'Bibliothèques',
   'web.libraries.new.in-place': 'Nouvelle bibliothèque',
@@ -1372,14 +1378,14 @@ export const fr: Record<keyof typeof en, string> = {
   'web.onboarding.form.source': 'Dossier de téléchargements',
   'web.onboarding.form.source.hint':
     'Le dossier où arrivent vos vidéos téléchargées, pas celui de vos films et séries.',
+  'web.onboarding.form.source.order':
+    'Kinoshelf scanne d’abord vos dossiers de films et de séries pour reconnaître ce qui s’y trouve déjà, puis analyse vos téléchargements.',
   'web.onboarding.form.source.once': 'Analyser une fois',
   'web.onboarding.form.source.once.hint':
     'Rien n’est modifié : vous verrez d’abord ce que Kinoshelf propose.',
   'web.onboarding.form.source.watch': 'Surveiller ce dossier',
   'web.onboarding.form.source.watch.hint':
     'Pour un dossier qui ne contient que des téléchargements terminés : chaque nouvelle release est analysée à son arrivée. Pas pour une bibliothèque déjà rangée. Modifiable ensuite dans les réglages.',
-  'web.onboarding.form.source.order':
-    'Kinoshelf scanne d’abord vos dossiers de films et de séries pour reconnaître ce qui s’y trouve déjà, puis analyse vos téléchargements.',
   'web.onboarding.form.source.name': 'Nom du dossier',
   'web.onboarding.form.source.submit': 'Analyser',
   'web.onboarding.form.source.submit.watch': 'Surveiller',
