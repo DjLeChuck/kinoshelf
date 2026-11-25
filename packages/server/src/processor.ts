@@ -6,6 +6,7 @@ import {
   libraryProfile,
   analyze,
   discoverVideos,
+  type SkippedVideo,
   GuessitParser,
   KinoshelfError,
   libraryOverrides,
@@ -45,6 +46,8 @@ export interface ProcessorDeps {
   readonly progress?: ProgressTracker;
   /** Told of a folder a scan had to leave out because it could not be read. */
   readonly onUnreadable?: (path: string, error: unknown) => void;
+  /** Told of a video left out for being far smaller than its siblings. */
+  readonly onSkipped?: (video: SkippedVideo) => void;
 }
 
 /**
@@ -158,6 +161,7 @@ async function process(
       // A folder of the library read alone is parsed as it would be inside a scan of the source.
       ...(library && job.rescan && { parserRoot: library.source }),
       ...(deps.onUnreadable && { onUnreadable: deps.onUnreadable }),
+      ...(deps.onSkipped && { onSkipped: deps.onSkipped }),
       ...(signal && { signal }),
     },
   );

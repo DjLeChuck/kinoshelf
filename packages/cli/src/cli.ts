@@ -31,6 +31,7 @@ import {
   createTranslator,
   describeError,
   detectLocale,
+  formatBytes,
   isLocale,
   type Locale,
   type Translate,
@@ -154,6 +155,15 @@ async function runPipeline(
     const files = await discoverVideos(source, undefined, undefined, {
       onUnreadable: (path) => {
         deps.io.err(t('report.unreadable', { path }));
+      },
+      onSkipped: ({ displayPath, size, largest }) => {
+        deps.io.err(
+          t('report.skipped-small', {
+            path: displayPath,
+            size: formatBytes(size),
+            largest: formatBytes(largest),
+          }),
+        );
       },
     });
     const journal = new SqliteJournal(database);

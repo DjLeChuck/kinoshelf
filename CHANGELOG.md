@@ -8,6 +8,10 @@ All notable changes to Kinoshelf are written here. The format follows
 
 ### Added
 
+- A video far smaller than the others in its folder (under 5 % of the largest and under 256 MiB: a sample or a
+  trailer with an ordinary name) is left out of a scan, an analysis and the CLI, and each one is told: a line in
+  the System logs (`scan`) and a notice from `kinoshelf scan` and `process`. Loose files of an arrival folder
+  are never compared with each other (#19).
 - Arrivals tells when a file is already in its destination library, under another name: the same file (a
   hard link) or one of the same size is listed under a new **Already in the library** state, never ready and
   never taken by "Transfer all". The same work in a file of another size waits in "To validate" with the

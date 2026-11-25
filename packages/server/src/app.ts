@@ -407,6 +407,11 @@ export async function buildApp(options: AppOptions): Promise<FastifyInstance> {
       createProcessor({
         ...options,
         progress,
+        onSkipped: ({ path, size, largest }) => {
+          noted('scan').info(
+            `Left out a video far smaller than its siblings (a sample?): ${path} (${size} bytes against ${largest})`,
+          );
+        },
         onUnreadable: (path, error) => {
           noted('scan').warn(error, `Left out a folder that cannot be read: ${path}`);
         },

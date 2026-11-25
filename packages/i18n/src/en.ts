@@ -95,6 +95,8 @@ export const en = {
   'unrecognized.no-candidates': 'nothing found on TMDB',
 
   'report.none': 'No video files found.',
+  'report.skipped-small':
+    'Left out a video far smaller than the others in its folder (a sample?): {path} ({size} against {largest})',
   'report.unreadable': 'Left out a folder that cannot be read: {path}',
   'report.analyzed': 'Video files analyzed: {count} · profile {profile} · mode {mode}',
   'report.destination': 'Destination: {destination}',

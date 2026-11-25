@@ -87,8 +87,10 @@ export { undoBatch, undoLastBatch, type UndoEntryResult, type UndoResult } from 
 export {
   discoverVideos,
   isSample,
+  tooSmall,
   VIDEO_EXTENSIONS,
   type DiscoveredFile,
+  type SkippedVideo,
 } from './pipeline/discover.js';
 export {
   MetadataLoader,

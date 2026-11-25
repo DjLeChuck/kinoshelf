@@ -5,6 +5,7 @@ import {
   analyze,
   discoverVideos,
   isSample,
+  tooSmall,
   GuessitParser,
   KinoshelfError,
   buildProfile,
@@ -88,6 +89,69 @@ describe('discoverVideos', () => {
       join('Film (2016)', 'Film.2016.mkv'),
       'Sampler.2020.mkv',
     ]);
+  });
+
+  it('skips a video far smaller than its siblings and says so', async () => {
+    const root = await makeDir();
+    await put(join(root, 'Film (2016)', 'Film.2016.mkv'), 'x'.repeat(10_000));
+    await put(join(root, 'Film (2016)', 'Teaser.mkv'), 'x'.repeat(100));
+    // A lone file and a file of another folder are never judged against it.
+    await put(join(root, 'Short (2020)', 'Short.2020.mkv'), 'x'.repeat(100));
+    const skipped: string[] = [];
+    const found = await discoverVideos(root, undefined, undefined, {
+      onSkipped: ({ displayPath, size, largest }) =>
+        skipped.push(`${displayPath}:${size}/${largest}`),
+    });
+    expect(found.map((f) => f.displayPath).sort()).toEqual([
+      join('Film (2016)', 'Film.2016.mkv'),
+      join('Short (2020)', 'Short.2020.mkv'),
+    ]);
+    expect(skipped).toEqual([`${join('Film (2016)', 'Teaser.mkv')}:100/10000`]);
+  });
+
+  it('does not compare the loose files of a root that holds releases', async () => {
+    const root = await makeDir();
+    await put(join(root, 'Big.2021.mkv'), 'x'.repeat(10_000));
+    await put(join(root, 'Small.2020.mkv'), 'x'.repeat(100));
+    expect(await discoverVideos(root, undefined, undefined, { splitReleases: true })).toHaveLength(
+      2,
+    );
+    expect(await discoverVideos(root)).toHaveLength(1);
+  });
+
+  it('keeps videos of similar sizes, and an empty folder of them', async () => {
+    const root = await makeDir();
+    await put(join(root, 'Show', 'e01.mkv'), 'x'.repeat(10_000));
+    await put(join(root, 'Show', 'e02.mkv'), 'x'.repeat(600));
+    await put(join(root, 'Other', 'a.mkv'), '');
+    await put(join(root, 'Other', 'b.mkv'), '');
+    expect(await discoverVideos(root)).toHaveLength(4);
+  });
+
+  it.each([
+    [
+      [10_000, 100],
+      [false, true],
+    ],
+    [
+      [10_000, 600],
+      [false, false],
+    ],
+    [[100], [false]],
+    [
+      [0, 0],
+      [false, false],
+    ],
+    [
+      [10 * 1024 ** 3, 400 * 1024 ** 2],
+      [false, false],
+    ],
+    [
+      [10 * 1024 ** 3, 100 * 1024 ** 2],
+      [false, true],
+    ],
+  ])('tooSmall(%j) is %j', (sizes, expected) => {
+    expect(tooSmall(sizes)).toEqual(expected);
   });
 
   it('judges samples below the scanned root only', async () => {

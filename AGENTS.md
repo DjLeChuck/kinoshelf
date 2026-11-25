@@ -19,8 +19,11 @@ versions is listed once (see "Versions in the lists" below). The NFO
 and artwork writers (`metadata: nfo`) are built (see "NFO and artwork"
 below), metadata included for a library that is already organized. Releases: see "Releasing" below (`v1.0.0` is the first).
 
-Backlog, not built: skipping samples by size (today only by name: `sample.*`, a `Sample` folder);
-reading completion from a download client's own API (see "Getting downloads in").
+Samples are skipped by name (`sample.*`, a `Sample` folder) and by size (`tooSmall`, `discover.ts`: under 5 % of
+the largest video of their folder and under 256 MiB, two videos at least, never the loose files of a root that holds
+releases); each size skip goes to `DiscoverOptions.onSkipped`: the `scan` log and a CLI notice, not yet the web.
+
+Backlog, not built: reading completion from a download client's own API (see "Getting downloads in").
 
 ## Golden rules
 
