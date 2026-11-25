@@ -252,12 +252,15 @@
   </label>
 {/snippet}
 
-<!-- What the library holds of a file, said on its line: where, and which file. -->
+<!-- What the library holds of a file, said on its line: where, and which file. A file held in another
+  version waits to be validated, and its line says why. -->
 {#snippet held(lead: Arrival)}
-  {#if lead.duplicate && lead.state === 'present'}
+  {#if lead.duplicate && (lead.state === 'present' || (lead.state === 'review' && lead.duplicate.kind === 'other-version'))}
     <span class="meta">
       <span class="muted"
-        >{t('web.arrivals.in-library', { library: lead.duplicate.libraryName })}</span
+        >{t(lead.state === 'present' ? 'web.arrivals.in-library' : 'web.arrivals.other-version', {
+          library: lead.duplicate.libraryName,
+        })}</span
       >
       <span class="mono">{truncateMiddle(lead.duplicate.file)}</span>
     </span>
