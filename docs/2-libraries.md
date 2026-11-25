@@ -17,6 +17,12 @@ is refused), and it does not move files: a rename is a separate, previewed step.
 is waiting or running. Nothing is stored, so the library keeps what its last scan saw; the History lists the job as
 **Cancelled** and offers **Send again**.
 
+**Samples are left out.** A file named `sample` and anything in a `Sample` folder are skipped, and so is a
+video far smaller than the others in its folder (under 5 % of the largest and under 256 MiB: a trailer or a
+sample with a plain name). Every video skipped for its size is told in the [logs](3-system.md#logs) (component
+`scan`) and by `kinoshelf scan` and `process`, so nothing disappears silently. A folder with one video is
+never judged, and neither are loose files lying directly in an arrival folder.
+
 What the scan saw is kept as a **snapshot**: the lists read it, never the disk and never TMDB, so
 they are instant. It is patched after each transfer, undo or manual match, and replaced as a whole by
 the next scan. A library organized in place is scanned once when it is made (and when Kinoshelf starts, if
