@@ -1241,6 +1241,7 @@ export const fr: Record<keyof typeof en, string> = {
   'web.arrivals.bar.transfer.hint':
     'Seuls des fichiers prêts à transférer peuvent être envoyés ensemble.',
   'web.arrivals.in-library': 'Déjà dans {library}',
+  'web.arrivals.other-version': 'Autre version dans {library}',
   'web.arrivals.list.label': 'Fichiers à trancher',
   'web.arrivals.empty': 'Rien n’attend votre décision.',
   'web.arrivals.transfer-all': 'Transférer tous les fichiers prêts ({count})',

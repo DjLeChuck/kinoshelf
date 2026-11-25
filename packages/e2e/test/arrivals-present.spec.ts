@@ -43,6 +43,9 @@ test('ignores in one click what the library already holds, and keeps the new fil
   await mkdir(folder, { recursive: true });
   await link(dune, `${folder}/Dune.2021.1080p-LINK.mkv`);
   await put(`${folder}/Alien.1979.2160p-COPY.mkv`, 'alien in the library, another size');
+  // The same film in a size the library does not hold: not a duplicate for certain, so it waits to
+  // be validated, and its line says the library has the film.
+  await put(`${folder}/Alien.1979.1080p-OTHERSIZE.mkv`, 'alien again, in a third size entirely');
   await put(`${folder}/Dune.1984.720p-NEW.mkv`, 'a film the library does not hold yet');
   const drop = await create(request, {
     name: 'Present drop',
@@ -72,6 +75,14 @@ test('ignores in one click what the library already holds, and keeps the new fil
     await expect(page).toHaveURL(/\/libraries\/.*item=/);
     await expect(page.getByRole('heading', { name: /Dune/ })).toBeVisible();
     await page.goBack();
+
+    // The other size is not in this state, and is told apart where it waits.
+    await expect(page.getByRole('button', { name: /OTHERSIZE/ })).toHaveCount(0);
+    await page.goto('/arrivals?state=review');
+    await expect(page.getByRole('button', { name: /OTHERSIZE/ })).toContainText(
+      'Another version in Present films',
+    );
+    await page.goto('/arrivals?state=present');
 
     // One click, one confirmation: both leave the state.
     await page

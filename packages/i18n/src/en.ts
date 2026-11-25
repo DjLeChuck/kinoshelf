@@ -1199,6 +1199,7 @@ export const en = {
   'web.arrivals.bar.transfer': 'Transfer',
   'web.arrivals.bar.transfer.hint': 'Only files that are ready to transfer can be sent together.',
   'web.arrivals.in-library': 'Already in {library}',
+  'web.arrivals.other-version': 'Another version in {library}',
   'web.arrivals.list.label': 'Files to settle',
   'web.arrivals.empty': 'Nothing waits for you.',
   'web.arrivals.transfer-all': 'Transfer all the files that are ready ({count})',
