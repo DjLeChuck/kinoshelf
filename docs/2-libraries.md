@@ -40,7 +40,7 @@ show's or a season's) instead of the whole library. It shares the guard of a who
 
 When Kinoshelf picked the wrong work, **Change the match** (on a movie's page and a show's) lets you
 search TMDB and choose the right one. It is a scan of that folder that takes your choice for every
-file. Nothing moves: the rows come back **To rename**, named after the new work, and the usual Rename
+file. Nothing moves: the rows come back **To organize**, named after the new work, and the usual Organize
 (preview, batch, undo) does the rest. NFO and images Kinoshelf wrote for the former work are
 replaced (the old ones are kept in `replaced/`, and undo puts them back), unless someone edited them.
 
@@ -54,7 +54,7 @@ A movie library lists movies; a series library reads as a **tree**: show, season
 - **Search** reads the title and the file name, never the folders.
 - **Filters**, in a panel (a sheet on a phone) and as chips under the search box:
   - **To validate**: files Kinoshelf could not place with confidence;
-  - **To rename**: files that do not follow the profile;
+  - **To organize**: files that do not follow the profile;
   - **Not recognized**: nothing was found for them;
   - **Incomplete**: a video already in place whose NFO or images are missing (**Complete…** writes them);
   - **Missing NFO** and **Missing images** (poster, fanart, logo, and an episode's thumbnail);
@@ -71,7 +71,7 @@ A movie library lists movies; a series library reads as a **tree**: show, season
   resets them.
 - **Organize…**, **Complete…** and **Add the version to the name…** work on the ticked lines (movies in a
   list, shows in the tree): a dry run lists what would move and what would be written, then you
-  confirm. **Organize** renames and moves the files to rename, **Complete** writes the missing NFO and
+  confirm. **Organize** renames and moves the files to organize, **Complete** writes the missing NFO and
   images, and **Add the version to the name** adds the picture size to a file already in its folder.
   A button stays grey when nothing in the selection can use it. Hover a button, or focus it with the
   keyboard, to read what it does (a long press on a phone); Escape closes the tip.
