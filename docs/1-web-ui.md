@@ -102,7 +102,8 @@ place never lands here. The files are in four states:
   _To validate_ with its candidate. **Ignore all the files already in the library** (at the top) sets
   aside the whole state in one click, the files the list has not loaded included. A work the library
   holds in a file of **another size** is not in this state: it waits in _To validate_, with the file it
-  would sit beside, because it may be a second version you want (validating it adds it as one). A release
+  would sit beside (its line says **Another version in Films** and names that file), because it may be a
+  second version you want (validating it adds it as one). A release
   of a series moves here only when **every** episode is already there; otherwise it stays where it was,
   and its panel lists the episodes already in the library, with **Ignore the files already there** to set
   aside only those and keep the others to transfer.
